@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /d/NEUROSTACK/PROJECTS/task-management/backend/src -name \"*.ts\" -type f -delete)",
+      "Bash(find /d/NEUROSTACK/PROJECTS/task-management/backend/src -type d -empty -delete)"
+    ]
+  }
+}

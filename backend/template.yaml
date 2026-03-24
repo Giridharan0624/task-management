@@ -1,0 +1,370 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Task Management System Backend
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 10
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref TaskManagementTable
+        USER_POOL_ID: !Ref UserPool
+        USER_POOL_CLIENT_ID: !Ref UserPoolClient
+
+Resources:
+
+  # ─── DynamoDB ────────────────────────────────────────────────────────────────
+  TaskManagementTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TaskManagementTable
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+        - AttributeName: GSI2PK
+          AttributeType: S
+        - AttributeName: GSI2SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI2
+          KeySchema:
+            - AttributeName: GSI2PK
+              KeyType: HASH
+            - AttributeName: GSI2SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # ─── Cognito ─────────────────────────────────────────────────────────────────
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: TaskManagementUserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: false
+        - Name: name
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+        - Name: systemRole
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+          StringAttributeConstraints:
+            MinLength: '1'
+            MaxLength: '20'
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: TaskManagementClient
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: false
+
+  # ─── API Gateway ─────────────────────────────────────────────────────────────
+  TaskManagementApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
+
+  # ─── Lambda Functions ─────────────────────────────────────────────────────────
+
+  # Board handlers
+  CreateBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.board.create_board.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards
+            Method: POST
+
+  ListBoardsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.board.list_boards.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards
+            Method: GET
+
+  GetBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.board.get_board.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}
+            Method: GET
+
+  DeleteBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.board.delete_board.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}
+            Method: DELETE
+
+  AddMemberFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.board.add_member.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/members
+            Method: POST
+
+  RemoveMemberFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.board.remove_member.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/members/{userId}
+            Method: DELETE
+
+  UpdateMemberRoleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.board.update_member_role.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/members/{userId}/role
+            Method: PUT
+
+  # Task handlers
+  CreateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.task.create_task.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/tasks
+            Method: POST
+
+  ListTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.task.list_tasks.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/tasks
+            Method: GET
+
+  GetTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.task.get_task.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/tasks/{taskId}
+            Method: GET
+
+  UpdateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.task.update_task.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/tasks/{taskId}
+            Method: PUT
+
+  DeleteTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.task.delete_task.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/tasks/{taskId}
+            Method: DELETE
+
+  AssignTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.task.assign_task.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /boards/{boardId}/tasks/{taskId}/assign
+            Method: PUT
+
+  # User handlers
+  GetProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.get_profile.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users/me
+            Method: GET
+
+  UpdateProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.update_profile.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users/me
+            Method: PUT
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${TaskManagementApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient
+  TableName:
+    Description: DynamoDB Table Name
+    Value: !Ref TaskManagementTable
