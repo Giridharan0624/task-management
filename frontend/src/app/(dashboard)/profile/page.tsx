@@ -14,7 +14,7 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(user?.name || '')
   const [saving, setSaving] = useState(false)
@@ -25,6 +25,7 @@ export default function ProfilePage() {
     setSuccess(false)
     try {
       await updateProfile({ name })
+      updateUser({ name })
       setEditing(false)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)

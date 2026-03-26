@@ -1,6 +1,10 @@
 import json
+import logging
 
 from shared.errors import AppError
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 CORS_HEADERS = {
     "Content-Type": "application/json",
@@ -21,6 +25,7 @@ def build_error(error: Exception) -> dict:
             "headers": CORS_HEADERS,
             "body": json.dumps({"error": error.message}),
         }
+    logger.error("Unhandled error: %s", str(error), exc_info=True)
     return {
         "statusCode": 500,
         "headers": CORS_HEADERS,

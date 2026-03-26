@@ -6,12 +6,12 @@ class UserMapper:
     @staticmethod
     def to_domain(item: dict) -> User:
         return User(
-            user_id=item["user_id"],
-            email=item["email"],
-            name=item["name"],
-            system_role=SystemRole(item["system_role"]),
-            created_at=item["created_at"],
-            updated_at=item["updated_at"],
+            user_id=item.get("user_id") or item.get("userId", ""),
+            email=item.get("email", ""),
+            name=item.get("name", ""),
+            system_role=SystemRole(item.get("system_role") or item.get("systemRole", "MEMBER")),
+            created_at=item.get("created_at") or item.get("createdAt", ""),
+            updated_at=item.get("updated_at") or item.get("updatedAt", ""),
         )
 
     @staticmethod
