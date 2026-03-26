@@ -61,7 +61,6 @@ export function MemberList({ boardId, members, canManageMembers }: MemberListPro
   const roleBadgeColor: Record<BoardRole, string> = {
     ADMIN: 'bg-purple-100 text-purple-700',
     MEMBER: 'bg-blue-100 text-blue-700',
-    VIEWER: 'bg-gray-100 text-gray-700',
   }
 
   return (
@@ -155,7 +154,6 @@ export function MemberList({ boardId, members, canManageMembers }: MemberListPro
               {...register('boardRole', { required: true })}
             >
               <option value="MEMBER">Member</option>
-              <option value="VIEWER">Viewer</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>

@@ -12,7 +12,7 @@ from infrastructure.cognito.cognito_service import CognitoService
 
 
 class ListUsersUseCase:
-    """OWNER and ADMIN can list all users."""
+    """OWNER sees all users. ADMIN sees only MEMBER users."""
     def __init__(self, user_repo: IUserRepository):
         self._user_repo = user_repo
 
@@ -20,11 +20,14 @@ class ListUsersUseCase:
         if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
             raise AuthorizationError("Only owners and admins can list users")
         users = self._user_repo.find_all()
+        if caller_system_role == SystemRole.ADMIN.value:
+            # Admins only see members
+            users = [u for u in users if u.system_role == SystemRole.MEMBER]
         return [u.to_dict() for u in users]
 
 
 class UpdateUserRoleUseCase:
-    """OWNER can promote/demote users to ADMIN. OWNER cannot be changed."""
+    """OWNER can promote/demote users to ADMIN or MEMBER. OWNER cannot be changed."""
     def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService = None):
         self._user_repo = user_repo
         self._cognito = cognito_service or CognitoService()
@@ -51,6 +54,10 @@ class UpdateUserRoleUseCase:
         if new_role == SystemRole.OWNER:
             raise AuthorizationError("Cannot promote to owner")
 
+        # Valid target roles are only ADMIN and MEMBER
+        if new_role not in (SystemRole.ADMIN, SystemRole.MEMBER):
+            raise ValidationError(f"Invalid target role: {new_role_value}")
+
         updated_user = User(
             user_id=target_user.user_id,
             email=target_user.email,
@@ -68,7 +75,7 @@ class UpdateUserRoleUseCase:
 
 
 class GetUserProgressUseCase:
-    """OWNER and ADMIN can view a specific user's task progress across all boards."""
+    """OWNER can view anyone's progress. ADMIN can only view MEMBER progress."""
     def __init__(self, user_repo: IUserRepository, board_repo: IBoardRepository, task_repo: ITaskRepository):
         self._user_repo = user_repo
         self._board_repo = board_repo
@@ -82,6 +89,11 @@ class GetUserProgressUseCase:
         target_user = self._user_repo.find_by_id(target_user_id)
         if not target_user:
             raise NotFoundError(f"User {target_user_id} not found")
+
+        # Admin can only view member progress
+        if caller_system_role == SystemRole.ADMIN.value:
+            if target_user.system_role != SystemRole.MEMBER:
+                raise AuthorizationError("Admins can only view member progress")
 
         # Get all boards the target user belongs to
         boards = self._board_repo.find_boards_for_user(target_user_id)
@@ -118,8 +130,9 @@ class GetUserProgressUseCase:
 
 class CreateUserUseCase:
     """
-    Owner creates Admins.
-    Admins create Members/Viewers.
+    Owner creates Admins or Members.
+    Admins create Members only.
+    Members cannot create anyone.
     """
     def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService):
         self._user_repo = user_repo
@@ -137,17 +150,22 @@ class CreateUserUseCase:
         except ValueError:
             raise ValidationError(f"Invalid role: {target_role}")
 
-        # Authorization: who can create whom
+        # Cannot create an owner
         if role_enum == SystemRole.OWNER:
             raise AuthorizationError("Cannot create an owner account")
 
-        if role_enum == SystemRole.ADMIN:
-            if caller_system_role != SystemRole.OWNER.value:
-                raise AuthorizationError("Only the owner can create admin accounts")
+        # Authorization: who can create whom
+        if caller_system_role == SystemRole.OWNER.value:
+            # Owner can create ADMIN or MEMBER
+            if role_enum not in (SystemRole.ADMIN, SystemRole.MEMBER):
+                raise AuthorizationError("Owner can only create admin or member accounts")
+        elif caller_system_role == SystemRole.ADMIN.value:
+            # Admin can only create MEMBER
+            if role_enum != SystemRole.MEMBER:
+                raise AuthorizationError("Admins can only create member accounts")
         else:
-            # MEMBER or VIEWER
-            if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-                raise AuthorizationError("Only owners and admins can create user accounts")
+            # Members cannot create anyone
+            raise AuthorizationError("Members cannot create user accounts")
 
         # Check if email already exists
         existing = self._user_repo.find_by_email(email)
@@ -173,8 +191,8 @@ class CreateUserUseCase:
 
 class DeleteUserUseCase:
     """
-    Owner deletes Admins.
-    Admins delete Members/Viewers.
+    Owner deletes Admins or Members.
+    Admins delete Members only.
     Cannot delete Owner. Cannot delete self.
     """
     def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService, board_repo: IBoardRepository):
@@ -196,12 +214,15 @@ class DeleteUserUseCase:
             raise AuthorizationError("Cannot delete the owner account")
 
         # Authorization: who can delete whom
-        if target_user.system_role == SystemRole.ADMIN:
-            if caller_system_role != SystemRole.OWNER.value:
-                raise AuthorizationError("Only the owner can delete admin accounts")
+        if caller_system_role == SystemRole.OWNER.value:
+            # Owner can delete ADMIN or MEMBER
+            pass
+        elif caller_system_role == SystemRole.ADMIN.value:
+            # Admin can only delete MEMBER
+            if target_user.system_role != SystemRole.MEMBER:
+                raise AuthorizationError("Admins can only delete member accounts")
         else:
-            if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-                raise AuthorizationError("Only owners and admins can delete users")
+            raise AuthorizationError("Members cannot delete user accounts")
 
         # Delete from Cognito
         self._cognito.delete_user(target_user.email)

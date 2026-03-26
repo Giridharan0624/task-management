@@ -38,7 +38,7 @@ def handler(event, context):
         task_repo = TaskDynamoRepository()
         board_repo = BoardDynamoRepository()
         use_case = UpdateTaskUseCase(task_repo, board_repo)
-        result = use_case.execute(dto, auth.user_id)
+        result = use_case.execute(dto, auth.user_id, auth.system_role)
         return build_success(200, result)
     except Exception as e:
         return build_error(e)

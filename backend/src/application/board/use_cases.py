@@ -52,7 +52,7 @@ class GetBoardUseCase:
             raise NotFoundError(f"Board {board_id} not found")
 
         caller_member = self._board_repo.find_member(board_id, caller_user_id)
-        if not caller_member and caller_system_role != SystemRole.ADMIN.value:
+        if not caller_member and caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
             raise AuthorizationError("You are not a member of this board")
 
         members = self._board_repo.find_members(board_id)

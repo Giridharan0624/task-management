@@ -15,5 +15,5 @@ def extract_auth_context(event: dict) -> AuthContext:
     return AuthContext(
         user_id=claims.get("sub", ""),
         email=claims.get("email", ""),
-        system_role=claims.get("custom:systemRole", "VIEWER"),
+        system_role=claims.get("custom:systemRole", "MEMBER"),
     )

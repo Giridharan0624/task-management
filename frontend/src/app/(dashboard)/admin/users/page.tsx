@@ -15,8 +15,9 @@ const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800',
   ADMIN: 'bg-red-100 text-red-800',
   MEMBER: 'bg-blue-100 text-blue-800',
-  VIEWER: 'bg-gray-100 text-gray-800',
 }
+
+type TabType = 'ADMIN' | 'MEMBER'
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth()
@@ -31,6 +32,7 @@ export default function UsersPage() {
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [progressUser, setProgressUser] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState<TabType>('ADMIN')
 
   // Form state
   const [newEmail, setNewEmail] = useState('')
@@ -54,14 +56,18 @@ export default function UsersPage() {
     )
   }
 
-  // Filter users based on caller's role
   const isOwner = currentUser?.systemRole === 'OWNER'
-  const filteredUsers = isOwner
-    ? users ?? []
-    : (users ?? []).filter((u) => u.systemRole !== 'OWNER' && u.systemRole !== 'ADMIN')
+
+  // Owner sees tabbed view (Admins | Members), Admin sees only Members
+  const admins = (users ?? []).filter((u) => u.systemRole === 'ADMIN')
+  const members = (users ?? []).filter((u) => u.systemRole === 'MEMBER')
+
+  const displayedUsers = isOwner
+    ? (activeTab === 'ADMIN' ? admins : members)
+    : members
 
   // Available roles for creation based on caller
-  const creatableRoles = isOwner ? ['ADMIN', 'MEMBER', 'VIEWER'] : ['MEMBER', 'VIEWER']
+  const creatableRoles = isOwner ? ['ADMIN', 'MEMBER'] : ['MEMBER']
 
   const handleCreateUser = async () => {
     setError('')
@@ -114,9 +120,11 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isOwner ? 'User Management' : 'Member Management'}
+          </h1>
           <p className="text-gray-500 mt-1">
-            {isOwner ? 'Manage admins and users' : 'Manage users'}
+            {isOwner ? 'Manage admins and members' : 'Manage members'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -124,38 +132,54 @@ export default function UsersPage() {
             {currentUser?.systemRole}
           </Badge>
           <Button variant="primary" onClick={() => setShowAddUser(true)}>
-            + Add {isOwner ? 'Admin / User' : 'User'}
+            + Add {isOwner ? 'User' : 'Member'}
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {isOwner && (
           <div className="bg-red-50 rounded-xl p-4 border border-red-100">
-            <div className="text-2xl font-bold text-red-700">
-              {(users ?? []).filter((u) => u.systemRole === 'ADMIN').length}
-            </div>
+            <div className="text-2xl font-bold text-red-700">{admins.length}</div>
             <div className="text-sm text-red-600">Admins</div>
           </div>
         )}
         <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-          <div className="text-2xl font-bold text-blue-700">
-            {(users ?? []).filter((u) => u.systemRole === 'MEMBER').length}
-          </div>
+          <div className="text-2xl font-bold text-blue-700">{members.length}</div>
           <div className="text-sm text-blue-600">Members</div>
-        </div>
-        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-          <div className="text-2xl font-bold text-gray-700">
-            {(users ?? []).filter((u) => u.systemRole === 'VIEWER').length}
-          </div>
-          <div className="text-sm text-gray-600">Viewers</div>
         </div>
         <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
           <div className="text-2xl font-bold text-indigo-700">{(users ?? []).length}</div>
           <div className="text-sm text-indigo-600">Total Users</div>
         </div>
       </div>
+
+      {/* Tabs (Owner only) */}
+      {isOwner && (
+        <div className="flex gap-2 border-b border-gray-200 pb-0">
+          <button
+            onClick={() => setActiveTab('ADMIN')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              activeTab === 'ADMIN'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Admins ({admins.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('MEMBER')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              activeTab === 'MEMBER'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Members ({members.length})
+          </button>
+        </div>
+      )}
 
       {/* User Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -169,7 +193,7 @@ export default function UsersPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredUsers.map((u) => (
+            {displayedUsers.map((u) => (
               <tr key={u.userId} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -216,10 +240,12 @@ export default function UsersPage() {
                 </td>
               </tr>
             ))}
-            {filteredUsers.length === 0 && (
+            {displayedUsers.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                  No users found. Click &quot;Add&quot; to create one.
+                  {isOwner && activeTab === 'ADMIN'
+                    ? 'No admins found. Click "Add User" to create one.'
+                    : 'No members found. Click "Add Member" to create one.'}
                 </td>
               </tr>
             )}
@@ -326,7 +352,7 @@ export default function UsersPage() {
             Current role: <Badge className={ROLE_COLORS[selectedUser?.systemRole ?? 'MEMBER']}>{selectedUser?.systemRole}</Badge>
           </p>
           <div className="flex gap-2">
-            {['ADMIN', 'MEMBER', 'VIEWER'].map((role) => (
+            {['ADMIN', 'MEMBER'].map((role) => (
               <Button
                 key={role}
                 variant={selectedUser?.systemRole === role ? 'primary' : 'secondary'}

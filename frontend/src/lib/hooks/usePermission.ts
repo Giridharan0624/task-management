@@ -15,6 +15,7 @@ export interface SystemPermissions {
   canManageUsers: boolean
   canManageAdmins: boolean
   canViewProgress: boolean
+  canAssignTasks: boolean
 }
 
 export function usePermission(boardRole?: BoardRole): Permissions {
@@ -39,5 +40,6 @@ export function useSystemPermission(systemRole?: SystemRole): SystemPermissions 
     canManageUsers: isOwnerOrAdmin,
     canManageAdmins: isOwner,
     canViewProgress: isOwnerOrAdmin,
+    canAssignTasks: isOwnerOrAdmin,
   }
 }

@@ -14,7 +14,7 @@ def handler(event, context):
         task_repo = TaskDynamoRepository()
         board_repo = BoardDynamoRepository()
         use_case = DeleteTaskUseCase(task_repo, board_repo)
-        use_case.execute({"board_id": board_id, "task_id": task_id}, auth.user_id)
+        use_case.execute({"board_id": board_id, "task_id": task_id}, auth.user_id, auth.system_role)
         return build_success(204, {})
     except Exception as e:
         return build_error(e)
