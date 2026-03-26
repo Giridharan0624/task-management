@@ -17,8 +17,8 @@ class CreateBoardUseCase:
         self._user_repo = user_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
-        if caller_system_role != SystemRole.ADMIN.value:
-            raise AuthorizationError("Only system admins can create boards")
+        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+            raise AuthorizationError("Only owners and admins can create boards")
 
         board_id = str(uuid.uuid4())
         board = Board.create(

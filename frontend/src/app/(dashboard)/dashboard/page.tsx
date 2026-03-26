@@ -4,7 +4,16 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useBoards } from '@/lib/hooks/useBoards'
 import { useTasks } from '@/lib/hooks/useTasks'
+import { useSystemPermission } from '@/lib/hooks/usePermission'
+import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
+
+const ROLE_COLORS: Record<string, string> = {
+  OWNER: 'bg-purple-100 text-purple-800',
+  ADMIN: 'bg-red-100 text-red-800',
+  MEMBER: 'bg-blue-100 text-blue-800',
+  VIEWER: 'bg-gray-100 text-gray-800',
+}
 
 function SummaryCard({
   label,
@@ -25,12 +34,10 @@ function SummaryCard({
 
 function DashboardContent() {
   const { user } = useAuth()
+  const systemPerms = useSystemPermission(user?.systemRole)
   const { data: boards, isLoading: boardsLoading } = useBoards()
 
   const allBoardIds = boards?.map((b) => b.boardId) ?? []
-  // For task stats, we only fetch if boards are loaded — use first board as example
-  // In a real app, you'd have a summary endpoint. Here we aggregate from all boards.
-  // To avoid excessive calls, we load the first 3 boards' tasks for stats.
   const boardsForStats = allBoardIds.slice(0, 3)
 
   const { data: tasks0 } = useTasks(boardsForStats[0] ?? '')
@@ -52,12 +59,35 @@ function DashboardContent() {
   return (
     <div className="flex flex-col gap-8">
       {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
-        </h1>
-        <p className="mt-1 text-gray-500">Here&apos;s what&apos;s happening across your boards.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
+          </h1>
+          <p className="mt-1 text-gray-500">Here&apos;s what&apos;s happening across your boards.</p>
+        </div>
+        <Badge className={ROLE_COLORS[user?.systemRole ?? 'MEMBER']}>
+          {user?.systemRole}
+        </Badge>
       </div>
+
+      {/* Quick Actions for Owner/Admin */}
+      {systemPerms.canManageUsers && (
+        <div className="flex gap-3">
+          <Link
+            href="/admin/users"
+            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
+          >
+            <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-gray-900">User Management</p>
+              <p className="text-xs text-gray-500">Manage users and roles</p>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* Summary cards */}
       {boardsLoading ? (

@@ -1,4 +1,4 @@
-export type SystemRole = 'ADMIN' | 'MEMBER' | 'VIEWER'
+export type SystemRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
 export type BoardRole = 'ADMIN' | 'MEMBER' | 'VIEWER'
 
 export interface User {

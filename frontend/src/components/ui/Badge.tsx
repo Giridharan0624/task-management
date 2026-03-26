@@ -3,11 +3,19 @@ import type { TaskStatus, TaskPriority } from '@/types/task'
 
 type BadgeVariant = TaskStatus | TaskPriority
 
-interface BadgeProps {
+interface BadgeWithVariantProps {
   variant: BadgeVariant
   children: React.ReactNode
   className?: string
 }
+
+interface BadgeWithoutVariantProps {
+  variant?: undefined
+  children: React.ReactNode
+  className?: string
+}
+
+type BadgeProps = BadgeWithVariantProps | BadgeWithoutVariantProps
 
 const variantClasses: Record<BadgeVariant, string> = {
   TODO: 'bg-gray-100 text-gray-700',
@@ -23,7 +31,7 @@ export function Badge({ variant, children, className }: BadgeProps) {
     <span
       className={clsx(
         'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-        variantClasses[variant],
+        variant ? variantClasses[variant] : undefined,
         className
       )}
     >

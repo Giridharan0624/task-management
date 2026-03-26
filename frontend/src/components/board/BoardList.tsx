@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useBoards, useDeleteBoard } from '@/lib/hooks/useBoards'
+import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { BoardCard } from './BoardCard'
 import { CreateBoardModal } from './CreateBoardModal'
 import { Button } from '@/components/ui/Button'
@@ -10,12 +11,11 @@ import { Spinner } from '@/components/ui/Spinner'
 
 export function BoardList() {
   const { user } = useAuth()
+  const systemPerms = useSystemPermission(user?.systemRole)
   const { data: boards, isLoading, error } = useBoards()
   const deleteBoard = useDeleteBoard()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-
-  const isAdmin = user?.systemRole === 'ADMIN'
 
   const handleDelete = async (boardId: string) => {
     if (!confirm('Are you sure you want to delete this board? This action cannot be undone.')) return
@@ -47,7 +47,7 @@ export function BoardList() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">My Boards</h2>
-        {isAdmin && (
+        {systemPerms.canCreateBoard && (
           <Button onClick={() => setShowCreateModal(true)}>Create Board</Button>
         )}
       </div>
@@ -68,7 +68,7 @@ export function BoardList() {
             />
           </svg>
           <p className="text-gray-500">No boards yet.</p>
-          {isAdmin && (
+          {systemPerms.canCreateBoard && (
             <Button onClick={() => setShowCreateModal(true)}>Create your first board</Button>
           )}
         </div>
@@ -78,7 +78,7 @@ export function BoardList() {
             <BoardCard
               key={board.boardId}
               board={board}
-              canDeleteBoard={isAdmin}
+              canDeleteBoard={systemPerms.canCreateBoard}
               onDelete={handleDelete}
               isDeleting={deletingId === board.boardId}
             />

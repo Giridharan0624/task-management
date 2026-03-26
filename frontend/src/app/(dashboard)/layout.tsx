@@ -28,6 +28,16 @@ const navItems = [
   },
 ]
 
+const usersNavItem = {
+  href: '/admin/users',
+  label: 'Users',
+  icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  ),
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, signOut } = useAuth()
   const router = useRouter()
@@ -48,6 +58,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) return null
+
+  const isOwnerOrAdmin = user.systemRole === 'OWNER' || user.systemRole === 'ADMIN'
+  const allNavItems = isOwnerOrAdmin ? [...navItems, usersNavItem] : navItems
 
   const handleSignOut = () => {
     signOut()
@@ -70,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav */}
         <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link

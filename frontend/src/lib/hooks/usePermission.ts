@@ -1,4 +1,6 @@
-import type { BoardRole } from '@/types/user'
+'use client'
+
+import type { BoardRole, SystemRole } from '@/types/user'
 
 export interface Permissions {
   canCreateTask: boolean
@@ -6,6 +8,13 @@ export interface Permissions {
   canDeleteTask: boolean
   canManageMembers: boolean
   canDeleteBoard: boolean
+}
+
+export interface SystemPermissions {
+  canCreateBoard: boolean
+  canManageUsers: boolean
+  canManageAdmins: boolean
+  canViewProgress: boolean
 }
 
 export function usePermission(boardRole?: BoardRole): Permissions {
@@ -18,5 +27,17 @@ export function usePermission(boardRole?: BoardRole): Permissions {
     canDeleteTask: isAdmin,
     canManageMembers: isAdmin,
     canDeleteBoard: isAdmin,
+  }
+}
+
+export function useSystemPermission(systemRole?: SystemRole): SystemPermissions {
+  const isOwner = systemRole === 'OWNER'
+  const isOwnerOrAdmin = systemRole === 'OWNER' || systemRole === 'ADMIN'
+
+  return {
+    canCreateBoard: isOwnerOrAdmin,
+    canManageUsers: isOwnerOrAdmin,
+    canManageAdmins: isOwner,
+    canViewProgress: isOwnerOrAdmin,
   }
 }

@@ -356,6 +356,55 @@ Resources:
             Path: /users/me
             Method: PUT
 
+  # User management handlers
+  ListUsersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.list_users.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users
+            Method: GET
+
+  UpdateUserRoleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.update_user_role.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users/role
+            Method: PUT
+
+  GetUserProgressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.get_user_progress.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users/{userId}/progress
+            Method: GET
+
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL
