@@ -1,0 +1,12 @@
+{
+  "PK": {"S": "USER#d133ed9a-5031-70fd-25e6-29085bde44d8"},
+  "SK": {"S": "PROFILE"},
+  "GSI1PK": {"S": "USER_EMAIL#admin@taskmanager.com"},
+  "GSI1SK": {"S": "PROFILE"},
+  "userId": {"S": "d133ed9a-5031-70fd-25e6-29085bde44d8"},
+  "email": {"S": "admin@taskmanager.com"},
+  "name": {"S": "Admin"},
+  "systemRole": {"S": "ADMIN"},
+  "createdAt": {"S": "2026-03-26T00:00:00Z"},
+  "updatedAt": {"S": "2026-03-26T00:00:00Z"}
+}
