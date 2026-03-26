@@ -8,6 +8,7 @@ from domain.user.value_objects import SystemRole
 from domain.board.repository import IBoardRepository
 from domain.task.repository import ITaskRepository
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
+from infrastructure.cognito.cognito_service import CognitoService
 
 
 class ListUsersUseCase:
@@ -24,8 +25,9 @@ class ListUsersUseCase:
 
 class UpdateUserRoleUseCase:
     """OWNER can promote/demote users to ADMIN. OWNER cannot be changed."""
-    def __init__(self, user_repo: IUserRepository):
+    def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService = None):
         self._user_repo = user_repo
+        self._cognito = cognito_service or CognitoService()
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         if caller_system_role != SystemRole.OWNER.value:
@@ -58,6 +60,10 @@ class UpdateUserRoleUseCase:
             updated_at=datetime.now(timezone.utc).isoformat(),
         )
         self._user_repo.update(updated_user)
+
+        # Sync role to Cognito
+        self._cognito.update_user_role(target_user.email, new_role.value)
+
         return updated_user.to_dict()
 
 
@@ -108,3 +114,102 @@ class GetUserProgressUseCase:
             "boards": board_progress,
             "total_stats": total_stats,
         }
+
+
+class CreateUserUseCase:
+    """
+    Owner creates Admins.
+    Admins create Members/Viewers.
+    """
+    def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService):
+        self._user_repo = user_repo
+        self._cognito = cognito_service
+
+    def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
+        target_role = dto.get("system_role", "MEMBER")
+        email = dto["email"]
+        name = dto["name"]
+        password = dto["password"]
+
+        # Validate the target role
+        try:
+            role_enum = SystemRole(target_role)
+        except ValueError:
+            raise ValidationError(f"Invalid role: {target_role}")
+
+        # Authorization: who can create whom
+        if role_enum == SystemRole.OWNER:
+            raise AuthorizationError("Cannot create an owner account")
+
+        if role_enum == SystemRole.ADMIN:
+            if caller_system_role != SystemRole.OWNER.value:
+                raise AuthorizationError("Only the owner can create admin accounts")
+        else:
+            # MEMBER or VIEWER
+            if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+                raise AuthorizationError("Only owners and admins can create user accounts")
+
+        # Check if email already exists
+        existing = self._user_repo.find_by_email(email)
+        if existing:
+            raise ValidationError(f"User with email {email} already exists")
+
+        # Create in Cognito
+        user_id = self._cognito.create_user(email, name, password, target_role)
+        self._cognito.set_permanent_password(email, password)
+
+        # Create in DynamoDB
+        now = datetime.now(timezone.utc).isoformat()
+        user = User.create(
+            user_id=user_id,
+            email=email,
+            name=name,
+            system_role=role_enum,
+        )
+        self._user_repo.save(user)
+
+        return user.to_dict()
+
+
+class DeleteUserUseCase:
+    """
+    Owner deletes Admins.
+    Admins delete Members/Viewers.
+    Cannot delete Owner. Cannot delete self.
+    """
+    def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService, board_repo: IBoardRepository):
+        self._user_repo = user_repo
+        self._cognito = cognito_service
+        self._board_repo = board_repo
+
+    def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> None:
+        target_user_id = dto["user_id"]
+
+        if target_user_id == caller_user_id:
+            raise AuthorizationError("Cannot delete your own account")
+
+        target_user = self._user_repo.find_by_id(target_user_id)
+        if not target_user:
+            raise NotFoundError(f"User {target_user_id} not found")
+
+        if target_user.system_role == SystemRole.OWNER:
+            raise AuthorizationError("Cannot delete the owner account")
+
+        # Authorization: who can delete whom
+        if target_user.system_role == SystemRole.ADMIN:
+            if caller_system_role != SystemRole.OWNER.value:
+                raise AuthorizationError("Only the owner can delete admin accounts")
+        else:
+            if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+                raise AuthorizationError("Only owners and admins can delete users")
+
+        # Delete from Cognito
+        self._cognito.delete_user(target_user.email)
+
+        # Remove from all board memberships
+        boards = self._board_repo.find_boards_for_user(target_user_id)
+        for board in boards:
+            self._board_repo.remove_member(board.board_id, target_user_id)
+
+        # Delete from DynamoDB
+        self._user_repo.delete(target_user_id)

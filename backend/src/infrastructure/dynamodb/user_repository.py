@@ -56,3 +56,8 @@ class UserDynamoRepository(IUserRepository):
             users.extend(UserMapper.to_domain(item) for item in response.get("Items", []))
 
         return users
+
+    def delete(self, user_id: str) -> None:
+        self._table.delete_item(
+            Key={"PK": f"USER#{user_id}", "SK": "PROFILE"}
+        )

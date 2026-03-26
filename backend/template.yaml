@@ -356,6 +356,22 @@ Resources:
             Path: /users/me
             Method: PUT
 
+  MyTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.my_tasks.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users/me/tasks
+            Method: GET
+
   # User management handlers
   ListUsersFunction:
     Type: AWS::Serverless::Function
@@ -373,6 +389,49 @@ Resources:
             Path: /users
             Method: GET
 
+  CreateUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.create_user.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminSetUserPassword
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users
+            Method: POST
+
+  DeleteUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers.user.delete_user.handler
+      CodeUri: src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskManagementTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminDeleteUser
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskManagementApi
+            Path: /users/{userId}
+            Method: DELETE
+
   UpdateUserRoleFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -381,6 +440,11 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskManagementTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminUpdateUserAttributes
+              Resource: !GetAtt UserPool.Arn
       Events:
         Api:
           Type: Api

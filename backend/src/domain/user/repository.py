@@ -24,3 +24,7 @@ class IUserRepository(ABC):
     @abstractmethod
     def find_all(self) -> list[User]:
         ...
+
+    @abstractmethod
+    def delete(self, user_id: str) -> None:
+        ...
