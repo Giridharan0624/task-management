@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getMyAttendance,
   getTodayAttendance,
+  getAttendanceReport,
   signInToWork,
   signOutFromWork,
 } from '@/lib/api/attendanceApi'
@@ -9,6 +10,7 @@ import {
 const attendanceKeys = {
   me: ['attendance', 'me'] as const,
   today: ['attendance', 'today'] as const,
+  report: (start: string, end: string) => ['attendance', 'report', start, end] as const,
 }
 
 export function useMyAttendance() {
@@ -24,6 +26,14 @@ export function useTodayAttendance() {
     queryKey: attendanceKeys.today,
     queryFn: getTodayAttendance,
     refetchInterval: 60000,
+  })
+}
+
+export function useAttendanceReport(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: attendanceKeys.report(startDate, endDate),
+    queryFn: () => getAttendanceReport(startDate, endDate),
+    enabled: !!startDate && !!endDate,
   })
 }
 

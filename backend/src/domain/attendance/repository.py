@@ -16,3 +16,7 @@ class IAttendanceRepository(ABC):
     @abstractmethod
     def find_all_by_date(self, date: str) -> list[Attendance]:
         ...
+
+    @abstractmethod
+    def find_all_by_date_range(self, start_date: str, end_date: str) -> list[Attendance]:
+        ...

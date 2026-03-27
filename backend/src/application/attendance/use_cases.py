@@ -89,8 +89,32 @@ class ListTodayAttendanceUseCase:
         if caller_system_role == SystemRole.OWNER.value:
             return [r.to_dict() for r in records]
 
+        # Admin sees all except OWNER
         return [
             r.to_dict()
             for r in records
-            if r.user_id == caller_user_id or r.system_role == SystemRole.MEMBER.value
+            if r.system_role != SystemRole.OWNER.value
         ]
+
+
+class GetAttendanceReportUseCase:
+    """Get attendance records for a date range. OWNER sees all, ADMIN sees self + members."""
+
+    def __init__(self, attendance_repo: IAttendanceRepository):
+        self._attendance_repo = attendance_repo
+
+    def execute(self, caller_user_id: str, caller_system_role: str, start_date: str, end_date: str) -> list[dict]:
+        records = self._attendance_repo.find_all_by_date_range(start_date, end_date)
+
+        if caller_system_role == SystemRole.OWNER.value:
+            return [r.to_dict() for r in records]
+
+        if caller_system_role == SystemRole.ADMIN.value:
+            return [
+                r.to_dict()
+                for r in records
+                if r.system_role != SystemRole.OWNER.value
+            ]
+
+        # MEMBER sees only their own records
+        return [r.to_dict() for r in records if r.user_id == caller_user_id]

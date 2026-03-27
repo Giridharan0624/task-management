@@ -1,7 +1,7 @@
 from typing import Optional
 from decimal import Decimal
 
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 
 from domain.attendance.entities import Attendance
 from domain.attendance.repository import IAttendanceRepository
@@ -50,4 +50,26 @@ class AttendanceDynamoRepository(IAttendanceRepository):
             if "total_hours" in item and item["total_hours"] is not None:
                 item["total_hours"] = float(item["total_hours"])
             result.append(AttendanceMapper.to_domain(item))
+        return result
+
+    def find_all_by_date_range(self, start_date: str, end_date: str) -> list[Attendance]:
+        """Scan for all attendance records within a date range (inclusive)."""
+        response = self._table.scan(
+            FilterExpression=Attr("SK").begins_with("ATTENDANCE#")
+            & Attr("date").between(start_date, end_date),
+        )
+        items = response.get("Items", [])
+        while "LastEvaluatedKey" in response:
+            response = self._table.scan(
+                FilterExpression=Attr("SK").begins_with("ATTENDANCE#")
+                & Attr("date").between(start_date, end_date),
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+            )
+            items.extend(response.get("Items", []))
+        result = []
+        for item in items:
+            if "total_hours" in item and item["total_hours"] is not None:
+                item["total_hours"] = float(item["total_hours"])
+            result.append(AttendanceMapper.to_domain(item))
+        result.sort(key=lambda a: (a.date, a.user_name))
         return result

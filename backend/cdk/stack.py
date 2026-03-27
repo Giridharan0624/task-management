@@ -228,6 +228,8 @@ class TaskManagementStack(Stack):
         add_api_lambda("AttendanceSignOut", "handlers.attendance.sign_out.handler", "PUT", attendance_sign_out)
         add_api_lambda("GetMyAttendance", "handlers.attendance.get_my_attendance.handler", "GET", attendance_me)
         add_api_lambda("ListTodayAttendance", "handlers.attendance.list_today_attendance.handler", "GET", attendance_today)
+        attendance_report = attendance.add_resource("report")
+        add_api_lambda("GetAttendanceReport", "handlers.attendance.get_report.handler", "GET", attendance_report)
 
         # ─── Outputs ─────────────────────────────────────────────────────────
         CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")

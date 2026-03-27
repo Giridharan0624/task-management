@@ -16,3 +16,7 @@ export function getMyAttendance(): Promise<Attendance | null> {
 export function getTodayAttendance(): Promise<Attendance[]> {
   return apiClient.get<Attendance[]>('/attendance/today')
 }
+
+export function getAttendanceReport(startDate: string, endDate: string): Promise<Attendance[]> {
+  return apiClient.get<Attendance[]>(`/attendance/report?startDate=${startDate}&endDate=${endDate}`)
+}
