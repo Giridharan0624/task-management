@@ -1,33 +1,34 @@
 'use client'
 
-import type { BoardRole, SystemRole } from '@/types/user'
+import type { ProjectRole, SystemRole } from '@/types/user'
 
 export interface Permissions {
   canCreateTask: boolean
   canUpdateTask: boolean
   canDeleteTask: boolean
   canManageMembers: boolean
-  canDeleteBoard: boolean
+  canDeleteProject: boolean
 }
 
 export interface SystemPermissions {
-  canCreateBoard: boolean
+  canCreateProject: boolean
   canManageUsers: boolean
   canManageAdmins: boolean
   canViewProgress: boolean
   canAssignTasks: boolean
 }
 
-export function usePermission(boardRole?: BoardRole): Permissions {
-  const isAdmin = boardRole === 'ADMIN'
-  const isAdminOrMember = boardRole === 'ADMIN' || boardRole === 'MEMBER'
+export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole): Permissions {
+  const isOwner = systemRole === 'OWNER'
+  const isAdmin = projectRole === 'ADMIN'
+  const isAdminOrMember = projectRole === 'ADMIN' || projectRole === 'MEMBER'
 
   return {
-    canCreateTask: isAdminOrMember,
-    canUpdateTask: isAdminOrMember,
-    canDeleteTask: isAdmin,
-    canManageMembers: isAdmin,
-    canDeleteBoard: isAdmin,
+    canCreateTask: isOwner || isAdminOrMember,
+    canUpdateTask: isOwner || isAdminOrMember,
+    canDeleteTask: isOwner || isAdmin,
+    canManageMembers: isOwner || isAdmin,
+    canDeleteProject: isOwner || isAdmin,
   }
 }
 
@@ -36,7 +37,7 @@ export function useSystemPermission(systemRole?: SystemRole): SystemPermissions 
   const isOwnerOrAdmin = systemRole === 'OWNER' || systemRole === 'ADMIN'
 
   return {
-    canCreateBoard: isOwnerOrAdmin,
+    canCreateProject: isOwnerOrAdmin,
     canManageUsers: isOwnerOrAdmin,
     canManageAdmins: isOwner,
     canViewProgress: isOwnerOrAdmin,

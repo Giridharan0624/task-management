@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useCreateTask } from '@/lib/hooks/useTasks'
 import { Modal } from '@/components/ui/Modal'
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import type { TaskStatus, TaskPriority } from '@/types/task'
 
 interface CreateTaskModalProps {
-  boardId: string
+  projectId: string
   isOpen: boolean
   onClose: () => void
 }
@@ -18,11 +19,12 @@ interface FormValues {
   description: string
   status: TaskStatus
   priority: TaskPriority
-  dueDate: string
+  deadline: string
 }
 
-export function CreateTaskModal({ boardId, isOpen, onClose }: CreateTaskModalProps) {
-  const createTask = useCreateTask(boardId)
+export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalProps) {
+  const createTask = useCreateTask(projectId)
+  const [assigneeInputs, setAssigneeInputs] = useState<string[]>([''])
 
   const {
     register,
@@ -37,20 +39,36 @@ export function CreateTaskModal({ boardId, isOpen, onClose }: CreateTaskModalPro
   })
 
   const onSubmit = async (values: FormValues) => {
+    const assignedTo = assigneeInputs.map((s) => s.trim()).filter(Boolean)
     await createTask.mutateAsync({
       title: values.title,
       description: values.description || undefined,
       status: values.status,
       priority: values.priority,
-      dueDate: values.dueDate || undefined,
+      deadline: values.deadline,
+      assignedTo: assignedTo.length > 0 ? assignedTo : undefined,
     })
     reset()
+    setAssigneeInputs([''])
     onClose()
   }
 
   const handleClose = () => {
     reset()
+    setAssigneeInputs([''])
     onClose()
+  }
+
+  const addAssigneeField = () => {
+    setAssigneeInputs((prev) => [...prev, ''])
+  }
+
+  const removeAssigneeField = (index: number) => {
+    setAssigneeInputs((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const updateAssignee = (index: number, value: string) => {
+    setAssigneeInputs((prev) => prev.map((v, i) => (i === index ? value : v)))
   }
 
   return (
@@ -103,10 +121,43 @@ export function CreateTaskModal({ boardId, isOpen, onClose }: CreateTaskModalPro
         </div>
 
         <Input
-          label="Due Date (optional)"
-          type="date"
-          {...register('dueDate')}
+          label="Deadline"
+          type="datetime-local"
+          error={errors.deadline?.message}
+          {...register('deadline', { required: 'Deadline is required' })}
         />
+
+        {/* Multi-assign */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">Assign To</label>
+          {assigneeInputs.map((value, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={value}
+                onChange={(e) => updateAssignee(index, e.target.value)}
+                placeholder="Enter user ID"
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {assigneeInputs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeAssigneeField(index)}
+                  className="text-red-500 hover:text-red-700 text-sm"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addAssigneeField}
+            className="text-sm text-blue-600 hover:text-blue-800 self-start"
+          >
+            + Add another assignee
+          </button>
+        </div>
 
         {createTask.error && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">

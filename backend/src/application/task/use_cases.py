@@ -3,8 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from domain.board.repository import IBoardRepository
-from domain.board.value_objects import BoardRole
+from domain.comment.repository import ICommentRepository
+from domain.project.repository import IProjectRepository
+from domain.project.value_objects import ProjectRole
 from domain.task.entities import Task
 from domain.task.repository import ITaskRepository
 from domain.task.value_objects import TaskPriority, TaskStatus
@@ -13,27 +14,27 @@ from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
 
 class CreateTaskUseCase:
-    """Owner can create tasks on any board. Admin can create tasks on boards they belong to.
+    """Owner can create tasks on any project. Admin can create tasks on projects they belong to.
     Members cannot create tasks (they receive tasks)."""
-    def __init__(self, task_repo: ITaskRepository, board_repo: IBoardRepository):
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self._task_repo = task_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str = None) -> dict:
-        board_id = dto["board_id"]
+        project_id = dto["project_id"]
 
-        board = self._board_repo.find_by_id(board_id)
-        if not board:
-            raise NotFoundError(f"Board {board_id} not found")
+        project = self._project_repo.find_by_id(project_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner can create tasks on any board
+        # Owner can create tasks on any project
         if caller_system_role == SystemRole.OWNER.value:
             pass
         elif caller_system_role == SystemRole.ADMIN.value:
-            # Admin can create tasks on boards they are a member of
-            caller_member = self._board_repo.find_member(board_id, caller_user_id)
+            # Admin can create tasks on projects they are a member of
+            caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
-                raise AuthorizationError("You must be a board member to create tasks on this board")
+                raise AuthorizationError("You must be a project member to create tasks on this project")
         else:
             # Members cannot create tasks
             raise AuthorizationError("Members cannot create tasks")
@@ -52,10 +53,18 @@ class CreateTaskUseCase:
             except ValueError:
                 raise ValidationError(f"Invalid priority: {dto['priority']}")
 
-        assigned_to = dto.get("assigned_to")
+        assigned_to = dto.get("assigned_to", [])
+        # Validate all assignees are project members
+        for assignee_id in assigned_to:
+            assignee_member = self._project_repo.find_member(project_id, assignee_id)
+            if not assignee_member:
+                raise NotFoundError(f"User {assignee_id} is not a member of project {project_id}")
+
+        deadline = dto["deadline"]
+
         task = Task.create(
             task_id=str(uuid.uuid4()),
-            board_id=board_id,
+            project_id=project_id,
             title=dto["title"],
             created_by=caller_user_id,
             description=dto.get("description"),
@@ -63,86 +72,86 @@ class CreateTaskUseCase:
             priority=priority,
             assigned_to=assigned_to,
             assigned_by=caller_user_id if assigned_to else None,
-            due_date=dto.get("due_date"),
+            deadline=deadline,
         )
         self._task_repo.save(task)
         return task.to_dict()
 
 
 class GetTaskUseCase:
-    """Any board member can view a task."""
-    def __init__(self, task_repo: ITaskRepository, board_repo: IBoardRepository):
+    """Any project member can view a task."""
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self._task_repo = task_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str = None) -> dict:
-        board_id = dto["board_id"]
+        project_id = dto["project_id"]
         task_id = dto["task_id"]
 
-        board = self._board_repo.find_by_id(board_id)
-        if not board:
-            raise NotFoundError(f"Board {board_id} not found")
+        project = self._project_repo.find_by_id(project_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner can view any task; others must be board members
+        # Owner can view any task; others must be project members
         if caller_system_role != SystemRole.OWNER.value:
-            caller_member = self._board_repo.find_member(board_id, caller_user_id)
+            caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
-                raise AuthorizationError("You are not a member of this board")
+                raise AuthorizationError("You are not a member of this project")
 
         task = self._task_repo.find_by_id(task_id)
-        if not task or task.board_id != board_id:
+        if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
         return task.to_dict()
 
 
-class ListTasksForBoardUseCase:
-    def __init__(self, task_repo: ITaskRepository, board_repo: IBoardRepository):
+class ListTasksForProjectUseCase:
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self._task_repo = task_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str = None) -> list[dict]:
-        board_id = dto["board_id"]
+        project_id = dto["project_id"]
 
-        board = self._board_repo.find_by_id(board_id)
-        if not board:
-            raise NotFoundError(f"Board {board_id} not found")
+        project = self._project_repo.find_by_id(project_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner can list any board's tasks; others must be board members
+        # Owner can list any project's tasks; others must be project members
         if caller_system_role != SystemRole.OWNER.value:
-            caller_member = self._board_repo.find_member(board_id, caller_user_id)
+            caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
-                raise AuthorizationError("You are not a member of this board")
+                raise AuthorizationError("You are not a member of this project")
 
-        tasks = self._task_repo.find_by_board(board_id)
+        tasks = self._task_repo.find_by_project(project_id)
         return [t.to_dict() for t in tasks]
 
 
 class UpdateTaskUseCase:
     """Owner and Admin can update any task field.
     Members can ONLY update the status field of tasks assigned to them."""
-    def __init__(self, task_repo: ITaskRepository, board_repo: IBoardRepository):
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self._task_repo = task_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str = None) -> dict:
-        board_id = dto["board_id"]
+        project_id = dto["project_id"]
         task_id = dto["task_id"]
 
-        board = self._board_repo.find_by_id(board_id)
-        if not board:
-            raise NotFoundError(f"Board {board_id} not found")
+        project = self._project_repo.find_by_id(project_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
 
         task = self._task_repo.find_by_id(task_id)
-        if not task or task.board_id != board_id:
+        if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
         # Member can only update status of tasks assigned to them
         if caller_system_role == SystemRole.MEMBER.value:
-            if task.assigned_to != caller_user_id:
+            if caller_user_id not in task.assigned_to:
                 raise AuthorizationError("You can only update tasks assigned to you")
             # Members can only update the status field
-            allowed_fields = {"board_id", "task_id", "status"}
+            allowed_fields = {"project_id", "task_id", "status"}
             extra_fields = set(dto.keys()) - allowed_fields
             if extra_fields:
                 raise AuthorizationError("Members can only update the status of their assigned tasks")
@@ -150,20 +159,25 @@ class UpdateTaskUseCase:
             # Owner can update any task
             pass
         elif caller_system_role == SystemRole.ADMIN.value:
-            # Admin can update any task on boards they belong to
-            caller_member = self._board_repo.find_member(board_id, caller_user_id)
+            # Admin can update any task on projects they belong to
+            caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
-                raise AuthorizationError("You must be a board member to update tasks on this board")
+                raise AuthorizationError("You must be a project member to update tasks on this project")
         else:
             raise AuthorizationError("Unauthorized to update tasks")
 
         # Apply updates
         title = dto.get("title", task.title)
         description = dto.get("description", task.description)
-        due_date = dto.get("due_date", task.due_date)
+        deadline = dto.get("deadline", task.deadline)
         assigned_to = dto.get("assigned_to", task.assigned_to)
         assigned_by = task.assigned_by
         if "assigned_to" in dto and dto["assigned_to"] != task.assigned_to:
+            # Validate all new assignees are project members
+            for assignee_id in assigned_to:
+                assignee_member = self._project_repo.find_member(project_id, assignee_id)
+                if not assignee_member:
+                    raise NotFoundError(f"User {assignee_id} is not a member of project {project_id}")
             assigned_by = caller_user_id
 
         status = task.status
@@ -183,7 +197,7 @@ class UpdateTaskUseCase:
         now = datetime.now(timezone.utc).isoformat()
         updated_task = Task(
             task_id=task.task_id,
-            board_id=task.board_id,
+            project_id=task.project_id,
             title=title,
             description=description,
             status=status,
@@ -191,7 +205,7 @@ class UpdateTaskUseCase:
             assigned_to=assigned_to,
             assigned_by=assigned_by,
             created_by=task.created_by,
-            due_date=due_date,
+            deadline=deadline,
             created_at=task.created_at,
             updated_at=now,
         )
@@ -201,20 +215,21 @@ class UpdateTaskUseCase:
 
 class DeleteTaskUseCase:
     """Owner can delete any task. Admin can delete tasks they created."""
-    def __init__(self, task_repo: ITaskRepository, board_repo: IBoardRepository):
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository, comment_repo: ICommentRepository = None):
         self._task_repo = task_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
+        self._comment_repo = comment_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str = None) -> None:
-        board_id = dto["board_id"]
+        project_id = dto["project_id"]
         task_id = dto["task_id"]
 
-        board = self._board_repo.find_by_id(board_id)
-        if not board:
-            raise NotFoundError(f"Board {board_id} not found")
+        project = self._project_repo.find_by_id(project_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
 
         task = self._task_repo.find_by_id(task_id)
-        if not task or task.board_id != board_id:
+        if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
         if caller_system_role == SystemRole.OWNER.value:
@@ -227,60 +242,62 @@ class DeleteTaskUseCase:
         else:
             raise AuthorizationError("Members cannot delete tasks")
 
-        self._task_repo.delete(task_id, board_id)
+        # Cascade delete comments
+        if self._comment_repo:
+            self._comment_repo.delete_all_by_task(task_id)
+        self._task_repo.delete(task_id, project_id)
 
 
 class AssignTaskUseCase:
     """Owner can assign to anyone. Admin can assign to members only."""
-    def __init__(self, task_repo: ITaskRepository, board_repo: IBoardRepository):
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self._task_repo = task_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str = None) -> dict:
-        board_id = dto["board_id"]
+        project_id = dto["project_id"]
         task_id = dto["task_id"]
-        assignee_id = dto["assigned_to"]
+        assignee_ids = dto["assigned_to"]  # list of user IDs
 
-        board = self._board_repo.find_by_id(board_id)
-        if not board:
-            raise NotFoundError(f"Board {board_id} not found")
+        project = self._project_repo.find_by_id(project_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
 
         task = self._task_repo.find_by_id(task_id)
-        if not task or task.board_id != board_id:
+        if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
         # Authorization: who can assign
         if caller_system_role == SystemRole.OWNER.value:
-            # Owner can assign to anyone on the board
+            # Owner can assign to anyone on the project
             pass
         elif caller_system_role == SystemRole.ADMIN.value:
             # Admin can assign to members only
-            assignee_member = self._board_repo.find_member(board_id, assignee_id)
-            if not assignee_member:
-                raise NotFoundError(f"User {assignee_id} is not a member of board {board_id}")
-            if assignee_member.board_role != BoardRole.MEMBER:
-                raise AuthorizationError("Admins can only assign tasks to members")
+            pass
         else:
             raise AuthorizationError("Members cannot assign tasks")
 
-        # Verify assignee is on the board (for owner case too)
-        if caller_system_role == SystemRole.OWNER.value:
-            assignee_member = self._board_repo.find_member(board_id, assignee_id)
+        # Validate each assignee is a project member
+        for assignee_id in assignee_ids:
+            assignee_member = self._project_repo.find_member(project_id, assignee_id)
             if not assignee_member:
-                raise NotFoundError(f"User {assignee_id} is not a member of board {board_id}")
+                raise NotFoundError(f"User {assignee_id} is not a member of project {project_id}")
+            if caller_system_role == SystemRole.ADMIN.value:
+                if assignee_member.project_role != ProjectRole.MEMBER:
+                    raise AuthorizationError("Admins can only assign tasks to members")
 
         now = datetime.now(timezone.utc).isoformat()
         updated_task = Task(
             task_id=task.task_id,
-            board_id=task.board_id,
+            project_id=task.project_id,
             title=task.title,
             description=task.description,
             status=task.status,
             priority=task.priority,
-            assigned_to=assignee_id,
+            assigned_to=assignee_ids,
             assigned_by=caller_user_id,
             created_by=task.created_by,
-            due_date=task.due_date,
+            deadline=task.deadline,
             created_at=task.created_at,
             updated_at=now,
         )
@@ -289,19 +306,19 @@ class AssignTaskUseCase:
 
 
 class GetMyAssignedTasksUseCase:
-    """Get all tasks assigned to the caller across all boards."""
-    def __init__(self, task_repo: ITaskRepository, board_repo: IBoardRepository):
+    """Get all tasks assigned to the caller across all projects."""
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self._task_repo = task_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
 
     def execute(self, caller_user_id: str) -> list[dict]:
-        boards = self._board_repo.find_boards_for_user(caller_user_id)
+        projects = self._project_repo.find_projects_for_user(caller_user_id)
         my_tasks = []
-        for board in boards:
-            tasks = self._task_repo.find_by_board(board.board_id)
+        for project in projects:
+            tasks = self._task_repo.find_by_project(project.project_id)
             for task in tasks:
-                if task.assigned_to == caller_user_id:
+                if caller_user_id in task.assigned_to:
                     task_dict = task.to_dict()
-                    task_dict["board_name"] = board.name
+                    task_dict["project_name"] = project.name
                     my_tasks.append(task_dict)
         return my_tasks

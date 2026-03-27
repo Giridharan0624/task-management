@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useUpdateTask, useDeleteTask, useAssignTask } from '@/lib/hooks/useTasks'
+import { useComments, useCreateComment } from '@/lib/hooks/useComments'
+import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
@@ -11,7 +13,7 @@ import { Input } from '@/components/ui/Input'
 
 interface TaskDetailPanelProps {
   task: Task | null
-  boardId: string
+  projectId: string
   permissions: Permissions
   onClose: () => void
 }
@@ -21,16 +23,21 @@ interface EditFormValues {
   description: string
   status: TaskStatus
   priority: TaskPriority
-  dueDate: string
+  deadline: string
 }
 
-export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDetailPanelProps) {
-  const updateTask = useUpdateTask(boardId)
-  const deleteTask = useDeleteTask(boardId)
-  const assignTask = useAssignTask(boardId)
+export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskDetailPanelProps) {
+  const { user } = useAuth()
+  const updateTask = useUpdateTask(projectId)
+  const deleteTask = useDeleteTask(projectId)
+  const assignTask = useAssignTask(projectId)
   const [isEditing, setIsEditing] = useState(false)
   const [assigneeInput, setAssigneeInput] = useState('')
   const [showAssignInput, setShowAssignInput] = useState(false)
+  const [commentText, setCommentText] = useState('')
+
+  const { data: comments } = useComments(projectId, task?.taskId ?? '')
+  const createComment = useCreateComment(projectId, task?.taskId ?? '')
 
   const {
     register,
@@ -46,10 +53,11 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
         description: task.description ?? '',
         status: task.status,
         priority: task.priority,
-        dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+        deadline: task.deadline ? task.deadline.slice(0, 16) : '',
       })
       setIsEditing(false)
       setShowAssignInput(false)
+      setCommentText('')
     }
   }, [task, reset])
 
@@ -72,7 +80,7 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
         description: values.description || undefined,
         status: values.status,
         priority: values.priority,
-        dueDate: values.dueDate || undefined,
+        deadline: values.deadline || undefined,
       },
     })
     setIsEditing(false)
@@ -86,10 +94,21 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
 
   const handleAssign = async () => {
     if (!assigneeInput.trim()) return
-    await assignTask.mutateAsync({ taskId: task.taskId, assignedTo: assigneeInput.trim() })
+    const newAssignees = [...(task.assignedTo ?? []), assigneeInput.trim()]
+    await assignTask.mutateAsync({ taskId: task.taskId, assignedTo: newAssignees })
     setShowAssignInput(false)
     setAssigneeInput('')
   }
+
+  const handlePostComment = async () => {
+    if (!commentText.trim()) return
+    await createComment.mutateAsync(commentText.trim())
+    setCommentText('')
+  }
+
+  const isAssigned = task.assignedTo?.includes(user?.userId ?? '')
+  const isOwnerOrAdmin = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const canComment = isAssigned || isOwnerOrAdmin
 
   const statusLabel: Record<TaskStatus, string> = {
     TODO: 'To Do',
@@ -179,7 +198,11 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
                   </select>
                 </div>
               </div>
-              <Input label="Due Date" type="date" {...register('dueDate')} />
+              <Input
+                label="Deadline"
+                type="datetime-local"
+                {...register('deadline')}
+              />
               {updateTask.error && (
                 <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
                   {updateTask.error instanceof Error ? updateTask.error.message : 'Update failed'}
@@ -220,7 +243,20 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Assigned To</p>
-                  <p className="text-sm text-gray-700">{task.assignedTo ?? 'Unassigned'}</p>
+                  {task.assignedTo && task.assignedTo.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {task.assignedTo.map((userId) => (
+                        <span
+                          key={userId}
+                          className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700"
+                        >
+                          {userId}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-700">Unassigned</p>
+                  )}
                 </div>
                 {task.assignedBy && (
                   <div>
@@ -232,16 +268,15 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Created By</p>
                   <p className="text-sm text-gray-700">{task.createdBy}</p>
                 </div>
-                {task.dueDate && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Due Date</p>
-                    <p className="text-sm text-gray-700">
-                      {new Date(task.dueDate).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'long', day: 'numeric',
-                      })}
-                    </p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Deadline</p>
+                  <p className="text-sm text-gray-700">
+                    {new Date(task.deadline).toLocaleDateString('en-US', {
+                      year: 'numeric', month: 'long', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
+                </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Created At</p>
                   <p className="text-sm text-gray-700">
@@ -286,6 +321,53 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
                   )}
                 </div>
               )}
+
+              {/* Progress Comments */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Progress Updates</p>
+
+                {comments && comments.length > 0 ? (
+                  <div className="flex flex-col gap-3 mb-4">
+                    {comments.map((comment) => (
+                      <div key={comment.commentId} className="rounded-lg bg-gray-50 p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-indigo-700">{comment.authorId}</span>
+                          <span className="text-xs text-gray-400">
+                            {new Date(comment.createdAt).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 mb-4">No progress updates yet.</p>
+                )}
+
+                {canComment && (
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      rows={2}
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Post a progress update..."
+                      className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handlePostComment}
+                        loading={createComment.isPending}
+                        disabled={!commentText.trim()}
+                      >
+                        Post Update
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -6,8 +6,8 @@ export interface CreateTaskData {
   description?: string
   status?: TaskStatus
   priority?: TaskPriority
-  dueDate?: string
-  assignedTo?: string
+  deadline: string
+  assignedTo?: string[]
 }
 
 export interface UpdateTaskData {
@@ -15,38 +15,38 @@ export interface UpdateTaskData {
   description?: string
   status?: TaskStatus
   priority?: TaskPriority
-  dueDate?: string
-  assignedTo?: string
+  deadline?: string
+  assignedTo?: string[]
 }
 
-export async function getTasks(boardId: string): Promise<Task[]> {
-  return apiClient.get<Task[]>(`/boards/${boardId}/tasks`)
+export async function getTasks(projectId: string): Promise<Task[]> {
+  return apiClient.get<Task[]>(`/projects/${projectId}/tasks`)
 }
 
-export async function getTask(boardId: string, taskId: string): Promise<Task> {
-  return apiClient.get<Task>(`/boards/${boardId}/tasks/${taskId}`)
+export async function getTask(projectId: string, taskId: string): Promise<Task> {
+  return apiClient.get<Task>(`/projects/${projectId}/tasks/${taskId}`)
 }
 
-export async function createTask(boardId: string, data: CreateTaskData): Promise<Task> {
-  return apiClient.post<Task>(`/boards/${boardId}/tasks`, data)
+export async function createTask(projectId: string, data: CreateTaskData): Promise<Task> {
+  return apiClient.post<Task>(`/projects/${projectId}/tasks`, data)
 }
 
 export async function updateTask(
-  boardId: string,
+  projectId: string,
   taskId: string,
   data: UpdateTaskData
 ): Promise<Task> {
-  return apiClient.put<Task>(`/boards/${boardId}/tasks/${taskId}`, data)
+  return apiClient.put<Task>(`/projects/${projectId}/tasks/${taskId}`, data)
 }
 
-export async function deleteTask(boardId: string, taskId: string): Promise<void> {
-  return apiClient.del<void>(`/boards/${boardId}/tasks/${taskId}`)
+export async function deleteTask(projectId: string, taskId: string): Promise<void> {
+  return apiClient.del<void>(`/projects/${projectId}/tasks/${taskId}`)
 }
 
 export async function assignTask(
-  boardId: string,
+  projectId: string,
   taskId: string,
-  assignedTo: string
+  assignedTo: string[]
 ): Promise<Task> {
-  return apiClient.put<Task>(`/boards/${boardId}/tasks/${taskId}/assign`, { assignedTo })
+  return apiClient.put<Task>(`/projects/${projectId}/tasks/${taskId}/assign`, { assignedTo })
 }

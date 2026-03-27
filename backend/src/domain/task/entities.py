@@ -10,15 +10,15 @@ from domain.task.value_objects import TaskStatus, TaskPriority
 
 class Task(BaseModel):
     task_id: str
-    board_id: str
+    project_id: str
     title: str
     description: Optional[str] = None
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority = TaskPriority.MEDIUM
-    assigned_to: Optional[str] = None
+    assigned_to: list[str] = []
     assigned_by: Optional[str] = None
     created_by: str
-    due_date: Optional[str] = None
+    deadline: str
     created_at: str
     updated_at: str
 
@@ -26,28 +26,28 @@ class Task(BaseModel):
     def create(
         cls,
         task_id: str,
-        board_id: str,
+        project_id: str,
         title: str,
         created_by: str,
+        deadline: str,
         description: Optional[str] = None,
         status: TaskStatus = TaskStatus.TODO,
         priority: TaskPriority = TaskPriority.MEDIUM,
-        assigned_to: Optional[str] = None,
+        assigned_to: list[str] | None = None,
         assigned_by: Optional[str] = None,
-        due_date: Optional[str] = None,
     ) -> "Task":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
             task_id=task_id,
-            board_id=board_id,
+            project_id=project_id,
             title=title,
             description=description,
             status=status,
             priority=priority,
-            assigned_to=assigned_to,
+            assigned_to=assigned_to or [],
             assigned_by=assigned_by,
             created_by=created_by,
-            due_date=due_date,
+            deadline=deadline,
             created_at=now,
             updated_at=now,
         )
@@ -55,7 +55,7 @@ class Task(BaseModel):
     def to_dict(self) -> dict:
         return {
             "task_id": self.task_id,
-            "board_id": self.board_id,
+            "project_id": self.project_id,
             "title": self.title,
             "description": self.description,
             "status": self.status.value,
@@ -63,7 +63,7 @@ class Task(BaseModel):
             "assigned_to": self.assigned_to,
             "assigned_by": self.assigned_by,
             "created_by": self.created_by,
-            "due_date": self.due_date,
+            "deadline": self.deadline,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

@@ -58,7 +58,7 @@ export default function UsersPage() {
 
   const isOwner = currentUser?.systemRole === 'OWNER'
 
-  // Build a userId → name map for resolving "created by"
+  // Build a userId -> name map for resolving "created by"
   const userMap = new Map((users ?? []).map((u) => [u.userId, u.name || u.email]))
   if (currentUser) userMap.set(currentUser.userId, currentUser.name || currentUser.email)
 
@@ -332,7 +332,7 @@ export default function UsersPage() {
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name || deleteTarget?.email}</span>?
-            This will remove them from Cognito and all board memberships. This action cannot be undone.
+            This will remove them from Cognito and all project memberships. This action cannot be undone.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
@@ -415,17 +415,17 @@ function UserProgressModal({ userId, onClose }: { userId: string; onClose: () =>
           </div>
 
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {progress.boards.map((board) => (
-              <div key={board.boardId} className="border rounded-lg p-3">
-                <h4 className="font-medium text-gray-900">{board.boardName}</h4>
+            {progress.projects.map((project) => (
+              <div key={project.projectId} className="border rounded-lg p-3">
+                <h4 className="font-medium text-gray-900">{project.projectName}</h4>
                 <div className="flex gap-2 mt-2">
-                  <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">{board.stats.TODO} To Do</span>
-                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{board.stats.IN_PROGRESS} In Progress</span>
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">{board.stats.DONE} Done</span>
+                  <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">{project.stats.TODO} To Do</span>
+                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{project.stats.IN_PROGRESS} In Progress</span>
+                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">{project.stats.DONE} Done</span>
                 </div>
-                {board.tasks.length > 0 && (
+                {project.tasks.length > 0 && (
                   <ul className="mt-2 space-y-1">
-                    {board.tasks.map((task) => (
+                    {project.tasks.map((task) => (
                       <li key={task.taskId} className="text-sm text-gray-600 flex justify-between">
                         <span>{task.title}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded ${
@@ -439,7 +439,7 @@ function UserProgressModal({ userId, onClose }: { userId: string; onClose: () =>
                 )}
               </div>
             ))}
-            {progress.boards.length === 0 && (
+            {progress.projects.length === 0 && (
               <p className="text-gray-500 text-center py-4">No tasks assigned to this user.</p>
             )}
           </div>

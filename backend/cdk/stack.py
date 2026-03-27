@@ -26,7 +26,7 @@ class TaskManagementStack(Stack):
         # ─── DynamoDB ────────────────────────────────────────────────────────
         table = dynamodb.Table(
             self,
-            "TaskManagementTable",
+            "Table",
             table_name="TaskManagementTable",
             partition_key=dynamodb.Attribute(name="PK", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="SK", type=dynamodb.AttributeType.STRING),
@@ -38,13 +38,6 @@ class TaskManagementStack(Stack):
             index_name="GSI1",
             partition_key=dynamodb.Attribute(name="GSI1PK", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="GSI1SK", type=dynamodb.AttributeType.STRING),
-            projection_type=dynamodb.ProjectionType.ALL,
-        )
-
-        table.add_global_secondary_index(
-            index_name="GSI2",
-            partition_key=dynamodb.Attribute(name="GSI2PK", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="GSI2SK", type=dynamodb.AttributeType.STRING),
             projection_type=dynamodb.ProjectionType.ALL,
         )
 
@@ -155,14 +148,15 @@ class TaskManagementStack(Stack):
             return fn
 
         # ─── API Resources ───────────────────────────────────────────────────
-        boards = api.root.add_resource("boards")
-        board = boards.add_resource("{boardId}")
-        members = board.add_resource("members")
+        projects = api.root.add_resource("projects")
+        project = projects.add_resource("{projectId}")
+        members = project.add_resource("members")
         member = members.add_resource("{userId}")
         member_role = member.add_resource("role")
-        tasks = board.add_resource("tasks")
+        tasks = project.add_resource("tasks")
         task = tasks.add_resource("{taskId}")
         task_assign = task.add_resource("assign")
+        comments = task.add_resource("comments")
 
         users = api.root.add_resource("users")
         users_me = users.add_resource("me")
@@ -171,14 +165,14 @@ class TaskManagementStack(Stack):
         user_progress = user_by_id.add_resource("progress")
         users_role = users.add_resource("role")
 
-        # ─── Board handlers ──────────────────────────────────────────────────
-        add_api_lambda("CreateBoard", "handlers.board.create_board.handler", "POST", boards)
-        add_api_lambda("ListBoards", "handlers.board.list_boards.handler", "GET", boards)
-        add_api_lambda("GetBoard", "handlers.board.get_board.handler", "GET", board)
-        add_api_lambda("DeleteBoard", "handlers.board.delete_board.handler", "DELETE", board)
-        add_api_lambda("AddMember", "handlers.board.add_member.handler", "POST", members)
-        add_api_lambda("RemoveMember", "handlers.board.remove_member.handler", "DELETE", member)
-        add_api_lambda("UpdateMemberRole", "handlers.board.update_member_role.handler", "PUT", member_role)
+        # ─── Project handlers ────────────────────────────────────────────────
+        add_api_lambda("CreateProject", "handlers.project.create_project.handler", "POST", projects)
+        add_api_lambda("ListProjects", "handlers.project.list_projects.handler", "GET", projects)
+        add_api_lambda("GetProject", "handlers.project.get_project.handler", "GET", project)
+        add_api_lambda("DeleteProject", "handlers.project.delete_project.handler", "DELETE", project)
+        add_api_lambda("AddMember", "handlers.project.add_member.handler", "POST", members)
+        add_api_lambda("RemoveMember", "handlers.project.remove_member.handler", "DELETE", member)
+        add_api_lambda("UpdateMemberRole", "handlers.project.update_member_role.handler", "PUT", member_role)
 
         # ─── Task handlers ───────────────────────────────────────────────────
         add_api_lambda("CreateTask", "handlers.task.create_task.handler", "POST", tasks)
@@ -187,6 +181,10 @@ class TaskManagementStack(Stack):
         add_api_lambda("UpdateTask", "handlers.task.update_task.handler", "PUT", task)
         add_api_lambda("DeleteTask", "handlers.task.delete_task.handler", "DELETE", task)
         add_api_lambda("AssignTask", "handlers.task.assign_task.handler", "PUT", task_assign)
+
+        # ─── Comment handlers ────────────────────────────────────────────────
+        add_api_lambda("CreateComment", "handlers.comment.create_comment.handler", "POST", comments)
+        add_api_lambda("ListComments", "handlers.comment.list_comments.handler", "GET", comments)
 
         # ─── User handlers ───────────────────────────────────────────────────
         add_api_lambda("GetProfile", "handlers.user.get_profile.handler", "GET", users_me)

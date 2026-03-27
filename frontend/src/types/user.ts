@@ -1,5 +1,5 @@
 export type SystemRole = 'OWNER' | 'ADMIN' | 'MEMBER'
-export type BoardRole = 'ADMIN' | 'MEMBER'
+export type ProjectRole = 'ADMIN' | 'MEMBER'
 
 export interface User {
   userId: string
@@ -11,10 +11,10 @@ export interface User {
   updatedAt: string
 }
 
-export interface BoardMember {
-  boardId: string
+export interface ProjectMember {
+  projectId: string
   userId: string
-  boardRole: BoardRole
+  projectRole: ProjectRole
   joinedAt: string
   user?: User
 }

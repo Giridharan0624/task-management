@@ -1,9 +1,9 @@
 {
-  "PK": {"S": "USER#51331daa-e051-701b-bdef-ab3d305c30da"},
+  "PK": {"S": "USER#31a30dea-10d1-70ff-95fa-951f24198ba9"},
   "SK": {"S": "PROFILE"},
   "GSI1PK": {"S": "USER_EMAIL#admin@taskmanager.com"},
   "GSI1SK": {"S": "PROFILE"},
-  "user_id": {"S": "51331daa-e051-701b-bdef-ab3d305c30da"},
+  "user_id": {"S": "31a30dea-10d1-70ff-95fa-951f24198ba9"},
   "email": {"S": "admin@taskmanager.com"},
   "name": {"S": "Admin"},
   "system_role": {"S": "OWNER"},

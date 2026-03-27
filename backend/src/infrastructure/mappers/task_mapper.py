@@ -5,17 +5,26 @@ from domain.task.value_objects import TaskStatus, TaskPriority
 class TaskMapper:
     @staticmethod
     def to_domain(item: dict) -> Task:
+        # Handle assigned_to: read as list, support legacy single string
+        raw_assigned = item.get("assigned_to")
+        if raw_assigned is None:
+            assigned_to = None
+        elif isinstance(raw_assigned, list):
+            assigned_to = raw_assigned
+        else:
+            assigned_to = [raw_assigned]
+
         return Task(
             task_id=item["task_id"],
-            board_id=item["board_id"],
+            project_id=item["project_id"],
             title=item["title"],
             description=item.get("description"),
             status=TaskStatus(item.get("status", TaskStatus.TODO.value)),
             priority=TaskPriority(item.get("priority", TaskPriority.MEDIUM.value)),
-            assigned_to=item.get("assigned_to"),
+            assigned_to=assigned_to,
             assigned_by=item.get("assigned_by"),
             created_by=item["created_by"],
-            due_date=item.get("due_date"),
+            deadline=item.get("deadline"),
             created_at=item["created_at"],
             updated_at=item["updated_at"],
         )
@@ -23,12 +32,12 @@ class TaskMapper:
     @staticmethod
     def to_dynamo(task: Task) -> dict:
         item: dict = {
-            "PK": f"BOARD#{task.board_id}",
+            "PK": f"PROJECT#{task.project_id}",
             "SK": f"TASK#{task.task_id}",
             "GSI1PK": f"TASK#{task.task_id}",
-            "GSI1SK": f"BOARD#{task.board_id}",
+            "GSI1SK": f"PROJECT#{task.project_id}",
             "task_id": task.task_id,
-            "board_id": task.board_id,
+            "project_id": task.project_id,
             "title": task.title,
             "status": task.status.value,
             "priority": task.priority.value,
@@ -38,12 +47,10 @@ class TaskMapper:
         }
         if task.description is not None:
             item["description"] = task.description
-        if task.due_date is not None:
-            item["due_date"] = task.due_date
+        if task.deadline is not None:
+            item["deadline"] = task.deadline
         if task.assigned_to is not None:
             item["assigned_to"] = task.assigned_to
-            item["GSI2PK"] = f"ASSIGNEE#{task.assigned_to}"
-            item["GSI2SK"] = f"TASK#{task.task_id}"
         if task.assigned_by is not None:
             item["assigned_by"] = task.assigned_by
         return item

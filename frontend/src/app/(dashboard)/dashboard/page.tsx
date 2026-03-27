@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { useBoards } from '@/lib/hooks/useBoards'
+import { useProjects } from '@/lib/hooks/useProjects'
 import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
@@ -47,14 +47,14 @@ function SummaryCard({
 
 function OwnerDashboard() {
   const { data: users, isLoading: usersLoading } = useUsers()
-  const { data: boards, isLoading: boardsLoading } = useBoards()
+  const { data: projects, isLoading: projectsLoading } = useProjects()
   const { data: myTasks } = useMyTasks()
 
   const adminCount = (users ?? []).filter((u) => u.systemRole === 'ADMIN').length
   const memberCount = (users ?? []).filter((u) => u.systemRole === 'MEMBER').length
   const totalTasks = (myTasks ?? []).length
 
-  const isLoading = usersLoading || boardsLoading
+  const isLoading = usersLoading || projectsLoading
 
   if (isLoading) {
     return (
@@ -70,7 +70,7 @@ function OwnerDashboard() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <SummaryCard label="Total Admins" value={adminCount} color="text-red-700" bgColor="bg-red-50" />
         <SummaryCard label="Total Members" value={memberCount} color="text-blue-700" bgColor="bg-blue-50" />
-        <SummaryCard label="Total Boards" value={boards?.length ?? 0} color="text-indigo-700" bgColor="bg-indigo-50" />
+        <SummaryCard label="Total Projects" value={projects?.length ?? 0} color="text-indigo-700" bgColor="bg-indigo-50" />
         <SummaryCard label="Total Tasks" value={totalTasks} color="text-green-700" bgColor="bg-green-50" />
       </div>
 
@@ -89,46 +89,46 @@ function OwnerDashboard() {
           </div>
         </Link>
         <Link
-          href="/boards"
+          href="/projects"
           className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
         >
           <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-gray-900">Create Board</p>
-            <p className="text-xs text-gray-500">Start a new project board</p>
+            <p className="text-sm font-medium text-gray-900">Create Project</p>
+            <p className="text-xs text-gray-500">Start a new project</p>
           </div>
         </Link>
       </div>
 
-      {/* Recent Boards */}
+      {/* Recent Projects */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Boards</h2>
-          <Link href="/boards" className="text-sm font-medium text-blue-600 hover:underline">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Projects</h2>
+          <Link href="/projects" className="text-sm font-medium text-blue-600 hover:underline">
             View all
           </Link>
         </div>
-        {(boards ?? []).length === 0 ? (
+        {(projects ?? []).length === 0 ? (
           <div className="rounded-xl border-2 border-dashed border-gray-200 py-10 text-center">
-            <p className="text-gray-500 text-sm">No boards yet.</p>
-            <Link href="/boards" className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline">
-              Create your first board
+            <p className="text-gray-500 text-sm">No projects yet.</p>
+            <Link href="/projects" className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline">
+              Create your first project
             </Link>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {(boards ?? []).slice(0, 5).map((board) => (
+            {(projects ?? []).slice(0, 5).map((project) => (
               <Link
-                key={board.boardId}
-                href={`/boards/${board.boardId}`}
+                key={project.projectId}
+                href={`/projects/${project.projectId}`}
                 className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm hover:shadow-md hover:border-blue-200 transition-all"
               >
                 <div>
-                  <p className="font-medium text-gray-900">{board.name}</p>
-                  {board.description && (
-                    <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">{board.description}</p>
+                  <p className="font-medium text-gray-900">{project.name}</p>
+                  {project.description && (
+                    <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">{project.description}</p>
                   )}
                 </div>
                 <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -221,7 +221,7 @@ function AdminDashboard() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Board</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                 </tr>
@@ -231,14 +231,14 @@ function AdminDashboard() {
                   <tr key={task.taskId} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-3">
                       <Link
-                        href={`/boards/${task.boardId}`}
+                        href={`/projects/${task.projectId}`}
                         className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
                       >
                         {task.title}
                       </Link>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{task.boardName}</span>
+                      <span className="text-sm text-gray-700">{task.projectName}</span>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <Badge className={STATUS_COLORS[task.status]}>
@@ -323,8 +323,8 @@ function MemberDashboard() {
         {previewTasks.length === 0 ? (
           <div className="rounded-xl border-2 border-dashed border-gray-200 py-10 text-center">
             <p className="text-gray-500 text-sm">No tasks assigned to you yet.</p>
-            <Link href="/boards" className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline">
-              Go to Boards
+            <Link href="/projects" className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline">
+              Go to Projects
             </Link>
           </div>
         ) : (
@@ -333,7 +333,7 @@ function MemberDashboard() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Board</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                 </tr>
@@ -343,14 +343,14 @@ function MemberDashboard() {
                   <tr key={task.taskId} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-3">
                       <Link
-                        href={`/boards/${task.boardId}`}
+                        href={`/projects/${task.projectId}`}
                         className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
                       >
                         {task.title}
                       </Link>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{task.boardName}</span>
+                      <span className="text-sm text-gray-700">{task.projectName}</span>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <Badge className={STATUS_COLORS[task.status]}>

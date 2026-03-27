@@ -9,7 +9,7 @@ import { CreateTaskModal } from './CreateTaskModal'
 import { Button } from '@/components/ui/Button'
 
 interface TaskKanbanProps {
-  boardId: string
+  projectId: string
   tasks: Task[]
   permissions: Permissions
 }
@@ -20,7 +20,7 @@ const COLUMNS: { status: TaskStatus; label: string; headerColor: string }[] = [
   { status: 'DONE', label: 'Done', headerColor: 'bg-green-100 text-green-700' },
 ]
 
-export function TaskKanban({ boardId, tasks, permissions }: TaskKanbanProps) {
+export function TaskKanban({ projectId, tasks, permissions }: TaskKanbanProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
@@ -79,13 +79,13 @@ export function TaskKanban({ boardId, tasks, permissions }: TaskKanbanProps) {
 
       <TaskDetailPanel
         task={selectedTask}
-        boardId={boardId}
+        projectId={projectId}
         permissions={permissions}
         onClose={() => setSelectedTask(null)}
       />
 
       <CreateTaskModal
-        boardId={boardId}
+        projectId={projectId}
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
       />

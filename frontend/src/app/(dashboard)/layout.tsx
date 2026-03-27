@@ -9,7 +9,7 @@ import { Spinner } from '@/components/ui/Spinner'
 const ownerNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
   { name: 'Users', href: '/admin/users', icon: 'users' },
-  { name: 'Boards', href: '/boards', icon: 'board' },
+  { name: 'Projects', href: '/projects', icon: 'board' },
   { name: 'Profile', href: '/profile', icon: 'user' },
 ]
 
@@ -17,14 +17,14 @@ const adminNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
   { name: 'My Tasks', href: '/my-tasks', icon: 'tasks' },
   { name: 'Members', href: '/admin/users', icon: 'users' },
-  { name: 'Boards', href: '/boards', icon: 'board' },
+  { name: 'Projects', href: '/projects', icon: 'board' },
   { name: 'Profile', href: '/profile', icon: 'user' },
 ]
 
 const memberNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
   { name: 'My Tasks', href: '/my-tasks', icon: 'tasks' },
-  { name: 'Boards', href: '/boards', icon: 'board' },
+  { name: 'Projects', href: '/projects', icon: 'board' },
   { name: 'Profile', href: '/profile', icon: 'user' },
 ]
 

@@ -10,7 +10,7 @@ class ITaskRepository(ABC):
         ...
 
     @abstractmethod
-    def find_by_board(self, board_id: str) -> list[Task]:
+    def find_by_project(self, project_id: str) -> list[Task]:
         ...
 
     @abstractmethod
@@ -22,9 +22,9 @@ class ITaskRepository(ABC):
         ...
 
     @abstractmethod
-    def delete(self, task_id: str, board_id: str) -> None:
+    def delete(self, task_id: str, project_id: str) -> None:
         ...
 
     @abstractmethod
-    def delete_all_by_board(self, board_id: str) -> None:
+    def delete_all_by_project(self, project_id: str) -> None:
         ...

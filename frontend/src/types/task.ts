@@ -3,15 +3,15 @@ export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH'
 
 export interface Task {
   taskId: string
-  boardId: string
+  projectId: string
   title: string
   description?: string
   status: TaskStatus
   priority: TaskPriority
-  assignedTo?: string
+  assignedTo: string[]
   assignedBy?: string
   createdBy: string
-  dueDate?: string
+  deadline: string
   createdAt: string
   updatedAt: string
 }

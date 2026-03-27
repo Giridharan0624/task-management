@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from domain.user.entities import User
 from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole
-from domain.board.repository import IBoardRepository
+from domain.project.repository import IProjectRepository
 from domain.task.repository import ITaskRepository
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 from domain.user.identity_service import IIdentityService
@@ -76,9 +76,9 @@ class UpdateUserRoleUseCase:
 
 class GetUserProgressUseCase:
     """OWNER can view anyone's progress. ADMIN can only view MEMBER progress."""
-    def __init__(self, user_repo: IUserRepository, board_repo: IBoardRepository, task_repo: ITaskRepository):
+    def __init__(self, user_repo: IUserRepository, project_repo: IProjectRepository, task_repo: ITaskRepository):
         self._user_repo = user_repo
-        self._board_repo = board_repo
+        self._project_repo = project_repo
         self._task_repo = task_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
@@ -95,24 +95,24 @@ class GetUserProgressUseCase:
             if target_user.system_role != SystemRole.MEMBER:
                 raise AuthorizationError("Admins can only view member progress")
 
-        # Get all boards the target user belongs to
-        boards = self._board_repo.find_boards_for_user(target_user_id)
+        # Get all projects the target user belongs to
+        projects = self._project_repo.find_projects_for_user(target_user_id)
 
-        board_progress = []
+        project_progress = []
         total_stats = {"TODO": 0, "IN_PROGRESS": 0, "DONE": 0, "total": 0}
 
-        for board in boards:
-            tasks = self._task_repo.find_by_board(board.board_id)
+        for project in projects:
+            tasks = self._task_repo.find_by_project(project.project_id)
             # Filter tasks assigned to this user
-            user_tasks = [t for t in tasks if t.assigned_to == target_user_id]
+            user_tasks = [t for t in tasks if target_user_id in t.assigned_to]
 
             stats = {"TODO": 0, "IN_PROGRESS": 0, "DONE": 0}
             for task in user_tasks:
                 stats[task.status.value] = stats.get(task.status.value, 0) + 1
 
-            board_progress.append({
-                "board_id": board.board_id,
-                "board_name": board.name,
+            project_progress.append({
+                "project_id": project.project_id,
+                "project_name": project.name,
                 "tasks": [t.to_dict() for t in user_tasks],
                 "stats": stats,
             })
@@ -123,7 +123,7 @@ class GetUserProgressUseCase:
 
         return {
             "user": target_user.to_dict(),
-            "boards": board_progress,
+            "projects": project_progress,
             "total_stats": total_stats,
         }
 
@@ -203,10 +203,10 @@ class DeleteUserUseCase:
     Admins delete Members only.
     Cannot delete Owner. Cannot delete self.
     """
-    def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService, board_repo: IBoardRepository):
+    def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService, project_repo: IProjectRepository):
         self._user_repo = user_repo
         self._cognito = cognito_service
-        self._board_repo = board_repo
+        self._project_repo = project_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> None:
         target_user_id = dto["user_id"]
@@ -235,10 +235,10 @@ class DeleteUserUseCase:
         # Delete from Cognito
         self._cognito.delete_user(target_user.email)
 
-        # Remove from all board memberships
-        boards = self._board_repo.find_boards_for_user(target_user_id)
-        for board in boards:
-            self._board_repo.remove_member(board.board_id, target_user_id)
+        # Remove from all project memberships
+        projects = self._project_repo.find_projects_for_user(target_user_id)
+        for project in projects:
+            self._project_repo.remove_member(project.project_id, target_user_id)
 
         # Delete from DynamoDB
         self._user_repo.delete(target_user_id)

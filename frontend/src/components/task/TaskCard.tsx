@@ -21,15 +21,17 @@ const priorityLabel: Record<Task['priority'], string> = {
 }
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
-  const dueDateFormatted = task.dueDate
-    ? new Date(task.dueDate).toLocaleDateString('en-US', {
+  const deadlineFormatted = task.deadline
+    ? new Date(task.deadline).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       })
     : null
 
   const isOverdue =
-    task.dueDate && task.status !== 'DONE' && new Date(task.dueDate) < new Date()
+    task.deadline && task.status !== 'DONE' && new Date(task.deadline) < new Date()
 
   return (
     <button
@@ -45,16 +47,24 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         </div>
 
         <div className="flex items-center justify-between text-xs text-gray-400 mt-1">
-          {task.assignedTo ? (
-            <span className="truncate max-w-[120px]" title={task.assignedTo}>
-              {task.assignedTo}
-            </span>
+          {task.assignedTo && task.assignedTo.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {task.assignedTo.map((userId) => (
+                <span
+                  key={userId}
+                  className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 truncate max-w-[100px]"
+                  title={userId}
+                >
+                  {userId}
+                </span>
+              ))}
+            </div>
           ) : (
             <span className="italic">Unassigned</span>
           )}
-          {dueDateFormatted && (
+          {deadlineFormatted && (
             <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
-              Due {dueDateFormatted}
+              Due {deadlineFormatted}
             </span>
           )}
         </div>

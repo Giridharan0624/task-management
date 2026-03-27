@@ -22,9 +22,9 @@ class TaskDynamoRepository(ITaskRepository):
             return None
         return TaskMapper.to_domain(items[0])
 
-    def find_by_board(self, board_id: str) -> list[Task]:
+    def find_by_project(self, project_id: str) -> list[Task]:
         response = self._table.query(
-            KeyConditionExpression=Key("PK").eq(f"BOARD#{board_id}")
+            KeyConditionExpression=Key("PK").eq(f"PROJECT#{project_id}")
             & Key("SK").begins_with("TASK#"),
         )
         items = response.get("Items", [])
@@ -32,7 +32,7 @@ class TaskDynamoRepository(ITaskRepository):
 
         while "LastEvaluatedKey" in response:
             response = self._table.query(
-                KeyConditionExpression=Key("PK").eq(f"BOARD#{board_id}")
+                KeyConditionExpression=Key("PK").eq(f"PROJECT#{project_id}")
                 & Key("SK").begins_with("TASK#"),
                 ExclusiveStartKey=response["LastEvaluatedKey"],
             )
@@ -48,21 +48,21 @@ class TaskDynamoRepository(ITaskRepository):
         item = TaskMapper.to_dynamo(task)
         self._table.put_item(Item=item)
 
-    def delete(self, task_id: str, board_id: str) -> None:
+    def delete(self, task_id: str, project_id: str) -> None:
         self._table.delete_item(
-            Key={"PK": f"BOARD#{board_id}", "SK": f"TASK#{task_id}"}
+            Key={"PK": f"PROJECT#{project_id}", "SK": f"TASK#{task_id}"}
         )
 
-    def delete_all_by_board(self, board_id: str) -> None:
+    def delete_all_by_project(self, project_id: str) -> None:
         response = self._table.query(
-            KeyConditionExpression=Key("PK").eq(f"BOARD#{board_id}")
+            KeyConditionExpression=Key("PK").eq(f"PROJECT#{project_id}")
             & Key("SK").begins_with("TASK#"),
         )
         items = response.get("Items", [])
 
         while "LastEvaluatedKey" in response:
             response = self._table.query(
-                KeyConditionExpression=Key("PK").eq(f"BOARD#{board_id}")
+                KeyConditionExpression=Key("PK").eq(f"PROJECT#{project_id}")
                 & Key("SK").begins_with("TASK#"),
                 ExclusiveStartKey=response["LastEvaluatedKey"],
             )

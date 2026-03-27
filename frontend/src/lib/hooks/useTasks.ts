@@ -10,55 +10,55 @@ import {
 } from '@/lib/api/taskApi'
 
 export const taskKeys = {
-  all: (boardId: string) => ['tasks', boardId] as const,
+  all: (projectId: string) => ['tasks', projectId] as const,
 }
 
-export function useTasks(boardId: string) {
+export function useTasks(projectId: string) {
   return useQuery({
-    queryKey: taskKeys.all(boardId),
-    queryFn: () => getTasks(boardId),
-    enabled: !!boardId,
+    queryKey: taskKeys.all(projectId),
+    queryFn: () => getTasks(projectId),
+    enabled: !!projectId,
   })
 }
 
-export function useCreateTask(boardId: string) {
+export function useCreateTask(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CreateTaskData) => createTask(boardId, data),
+    mutationFn: (data: CreateTaskData) => createTask(projectId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all(boardId) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.all(projectId) })
     },
   })
 }
 
-export function useUpdateTask(boardId: string) {
+export function useUpdateTask(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ taskId, data }: { taskId: string; data: UpdateTaskData }) =>
-      updateTask(boardId, taskId, data),
+      updateTask(projectId, taskId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all(boardId) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.all(projectId) })
     },
   })
 }
 
-export function useDeleteTask(boardId: string) {
+export function useDeleteTask(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (taskId: string) => deleteTask(boardId, taskId),
+    mutationFn: (taskId: string) => deleteTask(projectId, taskId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all(boardId) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.all(projectId) })
     },
   })
 }
 
-export function useAssignTask(boardId: string) {
+export function useAssignTask(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ taskId, assignedTo }: { taskId: string; assignedTo: string }) =>
-      assignTask(boardId, taskId, assignedTo),
+    mutationFn: ({ taskId, assignedTo }: { taskId: string; assignedTo: string[] }) =>
+      assignTask(projectId, taskId, assignedTo),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all(boardId) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.all(projectId) })
     },
   })
 }

@@ -109,7 +109,7 @@ export default function MyTasksPage() {
 }
 
 function TaskCard({ task }: { task: MyTask }) {
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE'
+  const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'DONE'
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition">
@@ -117,7 +117,7 @@ function TaskCard({ task }: { task: MyTask }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <Link
-              href={`/boards/${task.boardId}`}
+              href={`/projects/${task.projectId}`}
               className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors"
             >
               {task.title}
@@ -128,10 +128,12 @@ function TaskCard({ task }: { task: MyTask }) {
             <p className="text-sm text-gray-500 line-clamp-1 mb-2">{task.description}</p>
           )}
           <div className="flex items-center gap-3 text-xs text-gray-400">
-            <span>Board: {task.boardName}</span>
-            {task.dueDate && (
+            <span>Project: {task.projectName}</span>
+            {task.deadline && (
               <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
-                Due: {new Date(task.dueDate).toLocaleDateString()}
+                Deadline: {new Date(task.deadline).toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                })}
                 {isOverdue && ' (Overdue)'}
               </span>
             )}

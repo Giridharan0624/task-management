@@ -3,9 +3,9 @@ import type { User } from '@/types/user'
 
 export interface UserProgress {
   user: User
-  boards: {
-    boardId: string
-    boardName: string
+  projects: {
+    projectId: string
+    projectName: string
     tasks: import('@/types/task').Task[]
     stats: { TODO: number; IN_PROGRESS: number; DONE: number }
   }[]
@@ -42,14 +42,14 @@ export function deleteUser(userId: string): Promise<void> {
 
 export interface MyTask {
   taskId: string
-  boardId: string
-  boardName: string
+  projectId: string
+  projectName: string
   title: string
   description?: string
   status: import('@/types/task').TaskStatus
   priority: import('@/types/task').TaskPriority
-  assignedTo?: string
-  dueDate?: string
+  assignedTo: string[]
+  deadline: string
   createdAt: string
   updatedAt: string
 }
