@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(ls d:/NEUROSTACK/PROJECTS/task-management/frontend/src/app/\\\\\\(dashboard\\\\\\)/admin/)",
-      "Bash(npx tsc:*)"
-    ]
-  }
-}
