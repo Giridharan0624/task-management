@@ -71,7 +71,14 @@ class GetProjectUseCase:
             raise AuthorizationError("You are not a member of this project")
 
         members = self._project_repo.find_members(project_id)
-        return {**project.to_dict(), "members": [m.to_dict() for m in members]}
+        enriched_members = []
+        for m in members:
+            member_dict = m.to_dict()
+            user = self._user_repo.find_by_id(m.user_id)
+            if user:
+                member_dict["user"] = user.to_dict()
+            enriched_members.append(member_dict)
+        return {**project.to_dict(), "members": enriched_members}
 
 
 class ListProjectsForUserUseCase:
@@ -85,6 +92,33 @@ class ListProjectsForUserUseCase:
         else:
             projects = self._project_repo.find_projects_for_user(caller_user_id)
         return [p.to_dict() for p in projects]
+
+
+class UpdateProjectUseCase:
+    def __init__(self, project_repo: IProjectRepository, user_repo: IUserRepository):
+        self._project_repo = project_repo
+        self._user_repo = user_repo
+
+    def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
+        project_id = dto["project_id"]
+        project = self._project_repo.find_by_id(project_id)
+        if not project:
+            raise NotFoundError(f"Project {project_id} not found")
+
+        if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
+            raise AuthorizationError("Only project admins can update project details")
+
+        now = datetime.now(timezone.utc).isoformat()
+        updated = Project(
+            project_id=project.project_id,
+            name=dto.get("name", project.name),
+            description=dto.get("description", project.description),
+            created_by=project.created_by,
+            created_at=project.created_at,
+            updated_at=now,
+        )
+        self._project_repo.save(updated)
+        return updated.to_dict()
 
 
 class DeleteProjectUseCase:

@@ -25,14 +25,14 @@ export function updateProfile(data: { name: string }): Promise<User> {
 }
 
 export function updateUserRole(userId: string, systemRole: string): Promise<User> {
-  return apiClient.put<User>('/users/role', { user_id: userId, system_role: systemRole })
+  return apiClient.put<User>('/users/role', { userId, systemRole })
 }
 
 export function getUserProgress(userId: string): Promise<UserProgress> {
   return apiClient.get<UserProgress>(`/users/${userId}/progress`)
 }
 
-export function createUser(data: { email: string; name: string; password: string; system_role: string }): Promise<User> {
+export function createUser(data: { email: string; name: string; password: string; systemRole: string }): Promise<User> {
   return apiClient.post<User>('/users', data)
 }
 

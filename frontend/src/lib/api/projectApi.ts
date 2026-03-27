@@ -24,6 +24,15 @@ export async function createProject(data: CreateProjectData): Promise<Project> {
   return apiClient.post<Project>('/projects', data)
 }
 
+export interface UpdateProjectData {
+  name?: string
+  description?: string
+}
+
+export async function updateProject(projectId: string, data: UpdateProjectData): Promise<Project> {
+  return apiClient.put<Project>(`/projects/${projectId}`, data)
+}
+
 export async function deleteProject(projectId: string): Promise<void> {
   return apiClient.del<void>(`/projects/${projectId}`)
 }
@@ -41,7 +50,7 @@ export async function updateMemberRole(
   userId: string,
   projectRole: ProjectRole
 ): Promise<ProjectMember> {
-  return apiClient.put<ProjectMember>(`/projects/${projectId}/members/${userId}`, { projectRole })
+  return apiClient.put<ProjectMember>(`/projects/${projectId}/members/${userId}/role`, { projectRole })
 }
 
 export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {

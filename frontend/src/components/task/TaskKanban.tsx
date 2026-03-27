@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Task, TaskStatus } from '@/types/task'
+import type { ProjectMember } from '@/types/user'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { TaskCard } from './TaskCard'
 import { TaskDetailPanel } from './TaskDetailPanel'
@@ -12,6 +13,7 @@ interface TaskKanbanProps {
   projectId: string
   tasks: Task[]
   permissions: Permissions
+  members?: ProjectMember[]
 }
 
 const COLUMNS: { status: TaskStatus; label: string; headerColor: string }[] = [
@@ -20,9 +22,16 @@ const COLUMNS: { status: TaskStatus; label: string; headerColor: string }[] = [
   { status: 'DONE', label: 'Done', headerColor: 'bg-green-100 text-green-700' },
 ]
 
-export function TaskKanban({ projectId, tasks, permissions }: TaskKanbanProps) {
+export function TaskKanban({ projectId, tasks, permissions, members = [] }: TaskKanbanProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+
+  // Build userId -> name lookup
+  const nameMap = new Map<string, string>()
+  for (const m of members) {
+    nameMap.set(m.userId, m.user?.name || m.user?.email || m.userId)
+  }
+  const resolveName = (userId: string) => nameMap.get(userId) || userId
 
   const tasksByStatus = (status: TaskStatus) =>
     tasks.filter((t) => t.status === status)
@@ -40,7 +49,6 @@ export function TaskKanban({ projectId, tasks, permissions }: TaskKanbanProps) {
           const columnTasks = tasksByStatus(status)
           return (
             <div key={status} className="flex flex-col gap-3 rounded-xl bg-gray-50 p-4 border border-gray-200">
-              {/* Column header */}
               <div className="flex items-center justify-between">
                 <span
                   className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${headerColor}`}
@@ -50,17 +58,15 @@ export function TaskKanban({ projectId, tasks, permissions }: TaskKanbanProps) {
                 <span className="text-sm font-medium text-gray-400">{columnTasks.length}</span>
               </div>
 
-              {/* Cards */}
               <div className="flex flex-col gap-2 min-h-[120px]">
                 {columnTasks.length === 0 && (
                   <p className="text-center text-xs text-gray-400 py-6">No tasks</p>
                 )}
                 {columnTasks.map((task) => (
-                  <TaskCard key={task.taskId} task={task} onClick={setSelectedTask} />
+                  <TaskCard key={task.taskId} task={task} onClick={setSelectedTask} resolveName={resolveName} />
                 ))}
               </div>
 
-              {/* Add task in TODO column */}
               {status === 'TODO' && permissions.canCreateTask && (
                 <button
                   onClick={() => setShowCreateModal(true)}

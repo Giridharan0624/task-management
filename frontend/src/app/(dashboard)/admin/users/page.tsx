@@ -88,7 +88,7 @@ export default function UsersPage() {
         email: newEmail,
         name: newName,
         password: newPassword,
-        system_role: newRole,
+        systemRole: newRole,
       })
       setShowAddUser(false)
       setNewEmail('')

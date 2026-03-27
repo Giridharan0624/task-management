@@ -3,8 +3,10 @@ import {
   getProjects,
   getProject,
   createProject,
+  updateProject,
   deleteProject,
   type CreateProjectData,
+  type UpdateProjectData,
 } from '@/lib/api/projectApi'
 
 export const projectKeys = {
@@ -32,6 +34,17 @@ export function useCreateProject() {
   return useMutation({
     mutationFn: (data: CreateProjectData) => createProject(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.all })
+    },
+  })
+}
+
+export function useUpdateProject(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: UpdateProjectData) => updateProject(projectId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
       queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })

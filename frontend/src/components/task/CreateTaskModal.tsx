@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useCreateTask } from '@/lib/hooks/useTasks'
+import { useProject } from '@/lib/hooks/useProjects'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import type { TaskStatus, TaskPriority } from '@/types/task'
+import type { TaskPriority } from '@/types/task'
 
 interface CreateTaskModalProps {
   projectId: string
@@ -17,14 +18,14 @@ interface CreateTaskModalProps {
 interface FormValues {
   title: string
   description: string
-  status: TaskStatus
   priority: TaskPriority
   deadline: string
 }
 
 export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalProps) {
   const createTask = useCreateTask(projectId)
-  const [assigneeInputs, setAssigneeInputs] = useState<string[]>([''])
+  const { data: project } = useProject(projectId)
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
 
   const {
     register,
@@ -33,42 +34,36 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
-      status: 'TODO',
       priority: 'MEDIUM',
     },
   })
 
+  const members = project?.members ?? []
+
+  const toggleAssignee = (userId: string) => {
+    setSelectedAssignees((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    )
+  }
+
   const onSubmit = async (values: FormValues) => {
-    const assignedTo = assigneeInputs.map((s) => s.trim()).filter(Boolean)
     await createTask.mutateAsync({
       title: values.title,
       description: values.description || undefined,
-      status: values.status,
+      status: 'TODO',
       priority: values.priority,
       deadline: values.deadline,
-      assignedTo: assignedTo.length > 0 ? assignedTo : undefined,
+      assignedTo: selectedAssignees.length > 0 ? selectedAssignees : undefined,
     })
     reset()
-    setAssigneeInputs([''])
+    setSelectedAssignees([])
     onClose()
   }
 
   const handleClose = () => {
     reset()
-    setAssigneeInputs([''])
+    setSelectedAssignees([])
     onClose()
-  }
-
-  const addAssigneeField = () => {
-    setAssigneeInputs((prev) => [...prev, ''])
-  }
-
-  const removeAssigneeField = (index: number) => {
-    setAssigneeInputs((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const updateAssignee = (index: number, value: string) => {
-    setAssigneeInputs((prev) => prev.map((v, i) => (i === index ? value : v)))
   }
 
   return (
@@ -96,18 +91,6 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Status</label>
-            <select
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              {...register('status')}
-            >
-              <option value="TODO">To Do</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="DONE">Done</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Priority</label>
             <select
               className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -118,45 +101,55 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
               <option value="HIGH">High</option>
             </select>
           </div>
+
+          <Input
+            label="Deadline"
+            type="datetime-local"
+            error={errors.deadline?.message}
+            {...register('deadline', { required: 'Deadline is required' })}
+          />
         </div>
 
-        <Input
-          label="Deadline"
-          type="datetime-local"
-          error={errors.deadline?.message}
-          {...register('deadline', { required: 'Deadline is required' })}
-        />
-
-        {/* Multi-assign */}
+        {/* Assign to project members */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">Assign To</label>
-          {assigneeInputs.map((value, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={value}
-                onChange={(e) => updateAssignee(index, e.target.value)}
-                placeholder="Enter user ID"
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {assigneeInputs.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeAssigneeField(index)}
-                  className="text-red-500 hover:text-red-700 text-sm"
-                >
-                  Remove
-                </button>
-              )}
+          <label className="text-sm font-medium text-gray-700">
+            Assign To ({selectedAssignees.length} selected)
+          </label>
+          {members.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No project members yet. Add members first.</p>
+          ) : (
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+              {members.map((m) => {
+                const isSelected = selectedAssignees.includes(m.userId)
+                return (
+                  <label
+                    key={m.userId}
+                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      isSelected ? 'bg-indigo-50' : ''
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleAssignee(m.userId)}
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-indigo-600 text-xs font-medium">
+                          {(m.user?.name || m.user?.email || m.userId).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-900 truncate">
+                        {m.user?.name || m.user?.email || m.userId}
+                      </span>
+                      <span className="text-xs text-gray-400 ml-auto flex-shrink-0">{m.projectRole}</span>
+                    </div>
+                  </label>
+                )
+              })}
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={addAssigneeField}
-            className="text-sm text-blue-600 hover:text-blue-800 self-start"
-          >
-            + Add another assignee
-          </button>
+          )}
         </div>
 
         {createTask.error && (

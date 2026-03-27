@@ -16,6 +16,20 @@ function transformKeys(data: unknown): unknown {
   return data
 }
 
+function camelToSnake(str: string): string {
+  return str.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase())
+}
+
+function transformKeysToSnake(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(transformKeysToSnake)
+  if (data !== null && typeof data === 'object') {
+    return Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).map(([k, v]) => [camelToSnake(k), transformKeysToSnake(v)])
+    )
+  }
+  return data
+}
+
 class ApiClientError extends Error implements ApiError {
   status: number
   code?: string
@@ -52,7 +66,7 @@ async function request<T>(
   }
 
   if (body !== undefined) {
-    init.body = JSON.stringify(body)
+    init.body = JSON.stringify(transformKeysToSnake(body))
   }
 
   const url = `${BASE_URL}${path}`

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useUpdateTask, useDeleteTask, useAssignTask } from '@/lib/hooks/useTasks'
 import { useComments, useCreateComment } from '@/lib/hooks/useComments'
+import { useProject } from '@/lib/hooks/useProjects'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
@@ -28,16 +29,28 @@ interface EditFormValues {
 
 export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskDetailPanelProps) {
   const { user } = useAuth()
+  const { data: project } = useProject(projectId)
   const updateTask = useUpdateTask(projectId)
   const deleteTask = useDeleteTask(projectId)
   const assignTask = useAssignTask(projectId)
   const [isEditing, setIsEditing] = useState(false)
-  const [assigneeInput, setAssigneeInput] = useState('')
   const [showAssignInput, setShowAssignInput] = useState(false)
+  const [selectedAssignee, setSelectedAssignee] = useState('')
   const [commentText, setCommentText] = useState('')
 
   const { data: comments } = useComments(projectId, task?.taskId ?? '')
   const createComment = useCreateComment(projectId, task?.taskId ?? '')
+
+  // Build userId -> name lookup from project members
+  const members = project?.members ?? []
+  const nameMap = new Map<string, string>()
+  for (const m of members) {
+    nameMap.set(m.userId, m.user?.name || m.user?.email || m.userId)
+  }
+  // Also add current user
+  if (user) nameMap.set(user.userId, user.name || user.email)
+
+  const resolveName = (userId: string) => nameMap.get(userId) || userId
 
   const {
     register,
@@ -93,11 +106,16 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   }
 
   const handleAssign = async () => {
-    if (!assigneeInput.trim()) return
-    const newAssignees = [...(task.assignedTo ?? []), assigneeInput.trim()]
+    if (!selectedAssignee) return
+    const newAssignees = [...(task.assignedTo ?? []), selectedAssignee]
     await assignTask.mutateAsync({ taskId: task.taskId, assignedTo: newAssignees })
     setShowAssignInput(false)
-    setAssigneeInput('')
+    setSelectedAssignee('')
+  }
+
+  const handleUnassign = async (userId: string) => {
+    const newAssignees = (task.assignedTo ?? []).filter((id) => id !== userId)
+    await assignTask.mutateAsync({ taskId: task.taskId, assignedTo: newAssignees })
   }
 
   const handlePostComment = async () => {
@@ -109,6 +127,10 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   const isAssigned = task.assignedTo?.includes(user?.userId ?? '')
   const isOwnerOrAdmin = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
   const canComment = isAssigned || isOwnerOrAdmin
+
+  // Members not yet assigned to this task (for the assign dropdown)
+  const assignedSet = new Set(task.assignedTo ?? [])
+  const availableMembers = members.filter((m) => !assignedSet.has(m.userId))
 
   const statusLabel: Record<TaskStatus, string> = {
     TODO: 'To Do',
@@ -241,32 +263,43 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
 
               {/* Metadata */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="col-span-2">
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Assigned To</p>
                   {task.assignedTo && task.assignedTo.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {task.assignedTo.map((userId) => (
                         <span
                           key={userId}
-                          className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700"
+                          className="inline-flex items-center gap-1 rounded-full bg-indigo-50 pl-2.5 pr-1.5 py-0.5 text-xs font-medium text-indigo-700"
                         >
-                          {userId}
+                          {resolveName(userId)}
+                          {permissions.canUpdateTask && (
+                            <button
+                              onClick={() => handleUnassign(userId)}
+                              className="ml-0.5 rounded-full p-0.5 hover:bg-indigo-200 transition-colors"
+                              title="Remove assignee"
+                            >
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-700">Unassigned</p>
+                    <p className="text-sm text-gray-500">Unassigned</p>
                   )}
                 </div>
                 {task.assignedBy && (
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Assigned By</p>
-                    <p className="text-sm text-gray-700">{task.assignedBy}</p>
+                    <p className="text-sm text-gray-700">{resolveName(task.assignedBy)}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Created By</p>
-                  <p className="text-sm text-gray-700">{task.createdBy}</p>
+                  <p className="text-sm text-gray-700">{resolveName(task.createdBy)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Deadline</p>
@@ -291,24 +324,36 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
               {permissions.canUpdateTask && (
                 <div className="border-t border-gray-100 pt-4">
                   {showAssignInput ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={assigneeInput}
-                        onChange={(e) => setAssigneeInput(e.target.value)}
-                        placeholder="Enter user ID to assign"
-                        className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <Button size="sm" onClick={handleAssign} loading={assignTask.isPending}>
-                        Assign
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => { setShowAssignInput(false); setAssigneeInput('') }}
-                      >
-                        Cancel
-                      </Button>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium text-gray-700">Add Assignee</label>
+                      {availableMembers.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">All members are already assigned.</p>
+                      ) : (
+                        <select
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={selectedAssignee}
+                          onChange={(e) => setSelectedAssignee(e.target.value)}
+                        >
+                          <option value="">-- Select a member --</option>
+                          {availableMembers.map((m) => (
+                            <option key={m.userId} value={m.userId}>
+                              {m.user?.name || m.user?.email || m.userId} ({m.projectRole})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleAssign} loading={assignTask.isPending} disabled={!selectedAssignee}>
+                          Assign
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <Button
@@ -331,7 +376,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                     {comments.map((comment) => (
                       <div key={comment.commentId} className="rounded-lg bg-gray-50 p-3">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-indigo-700">{comment.authorId}</span>
+                          <span className="text-xs font-medium text-indigo-700">{resolveName(comment.authorId)}</span>
                           <span className="text-xs text-gray-400">
                             {new Date(comment.createdAt).toLocaleDateString('en-US', {
                               month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',

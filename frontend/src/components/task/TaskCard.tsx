@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 interface TaskCardProps {
   task: Task
   onClick: (task: Task) => void
+  resolveName?: (userId: string) => string
 }
 
 const statusLabel: Record<Task['status'], string> = {
@@ -20,7 +21,9 @@ const priorityLabel: Record<Task['priority'], string> = {
   HIGH: 'High',
 }
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
+  const resolve = resolveName ?? ((id: string) => id)
+
   const deadlineFormatted = task.deadline
     ? new Date(task.deadline).toLocaleDateString('en-US', {
         month: 'short',
@@ -52,10 +55,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
               {task.assignedTo.map((userId) => (
                 <span
                   key={userId}
-                  className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 truncate max-w-[100px]"
-                  title={userId}
+                  className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 truncate max-w-[120px]"
+                  title={resolve(userId)}
                 >
-                  {userId}
+                  {resolve(userId)}
                 </span>
               ))}
             </div>
@@ -64,7 +67,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           )}
           {deadlineFormatted && (
             <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
-              Due {deadlineFormatted}
+              {deadlineFormatted}
             </span>
           )}
         </div>
