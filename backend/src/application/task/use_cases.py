@@ -12,6 +12,8 @@ from domain.task.value_objects import TaskPriority, TaskStatus
 from domain.user.value_objects import SystemRole
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
+_PRIVILEGED_ROLES = (SystemRole.OWNER.value, SystemRole.ADMIN.value)
+
 
 class CreateTaskUseCase:
     """Owner can create tasks on any project. Admin can create tasks on projects they belong to.
@@ -27,16 +29,8 @@ class CreateTaskUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner can create tasks on any project
-        if caller_system_role == SystemRole.OWNER.value:
-            pass
-        elif caller_system_role == SystemRole.ADMIN.value:
-            # Admin can create tasks on projects they are a member of
-            caller_member = self._project_repo.find_member(project_id, caller_user_id)
-            if not caller_member:
-                raise AuthorizationError("You must be a project member to create tasks on this project")
-        else:
-            # Members cannot create tasks
+        # Owner/Admin can create tasks on any project; Members cannot
+        if caller_system_role not in _PRIVILEGED_ROLES:
             raise AuthorizationError("Members cannot create tasks")
 
         status = TaskStatus.TODO
@@ -92,8 +86,8 @@ class GetTaskUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner can view any task; others must be project members
-        if caller_system_role != SystemRole.OWNER.value:
+        # Owner/Admin can view any task; others must be project members
+        if caller_system_role not in _PRIVILEGED_ROLES:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
                 raise AuthorizationError("You are not a member of this project")
@@ -117,8 +111,8 @@ class ListTasksForProjectUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner can list any project's tasks; others must be project members
-        if caller_system_role != SystemRole.OWNER.value:
+        # Owner/Admin can list any project's tasks; others must be project members
+        if caller_system_role not in _PRIVILEGED_ROLES:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
                 raise AuthorizationError("You are not a member of this project")
@@ -146,23 +140,16 @@ class UpdateTaskUseCase:
         if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
-        # Member can only update status of tasks assigned to them
-        if caller_system_role == SystemRole.MEMBER.value:
+        # Owner/Admin can update any task; Member can only update status of their assigned tasks
+        if caller_system_role in _PRIVILEGED_ROLES:
+            pass
+        elif caller_system_role == SystemRole.MEMBER.value:
             if caller_user_id not in task.assigned_to:
                 raise AuthorizationError("You can only update tasks assigned to you")
-            # Members can only update the status field
             allowed_fields = {"project_id", "task_id", "status"}
             extra_fields = set(dto.keys()) - allowed_fields
             if extra_fields:
                 raise AuthorizationError("Members can only update the status of their assigned tasks")
-        elif caller_system_role == SystemRole.OWNER.value:
-            # Owner can update any task
-            pass
-        elif caller_system_role == SystemRole.ADMIN.value:
-            # Admin can update any task on projects they belong to
-            caller_member = self._project_repo.find_member(project_id, caller_user_id)
-            if not caller_member:
-                raise AuthorizationError("You must be a project member to update tasks on this project")
         else:
             raise AuthorizationError("Unauthorized to update tasks")
 
@@ -232,13 +219,8 @@ class DeleteTaskUseCase:
         if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
-        if caller_system_role == SystemRole.OWNER.value:
-            # Owner can delete any task
+        if caller_system_role in _PRIVILEGED_ROLES:
             pass
-        elif caller_system_role == SystemRole.ADMIN.value:
-            # Admin can delete tasks they created
-            if task.created_by != caller_user_id:
-                raise AuthorizationError("Admins can only delete tasks they created")
         else:
             raise AuthorizationError("Members cannot delete tasks")
 
@@ -311,7 +293,20 @@ class GetMyAssignedTasksUseCase:
         self._task_repo = task_repo
         self._project_repo = project_repo
 
-    def execute(self, caller_user_id: str) -> list[dict]:
+    def execute(self, caller_user_id: str, caller_system_role: str = None) -> list[dict]:
+        # Owner/Admin see ALL tasks across all projects
+        if caller_system_role in _PRIVILEGED_ROLES:
+            projects = self._project_repo.find_all()
+            my_tasks = []
+            for project in projects:
+                tasks = self._task_repo.find_by_project(project.project_id)
+                for task in tasks:
+                    task_dict = task.to_dict()
+                    task_dict["project_name"] = project.name
+                    my_tasks.append(task_dict)
+            return my_tasks
+
+        # Members see only tasks assigned to them
         projects = self._project_repo.find_projects_for_user(caller_user_id)
         my_tasks = []
         for project in projects:

@@ -8,4 +8,5 @@ export interface Project {
   createdAt: string
   updatedAt: string
   members?: ProjectMember[]
+  memberCount?: number
 }

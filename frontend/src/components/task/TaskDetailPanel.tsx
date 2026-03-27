@@ -37,6 +37,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   const [showAssignInput, setShowAssignInput] = useState(false)
   const [selectedAssignee, setSelectedAssignee] = useState('')
   const [commentText, setCommentText] = useState('')
+  const [statusUpdating, setStatusUpdating] = useState(false)
 
   const { data: comments } = useComments(projectId, task?.taskId ?? '')
   const createComment = useCreateComment(projectId, task?.taskId ?? '')
@@ -122,6 +123,18 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     if (!commentText.trim()) return
     await createComment.mutateAsync(commentText.trim())
     setCommentText('')
+  }
+
+  const handleStatusChange = async (newStatus: TaskStatus) => {
+    setStatusUpdating(true)
+    try {
+      await updateTask.mutateAsync({
+        taskId: task.taskId,
+        data: { status: newStatus },
+      })
+    } finally {
+      setStatusUpdating(false)
+    }
   }
 
   const isAssigned = task.assignedTo?.includes(user?.userId ?? '')
@@ -247,9 +260,22 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 <p className="text-base font-semibold text-gray-900">{task.title}</p>
               </div>
 
-              {/* Badges */}
-              <div className="flex gap-2">
-                <Badge variant={task.status}>{statusLabel[task.status]}</Badge>
+              {/* Status + Priority */}
+              <div className="flex items-center gap-3">
+                {permissions.canUpdateStatus && isAssigned && !permissions.canUpdateTask ? (
+                  <select
+                    value={task.status}
+                    onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
+                    disabled={statusUpdating}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="TODO">To Do</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="DONE">Done</option>
+                  </select>
+                ) : (
+                  <Badge variant={task.status}>{statusLabel[task.status]}</Badge>
+                )}
                 <Badge variant={task.priority}>{priorityLabel[task.priority]}</Badge>
               </div>
 
@@ -273,7 +299,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                           className="inline-flex items-center gap-1 rounded-full bg-indigo-50 pl-2.5 pr-1.5 py-0.5 text-xs font-medium text-indigo-700"
                         >
                           {resolveName(userId)}
-                          {permissions.canUpdateTask && (
+                          {permissions.canAssignTask && (
                             <button
                               onClick={() => handleUnassign(userId)}
                               className="ml-0.5 rounded-full p-0.5 hover:bg-indigo-200 transition-colors"
@@ -321,7 +347,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
               </div>
 
               {/* Assign section */}
-              {permissions.canUpdateTask && (
+              {permissions.canAssignTask && (
                 <div className="border-t border-gray-100 pt-4">
                   {showAssignInput ? (
                     <div className="flex flex-col gap-2">

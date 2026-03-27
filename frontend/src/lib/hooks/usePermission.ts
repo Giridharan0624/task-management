@@ -5,7 +5,9 @@ import type { ProjectRole, SystemRole } from '@/types/user'
 export interface Permissions {
   canCreateTask: boolean
   canUpdateTask: boolean
+  canUpdateStatus: boolean
   canDeleteTask: boolean
+  canAssignTask: boolean
   canManageMembers: boolean
   canDeleteProject: boolean
 }
@@ -20,15 +22,18 @@ export interface SystemPermissions {
 
 export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole): Permissions {
   const isOwner = systemRole === 'OWNER'
-  const isAdmin = projectRole === 'ADMIN'
-  const isAdminOrMember = projectRole === 'ADMIN' || projectRole === 'MEMBER'
+  const isSystemAdmin = systemRole === 'ADMIN'
+  const isPrivileged = isOwner || isSystemAdmin
+  const isMember = projectRole === 'MEMBER'
 
   return {
-    canCreateTask: isOwner || isAdminOrMember,
-    canUpdateTask: isOwner || isAdminOrMember,
-    canDeleteTask: isOwner || isAdmin,
-    canManageMembers: isOwner || isAdmin,
-    canDeleteProject: isOwner || isAdmin,
+    canCreateTask: isPrivileged,
+    canUpdateTask: isPrivileged,
+    canUpdateStatus: isMember || isPrivileged,
+    canDeleteTask: isPrivileged,
+    canAssignTask: isPrivileged,
+    canManageMembers: isPrivileged,
+    canDeleteProject: isPrivileged,
   }
 }
 

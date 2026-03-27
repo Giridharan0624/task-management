@@ -11,7 +11,7 @@ def handler(event, context):
         project_repo = ProjectDynamoRepository()
         task_repo = TaskDynamoRepository()
         use_case = GetMyAssignedTasksUseCase(task_repo, project_repo)
-        my_tasks = use_case.execute(auth.user_id)
+        my_tasks = use_case.execute(auth.user_id, auth.system_role)
         return build_success(200, my_tasks)
     except Exception as e:
         return build_error(e)

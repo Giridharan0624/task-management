@@ -91,7 +91,13 @@ class ListProjectsForUserUseCase:
             projects = self._project_repo.find_all()
         else:
             projects = self._project_repo.find_projects_for_user(caller_user_id)
-        return [p.to_dict() for p in projects]
+        result = []
+        for p in projects:
+            d = p.to_dict()
+            members = self._project_repo.find_members(p.project_id)
+            d["member_count"] = len(members)
+            result.append(d)
+        return result
 
 
 class UpdateProjectUseCase:

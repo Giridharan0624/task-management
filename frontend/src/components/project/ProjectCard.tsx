@@ -14,7 +14,7 @@ interface ProjectCardProps {
 export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting }: ProjectCardProps) {
   const router = useRouter()
 
-  const memberCount = project.members?.length ?? 0
+  const memberCount = project.memberCount ?? project.members?.length ?? 0
   const createdDate = new Date(project.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
