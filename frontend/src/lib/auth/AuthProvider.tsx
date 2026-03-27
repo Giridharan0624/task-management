@@ -4,7 +4,6 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { User } from '@/types/user'
 import {
   signIn as cognitoSignIn,
-  signUp as cognitoSignUp,
   signOut as cognitoSignOut,
   getCurrentToken,
   getCurrentUser,
@@ -15,7 +14,6 @@ interface AuthContextValue {
   token: string | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => void
   updateUser: (updates: Partial<User>) => void
 }
@@ -70,10 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(decoded)
   }, [])
 
-  const signUp = useCallback(async (email: string, password: string, name: string) => {
-    await cognitoSignUp(email, password, name)
-  }, [])
-
   const signOut = useCallback(() => {
     cognitoSignOut()
     setToken(null)
@@ -85,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, signIn, signUp, signOut, updateUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

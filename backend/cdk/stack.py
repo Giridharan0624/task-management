@@ -46,7 +46,7 @@ class TaskManagementStack(Stack):
             self,
             "UserPool",
             user_pool_name="TaskManagementUserPool",
-            self_sign_up_enabled=True,
+            self_sign_up_enabled=False,
             sign_in_aliases=cognito.SignInAliases(email=True),
             auto_verify=cognito.AutoVerifiedAttrs(email=True),
             standard_attributes=cognito.StandardAttributes(

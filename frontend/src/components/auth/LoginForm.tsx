@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -71,13 +71,6 @@ export function LoginForm() {
       <Button type="submit" loading={isSubmitting} className="w-full">
         Sign in
       </Button>
-
-      <p className="text-center text-sm text-gray-600">
-        Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-medium text-blue-600 hover:underline">
-          Sign up
-        </Link>
-      </p>
     </form>
   )
 }

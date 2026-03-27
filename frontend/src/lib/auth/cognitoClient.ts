@@ -2,7 +2,6 @@ import {
   CognitoUserPool,
   CognitoUser,
   AuthenticationDetails,
-  CognitoUserAttribute,
   CognitoUserSession,
 } from 'amazon-cognito-identity-js'
 
@@ -42,23 +41,6 @@ export function signIn(email: string, password: string): Promise<AuthTokens> {
       onFailure: (err) => {
         reject(err)
       },
-    })
-  })
-}
-
-export function signUp(email: string, password: string, name: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const attributeList: CognitoUserAttribute[] = [
-      new CognitoUserAttribute({ Name: 'email', Value: email }),
-      new CognitoUserAttribute({ Name: 'name', Value: name }),
-    ]
-
-    userPool.signUp(email, password, attributeList, [], (err, _result) => {
-      if (err) {
-        reject(err)
-        return
-      }
-      resolve()
     })
   })
 }

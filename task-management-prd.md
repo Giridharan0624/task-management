@@ -52,7 +52,8 @@ A scalable, serverless task management system where an OWNER manages users, crea
 * User login via AWS Cognito (email + password)
 * JWT-based authentication on all API calls
 * Three system roles: OWNER, ADMIN, MEMBER
-* OWNER creates ADMIN and MEMBER accounts (no self-registration for managed users)
+* No self-registration — all user accounts are created by OWNER or ADMIN
+* Cognito self-signup is disabled at the User Pool level
 * Cognito `custom:systemRole` attribute synced with DynamoDB
 
 ### 4.2 User Management (OWNER / ADMIN)
