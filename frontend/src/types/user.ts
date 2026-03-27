@@ -7,6 +7,12 @@ export interface User {
   name: string
   systemRole: SystemRole
   createdBy?: string
+  phone?: string
+  designation?: string
+  department?: string
+  location?: string
+  bio?: string
+  skills?: string[]
   createdAt: string
   updatedAt: string
 }

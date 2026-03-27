@@ -192,6 +192,11 @@ class CreateUserUseCase:
             system_role=role_enum,
             created_by=caller_user_id,
         )
+        # Set department at creation time
+        if dto.get("department"):
+            user = User(
+                **{**user.model_dump(), "department": dto["department"]}
+            )
         self._user_repo.save(user)
 
         return user.to_dict()

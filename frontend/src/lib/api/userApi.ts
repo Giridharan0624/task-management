@@ -20,7 +20,17 @@ export function getProfile(): Promise<User> {
   return apiClient.get<User>('/users/me')
 }
 
-export function updateProfile(data: { name: string }): Promise<User> {
+export interface UpdateProfileData {
+  name?: string
+  phone?: string
+  designation?: string
+  department?: string
+  location?: string
+  bio?: string
+  skills?: string[]
+}
+
+export function updateProfile(data: UpdateProfileData): Promise<User> {
   return apiClient.put<User>('/users/me', data)
 }
 
@@ -28,11 +38,15 @@ export function updateUserRole(userId: string, systemRole: string): Promise<User
   return apiClient.put<User>('/users/role', { userId, systemRole })
 }
 
+export function updateUserDepartment(userId: string, department: string): Promise<User> {
+  return apiClient.put<User>('/users/department', { userId, department })
+}
+
 export function getUserProgress(userId: string): Promise<UserProgress> {
   return apiClient.get<UserProgress>(`/users/${userId}/progress`)
 }
 
-export function createUser(data: { email: string; name: string; password: string; systemRole: string }): Promise<User> {
+export function createUser(data: { email: string; name: string; password: string; systemRole: string; department: string }): Promise<User> {
   return apiClient.post<User>('/users', data)
 }
 

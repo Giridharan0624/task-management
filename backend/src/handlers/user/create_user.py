@@ -12,6 +12,7 @@ class CreateUserRequest(BaseModel):
     name: str
     password: str
     system_role: str = "MEMBER"
+    department: str
 
 
 def handler(event, context):

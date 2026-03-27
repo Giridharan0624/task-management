@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { useUsers, useCreateUser, useDeleteUser, useUpdateUserRole, useUserProgress } from '@/lib/hooks/useUsers'
+import { useUsers, useCreateUser, useDeleteUser, useUpdateUserRole, useUpdateUserDepartment, useUserProgress } from '@/lib/hooks/useUsers'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -26,11 +26,15 @@ export default function UsersPage() {
   const createUserMutation = useCreateUser()
   const deleteUserMutation = useDeleteUser()
   const updateRole = useUpdateUserRole()
+  const updateDept = useUpdateUserDepartment()
 
   const [showAddUser, setShowAddUser] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [progressUser, setProgressUser] = useState<string | null>(null)
+  const [viewUser, setViewUser] = useState<User | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [deptFilter, setDeptFilter] = useState<string>('ALL')
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('ADMIN')
 
@@ -39,6 +43,7 @@ export default function UsersPage() {
   const [newName, setNewName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newRole, setNewRole] = useState('MEMBER')
+  const [newDepartment, setNewDepartment] = useState('')
 
   if (!systemPerms.canManageUsers) {
     return (
@@ -66,16 +71,30 @@ export default function UsersPage() {
   const admins = (users ?? []).filter((u) => u.systemRole === 'ADMIN')
   const members = (users ?? []).filter((u) => u.systemRole === 'MEMBER')
 
-  const displayedUsers = isOwner
+  const rawDisplayedUsers = isOwner
     ? (activeTab === 'ADMIN' ? admins : members)
     : members
+
+  const deptFiltered = deptFilter === 'ALL'
+    ? rawDisplayedUsers
+    : rawDisplayedUsers.filter((u) => (u.department || '').toLowerCase() === deptFilter.toLowerCase())
+
+  const displayedUsers = searchQuery.trim()
+    ? deptFiltered.filter((u) => {
+        const q = searchQuery.toLowerCase()
+        return (u.name || '').toLowerCase().includes(q)
+          || (u.email || '').toLowerCase().includes(q)
+          || (u.designation || '').toLowerCase().includes(q)
+          || (u.department || '').toLowerCase().includes(q)
+      })
+    : deptFiltered
 
   // Available roles for creation based on caller
   const creatableRoles = isOwner ? ['ADMIN', 'MEMBER'] : ['MEMBER']
 
   const handleCreateUser = async () => {
     setError('')
-    if (!newEmail || !newName || !newPassword) {
+    if (!newEmail || !newName || !newPassword || !newDepartment) {
       setError('All fields are required')
       return
     }
@@ -89,12 +108,14 @@ export default function UsersPage() {
         name: newName,
         password: newPassword,
         systemRole: newRole,
+        department: newDepartment,
       })
       setShowAddUser(false)
       setNewEmail('')
       setNewName('')
       setNewPassword('')
       setNewRole('MEMBER')
+      setNewDepartment('')
     } catch (err: any) {
       setError(err.message || 'Failed to create user')
     }
@@ -139,6 +160,51 @@ export default function UsersPage() {
             + Add {isOwner ? 'User' : 'Member'}
           </Button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name, email, designation, or department..."
+          className="w-full rounded-xl border border-gray-200 pl-10 pr-4 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
+
+      {/* Department Filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mr-1">Department:</span>
+        {['ALL', 'Development', 'Designing', 'Management', 'Research'].map((dept) => {
+          const isActive = deptFilter === (dept === 'ALL' ? 'ALL' : dept)
+          const count = dept === 'ALL'
+            ? rawDisplayedUsers.length
+            : rawDisplayedUsers.filter((u) => (u.department || '').toLowerCase() === dept.toLowerCase()).length
+          return (
+            <button
+              key={dept}
+              onClick={() => setDeptFilter(dept === 'ALL' ? 'ALL' : dept)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {dept}
+              <span className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[10px] font-bold ${
+                isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Stats Cards */}
@@ -191,8 +257,8 @@ export default function UsersPage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -208,18 +274,50 @@ export default function UsersPage() {
                       </span>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{u.name || 'Unnamed'}</div>
+                      <button
+                        type="button"
+                        onClick={() => setViewUser(u)}
+                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                      >
+                        {u.name || 'Unnamed'}
+                      </button>
                       <div className="text-sm text-gray-500">{u.email}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  {(() => {
+                    const canEditDept =
+                      (isOwner && u.systemRole !== 'OWNER') ||
+                      (currentUser?.systemRole === 'ADMIN' && u.systemRole === 'MEMBER')
+                    if (canEditDept) {
+                      return (
+                        <select
+                          value={u.department || ''}
+                          onChange={(e) => updateDept.mutate({ userId: u.userId, department: e.target.value })}
+                          className="rounded-full bg-teal-50 border-0 px-2.5 py-0.5 text-xs font-medium text-teal-700 focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:bg-teal-100 transition-colors"
+                        >
+                          <option value="">No Dept</option>
+                          <option value="Development">Development</option>
+                          <option value="Designing">Designing</option>
+                          <option value="Management">Management</option>
+                          <option value="Research">Research</option>
+                        </select>
+                      )
+                    }
+                    return u.department ? (
+                      <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
+                        {u.department}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">-</span>
+                    )
+                  })()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <Badge className={ROLE_COLORS[u.systemRole] || ROLE_COLORS.MEMBER}>
                     {u.systemRole}
                   </Badge>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {u.createdBy ? userMap.get(u.createdBy) || u.createdBy : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
@@ -251,6 +349,7 @@ export default function UsersPage() {
             {displayedUsers.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+
                   {isOwner && activeTab === 'ADMIN'
                     ? 'No admins found. Click "Add User" to create one.'
                     : 'No members found. Click "Add Member" to create one.'}
@@ -308,8 +407,22 @@ export default function UsersPage() {
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+            <select
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              value={newDepartment}
+              onChange={(e) => setNewDepartment(e.target.value)}
+            >
+              <option value="">-- Select Department --</option>
+              <option value="Development">Development</option>
+              <option value="Designing">Designing</option>
+              <option value="Management">Management</option>
+              <option value="Research">Research</option>
+            </select>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => { setShowAddUser(false); setError('') }}>
+            <Button variant="secondary" onClick={() => { setShowAddUser(false); setError(''); setNewDepartment('') }}>
               Cancel
             </Button>
             <Button
@@ -378,6 +491,87 @@ export default function UsersPage() {
       {progressUser && (
         <UserProgressModal userId={progressUser} onClose={() => setProgressUser(null)} />
       )}
+
+      {/* User Bio Modal */}
+      <Modal
+        isOpen={viewUser !== null}
+        onClose={() => setViewUser(null)}
+        title={viewUser?.name || viewUser?.email || 'User Profile'}
+      >
+        {viewUser && (
+          <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-xl">
+                  {(viewUser.name || viewUser.email).charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{viewUser.name || 'Unnamed'}</h3>
+                <p className="text-sm text-gray-500">{viewUser.email}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className={ROLE_COLORS[viewUser.systemRole]}>{viewUser.systemRole}</Badge>
+                  {viewUser.designation && (
+                    <span className="text-xs text-gray-500">{viewUser.designation}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bio */}
+            {viewUser.bio && (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">About</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewUser.bio}</p>
+              </div>
+            )}
+
+            {/* Details */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-400 mb-0.5">Phone</p>
+                <p className="text-sm font-medium text-gray-900">{viewUser.phone || '-'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-400 mb-0.5">Department</p>
+                <p className="text-sm font-medium text-gray-900">{viewUser.department || '-'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-400 mb-0.5">Location</p>
+                <p className="text-sm font-medium text-gray-900">{viewUser.location || '-'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-400 mb-0.5">Joined</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {viewUser.createdAt ? new Date(viewUser.createdAt).toLocaleDateString() : '-'}
+                </p>
+              </div>
+            </div>
+
+            {/* Skills */}
+            {viewUser.skills && viewUser.skills.length > 0 && (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Skills</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {viewUser.skills.map((skill) => (
+                    <span key={skill} className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Created By */}
+            {viewUser.createdBy && (
+              <div className="text-xs text-gray-400">
+                Created by {userMap.get(viewUser.createdBy) || viewUser.createdBy}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

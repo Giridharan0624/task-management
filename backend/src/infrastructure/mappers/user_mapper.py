@@ -1,3 +1,5 @@
+import json
+
 from domain.user.entities import User
 from domain.user.value_objects import SystemRole
 
@@ -5,12 +7,24 @@ from domain.user.value_objects import SystemRole
 class UserMapper:
     @staticmethod
     def to_domain(item: dict) -> User:
+        skills_raw = item.get("skills", "[]")
+        if isinstance(skills_raw, str):
+            skills_raw = json.loads(skills_raw)
+        if not isinstance(skills_raw, list):
+            skills_raw = []
+
         return User(
             user_id=item.get("user_id") or item.get("userId", ""),
             email=item.get("email", ""),
             name=item.get("name", ""),
             system_role=SystemRole(item.get("system_role") or item.get("systemRole", "MEMBER")),
             created_by=item.get("created_by"),
+            phone=item.get("phone"),
+            designation=item.get("designation"),
+            department=item.get("department"),
+            location=item.get("location"),
+            bio=item.get("bio"),
+            skills=skills_raw,
             created_at=item.get("created_at") or item.get("createdAt", ""),
             updated_at=item.get("updated_at") or item.get("updatedAt", ""),
         )
@@ -31,4 +45,16 @@ class UserMapper:
         }
         if user.created_by:
             item["created_by"] = user.created_by
+        if user.phone:
+            item["phone"] = user.phone
+        if user.designation:
+            item["designation"] = user.designation
+        if user.department:
+            item["department"] = user.department
+        if user.location:
+            item["location"] = user.location
+        if user.bio:
+            item["bio"] = user.bio
+        if user.skills:
+            item["skills"] = json.dumps(user.skills)
         return item

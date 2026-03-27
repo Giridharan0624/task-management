@@ -73,6 +73,13 @@ async function request<T>(
   const response = await fetch(url, init)
 
   if (!response.ok) {
+    // Token expired — clear auth and redirect to login
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token')
+      window.location.href = '/login'
+      throw new ApiClientError('Session expired. Please log in again.', 401)
+    }
+
     let errorMessage = `HTTP error ${response.status}`
     let errorCode: string | undefined
     try {

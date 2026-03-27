@@ -164,6 +164,7 @@ class TaskManagementStack(Stack):
         user_by_id = users.add_resource("{userId}")
         user_progress = user_by_id.add_resource("progress")
         users_role = users.add_resource("role")
+        users_department = users.add_resource("department")
 
         # ─── Project handlers ────────────────────────────────────────────────
         add_api_lambda("CreateProject", "handlers.project.create_project.handler", "POST", projects)
@@ -216,6 +217,7 @@ class TaskManagementStack(Stack):
             cognito_policies=["cognito-idp:AdminUpdateUserAttributes"],
         )
         add_api_lambda("GetUserProgress", "handlers.user.get_user_progress.handler", "GET", user_progress)
+        add_api_lambda("UpdateUserDepartment", "handlers.user.update_user_department.handler", "PUT", users_department)
 
         # ─── Attendance handlers ────────────────────────────────────────────
         attendance = api.root.add_resource("attendance")

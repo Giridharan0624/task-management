@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form'
 import { useCreateTask } from '@/lib/hooks/useTasks'
 import { useProject } from '@/lib/hooks/useProjects'
 import { Modal } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import type { TaskPriority } from '@/types/task'
 
@@ -19,8 +18,15 @@ interface FormValues {
   title: string
   description: string
   priority: TaskPriority
-  deadline: string
+  deadlineDate: string
+  deadlineTime: string
 }
+
+const priorityConfig = [
+  { value: 'LOW' as const, label: 'Low', icon: '!', bg: 'bg-slate-50', border: 'border-slate-200', activeBg: 'bg-slate-100', activeBorder: 'border-slate-500', text: 'text-slate-600', ring: 'ring-slate-400' },
+  { value: 'MEDIUM' as const, label: 'Medium', icon: '!!', bg: 'bg-amber-50', border: 'border-amber-200', activeBg: 'bg-amber-100', activeBorder: 'border-amber-500', text: 'text-amber-700', ring: 'ring-amber-400' },
+  { value: 'HIGH' as const, label: 'High', icon: '!!!', bg: 'bg-red-50', border: 'border-red-200', activeBg: 'bg-red-100', activeBorder: 'border-red-500', text: 'text-red-700', ring: 'ring-red-400' },
+]
 
 export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalProps) {
   const createTask = useCreateTask(projectId)
@@ -31,6 +37,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
@@ -38,6 +45,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
     },
   })
 
+  const currentPriority = watch('priority')
   const members = project?.members ?? []
 
   const toggleAssignee = (userId: string) => {
@@ -46,13 +54,17 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
     )
   }
 
+  const selectAll = () => setSelectedAssignees(members.map((m) => m.userId))
+  const clearAll = () => setSelectedAssignees([])
+
   const onSubmit = async (values: FormValues) => {
+    const deadline = `${values.deadlineDate}T${values.deadlineTime}`
     await createTask.mutateAsync({
       title: values.title,
       description: values.description || undefined,
       status: 'TODO',
       priority: values.priority,
-      deadline: values.deadline,
+      deadline,
       assignedTo: selectedAssignees.length > 0 ? selectedAssignees : undefined,
     })
     reset()
@@ -68,83 +80,166 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Create New Task">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        <Input
-          label="Title"
-          placeholder="Task title"
-          error={errors.title?.message}
-          {...register('title', {
-            required: 'Title is required',
-            minLength: { value: 2, message: 'Title must be at least 2 characters' },
-          })}
-        />
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+        {/* Title */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold text-gray-800">Title</label>
+          <input
+            placeholder="What needs to be done?"
+            className={`w-full rounded-xl border px-4 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+              errors.title ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'
+            }`}
+            {...register('title', {
+              required: 'Title is required',
+              minLength: { value: 2, message: 'At least 2 characters' },
+            })}
+          />
+          {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+        </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Description (optional)</label>
+        {/* Description */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold text-gray-800">
+            Description <span className="font-normal text-gray-400">(optional)</span>
+          </label>
           <textarea
-            rows={3}
-            placeholder="Describe the task..."
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            rows={2}
+            placeholder="Add more details..."
+            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none transition-all"
             {...register('description')}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Priority</label>
-            <select
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              {...register('priority')}
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </select>
+        {/* Priority */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold text-gray-800">Priority</label>
+          <div className="grid grid-cols-3 gap-2">
+            {priorityConfig.map((p) => {
+              const isActive = currentPriority === p.value
+              return (
+                <label key={p.value} className="cursor-pointer">
+                  <input type="radio" value={p.value} {...register('priority')} className="sr-only" />
+                  <div className={`flex flex-col items-center gap-1 rounded-xl border-2 py-3 transition-all ${
+                    isActive
+                      ? `${p.activeBg} ${p.activeBorder} ring-1 ${p.ring}`
+                      : `${p.bg} ${p.border} hover:border-gray-300`
+                  }`}>
+                    <span className={`text-lg font-bold ${p.text}`}>{p.icon}</span>
+                    <span className={`text-xs font-medium ${isActive ? p.text : 'text-gray-500'}`}>{p.label}</span>
+                  </div>
+                </label>
+              )
+            })}
           </div>
-
-          <Input
-            label="Deadline"
-            type="datetime-local"
-            error={errors.deadline?.message}
-            {...register('deadline', { required: 'Deadline is required' })}
-          />
         </div>
 
-        {/* Assign to project members */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">
-            Assign To ({selectedAssignees.length} selected)
-          </label>
+        {/* Deadline */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold text-gray-800">Deadline</label>
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <input
+                type="date"
+                className={`w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+                  errors.deadlineDate ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+                {...register('deadlineDate', { required: 'Date is required' })}
+              />
+            </div>
+            <div className="flex-1 relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <input
+                type="time"
+                className={`w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+                  errors.deadlineTime ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+                {...register('deadlineTime', { required: 'Time is required' })}
+              />
+            </div>
+          </div>
+          {(errors.deadlineDate || errors.deadlineTime) && (
+            <p className="text-xs text-red-500">{errors.deadlineDate?.message || errors.deadlineTime?.message}</p>
+          )}
+        </div>
+
+        {/* Assign Members */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-gray-800">
+              Assign To
+              {selectedAssignees.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                  {selectedAssignees.length}
+                </span>
+              )}
+            </label>
+            {members.length > 0 && (
+              <button
+                type="button"
+                onClick={selectedAssignees.length === members.length ? clearAll : selectAll}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                {selectedAssignees.length === members.length ? 'Clear all' : 'Select all'}
+              </button>
+            )}
+          </div>
           {members.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">No project members yet. Add members first.</p>
+            <div className="rounded-xl border-2 border-dashed border-gray-200 py-4 text-center">
+              <p className="text-sm text-gray-400">No project members yet</p>
+            </div>
           ) : (
-            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div className="max-h-36 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-50">
               {members.map((m) => {
                 const isSelected = selectedAssignees.includes(m.userId)
+                const name = m.user?.name || m.user?.email || m.userId
                 return (
                   <label
                     key={m.userId}
-                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      isSelected ? 'bg-indigo-50' : ''
+                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all ${
+                      isSelected ? 'bg-indigo-50/70' : 'hover:bg-gray-50'
                     }`}
                   >
+                    <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 transition-all ${
+                      isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                    }`}>
+                      {isSelected && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleAssignee(m.userId)}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      className="sr-only"
                     />
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-indigo-600 text-xs font-medium">
-                          {(m.user?.name || m.user?.email || m.userId).charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-900 truncate">
-                        {m.user?.name || m.user?.email || m.userId}
-                      </span>
-                      <span className="text-xs text-gray-400 ml-auto flex-shrink-0">{m.projectRole}</span>
+                    <div className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold ${
+                      isSelected ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {name.charAt(0).toUpperCase()}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-sm truncate block ${isSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                        {name}
+                      </span>
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded ${
+                      m.projectRole === 'TEAM_LEAD' ? 'bg-orange-100 text-orange-600' :
+                      m.projectRole === 'ADMIN' ? 'bg-purple-100 text-purple-600' :
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {m.projectRole === 'TEAM_LEAD' ? 'Lead' : m.projectRole}
+                    </span>
                   </label>
                 )
               })}
@@ -153,14 +248,12 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
         </div>
 
         {createTask.error && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {createTask.error instanceof Error
-              ? createTask.error.message
-              : 'Failed to create task'}
-          </p>
+          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {createTask.error instanceof Error ? createTask.error.message : 'Failed to create task'}
+          </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex justify-end gap-3 pt-1">
           <Button variant="secondary" type="button" onClick={handleClose}>
             Cancel
           </Button>
