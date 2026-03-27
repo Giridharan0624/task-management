@@ -217,6 +217,18 @@ class TaskManagementStack(Stack):
         )
         add_api_lambda("GetUserProgress", "handlers.user.get_user_progress.handler", "GET", user_progress)
 
+        # ─── Attendance handlers ────────────────────────────────────────────
+        attendance = api.root.add_resource("attendance")
+        attendance_sign_in = attendance.add_resource("sign-in")
+        attendance_sign_out = attendance.add_resource("sign-out")
+        attendance_me = attendance.add_resource("me")
+        attendance_today = attendance.add_resource("today")
+
+        add_api_lambda("AttendanceSignIn", "handlers.attendance.sign_in.handler", "POST", attendance_sign_in)
+        add_api_lambda("AttendanceSignOut", "handlers.attendance.sign_out.handler", "PUT", attendance_sign_out)
+        add_api_lambda("GetMyAttendance", "handlers.attendance.get_my_attendance.handler", "GET", attendance_me)
+        add_api_lambda("ListTodayAttendance", "handlers.attendance.list_today_attendance.handler", "GET", attendance_today)
+
         # ─── Outputs ─────────────────────────────────────────────────────────
         CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")
         CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id, description="Cognito User Pool ID")

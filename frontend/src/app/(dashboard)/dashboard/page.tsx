@@ -7,6 +7,8 @@ import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
+import { AttendanceButton } from '@/components/attendance/AttendanceButton'
+import { AttendanceTable } from '@/components/attendance/AttendanceTable'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800',
@@ -72,6 +74,15 @@ function OwnerDashboard() {
         <SummaryCard label="Total Members" value={memberCount} color="text-blue-700" bgColor="bg-blue-50" />
         <SummaryCard label="Total Projects" value={projects?.length ?? 0} color="text-indigo-700" bgColor="bg-indigo-50" />
         <SummaryCard label="Total Tasks" value={totalTasks} color="text-green-700" bgColor="bg-green-50" />
+      </div>
+
+      {/* Attendance */}
+      <AttendanceButton />
+
+      {/* Team Attendance Today */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Team Attendance Today</h2>
+        <AttendanceTable />
       </div>
 
       {/* Quick Actions */}
@@ -173,6 +184,15 @@ function AdminDashboard() {
         <SummaryCard label="In Progress" value={progressCount} color="text-blue-700" bgColor="bg-blue-50" />
         <SummaryCard label="Done" value={doneCount} color="text-green-700" bgColor="bg-green-50" />
         <SummaryCard label="My Members" value={memberCount} color="text-indigo-700" bgColor="bg-indigo-50" />
+      </div>
+
+      {/* Attendance */}
+      <AttendanceButton />
+
+      {/* Team Attendance Today */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Team Attendance Today</h2>
+        <AttendanceTable />
       </div>
 
       {/* Quick Actions */}
@@ -295,6 +315,9 @@ function MemberDashboard() {
         <SummaryCard label="In Progress" value={progressCount} color="text-blue-700" bgColor="bg-blue-50" />
         <SummaryCard label="Done" value={doneCount} color="text-green-700" bgColor="bg-green-50" />
       </div>
+
+      {/* Attendance */}
+      <AttendanceButton />
 
       {/* Quick Action */}
       <div className="flex gap-3">

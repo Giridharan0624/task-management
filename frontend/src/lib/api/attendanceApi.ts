@@ -1,0 +1,18 @@
+import { apiClient } from './client'
+import type { Attendance } from '@/types/attendance'
+
+export function signInToWork(): Promise<Attendance> {
+  return apiClient.post<Attendance>('/attendance/sign-in', {})
+}
+
+export function signOutFromWork(): Promise<Attendance> {
+  return apiClient.put<Attendance>('/attendance/sign-out', {})
+}
+
+export function getMyAttendance(): Promise<Attendance | null> {
+  return apiClient.get<Attendance | null>('/attendance/me')
+}
+
+export function getTodayAttendance(): Promise<Attendance[]> {
+  return apiClient.get<Attendance[]>('/attendance/today')
+}
