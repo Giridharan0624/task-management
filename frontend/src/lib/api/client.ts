@@ -2,6 +2,20 @@ import type { ApiError } from '@/types/api'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
 
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+}
+
+function transformKeys(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(transformKeys)
+  if (data !== null && typeof data === 'object') {
+    return Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).map(([k, v]) => [snakeToCamel(k), transformKeys(v)])
+    )
+  }
+  return data
+}
+
 class ApiClientError extends Error implements ApiError {
   status: number
   code?: string
@@ -61,7 +75,8 @@ async function request<T>(
     return undefined as unknown as T
   }
 
-  return response.json() as Promise<T>
+  const json = await response.json()
+  return transformKeys(json) as T
 }
 
 export const apiClient = {

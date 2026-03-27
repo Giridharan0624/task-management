@@ -4,12 +4,12 @@ import type { User } from '@/types/user'
 export interface UserProgress {
   user: User
   boards: {
-    board_id: string
-    board_name: string
+    boardId: string
+    boardName: string
     tasks: import('@/types/task').Task[]
     stats: { TODO: number; IN_PROGRESS: number; DONE: number }
   }[]
-  total_stats: { TODO: number; IN_PROGRESS: number; DONE: number; total: number }
+  totalStats: { TODO: number; IN_PROGRESS: number; DONE: number; total: number }
 }
 
 export function getUsers(): Promise<User[]> {

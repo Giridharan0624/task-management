@@ -222,6 +222,12 @@ export function TaskDetailPanel({ task, boardId, permissions, onClose }: TaskDet
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Assigned To</p>
                   <p className="text-sm text-gray-700">{task.assignedTo ?? 'Unassigned'}</p>
                 </div>
+                {task.assignedBy && (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Assigned By</p>
+                    <p className="text-sm text-gray-700">{task.assignedBy}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Created By</p>
                   <p className="text-sm text-gray-700">{task.createdBy}</p>

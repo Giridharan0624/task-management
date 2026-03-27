@@ -173,16 +173,24 @@ class CreateUserUseCase:
             raise ValidationError(f"User with email {email} already exists")
 
         # Create in Cognito
-        user_id = self._cognito.create_user(email, name, password, target_role)
-        self._cognito.set_permanent_password(email, password)
+        try:
+            user_id = self._cognito.create_user(email, name, password, target_role)
+            self._cognito.set_permanent_password(email, password)
+        except Exception as e:
+            msg = str(e)
+            if "Password" in msg or "password" in msg:
+                raise ValidationError(
+                    "Password must be at least 8 characters with uppercase, lowercase, and numbers"
+                )
+            raise
 
         # Create in DynamoDB
-        now = datetime.now(timezone.utc).isoformat()
         user = User.create(
             user_id=user_id,
             email=email,
             name=name,
             system_role=role_enum,
+            created_by=caller_user_id,
         )
         self._user_repo.save(user)
 

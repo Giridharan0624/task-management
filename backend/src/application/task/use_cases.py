@@ -52,6 +52,7 @@ class CreateTaskUseCase:
             except ValueError:
                 raise ValidationError(f"Invalid priority: {dto['priority']}")
 
+        assigned_to = dto.get("assigned_to")
         task = Task.create(
             task_id=str(uuid.uuid4()),
             board_id=board_id,
@@ -60,7 +61,8 @@ class CreateTaskUseCase:
             description=dto.get("description"),
             status=status,
             priority=priority,
-            assigned_to=dto.get("assigned_to"),
+            assigned_to=assigned_to,
+            assigned_by=caller_user_id if assigned_to else None,
             due_date=dto.get("due_date"),
         )
         self._task_repo.save(task)
@@ -160,6 +162,9 @@ class UpdateTaskUseCase:
         description = dto.get("description", task.description)
         due_date = dto.get("due_date", task.due_date)
         assigned_to = dto.get("assigned_to", task.assigned_to)
+        assigned_by = task.assigned_by
+        if "assigned_to" in dto and dto["assigned_to"] != task.assigned_to:
+            assigned_by = caller_user_id
 
         status = task.status
         if dto.get("status"):
@@ -184,6 +189,7 @@ class UpdateTaskUseCase:
             status=status,
             priority=priority,
             assigned_to=assigned_to,
+            assigned_by=assigned_by,
             created_by=task.created_by,
             due_date=due_date,
             created_at=task.created_at,
@@ -272,6 +278,7 @@ class AssignTaskUseCase:
             status=task.status,
             priority=task.priority,
             assigned_to=assignee_id,
+            assigned_by=caller_user_id,
             created_by=task.created_by,
             due_date=task.due_date,
             created_at=task.created_at,

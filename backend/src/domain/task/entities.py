@@ -16,6 +16,7 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority = TaskPriority.MEDIUM
     assigned_to: Optional[str] = None
+    assigned_by: Optional[str] = None
     created_by: str
     due_date: Optional[str] = None
     created_at: str
@@ -32,6 +33,7 @@ class Task(BaseModel):
         status: TaskStatus = TaskStatus.TODO,
         priority: TaskPriority = TaskPriority.MEDIUM,
         assigned_to: Optional[str] = None,
+        assigned_by: Optional[str] = None,
         due_date: Optional[str] = None,
     ) -> "Task":
         now = datetime.now(timezone.utc).isoformat()
@@ -43,6 +45,7 @@ class Task(BaseModel):
             status=status,
             priority=priority,
             assigned_to=assigned_to,
+            assigned_by=assigned_by,
             created_by=created_by,
             due_date=due_date,
             created_at=now,
@@ -58,6 +61,7 @@ class Task(BaseModel):
             "status": self.status.value,
             "priority": self.priority.value,
             "assigned_to": self.assigned_to,
+            "assigned_by": self.assigned_by,
             "created_by": self.created_by,
             "due_date": self.due_date,
             "created_at": self.created_at,

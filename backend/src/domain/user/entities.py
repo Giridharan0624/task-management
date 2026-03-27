@@ -13,6 +13,7 @@ class User(BaseModel):
     email: str
     name: str
     system_role: SystemRole
+    created_by: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -23,6 +24,7 @@ class User(BaseModel):
         email: str,
         name: str,
         system_role: SystemRole = SystemRole.MEMBER,
+        created_by: Optional[str] = None,
     ) -> "User":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
@@ -30,6 +32,7 @@ class User(BaseModel):
             email=email,
             name=name,
             system_role=system_role,
+            created_by=created_by,
             created_at=now,
             updated_at=now,
         )
@@ -40,6 +43,7 @@ class User(BaseModel):
             "email": self.email,
             "name": self.name,
             "system_role": self.system_role.value,
+            "created_by": self.created_by,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

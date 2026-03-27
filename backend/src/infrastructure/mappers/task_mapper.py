@@ -13,6 +13,7 @@ class TaskMapper:
             status=TaskStatus(item.get("status", TaskStatus.TODO.value)),
             priority=TaskPriority(item.get("priority", TaskPriority.MEDIUM.value)),
             assigned_to=item.get("assigned_to"),
+            assigned_by=item.get("assigned_by"),
             created_by=item["created_by"],
             due_date=item.get("due_date"),
             created_at=item["created_at"],
@@ -43,4 +44,6 @@ class TaskMapper:
             item["assigned_to"] = task.assigned_to
             item["GSI2PK"] = f"ASSIGNEE#{task.assigned_to}"
             item["GSI2SK"] = f"TASK#{task.task_id}"
+        if task.assigned_by is not None:
+            item["assigned_by"] = task.assigned_by
         return item

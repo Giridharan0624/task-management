@@ -58,6 +58,10 @@ export default function UsersPage() {
 
   const isOwner = currentUser?.systemRole === 'OWNER'
 
+  // Build a userId → name map for resolving "created by"
+  const userMap = new Map((users ?? []).map((u) => [u.userId, u.name || u.email]))
+  if (currentUser) userMap.set(currentUser.userId, currentUser.name || currentUser.email)
+
   // Owner sees tabbed view (Admins | Members), Admin sees only Members
   const admins = (users ?? []).filter((u) => u.systemRole === 'ADMIN')
   const members = (users ?? []).filter((u) => u.systemRole === 'MEMBER')
@@ -188,6 +192,7 @@ export default function UsersPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -212,6 +217,9 @@ export default function UsersPage() {
                   <Badge className={ROLE_COLORS[u.systemRole] || ROLE_COLORS.MEMBER}>
                     {u.systemRole}
                   </Badge>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {u.createdBy ? userMap.get(u.createdBy) || u.createdBy : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
@@ -242,7 +250,7 @@ export default function UsersPage() {
             ))}
             {displayedUsers.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                   {isOwner && activeTab === 'ADMIN'
                     ? 'No admins found. Click "Add User" to create one.'
                     : 'No members found. Click "Add Member" to create one.'}
@@ -389,27 +397,27 @@ function UserProgressModal({ userId, onClose }: { userId: string; onClose: () =>
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-3">
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-gray-900">{progress.total_stats.total}</div>
+              <div className="text-2xl font-bold text-gray-900">{progress.totalStats.total}</div>
               <div className="text-xs text-gray-500">Total</div>
             </div>
             <div className="bg-yellow-50 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{progress.total_stats.TODO}</div>
+              <div className="text-2xl font-bold text-yellow-600">{progress.totalStats.TODO}</div>
               <div className="text-xs text-gray-500">To Do</div>
             </div>
             <div className="bg-blue-50 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-blue-600">{progress.total_stats.IN_PROGRESS}</div>
+              <div className="text-2xl font-bold text-blue-600">{progress.totalStats.IN_PROGRESS}</div>
               <div className="text-xs text-gray-500">In Progress</div>
             </div>
             <div className="bg-green-50 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-green-600">{progress.total_stats.DONE}</div>
+              <div className="text-2xl font-bold text-green-600">{progress.totalStats.DONE}</div>
               <div className="text-xs text-gray-500">Done</div>
             </div>
           </div>
 
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {progress.boards.map((board) => (
-              <div key={board.board_id} className="border rounded-lg p-3">
-                <h4 className="font-medium text-gray-900">{board.board_name}</h4>
+              <div key={board.boardId} className="border rounded-lg p-3">
+                <h4 className="font-medium text-gray-900">{board.boardName}</h4>
                 <div className="flex gap-2 mt-2">
                   <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">{board.stats.TODO} To Do</span>
                   <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{board.stats.IN_PROGRESS} In Progress</span>
