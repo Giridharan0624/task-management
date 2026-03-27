@@ -14,24 +14,12 @@ venv/
 env/
 pip-log.txt
 
-# ─── Lambda bundled dependencies (pip install -t src/) ────────────────────────
-backend/src/bin/
-backend/src/boto3/
-backend/src/botocore/
-backend/src/s3transfer/
-backend/src/jmespath/
-backend/src/dateutil/
-backend/src/pydantic/
-backend/src/pydantic_core/
-backend/src/annotated_types/
-backend/src/typing_extensions*
-backend/src/six*
-backend/src/urllib3/
-backend/src/python_dateutil*
+# ─── Lambda Layer dependencies (pip install -t layers/python) ─────────────────
+backend/layers/
 
-# ─── SAM / AWS ────────────────────────────────────────────────────────────────
+# ─── CDK / AWS ────────────────────────────────────────────────────────────────
+cdk.out/
 .aws-sam/
-samconfig.toml
 *.zip
 
 # ─── Node / Next.js ───────────────────────────────────────────────────────────

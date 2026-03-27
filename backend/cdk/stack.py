@@ -1,0 +1,225 @@
+from pathlib import Path
+
+import aws_cdk as cdk
+from aws_cdk import (
+    Stack,
+    Duration,
+    CfnOutput,
+    RemovalPolicy,
+    aws_dynamodb as dynamodb,
+    aws_cognito as cognito,
+    aws_lambda as _lambda,
+    aws_apigateway as apigw,
+    aws_iam as iam,
+)
+from constructs import Construct
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+LAMBDA_SRC = str(BACKEND_DIR / "src")
+LAYERS_DIR = str(BACKEND_DIR / "layers")
+
+
+class TaskManagementStack(Stack):
+    def __init__(self, scope: Construct, construct_id: str, **kwargs):
+        super().__init__(scope, construct_id, **kwargs)
+
+        # ─── DynamoDB ────────────────────────────────────────────────────────
+        table = dynamodb.Table(
+            self,
+            "TaskManagementTable",
+            table_name="TaskManagementTable",
+            partition_key=dynamodb.Attribute(name="PK", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="SK", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        table.add_global_secondary_index(
+            index_name="GSI1",
+            partition_key=dynamodb.Attribute(name="GSI1PK", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="GSI1SK", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL,
+        )
+
+        table.add_global_secondary_index(
+            index_name="GSI2",
+            partition_key=dynamodb.Attribute(name="GSI2PK", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="GSI2SK", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL,
+        )
+
+        # ─── Cognito ─────────────────────────────────────────────────────────
+        user_pool = cognito.UserPool(
+            self,
+            "UserPool",
+            user_pool_name="TaskManagementUserPool",
+            self_sign_up_enabled=True,
+            sign_in_aliases=cognito.SignInAliases(email=True),
+            auto_verify=cognito.AutoVerifiedAttrs(email=True),
+            standard_attributes=cognito.StandardAttributes(
+                email=cognito.StandardAttribute(required=True, mutable=False),
+                fullname=cognito.StandardAttribute(required=False, mutable=True),
+            ),
+            custom_attributes={
+                "systemRole": cognito.StringAttribute(min_len=1, max_len=20, mutable=True),
+            },
+            password_policy=cognito.PasswordPolicy(
+                min_length=8,
+                require_uppercase=True,
+                require_lowercase=True,
+                require_digits=True,
+                require_symbols=False,
+            ),
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        user_pool_client = user_pool.add_client(
+            "UserPoolClient",
+            user_pool_client_name="TaskManagementClient",
+            auth_flows=cognito.AuthFlow(
+                user_srp=True,
+                user_password=True,
+            ),
+            generate_secret=False,
+        )
+
+        # ─── Cognito Authorizer ──────────────────────────────────────────────
+        authorizer = apigw.CognitoUserPoolsAuthorizer(
+            self,
+            "CognitoAuthorizer",
+            cognito_user_pools=[user_pool],
+        )
+
+        # ─── API Gateway ─────────────────────────────────────────────────────
+        api = apigw.RestApi(
+            self,
+            "TaskManagementApi",
+            rest_api_name="TaskManagementApi",
+            deploy_options=apigw.StageOptions(stage_name="prod"),
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=apigw.Cors.ALL_METHODS,
+                allow_headers=["Content-Type", "Authorization"],
+            ),
+        )
+
+        # ─── Lambda Layer (shared dependencies) ─────────────────────────────
+        deps_layer = _lambda.LayerVersion(
+            self,
+            "DepsLayer",
+            code=_lambda.Code.from_asset(LAYERS_DIR),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            description="boto3, pydantic, and other shared dependencies",
+        )
+
+        # ─── Shared Lambda config ────────────────────────────────────────────
+        lambda_env = {
+            "TABLE_NAME": table.table_name,
+            "USER_POOL_ID": user_pool.user_pool_id,
+            "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
+        }
+
+        lambda_defaults = dict(
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            code=_lambda.Code.from_asset(LAMBDA_SRC),
+            timeout=Duration.seconds(10),
+            environment=lambda_env,
+            layers=[deps_layer],
+        )
+
+        # ─── Helper to create Lambda + API route ─────────────────────────────
+        def add_api_lambda(
+            name: str,
+            handler: str,
+            method: str,
+            resource: apigw.IResource,
+            cognito_policies: list[str] | None = None,
+        ) -> _lambda.Function:
+            fn = _lambda.Function(self, name, handler=handler, **lambda_defaults)
+            table.grant_read_write_data(fn)
+
+            if cognito_policies:
+                fn.add_to_role_policy(
+                    iam.PolicyStatement(
+                        actions=cognito_policies,
+                        resources=[user_pool.user_pool_arn],
+                    )
+                )
+
+            resource.add_method(
+                method,
+                apigw.LambdaIntegration(fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+            return fn
+
+        # ─── API Resources ───────────────────────────────────────────────────
+        boards = api.root.add_resource("boards")
+        board = boards.add_resource("{boardId}")
+        members = board.add_resource("members")
+        member = members.add_resource("{userId}")
+        member_role = member.add_resource("role")
+        tasks = board.add_resource("tasks")
+        task = tasks.add_resource("{taskId}")
+        task_assign = task.add_resource("assign")
+
+        users = api.root.add_resource("users")
+        users_me = users.add_resource("me")
+        users_me_tasks = users_me.add_resource("tasks")
+        user_by_id = users.add_resource("{userId}")
+        user_progress = user_by_id.add_resource("progress")
+        users_role = users.add_resource("role")
+
+        # ─── Board handlers ──────────────────────────────────────────────────
+        add_api_lambda("CreateBoard", "handlers.board.create_board.handler", "POST", boards)
+        add_api_lambda("ListBoards", "handlers.board.list_boards.handler", "GET", boards)
+        add_api_lambda("GetBoard", "handlers.board.get_board.handler", "GET", board)
+        add_api_lambda("DeleteBoard", "handlers.board.delete_board.handler", "DELETE", board)
+        add_api_lambda("AddMember", "handlers.board.add_member.handler", "POST", members)
+        add_api_lambda("RemoveMember", "handlers.board.remove_member.handler", "DELETE", member)
+        add_api_lambda("UpdateMemberRole", "handlers.board.update_member_role.handler", "PUT", member_role)
+
+        # ─── Task handlers ───────────────────────────────────────────────────
+        add_api_lambda("CreateTask", "handlers.task.create_task.handler", "POST", tasks)
+        add_api_lambda("ListTasks", "handlers.task.list_tasks.handler", "GET", tasks)
+        add_api_lambda("GetTask", "handlers.task.get_task.handler", "GET", task)
+        add_api_lambda("UpdateTask", "handlers.task.update_task.handler", "PUT", task)
+        add_api_lambda("DeleteTask", "handlers.task.delete_task.handler", "DELETE", task)
+        add_api_lambda("AssignTask", "handlers.task.assign_task.handler", "PUT", task_assign)
+
+        # ─── User handlers ───────────────────────────────────────────────────
+        add_api_lambda("GetProfile", "handlers.user.get_profile.handler", "GET", users_me)
+        add_api_lambda("UpdateProfile", "handlers.user.update_profile.handler", "PUT", users_me)
+        add_api_lambda("MyTasks", "handlers.user.my_tasks.handler", "GET", users_me_tasks)
+        add_api_lambda("ListUsers", "handlers.user.list_users.handler", "GET", users)
+
+        # ─── User management (with Cognito admin permissions) ────────────────
+        add_api_lambda(
+            "CreateUser",
+            "handlers.user.create_user.handler",
+            "POST",
+            users,
+            cognito_policies=["cognito-idp:AdminCreateUser", "cognito-idp:AdminSetUserPassword"],
+        )
+        add_api_lambda(
+            "DeleteUser",
+            "handlers.user.delete_user.handler",
+            "DELETE",
+            user_by_id,
+            cognito_policies=["cognito-idp:AdminDeleteUser"],
+        )
+        add_api_lambda(
+            "UpdateUserRole",
+            "handlers.user.update_user_role.handler",
+            "PUT",
+            users_role,
+            cognito_policies=["cognito-idp:AdminUpdateUserAttributes"],
+        )
+        add_api_lambda("GetUserProgress", "handlers.user.get_user_progress.handler", "GET", user_progress)
+
+        # ─── Outputs ─────────────────────────────────────────────────────────
+        CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")
+        CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id, description="Cognito User Pool ID")
+        CfnOutput(self, "UserPoolClientId", value=user_pool_client.user_pool_client_id, description="Cognito Client ID")
+        CfnOutput(self, "TableName", value=table.table_name, description="DynamoDB Table Name")

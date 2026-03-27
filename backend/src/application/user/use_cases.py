@@ -8,7 +8,7 @@ from domain.user.value_objects import SystemRole
 from domain.board.repository import IBoardRepository
 from domain.task.repository import ITaskRepository
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
-from infrastructure.cognito.cognito_service import CognitoService
+from domain.user.identity_service import IIdentityService
 
 
 class ListUsersUseCase:
@@ -28,9 +28,9 @@ class ListUsersUseCase:
 
 class UpdateUserRoleUseCase:
     """OWNER can promote/demote users to ADMIN or MEMBER. OWNER cannot be changed."""
-    def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService = None):
+    def __init__(self, user_repo: IUserRepository, identity_service: IIdentityService):
         self._user_repo = user_repo
-        self._cognito = cognito_service or CognitoService()
+        self._cognito = identity_service
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         if caller_system_role != SystemRole.OWNER.value:
@@ -134,7 +134,7 @@ class CreateUserUseCase:
     Admins create Members only.
     Members cannot create anyone.
     """
-    def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService):
+    def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService):
         self._user_repo = user_repo
         self._cognito = cognito_service
 
@@ -195,7 +195,7 @@ class DeleteUserUseCase:
     Admins delete Members only.
     Cannot delete Owner. Cannot delete self.
     """
-    def __init__(self, user_repo: IUserRepository, cognito_service: CognitoService, board_repo: IBoardRepository):
+    def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService, board_repo: IBoardRepository):
         self._user_repo = user_repo
         self._cognito = cognito_service
         self._board_repo = board_repo

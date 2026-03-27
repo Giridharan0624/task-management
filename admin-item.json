@@ -1,12 +1,12 @@
 {
-  "PK": {"S": "USER#d133ed9a-5031-70fd-25e6-29085bde44d8"},
+  "PK": {"S": "USER#51331daa-e051-701b-bdef-ab3d305c30da"},
   "SK": {"S": "PROFILE"},
   "GSI1PK": {"S": "USER_EMAIL#admin@taskmanager.com"},
   "GSI1SK": {"S": "PROFILE"},
-  "user_id": {"S": "d133ed9a-5031-70fd-25e6-29085bde44d8"},
+  "user_id": {"S": "51331daa-e051-701b-bdef-ab3d305c30da"},
   "email": {"S": "admin@taskmanager.com"},
   "name": {"S": "Admin"},
   "system_role": {"S": "OWNER"},
-  "created_at": {"S": "2026-03-26T00:00:00Z"},
-  "updated_at": {"S": "2026-03-26T00:00:00Z"}
+  "created_at": {"S": "2026-03-27T00:00:00Z"},
+  "updated_at": {"S": "2026-03-27T00:00:00Z"}
 }

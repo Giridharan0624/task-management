@@ -1,11 +1,13 @@
 import os
 import boto3
 
+from domain.user.identity_service import IIdentityService
+
 cognito_client = boto3.client("cognito-idp", region_name=os.environ.get("AWS_REGION", "ap-south-1"))
 USER_POOL_ID = os.environ.get("USER_POOL_ID", "")
 
 
-class CognitoService:
+class CognitoService(IIdentityService):
     @staticmethod
     def create_user(email: str, name: str, temp_password: str, system_role: str) -> str:
         """Create a Cognito user and return their sub (userId)."""
