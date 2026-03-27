@@ -1,6 +1,6 @@
 from typing import Optional
 
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 
 from domain.project.entities import Project, ProjectMember
 from domain.project.repository import IProjectRepository
@@ -46,6 +46,21 @@ class ProjectDynamoRepository(IProjectRepository):
                 projects.append(project)
 
         return projects
+
+    def find_all(self) -> list[Project]:
+        response = self._table.scan(
+            FilterExpression=Attr("SK").eq("METADATA")
+            & Attr("PK").begins_with("PROJECT#"),
+        )
+        items = response.get("Items", [])
+        while "LastEvaluatedKey" in response:
+            response = self._table.scan(
+                FilterExpression=Attr("SK").eq("METADATA")
+                & Attr("PK").begins_with("PROJECT#"),
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+            )
+            items.extend(response.get("Items", []))
+        return [ProjectMapper.project_to_domain(item) for item in items]
 
     def save_member(self, member: ProjectMember) -> None:
         item = ProjectMapper.member_to_dynamo(member)

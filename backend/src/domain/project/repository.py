@@ -38,5 +38,9 @@ class IProjectRepository(ABC):
         ...
 
     @abstractmethod
+    def find_all(self) -> list[Project]:
+        ...
+
+    @abstractmethod
     def delete_all_project_data(self, project_id: str) -> None:
         ...

@@ -10,6 +10,21 @@ from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
+_PRIVILEGED_ROLES = (SystemRole.OWNER.value, SystemRole.ADMIN.value)
+
+
+def _is_project_admin_or_privileged(
+    project_repo: IProjectRepository,
+    project_id: str,
+    caller_user_id: str,
+    caller_system_role: str,
+) -> bool:
+    """Return True if caller is OWNER/ADMIN system role OR a project-level ADMIN."""
+    if caller_system_role in _PRIVILEGED_ROLES:
+        return True
+    member = project_repo.find_member(project_id, caller_user_id)
+    return member is not None and member.project_role == ProjectRole.ADMIN
+
 
 class CreateProjectUseCase:
     def __init__(self, project_repo: IProjectRepository, user_repo: IUserRepository):
@@ -65,7 +80,10 @@ class ListProjectsForUserUseCase:
         self._user_repo = user_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        projects = self._project_repo.find_projects_for_user(caller_user_id)
+        if caller_system_role in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+            projects = self._project_repo.find_all()
+        else:
+            projects = self._project_repo.find_projects_for_user(caller_user_id)
         return [p.to_dict() for p in projects]
 
 
@@ -80,10 +98,8 @@ class DeleteProjectUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        caller_member = self._project_repo.find_member(project_id, caller_user_id)
-        if not caller_member or caller_member.project_role != ProjectRole.ADMIN:
-            if caller_system_role != SystemRole.ADMIN.value:
-                raise AuthorizationError("Only project admins can delete this project")
+        if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
+            raise AuthorizationError("Only project admins can delete this project")
 
         self._project_repo.delete_all_project_data(project_id)
 
@@ -102,8 +118,7 @@ class AddProjectMemberUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        caller_member = self._project_repo.find_member(project_id, caller_user_id)
-        if not caller_member or caller_member.project_role != ProjectRole.ADMIN:
+        if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
             raise AuthorizationError("Only project admins can add members")
 
         target_user = self._user_repo.find_by_id(target_user_id)
@@ -137,8 +152,7 @@ class RemoveProjectMemberUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        caller_member = self._project_repo.find_member(project_id, caller_user_id)
-        if not caller_member or caller_member.project_role != ProjectRole.ADMIN:
+        if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
             raise AuthorizationError("Only project admins can remove members")
 
         self._project_repo.remove_member(project_id, target_user_id)
@@ -158,8 +172,7 @@ class UpdateMemberRoleUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        caller_member = self._project_repo.find_member(project_id, caller_user_id)
-        if not caller_member or caller_member.project_role != ProjectRole.ADMIN:
+        if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
             raise AuthorizationError("Only project admins can update member roles")
 
         target_member = self._project_repo.find_member(project_id, target_user_id)
