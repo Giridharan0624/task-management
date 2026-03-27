@@ -10,6 +10,10 @@ class Session(BaseModel):
     sign_in_at: str
     sign_out_at: Optional[str] = None
     hours: Optional[float] = None
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    task_title: Optional[str] = None
+    project_name: Optional[str] = None
 
 
 class Attendance(BaseModel):
@@ -28,9 +32,19 @@ class Attendance(BaseModel):
         user_name: str,
         user_email: str,
         system_role: str,
+        task_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        task_title: Optional[str] = None,
+        project_name: Optional[str] = None,
     ) -> "Attendance":
         now = datetime.now(timezone.utc)
-        session = Session(sign_in_at=now.isoformat())
+        session = Session(
+            sign_in_at=now.isoformat(),
+            task_id=task_id,
+            project_id=project_id,
+            task_title=task_title,
+            project_name=project_name,
+        )
         return cls(
             user_id=user_id,
             date=now.strftime("%Y-%m-%d"),
@@ -51,9 +65,21 @@ class Attendance(BaseModel):
             return self.sessions[-1]
         return None
 
-    def sign_in(self) -> "Attendance":
+    def sign_in(
+        self,
+        task_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        task_title: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> "Attendance":
         now = datetime.now(timezone.utc)
-        new_session = Session(sign_in_at=now.isoformat())
+        new_session = Session(
+            sign_in_at=now.isoformat(),
+            task_id=task_id,
+            project_id=project_id,
+            task_title=task_title,
+            project_name=project_name,
+        )
         return Attendance(
             user_id=self.user_id,
             date=self.date,
@@ -77,6 +103,10 @@ class Attendance(BaseModel):
             sign_in_at=last.sign_in_at,
             sign_out_at=now.isoformat(),
             hours=session_hours,
+            task_id=last.task_id,
+            project_id=last.project_id,
+            task_title=last.task_title,
+            project_name=last.project_name,
         )
 
         updated_sessions = [*self.sessions[:-1], closed_session]
@@ -94,6 +124,15 @@ class Attendance(BaseModel):
 
     def to_dict(self) -> dict:
         current = self.current_session
+        current_task = None
+        if current and current.task_id:
+            current_task = {
+                "task_id": current.task_id,
+                "project_id": current.project_id,
+                "task_title": current.task_title,
+                "project_name": current.project_name,
+            }
+
         return {
             "user_id": self.user_id,
             "date": self.date,
@@ -102,11 +141,16 @@ class Attendance(BaseModel):
                     "sign_in_at": s.sign_in_at,
                     "sign_out_at": s.sign_out_at,
                     "hours": s.hours,
+                    "task_id": s.task_id,
+                    "project_id": s.project_id,
+                    "task_title": s.task_title,
+                    "project_name": s.project_name,
                 }
                 for s in self.sessions
             ],
             "total_hours": self.total_hours,
             "current_sign_in_at": current.sign_in_at if current else None,
+            "current_task": current_task,
             "user_name": self.user_name,
             "user_email": self.user_email,
             "system_role": self.system_role,

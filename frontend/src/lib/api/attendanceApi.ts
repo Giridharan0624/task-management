@@ -1,8 +1,8 @@
 import { apiClient } from './client'
-import type { Attendance } from '@/types/attendance'
+import type { Attendance, StartTimerData } from '@/types/attendance'
 
-export function signInToWork(): Promise<Attendance> {
-  return apiClient.post<Attendance>('/attendance/sign-in', {})
+export function signInToWork(data?: StartTimerData): Promise<Attendance> {
+  return apiClient.post<Attendance>('/attendance/sign-in', data ?? {})
 }
 
 export function signOutFromWork(): Promise<Attendance> {

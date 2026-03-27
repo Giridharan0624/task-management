@@ -21,7 +21,7 @@ export function AttendanceTable() {
   if (attendance.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-gray-200 py-8 text-center">
-        <p className="text-gray-500 text-sm">No one has signed in today yet.</p>
+        <p className="text-gray-500 text-sm">No one has started tracking today yet.</p>
       </div>
     )
   }
@@ -38,11 +38,11 @@ export function AttendanceTable() {
         </div>
         <div className="bg-gray-50 rounded-lg p-3 text-center border border-gray-200">
           <p className="text-xl font-bold text-gray-700">{signedOut.length}</p>
-          <p className="text-xs text-gray-500">Signed Out</p>
+          <p className="text-xs text-gray-500">Done</p>
         </div>
         <div className="bg-indigo-50 rounded-lg p-3 text-center border border-indigo-100">
           <p className="text-xl font-bold text-indigo-700">{attendance.length}</p>
-          <p className="text-xs text-indigo-600">Total Today</p>
+          <p className="text-xs text-indigo-600">Total</p>
         </div>
       </div>
 
@@ -50,10 +50,10 @@ export function AttendanceTable() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sessions</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Task</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sessions</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -73,7 +73,12 @@ export function AttendanceTable() {
                   </div>
                 </td>
                 <td className="px-5 py-3 whitespace-nowrap">
-                  {record.status === 'SIGNED_IN' ? (
+                  {record.status === 'SIGNED_IN' && record.currentTask ? (
+                    <div>
+                      <p className="text-sm font-medium text-green-700">{record.currentTask.taskTitle}</p>
+                      <p className="text-xs text-gray-400">{record.currentTask.projectName}</p>
+                    </div>
+                  ) : record.status === 'SIGNED_IN' ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
                       Working
@@ -88,6 +93,7 @@ export function AttendanceTable() {
                       <span key={i} className={`text-xs px-2 py-0.5 rounded-full ${
                         s.signOutAt ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
                       }`}>
+                        {s.taskTitle ? `${s.taskTitle}: ` : ''}
                         {new Date(s.signInAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         {s.signOutAt
                           ? ` — ${new Date(s.signOutAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`

@@ -19,6 +19,10 @@ class AttendanceMapper:
                 sign_in_at=s["sign_in_at"],
                 sign_out_at=s.get("sign_out_at"),
                 hours=hours,
+                task_id=s.get("task_id"),
+                project_id=s.get("project_id"),
+                task_title=s.get("task_title"),
+                project_name=s.get("project_name"),
             ))
 
         total_hours = item.get("total_hours", 0)
@@ -39,11 +43,19 @@ class AttendanceMapper:
     def to_dynamo(attendance: Attendance) -> dict:
         sessions_data = []
         for s in attendance.sessions:
-            sd = {"sign_in_at": s.sign_in_at}
+            sd: dict = {"sign_in_at": s.sign_in_at}
             if s.sign_out_at:
                 sd["sign_out_at"] = s.sign_out_at
             if s.hours is not None:
                 sd["hours"] = str(s.hours)
+            if s.task_id:
+                sd["task_id"] = s.task_id
+            if s.project_id:
+                sd["project_id"] = s.project_id
+            if s.task_title:
+                sd["task_title"] = s.task_title
+            if s.project_name:
+                sd["project_name"] = s.project_name
             sessions_data.append(sd)
 
         return {

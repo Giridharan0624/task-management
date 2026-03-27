@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Optional
 
 from domain.attendance.entities import Attendance
 from domain.attendance.repository import IAttendanceRepository
@@ -18,20 +19,45 @@ class SignInUseCase:
         self._attendance_repo = attendance_repo
         self._user_repo = user_repo
 
-    def execute(self, caller_user_id: str, caller_system_role: str) -> dict:
+    def execute(
+        self,
+        caller_user_id: str,
+        caller_system_role: str,
+        task_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        task_title: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> dict:
         date = _today()
         existing = self._attendance_repo.find_by_user_and_date(caller_user_id, date)
-
-        if existing and existing.is_signed_in:
-            raise ValidationError("You are already signed in")
 
         user = self._user_repo.find_by_id(caller_user_id)
         if not user:
             raise NotFoundError("User not found")
 
+        if existing and existing.is_signed_in:
+            if task_id:
+                # Task switch: auto-stop current, start new
+                stopped = existing.sign_out()
+                switched = stopped.sign_in(
+                    task_id=task_id,
+                    project_id=project_id,
+                    task_title=task_title,
+                    project_name=project_name,
+                )
+                self._attendance_repo.save(switched)
+                return switched.to_dict()
+            else:
+                raise ValidationError("You are already signed in. Provide a task to switch.")
+
         if existing:
             # Add a new session to existing attendance
-            updated = existing.sign_in()
+            updated = existing.sign_in(
+                task_id=task_id,
+                project_id=project_id,
+                task_title=task_title,
+                project_name=project_name,
+            )
             self._attendance_repo.save(updated)
             return updated.to_dict()
         else:
@@ -41,6 +67,10 @@ class SignInUseCase:
                 user_name=user.name,
                 user_email=user.email,
                 system_role=caller_system_role,
+                task_id=task_id,
+                project_id=project_id,
+                task_title=task_title,
+                project_name=project_name,
             )
             self._attendance_repo.save(attendance)
             return attendance.to_dict()
@@ -98,8 +128,6 @@ class ListTodayAttendanceUseCase:
 
 
 class GetAttendanceReportUseCase:
-    """Get attendance records for a date range. OWNER sees all, ADMIN sees self + members."""
-
     def __init__(self, attendance_repo: IAttendanceRepository):
         self._attendance_repo = attendance_repo
 

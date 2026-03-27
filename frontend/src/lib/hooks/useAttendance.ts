@@ -6,6 +6,7 @@ import {
   signInToWork,
   signOutFromWork,
 } from '@/lib/api/attendanceApi'
+import type { StartTimerData } from '@/types/attendance'
 
 const attendanceKeys = {
   me: ['attendance', 'me'] as const,
@@ -40,7 +41,7 @@ export function useAttendanceReport(startDate: string, endDate: string) {
 export function useSignIn() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: signInToWork,
+    mutationFn: (data?: StartTimerData) => signInToWork(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: attendanceKeys.me })
       queryClient.invalidateQueries({ queryKey: attendanceKeys.today })

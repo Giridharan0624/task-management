@@ -18,30 +18,27 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
-function generateCSV(records: Attendance[], monthLabel: string): string {
+function generateCSV(records: Attendance[]): string {
   const rows: string[][] = [
-    ['Name', 'Email', 'Role', 'Date', 'Sessions', 'Session Details', 'Total Hours'],
+    ['Name', 'Email', 'Role', 'Date', 'Session #', 'Task', 'Project', 'Start', 'End', 'Hours'],
   ]
 
   for (const r of records) {
-    const sessionDetails = r.sessions
-      .map((s, i) => {
-        const inTime = formatTime(s.signInAt)
-        const outTime = s.signOutAt ? formatTime(s.signOutAt) : 'Active'
-        const hrs = s.hours != null ? `${s.hours.toFixed(2)}h` : '-'
-        return `Session ${i + 1}: ${inTime} - ${outTime} (${hrs})`
-      })
-      .join(' | ')
-
-    rows.push([
-      r.userName,
-      r.userEmail,
-      r.systemRole,
-      r.date,
-      String(r.sessionCount),
-      sessionDetails,
-      r.totalHours.toFixed(2),
-    ])
+    for (let i = 0; i < r.sessions.length; i++) {
+      const s = r.sessions[i]
+      rows.push([
+        r.userName,
+        r.userEmail,
+        r.systemRole,
+        r.date,
+        String(i + 1),
+        s.taskTitle || 'General',
+        s.projectName || '-',
+        formatTime(s.signInAt),
+        s.signOutAt ? formatTime(s.signOutAt) : 'Active',
+        s.hours != null ? s.hours.toFixed(2) : '-',
+      ])
+    }
   }
 
   return rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -75,7 +72,7 @@ export default function AttendancePage() {
 
   const handleDownload = () => {
     if (!records || records.length === 0) return
-    const csv = generateCSV(records, monthLabel)
+    const csv = generateCSV(records)
     downloadCSV(csv, `attendance-report-${start}-to-${end}.csv`)
   }
 
@@ -94,6 +91,29 @@ export default function AttendancePage() {
         days: 1,
         totalHours: r.totalHours,
       })
+    }
+  }
+
+  // Per-task breakdown
+  const taskStats = new Map<string, { userName: string; taskTitle: string; projectName: string; totalHours: number; sessions: number }>()
+  for (const r of records ?? []) {
+    for (const s of r.sessions) {
+      if (!s.taskId) continue
+      const key = `${r.userId}::${s.taskId}`
+      const existing = taskStats.get(key)
+      const hrs = s.hours ?? 0
+      if (existing) {
+        existing.totalHours += hrs
+        existing.sessions += 1
+      } else {
+        taskStats.set(key, {
+          userName: r.userName,
+          taskTitle: s.taskTitle || 'Unknown',
+          projectName: s.projectName || '-',
+          totalHours: hrs,
+          sessions: 1,
+        })
+      }
     }
   }
 
@@ -186,6 +206,37 @@ export default function AttendancePage() {
             )}
           </div>
 
+          {/* Per-Task Breakdown */}
+          {taskStats.size > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Per-Task Breakdown</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Task</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sessions</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Hours</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {Array.from(taskStats.entries()).map(([key, stats]) => (
+                      <tr key={key} className="hover:bg-gray-50">
+                        <td className="px-5 py-3 text-sm text-gray-900">{stats.userName}</td>
+                        <td className="px-5 py-3 text-sm text-gray-600">{stats.projectName}</td>
+                        <td className="px-5 py-3 text-sm font-medium text-gray-900">{stats.taskTitle}</td>
+                        <td className="px-5 py-3 text-sm text-gray-600">{stats.sessions}</td>
+                        <td className="px-5 py-3 text-sm font-medium text-indigo-700">{stats.totalHours.toFixed(1)}h</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Daily Records */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Daily Records</h2>
@@ -213,6 +264,7 @@ export default function AttendancePage() {
                           <div className="flex flex-wrap gap-1">
                             {r.sessions.map((s, i) => (
                               <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                {s.taskTitle ? `${s.taskTitle}: ` : ''}
                                 {formatTime(s.signInAt)}
                                 {s.signOutAt ? ` — ${formatTime(s.signOutAt)}` : ' — active'}
                               </span>
