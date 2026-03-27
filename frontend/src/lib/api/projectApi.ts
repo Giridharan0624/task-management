@@ -5,6 +5,8 @@ import type { ProjectMember, ProjectRole } from '@/types/user'
 export interface CreateProjectData {
   name: string
   description?: string
+  teamLeadId?: string
+  memberIds?: string[]
 }
 
 export interface AddMemberData {

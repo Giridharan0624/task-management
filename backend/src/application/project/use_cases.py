@@ -13,17 +13,20 @@ from shared.errors import AuthorizationError, NotFoundError, ValidationError
 _PRIVILEGED_ROLES = (SystemRole.OWNER.value, SystemRole.ADMIN.value)
 
 
+_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD)
+
+
 def _is_project_admin_or_privileged(
     project_repo: IProjectRepository,
     project_id: str,
     caller_user_id: str,
     caller_system_role: str,
 ) -> bool:
-    """Return True if caller is OWNER/ADMIN system role OR a project-level ADMIN."""
+    """Return True if caller is OWNER/ADMIN system role OR a project-level ADMIN/TEAM_LEAD."""
     if caller_system_role in _PRIVILEGED_ROLES:
         return True
     member = project_repo.find_member(project_id, caller_user_id)
-    return member is not None and member.project_role == ProjectRole.ADMIN
+    return member is not None and member.project_role in _MANAGE_ROLES
 
 
 class CreateProjectUseCase:
@@ -35,6 +38,20 @@ class CreateProjectUseCase:
         if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
             raise AuthorizationError("Only owners and admins can create projects")
 
+        team_lead_id = dto.get("team_lead_id")
+        member_ids = dto.get("member_ids", [])
+
+        # Validate team lead exists
+        if team_lead_id:
+            tl_user = self._user_repo.find_by_id(team_lead_id)
+            if not tl_user:
+                raise NotFoundError(f"Team lead user {team_lead_id} not found")
+
+        # Validate all members exist
+        for uid in member_ids:
+            if not self._user_repo.find_by_id(uid):
+                raise NotFoundError(f"User {uid} not found")
+
         project_id = str(uuid.uuid4())
         project = Project.create(
             project_id=project_id,
@@ -44,13 +61,25 @@ class CreateProjectUseCase:
         )
         self._project_repo.save(project)
 
-        # Auto-add creator as project ADMIN
-        member = ProjectMember.create(
-            project_id=project_id,
-            user_id=caller_user_id,
-            project_role=ProjectRole.ADMIN,
-        )
-        self._project_repo.save_member(member)
+        # Add team lead
+        if team_lead_id:
+            tl_member = ProjectMember.create(
+                project_id=project_id,
+                user_id=team_lead_id,
+                project_role=ProjectRole.TEAM_LEAD,
+            )
+            self._project_repo.save_member(tl_member)
+
+        # Add members
+        for uid in member_ids:
+            if uid == team_lead_id:
+                continue
+            m = ProjectMember.create(
+                project_id=project_id,
+                user_id=uid,
+                project_role=ProjectRole.MEMBER,
+            )
+            self._project_repo.save_member(m)
 
         return project.to_dict()
 

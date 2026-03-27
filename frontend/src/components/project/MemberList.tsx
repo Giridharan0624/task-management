@@ -66,6 +66,7 @@ export function MemberList({ projectId, members, canManageMembers }: MemberListP
 
   const roleBadgeColor: Record<ProjectRole, string> = {
     ADMIN: 'bg-purple-100 text-purple-700',
+    TEAM_LEAD: 'bg-orange-100 text-orange-700',
     MEMBER: 'bg-blue-100 text-blue-700',
   }
 

@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useCreateProject } from '@/lib/hooks/useProjects'
+import { useUsers } from '@/lib/hooks/useUsers'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -18,6 +20,9 @@ interface FormValues {
 
 export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps) {
   const createProject = useCreateProject()
+  const { data: allUsers } = useUsers()
+  const [teamLeadId, setTeamLeadId] = useState('')
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
 
   const {
     register,
@@ -26,17 +31,32 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     formState: { errors, isSubmitting },
   } = useForm<FormValues>()
 
+  // Filter to non-OWNER users for team selection
+  const availableUsers = (allUsers ?? []).filter((u) => u.systemRole !== 'OWNER')
+
+  const toggleMember = (userId: string) => {
+    setSelectedMembers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    )
+  }
+
   const onSubmit = async (values: FormValues) => {
     await createProject.mutateAsync({
       name: values.name,
       description: values.description || undefined,
+      teamLeadId: teamLeadId || undefined,
+      memberIds: selectedMembers.length > 0 ? selectedMembers : undefined,
     })
     reset()
+    setTeamLeadId('')
+    setSelectedMembers([])
     onClose()
   }
 
   const handleClose = () => {
     reset()
+    setTeamLeadId('')
+    setSelectedMembers([])
     onClose()
   }
 
@@ -50,17 +70,75 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           {...register('name', {
             required: 'Project name is required',
             minLength: { value: 2, message: 'Name must be at least 2 characters' },
-            maxLength: { value: 100, message: 'Name must be at most 100 characters' },
           })}
         />
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">Description (optional)</label>
           <textarea
-            rows={3}
+            rows={2}
             placeholder="What is this project about?"
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
             {...register('description')}
           />
+        </div>
+
+        {/* Team Lead Selection */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Team Lead</label>
+          <select
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            value={teamLeadId}
+            onChange={(e) => setTeamLeadId(e.target.value)}
+          >
+            <option value="">-- Select a Team Lead --</option>
+            {availableUsers.map((u) => (
+              <option key={u.userId} value={u.userId}>
+                {u.name || u.email} ({u.systemRole})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Team Members Selection */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">
+            Team Members ({selectedMembers.length} selected)
+          </label>
+          {availableUsers.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No users available. Create users first.</p>
+          ) : (
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+              {availableUsers
+                .filter((u) => u.userId !== teamLeadId)
+                .map((u) => {
+                  const isSelected = selectedMembers.includes(u.userId)
+                  return (
+                    <label
+                      key={u.userId}
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        isSelected ? 'bg-indigo-50' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleMember(u.userId)}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-indigo-600 text-xs font-medium">
+                            {(u.name || u.email).charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-900 truncate">{u.name || u.email}</span>
+                        <span className="text-xs text-gray-400 ml-auto flex-shrink-0">{u.systemRole}</span>
+                      </div>
+                    </label>
+                  )
+                })}
+            </div>
+          )}
         </div>
 
         {createProject.error && (

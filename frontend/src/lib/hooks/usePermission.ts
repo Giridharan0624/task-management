@@ -24,15 +24,17 @@ export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole
   const isOwner = systemRole === 'OWNER'
   const isSystemAdmin = systemRole === 'ADMIN'
   const isPrivileged = isOwner || isSystemAdmin
+  const isTeamLead = projectRole === 'TEAM_LEAD'
+  const canManage = isPrivileged || isTeamLead
   const isMember = projectRole === 'MEMBER'
 
   return {
-    canCreateTask: isPrivileged,
-    canUpdateTask: isPrivileged,
-    canUpdateStatus: isMember || isPrivileged,
-    canDeleteTask: isPrivileged,
-    canAssignTask: isPrivileged,
-    canManageMembers: isPrivileged,
+    canCreateTask: canManage,
+    canUpdateTask: canManage,
+    canUpdateStatus: isMember || canManage,
+    canDeleteTask: canManage,
+    canAssignTask: canManage,
+    canManageMembers: canManage,
     canDeleteProject: isPrivileged,
   }
 }

@@ -1,5 +1,5 @@
 export type SystemRole = 'OWNER' | 'ADMIN' | 'MEMBER'
-export type ProjectRole = 'ADMIN' | 'MEMBER'
+export type ProjectRole = 'ADMIN' | 'TEAM_LEAD' | 'MEMBER'
 
 export interface User {
   userId: string
