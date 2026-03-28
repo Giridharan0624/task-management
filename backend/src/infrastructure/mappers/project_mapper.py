@@ -9,6 +9,7 @@ class ProjectMapper:
             project_id=item["project_id"],
             name=item["name"],
             description=item.get("description"),
+            estimated_hours=float(item["estimated_hours"]) if item.get("estimated_hours") is not None else None,
             created_by=item["created_by"],
             created_at=item["created_at"],
             updated_at=item["updated_at"],
@@ -27,6 +28,8 @@ class ProjectMapper:
         }
         if project.description is not None:
             item["description"] = project.description
+        if project.estimated_hours is not None:
+            item["estimated_hours"] = str(project.estimated_hours)
         return item
 
     @staticmethod

@@ -13,6 +13,7 @@ from infrastructure.dynamodb.user_repository import UserDynamoRepository
 class UpdateProjectRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    estimated_hours: Optional[float] = None
 
 
 def handler(event, context):

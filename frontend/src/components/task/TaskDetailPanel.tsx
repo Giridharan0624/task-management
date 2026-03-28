@@ -25,6 +25,7 @@ interface EditFormValues {
   status: TaskStatus
   priority: TaskPriority
   deadline: string
+  estimatedHours: string
 }
 
 export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskDetailPanelProps) {
@@ -68,6 +69,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         status: task.status,
         priority: task.priority,
         deadline: task.deadline ? task.deadline.slice(0, 16) : '',
+        estimatedHours: task.estimatedHours ? String(task.estimatedHours) : '',
       })
       setIsEditing(false)
       setShowAssignInput(false)
@@ -87,6 +89,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   if (!task) return null
 
   const handleSave = async (values: EditFormValues) => {
+    const estHours = values.estimatedHours ? parseFloat(values.estimatedHours) : undefined
     await updateTask.mutateAsync({
       taskId: task.taskId,
       data: {
@@ -95,6 +98,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         status: values.status,
         priority: values.priority,
         deadline: values.deadline || undefined,
+        estimatedHours: estHours,
       },
     })
     setIsEditing(false)
@@ -238,6 +242,11 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 type="datetime-local"
                 {...register('deadline')}
               />
+              <Input
+                label="Estimated Hours"
+                type="number"
+                {...register('estimatedHours')}
+              />
               {updateTask.error && (
                 <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
                   {updateTask.error instanceof Error ? updateTask.error.message : 'Update failed'}
@@ -336,6 +345,12 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                     })}
                   </p>
                 </div>
+                {task.estimatedHours != null && (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Estimated</p>
+                    <p className="text-sm text-gray-700">{task.estimatedHours}h</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Created At</p>
                   <p className="text-sm text-gray-700">

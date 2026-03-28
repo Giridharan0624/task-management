@@ -29,6 +29,7 @@ export default function ProjectDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const [editEstHours, setEditEstHours] = useState('')
   const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'progress'>('tasks')
   const { data: projectStatus } = useProjectStatus(projectId)
 
@@ -45,11 +46,13 @@ export default function ProjectDetailPage() {
   const openEditModal = () => {
     setEditName(project?.name ?? '')
     setEditDesc(project?.description ?? '')
+    setEditEstHours(project?.estimatedHours ? String(project.estimatedHours) : '')
     setShowEditModal(true)
   }
 
   const handleUpdateProject = async () => {
-    await updateProject.mutateAsync({ name: editName, description: editDesc })
+    const estHours = editEstHours ? parseFloat(editEstHours) : undefined
+    await updateProject.mutateAsync({ name: editName, description: editDesc, estimatedHours: estHours })
     setShowEditModal(false)
   }
 
@@ -135,16 +138,18 @@ export default function ProjectDetailPage() {
         >
           Members ({project.members?.length ?? 0})
         </button>
-        <button
-          onClick={() => setActiveTab('progress')}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-            activeTab === 'progress'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          }`}
-        >
-          Progress
-        </button>
+        {permissions.canManageMembers && (
+          <button
+            onClick={() => setActiveTab('progress')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              activeTab === 'progress'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Progress
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -301,30 +306,134 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Edit Project Modal */}
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Project">
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
-            <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Project Settings" size="lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column — Editable Fields */}
+          <div className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Project Name</label>
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Description</label>
+              <textarea
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white resize-none transition-all"
+                rows={4}
+                placeholder="What is this project about?"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Time Budget</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  placeholder="e.g. 100"
+                  value={editEstHours}
+                  onChange={(e) => setEditEstHours(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-16 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">hours</span>
+              </div>
+            </div>
+
+            {/* Metadata */}
+            <div className="flex items-center gap-4 text-xs text-gray-400 pt-2">
+              <div className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                Created {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                Updated {new Date(project.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+              <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={handleUpdateProject}
+                disabled={updateProject.isPending || !editName.trim()}
+              >
+                {updateProject.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              rows={3}
-              value={editDesc}
-              onChange={(e) => setEditDesc(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button
-              variant="primary"
-              onClick={handleUpdateProject}
-              disabled={updateProject.isPending || !editName.trim()}
-            >
-              {updateProject.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
+
+          {/* Right Column — Overview */}
+          <div className="space-y-5">
+            {/* Stats */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Overview</label>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-indigo-50 rounded-xl p-3 text-center border border-indigo-100">
+                  <p className="text-xl font-bold text-indigo-700">{project.members?.length ?? 0}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-indigo-500 font-semibold">Members</p>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
+                  <p className="text-xl font-bold text-blue-700">{tasks?.length ?? 0}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">Tasks</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-3 text-center border border-green-100">
+                  <p className="text-xl font-bold text-green-700">{tasks?.filter(t => t.status === 'DONE').length ?? 0}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-green-500 font-semibold">Done</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Team */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Team</label>
+              {(project.members ?? []).length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-200 py-6 text-center">
+                  <p className="text-sm text-gray-400">No members yet</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {(project.members ?? []).map((m) => (
+                    <div key={m.userId} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 border border-gray-100">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                          m.projectRole === 'TEAM_LEAD' ? 'bg-orange-100 text-orange-600' :
+                          m.projectRole === 'ADMIN' ? 'bg-purple-100 text-purple-600' :
+                          'bg-indigo-100 text-indigo-600'
+                        }`}>
+                          {(m.user?.name || m.user?.email || m.userId).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{m.user?.name || m.user?.email || m.userId}</p>
+                          {m.user?.email && m.user?.name && (
+                            <p className="text-xs text-gray-400">{m.user.email}</p>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-lg ${
+                        m.projectRole === 'TEAM_LEAD' ? 'bg-orange-100 text-orange-600' :
+                        m.projectRole === 'ADMIN' ? 'bg-purple-100 text-purple-600' :
+                        'bg-blue-100 text-blue-600'
+                      }`}>{m.projectRole === 'TEAM_LEAD' ? 'Lead' : m.projectRole}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-400 mt-2">Manage team from the <strong>Members</strong> tab</p>
+            </div>
           </div>
         </div>
       </Modal>

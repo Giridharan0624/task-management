@@ -7,6 +7,7 @@ export interface Project {
   createdBy: string
   createdAt: string
   updatedAt: string
+  estimatedHours?: number
   members?: ProjectMember[]
   memberCount?: number
 }

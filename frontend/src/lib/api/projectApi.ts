@@ -29,6 +29,7 @@ export async function createProject(data: CreateProjectData): Promise<Project> {
 export interface UpdateProjectData {
   name?: string
   description?: string
+  estimatedHours?: number
 }
 
 export async function updateProject(projectId: string, data: UpdateProjectData): Promise<Project> {

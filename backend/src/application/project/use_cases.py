@@ -144,10 +144,12 @@ class UpdateProjectUseCase:
             raise AuthorizationError("Only project admins can update project details")
 
         now = datetime.now(timezone.utc).isoformat()
+        est_hours = dto.get("estimated_hours", project.estimated_hours)
         updated = Project(
             project_id=project.project_id,
             name=dto.get("name", project.name),
             description=dto.get("description", project.description),
+            estimated_hours=est_hours,
             created_by=project.created_by,
             created_at=project.created_at,
             updated_at=now,
