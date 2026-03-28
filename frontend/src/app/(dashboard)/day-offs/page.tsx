@@ -296,7 +296,8 @@ export default function DayOffsPage() {
   const isTopTier = role === 'OWNER' || role === 'CEO' || role === 'MD'
   const isOwner = isTopTier
   const isAdminOrOwner = isTopTier || role === 'ADMIN'
-  const isApprover = isAdminOrOwner || role === 'TEAM_LEAD'
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  const isApprover = isAdminOrOwner || (role as string) === 'TEAM_LEAD'
 
   const { data: myDayOffs, isLoading: myLoading } = useMyDayOffs()
   const { data: pendingDayOffs, isLoading: pendingLoading } = usePendingDayOffs()
