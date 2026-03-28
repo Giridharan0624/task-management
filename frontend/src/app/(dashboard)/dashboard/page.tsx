@@ -12,6 +12,8 @@ import { AttendanceTable } from '@/components/attendance/AttendanceTable'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800',
+  CEO: 'bg-violet-100 text-violet-800',
+  MD: 'bg-fuchsia-100 text-fuchsia-800',
   ADMIN: 'bg-red-100 text-red-800',
   MEMBER: 'bg-blue-100 text-blue-800',
 }
@@ -421,7 +423,7 @@ export default function DashboardPage() {
         </Badge>
       </div>
 
-      {user?.systemRole === 'OWNER' && <OwnerDashboard />}
+      {(user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD') && <OwnerDashboard />}
       {user?.systemRole === 'ADMIN' && <AdminDashboard />}
       {user?.systemRole === 'MEMBER' && <MemberDashboard />}
     </div>

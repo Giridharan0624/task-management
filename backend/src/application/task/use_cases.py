@@ -9,16 +9,14 @@ from domain.project.value_objects import ProjectRole
 from domain.task.entities import Task
 from domain.task.repository import ITaskRepository
 from domain.task.value_objects import TaskPriority, TaskStatus
-from domain.user.value_objects import SystemRole
+from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
-
-_PRIVILEGED_ROLES = (SystemRole.OWNER.value, SystemRole.ADMIN.value)
 _TASK_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD)
 
 
 def _can_manage_tasks(project_repo, project_id, caller_user_id, caller_system_role):
     """OWNER/ADMIN system role OR project ADMIN/TEAM_LEAD can manage tasks."""
-    if caller_system_role in _PRIVILEGED_ROLES:
+    if caller_system_role in PRIVILEGED_ROLES:
         return True
     member = project_repo.find_member(project_id, caller_user_id)
     return member is not None and member.project_role in _TASK_MANAGE_ROLES
@@ -97,7 +95,7 @@ class GetTaskUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         # Owner/Admin can view any task; others must be project members
-        if caller_system_role not in _PRIVILEGED_ROLES:
+        if caller_system_role not in PRIVILEGED_ROLES:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
                 raise AuthorizationError("You are not a member of this project")
@@ -122,7 +120,7 @@ class ListTasksForProjectUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         # Owner/Admin can list any project's tasks; others must be project members
-        if caller_system_role not in _PRIVILEGED_ROLES:
+        if caller_system_role not in PRIVILEGED_ROLES:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
                 raise AuthorizationError("You are not a member of this project")
@@ -297,7 +295,7 @@ class GetMyAssignedTasksUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str = None) -> list[dict]:
         # Owner/Admin see ALL tasks across all projects
-        if caller_system_role in _PRIVILEGED_ROLES:
+        if caller_system_role in PRIVILEGED_ROLES:
             projects = self._project_repo.find_all()
             my_tasks = []
             for project in projects:

@@ -4,7 +4,7 @@ from infrastructure.dynamodb.project_repository import ProjectDynamoRepository
 from infrastructure.dynamodb.task_repository import TaskDynamoRepository
 from infrastructure.dynamodb.attendance_repository import AttendanceDynamoRepository
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
-from domain.user.value_objects import SystemRole
+from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from domain.project.value_objects import ProjectRole
 
 
@@ -23,8 +23,8 @@ def handler(event, context):
         if not project:
             return build_success(404, {"error": "Project not found"})
 
-        # Check access — only OWNER, ADMIN (system), or TEAM_LEAD (project)
-        if auth.system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+        # Check access — only OWNER, CEO, MD, ADMIN (system), or TEAM_LEAD (project)
+        if auth.system_role not in PRIVILEGED_ROLES:
             member = project_repo.find_member(project_id, auth.user_id)
             if not member or member.project_role not in (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD):
                 return build_success(403, {"error": "Only owners, admins, and team leads can view project progress"})

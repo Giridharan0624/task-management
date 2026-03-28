@@ -8,7 +8,7 @@ from domain.dayoff.repository import IDayOffRepository
 from domain.project.repository import IProjectRepository
 from domain.project.value_objects import ProjectRole
 from domain.user.repository import IUserRepository
-from domain.user.value_objects import SystemRole
+from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
 
@@ -38,8 +38,8 @@ class CreateDayOffRequestUseCase:
         if not user:
             raise NotFoundError("User not found")
 
-        if user.system_role == SystemRole.OWNER:
-            raise AuthorizationError("Owner account cannot request day offs")
+        if user.system_role.value in TOP_TIER_VALUES:
+            raise AuthorizationError("Management accounts (OWNER/CEO/MD) cannot request day offs")
 
         admin = self._user_repo.find_by_id(admin_id)
         admin_name = admin.name if admin else None
@@ -110,8 +110,8 @@ class GetAllRequestsUseCase:
         self._dayoff_repo = dayoff_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-            raise AuthorizationError("Only owners and admins can view all day-off requests")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners, CEO, MD, and admins can view all day-off requests")
         requests = self._dayoff_repo.find_all()
         return [r.to_dict() for r in requests]
 
@@ -176,8 +176,8 @@ class ForwardRequestUseCase:
         request_id: str,
         forward_to_id: str,
     ) -> dict:
-        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-            raise AuthorizationError("Only owners and admins can forward requests")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners, CEO, MD, and admins can forward requests")
 
         day_off = self._dayoff_repo.find_by_id(request_id)
         if not day_off:

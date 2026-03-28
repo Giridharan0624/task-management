@@ -294,9 +294,10 @@ function ForwardModal({
 export default function DayOffsPage() {
   const { user } = useAuth()
   const role = user?.systemRole
-  const isOwner = role === 'OWNER'
-  const isAdminOrOwner = role === 'ADMIN' || role === 'OWNER'
-  const isApprover = role === 'ADMIN' || role === 'OWNER' || role === 'TEAM_LEAD'
+  const isTopTier = role === 'OWNER' || role === 'CEO' || role === 'MD'
+  const isOwner = isTopTier
+  const isAdminOrOwner = isTopTier || role === 'ADMIN'
+  const isApprover = isAdminOrOwner || role === 'TEAM_LEAD'
 
   const { data: admins } = useAdmins()
   const { data: myDayOffs, isLoading: myLoading } = useMyDayOffs()

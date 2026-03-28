@@ -13,7 +13,7 @@ def handler(event, context):
         admins = [
             {"user_id": u.user_id, "name": u.name, "email": u.email, "employee_id": u.employee_id}
             for u in users
-            if u.system_role in (SystemRole.ADMIN, SystemRole.OWNER)
+            if u.system_role in (SystemRole.OWNER, SystemRole.CEO, SystemRole.MD, SystemRole.ADMIN)
         ]
         return build_success(200, admins)
     except Exception as e:

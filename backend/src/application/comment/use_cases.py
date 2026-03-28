@@ -6,7 +6,7 @@ from domain.comment.entities import ProgressComment
 from domain.comment.repository import ICommentRepository
 from domain.project.repository import IProjectRepository
 from domain.task.repository import ITaskRepository
-from domain.user.value_objects import SystemRole
+from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError
 
 
@@ -22,8 +22,8 @@ class CreateCommentUseCase:
         if not task:
             raise NotFoundError(f"Task {task_id} not found")
 
-        # Caller must be assigned to the task OR be OWNER/ADMIN
-        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+        # Caller must be assigned to the task OR be privileged (OWNER/CEO/MD/ADMIN)
+        if caller_system_role not in PRIVILEGED_ROLES:
             if caller_user_id not in task.assigned_to:
                 raise AuthorizationError("You must be assigned to this task to comment")
 
@@ -51,8 +51,8 @@ class ListCommentsUseCase:
         if not task:
             raise NotFoundError(f"Task {task_id} not found")
 
-        # OWNER can see any. Others must be a project member.
-        if caller_system_role != SystemRole.OWNER.value:
+        # TOP_TIER (OWNER/CEO/MD) can see any. Others must be a project member.
+        if caller_system_role not in TOP_TIER_VALUES:
             member = self._project_repo.find_member(task.project_id, caller_user_id)
             if not member:
                 raise AuthorizationError("You must be a project member to view comments")

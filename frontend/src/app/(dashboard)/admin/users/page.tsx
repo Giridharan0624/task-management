@@ -13,6 +13,8 @@ import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800',
+  CEO: 'bg-violet-100 text-violet-800',
+  MD: 'bg-fuchsia-100 text-fuchsia-800',
   ADMIN: 'bg-red-100 text-red-800',
   MEMBER: 'bg-blue-100 text-blue-800',
 }
@@ -61,6 +63,7 @@ export default function UsersPage() {
     )
   }
 
+  const isTopTier = currentUser?.systemRole === 'OWNER' || currentUser?.systemRole === 'CEO' || currentUser?.systemRole === 'MD'
   const isOwner = currentUser?.systemRole === 'OWNER'
 
   // Build a userId -> name map for resolving "created by"
@@ -90,7 +93,11 @@ export default function UsersPage() {
     : deptFiltered
 
   // Available roles for creation based on caller
-  const creatableRoles = isOwner ? ['ADMIN', 'MEMBER'] : ['MEMBER']
+  const creatableRoles = isOwner
+    ? ['CEO', 'MD', 'ADMIN', 'MEMBER']
+    : isTopTier
+      ? ['ADMIN', 'MEMBER']
+      : ['MEMBER']
 
   const handleCreateUser = async () => {
     setError('')
@@ -293,7 +300,7 @@ export default function UsersPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   {(() => {
                     const canEditDept =
-                      (isOwner && u.systemRole !== 'OWNER') ||
+                      (isTopTier && u.systemRole !== 'OWNER' && u.systemRole !== 'CEO' && u.systemRole !== 'MD') ||
                       (currentUser?.systemRole === 'ADMIN' && u.systemRole === 'MEMBER')
                     if (canEditDept) {
                       return (
@@ -332,7 +339,7 @@ export default function UsersPage() {
                     <Button variant="secondary" size="sm" onClick={() => setProgressUser(u.userId)}>
                       Progress
                     </Button>
-                    {isOwner && u.systemRole !== 'OWNER' && (
+                    {isTopTier && u.systemRole !== 'OWNER' && u.systemRole !== 'CEO' && u.systemRole !== 'MD' && (
                       <Button variant="secondary" size="sm" onClick={() => setSelectedUser(u)}>
                         Role
                       </Button>

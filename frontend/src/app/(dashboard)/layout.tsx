@@ -36,7 +36,10 @@ const memberNav = [
 
 function getNavItems(role?: string) {
   switch (role) {
-    case 'OWNER': return ownerNav
+    case 'OWNER':
+    case 'CEO':
+    case 'MD':
+      return ownerNav
     case 'ADMIN': return adminNav
     default: return memberNav
   }

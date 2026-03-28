@@ -7,10 +7,8 @@ from domain.project.entities import Project, ProjectMember
 from domain.project.repository import IProjectRepository
 from domain.project.value_objects import ProjectRole
 from domain.user.repository import IUserRepository
-from domain.user.value_objects import SystemRole
+from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
-
-_PRIVILEGED_ROLES = (SystemRole.OWNER.value, SystemRole.ADMIN.value)
 
 
 _MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD)
@@ -23,7 +21,7 @@ def _is_project_admin_or_privileged(
     caller_system_role: str,
 ) -> bool:
     """Return True if caller is OWNER/ADMIN system role OR a project-level ADMIN/TEAM_LEAD."""
-    if caller_system_role in _PRIVILEGED_ROLES:
+    if caller_system_role in PRIVILEGED_ROLES:
         return True
     member = project_repo.find_member(project_id, caller_user_id)
     return member is not None and member.project_role in _MANAGE_ROLES
@@ -35,8 +33,8 @@ class CreateProjectUseCase:
         self._user_repo = user_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
-        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-            raise AuthorizationError("Only owners and admins can create projects")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners, CEO, MD, and admins can create projects")
 
         team_lead_id = dto.get("team_lead_id")
         member_ids = dto.get("member_ids", [])
@@ -96,7 +94,7 @@ class GetProjectUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         caller_member = self._project_repo.find_member(project_id, caller_user_id)
-        if not caller_member and caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+        if not caller_member and caller_system_role not in PRIVILEGED_ROLES:
             raise AuthorizationError("You are not a member of this project")
 
         members = self._project_repo.find_members(project_id)
@@ -116,7 +114,7 @@ class ListProjectsForUserUseCase:
         self._user_repo = user_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
+        if caller_system_role in PRIVILEGED_ROLES:
             projects = self._project_repo.find_all()
         else:
             projects = self._project_repo.find_projects_for_user(caller_user_id)

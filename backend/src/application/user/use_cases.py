@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from domain.user.entities import User
 from domain.user.repository import IUserRepository
-from domain.user.value_objects import SystemRole
+from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
 from domain.project.repository import IProjectRepository
 from domain.task.repository import ITaskRepository
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
@@ -12,13 +12,13 @@ from domain.user.identity_service import IIdentityService
 
 
 class ListUsersUseCase:
-    """OWNER sees all users. ADMIN sees only MEMBER users."""
+    """TOP_TIER (OWNER/CEO/MD) sees all users. ADMIN sees only MEMBER users."""
     def __init__(self, user_repo: IUserRepository):
         self._user_repo = user_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-            raise AuthorizationError("Only owners and admins can list users")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners, CEO, MD, and admins can list users")
         users = self._user_repo.find_all()
         if caller_system_role == SystemRole.ADMIN.value:
             # Admins only see members
@@ -27,14 +27,14 @@ class ListUsersUseCase:
 
 
 class UpdateUserRoleUseCase:
-    """OWNER can promote/demote users to ADMIN or MEMBER. OWNER cannot be changed."""
+    """TOP_TIER (OWNER/CEO/MD) can promote/demote users. Cannot change other top-tier roles."""
     def __init__(self, user_repo: IUserRepository, identity_service: IIdentityService):
         self._user_repo = user_repo
         self._cognito = identity_service
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
-        if caller_system_role != SystemRole.OWNER.value:
-            raise AuthorizationError("Only the owner can change user roles")
+        if caller_system_role not in TOP_TIER_VALUES:
+            raise AuthorizationError("Only owner, CEO, and MD can change user roles")
 
         target_user_id = dto["user_id"]
         new_role_value = dto["system_role"]
@@ -43,8 +43,8 @@ class UpdateUserRoleUseCase:
         if not target_user:
             raise NotFoundError(f"User {target_user_id} not found")
 
-        if target_user.system_role == SystemRole.OWNER:
-            raise AuthorizationError("Cannot change the owner's role")
+        if target_user.system_role.value in TOP_TIER_VALUES:
+            raise AuthorizationError("Cannot change a top-tier role (OWNER/CEO/MD)")
 
         try:
             new_role = SystemRole(new_role_value)
@@ -54,8 +54,15 @@ class UpdateUserRoleUseCase:
         if new_role == SystemRole.OWNER:
             raise AuthorizationError("Cannot promote to owner")
 
-        # Valid target roles are only ADMIN and MEMBER
-        if new_role not in (SystemRole.ADMIN, SystemRole.MEMBER):
+        # Only OWNER can promote to CEO or MD
+        if new_role in (SystemRole.CEO, SystemRole.MD) and caller_system_role != SystemRole.OWNER.value:
+            raise AuthorizationError("Only the owner can promote to CEO or MD")
+
+        # Valid target roles are ADMIN and MEMBER (or CEO/MD if caller is OWNER)
+        valid_targets = (SystemRole.ADMIN, SystemRole.MEMBER)
+        if caller_system_role == SystemRole.OWNER.value:
+            valid_targets = (SystemRole.CEO, SystemRole.MD, SystemRole.ADMIN, SystemRole.MEMBER)
+        if new_role not in valid_targets:
             raise ValidationError(f"Invalid target role: {new_role_value}")
 
         updated_user = User(
@@ -75,22 +82,22 @@ class UpdateUserRoleUseCase:
 
 
 class GetUserProgressUseCase:
-    """OWNER can view anyone's progress. ADMIN can only view MEMBER progress."""
+    """TOP_TIER (OWNER/CEO/MD) can view anyone's progress. ADMIN can only view MEMBER progress."""
     def __init__(self, user_repo: IUserRepository, project_repo: IProjectRepository, task_repo: ITaskRepository):
         self._user_repo = user_repo
         self._project_repo = project_repo
         self._task_repo = task_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
-        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-            raise AuthorizationError("Only owners and admins can view user progress")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners, CEO, MD, and admins can view user progress")
 
         target_user_id = dto["user_id"]
         target_user = self._user_repo.find_by_id(target_user_id)
         if not target_user:
             raise NotFoundError(f"User {target_user_id} not found")
 
-        # Admin can only view member progress
+        # Admin can only view member progress; TOP_TIER sees all
         if caller_system_role == SystemRole.ADMIN.value:
             if target_user.system_role != SystemRole.MEMBER:
                 raise AuthorizationError("Admins can only view member progress")
@@ -130,9 +137,11 @@ class GetUserProgressUseCase:
 
 class CreateUserUseCase:
     """
-    Owner creates Admins or Members.
+    Owner creates CEO, MD, Admins, or Members.
+    CEO/MD create Admins or Members.
     Admins create Members only.
     Members cannot create anyone.
+    Nobody can create OWNER.
     """
     def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService):
         self._user_repo = user_repo
@@ -156,9 +165,13 @@ class CreateUserUseCase:
 
         # Authorization: who can create whom
         if caller_system_role == SystemRole.OWNER.value:
-            # Owner can create ADMIN or MEMBER
+            # Owner can create CEO, MD, ADMIN, or MEMBER
+            if role_enum not in (SystemRole.CEO, SystemRole.MD, SystemRole.ADMIN, SystemRole.MEMBER):
+                raise AuthorizationError("Owner can only create CEO, MD, admin, or member accounts")
+        elif caller_system_role in (SystemRole.CEO.value, SystemRole.MD.value):
+            # CEO/MD can create ADMIN or MEMBER
             if role_enum not in (SystemRole.ADMIN, SystemRole.MEMBER):
-                raise AuthorizationError("Owner can only create admin or member accounts")
+                raise AuthorizationError("CEO/MD can only create admin or member accounts")
         elif caller_system_role == SystemRole.ADMIN.value:
             # Admin can only create MEMBER
             if role_enum != SystemRole.MEMBER:
@@ -209,7 +222,7 @@ class CreateUserUseCase:
 
 class DeleteUserUseCase:
     """
-    Owner deletes Admins or Members.
+    TOP_TIER (OWNER/CEO/MD) can delete anyone except other top-tier.
     Admins delete Members only.
     Cannot delete Owner. Cannot delete self.
     """
@@ -232,9 +245,10 @@ class DeleteUserUseCase:
             raise AuthorizationError("Cannot delete the owner account")
 
         # Authorization: who can delete whom
-        if caller_system_role == SystemRole.OWNER.value:
-            # Owner can delete ADMIN or MEMBER
-            pass
+        if caller_system_role in TOP_TIER_VALUES:
+            # TOP_TIER can delete anyone except other top-tier
+            if target_user.system_role.value in TOP_TIER_VALUES:
+                raise AuthorizationError("Cannot delete another top-tier account (OWNER/CEO/MD)")
         elif caller_system_role == SystemRole.ADMIN.value:
             # Admin can only delete MEMBER
             if target_user.system_role != SystemRole.MEMBER:

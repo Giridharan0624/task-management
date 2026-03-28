@@ -6,7 +6,7 @@ from typing import Optional
 from domain.attendance.entities import Attendance
 from domain.attendance.repository import IAttendanceRepository
 from domain.user.repository import IUserRepository
-from domain.user.value_objects import SystemRole
+from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
 
@@ -110,20 +110,20 @@ class ListTodayAttendanceUseCase:
         self._attendance_repo = attendance_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-            raise AuthorizationError("Only owners and admins can view team attendance")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners, CEO, MD, and admins can view team attendance")
 
         date = _today()
         records = self._attendance_repo.find_all_by_date(date)
 
-        if caller_system_role == SystemRole.OWNER.value:
+        if caller_system_role in TOP_TIER_VALUES:
             return [r.to_dict() for r in records]
 
-        # Admin sees all except OWNER
+        # Admin sees all except top-tier
         return [
             r.to_dict()
             for r in records
-            if r.system_role != SystemRole.OWNER.value
+            if r.system_role not in TOP_TIER_VALUES
         ]
 
 
@@ -134,14 +134,14 @@ class GetAttendanceReportUseCase:
     def execute(self, caller_user_id: str, caller_system_role: str, start_date: str, end_date: str) -> list[dict]:
         records = self._attendance_repo.find_all_by_date_range(start_date, end_date)
 
-        if caller_system_role == SystemRole.OWNER.value:
+        if caller_system_role in TOP_TIER_VALUES:
             return [r.to_dict() for r in records]
 
         if caller_system_role == SystemRole.ADMIN.value:
             return [
                 r.to_dict()
                 for r in records
-                if r.system_role != SystemRole.OWNER.value
+                if r.system_role not in TOP_TIER_VALUES
             ]
 
         # MEMBER sees only their own records

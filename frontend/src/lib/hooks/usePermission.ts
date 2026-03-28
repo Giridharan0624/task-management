@@ -2,6 +2,17 @@
 
 import type { ProjectRole, SystemRole } from '@/types/user'
 
+const TOP_TIER: SystemRole[] = ['OWNER', 'CEO', 'MD']
+const PRIVILEGED: SystemRole[] = ['OWNER', 'CEO', 'MD', 'ADMIN']
+
+function isTopTier(role?: SystemRole) {
+  return !!role && TOP_TIER.includes(role)
+}
+
+function isPrivileged(role?: SystemRole) {
+  return !!role && PRIVILEGED.includes(role)
+}
+
 export interface Permissions {
   canCreateTask: boolean
   canUpdateTask: boolean
@@ -16,16 +27,15 @@ export interface SystemPermissions {
   canCreateProject: boolean
   canManageUsers: boolean
   canManageAdmins: boolean
+  canCreateCeoMd: boolean
   canViewProgress: boolean
   canAssignTasks: boolean
 }
 
 export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole): Permissions {
-  const isOwner = systemRole === 'OWNER'
-  const isSystemAdmin = systemRole === 'ADMIN'
-  const isPrivileged = isOwner || isSystemAdmin
+  const priv = isPrivileged(systemRole)
   const isTeamLead = projectRole === 'TEAM_LEAD'
-  const canManage = isPrivileged || isTeamLead
+  const canManage = priv || isTeamLead
   const isMember = projectRole === 'MEMBER'
 
   return {
@@ -35,19 +45,20 @@ export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole
     canDeleteTask: canManage,
     canAssignTask: canManage,
     canManageMembers: canManage,
-    canDeleteProject: isPrivileged,
+    canDeleteProject: priv,
   }
 }
 
 export function useSystemPermission(systemRole?: SystemRole): SystemPermissions {
-  const isOwner = systemRole === 'OWNER'
-  const isOwnerOrAdmin = systemRole === 'OWNER' || systemRole === 'ADMIN'
+  const top = isTopTier(systemRole)
+  const priv = isPrivileged(systemRole)
 
   return {
-    canCreateProject: isOwnerOrAdmin,
-    canManageUsers: isOwnerOrAdmin,
-    canManageAdmins: isOwner,
-    canViewProgress: isOwnerOrAdmin,
-    canAssignTasks: isOwnerOrAdmin,
+    canCreateProject: priv,
+    canManageUsers: priv,
+    canManageAdmins: top,
+    canCreateCeoMd: systemRole === 'OWNER',
+    canViewProgress: priv,
+    canAssignTasks: priv,
   }
 }
