@@ -1,7 +1,7 @@
 import { apiClient } from './client'
 import type { DayOffRequest } from '@/types/dayoff'
 
-export function createDayOff(data: { startDate: string; endDate: string; reason: string; adminId: string }): Promise<DayOffRequest> {
+export function createDayOff(data: { startDate: string; endDate: string; reason: string }): Promise<DayOffRequest> {
   return apiClient.post<DayOffRequest>('/day-offs', data)
 }
 

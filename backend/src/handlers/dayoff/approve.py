@@ -2,6 +2,7 @@ from application.dayoff.use_cases import ApproveRequestUseCase
 from handlers.shared.auth_context import extract_auth_context
 from handlers.shared.response import build_error, build_success
 from infrastructure.dynamodb.dayoff_repository import DayOffDynamoRepository
+from infrastructure.dynamodb.user_repository import UserDynamoRepository
 
 
 def handler(event, context):
@@ -10,9 +11,11 @@ def handler(event, context):
         request_id = event.get("pathParameters", {}).get("requestId", "")
 
         dayoff_repo = DayOffDynamoRepository()
-        use_case = ApproveRequestUseCase(dayoff_repo)
+        user_repo = UserDynamoRepository()
+        use_case = ApproveRequestUseCase(dayoff_repo, user_repo)
         result = use_case.execute(
             caller_user_id=auth.user_id,
+            caller_system_role=auth.system_role,
             request_id=request_id,
         )
         return build_success(200, result)

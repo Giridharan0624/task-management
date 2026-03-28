@@ -9,7 +9,7 @@ def handler(event, context):
         auth = extract_auth_context(event)
         dayoff_repo = DayOffDynamoRepository()
         use_case = GetPendingApprovalsUseCase(dayoff_repo)
-        result = use_case.execute(caller_user_id=auth.user_id)
+        result = use_case.execute(caller_user_id=auth.user_id, caller_system_role=auth.system_role)
         return build_success(200, result)
     except Exception as e:
         return build_error(e)

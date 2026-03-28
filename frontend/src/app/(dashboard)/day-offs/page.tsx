@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { useAdmins } from '@/lib/hooks/useUsers'
 import {
   useMyDayOffs,
   usePendingDayOffs,
@@ -10,10 +9,8 @@ import {
   useCreateDayOff,
   useApproveDayOff,
   useRejectDayOff,
-  useForwardDayOff,
 } from '@/lib/hooks/useDayOffs'
 import type { DayOffRequest, DayOffStatus, ApprovalStatus } from '@/types/dayoff'
-import type { AdminInfo } from '@/lib/api/userApi'
 import { Spinner } from '@/components/ui/Spinner'
 
 /* ─── Status Badge ─── */
@@ -50,18 +47,14 @@ function fmtDate(iso: string) {
 function RequestCard({
   req,
   showActions,
-  isAdmin,
   onApprove,
   onReject,
-  onForward,
   isActing,
 }: {
   req: DayOffRequest
   showActions: boolean
-  isAdmin: boolean
   onApprove: () => void
   onReject: () => void
-  onForward: () => void
   isActing: boolean
 }) {
   return (
@@ -74,7 +67,9 @@ function RequestCard({
             {req.employeeId && <span className="ml-2 text-xs font-medium text-gray-500">({req.employeeId})</span>}
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
-            {fmtDate(req.startDate)} &ndash; {fmtDate(req.endDate)}
+            {req.startDate.slice(0, 10) === req.endDate.slice(0, 10)
+              ? fmtDate(req.startDate)
+              : <>{fmtDate(req.startDate)} &ndash; {fmtDate(req.endDate)}</>}
           </p>
         </div>
         <StatusBadge status={req.status} />
@@ -85,24 +80,20 @@ function RequestCard({
         <span className="font-medium text-gray-700">Reason:</span> {req.reason}
       </p>
 
-      {/* Approval chain */}
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500 mb-4">
-        <span>
-          Team Lead: {req.teamLeadName ?? 'N/A'}{' '}
-          <StatusBadge status={req.teamLeadStatus} />
-        </span>
-        <span>
-          Admin: {req.adminName ?? 'N/A'}{' '}
-          <StatusBadge status={req.adminStatus} />
-        </span>
-        {req.forwardedToName && (
-          <span>
-            Forwarded to: {req.forwardedToName}
+      {/* Approval */}
+      <div className="text-xs text-gray-500 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400">Decision:</span>
+          <span className="font-medium text-gray-700">
+            {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED'
+              ? req.adminName
+              : 'Awaiting CEO/MD'}
           </span>
-        )}
+          <StatusBadge status={req.adminStatus} />
+        </div>
       </div>
 
-      {/* Actions */}
+      {/* Actions — only CEO/MD */}
       {showActions && req.status === 'PENDING' && (
         <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
           <button
@@ -119,15 +110,6 @@ function RequestCard({
           >
             Reject
           </button>
-          {isAdmin && (
-            <button
-              onClick={onForward}
-              disabled={isActing}
-              className="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 transition-colors ml-auto"
-            >
-              Forward
-            </button>
-          )}
         </div>
       )}
     </div>
@@ -136,73 +118,142 @@ function RequestCard({
 
 /* ─── Create Request Modal ─── */
 function CreateModal({
-  admins,
   onClose,
   onCreate,
   isPending,
 }: {
-  admins: AdminInfo[]
   onClose: () => void
-  onCreate: (data: { startDate: string; endDate: string; reason: string; adminId: string }) => void
+  onCreate: (data: { startDate: string; endDate: string; reason: string }) => void
   isPending: boolean
 }) {
+  const [mode, setMode] = useState<'single' | 'multiple'>('single')
+  const [singleDate, setSingleDate] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
-  const [adminId, setAdminId] = useState(admins[0]?.userId ?? '')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!startDate || !endDate || !reason.trim() || !adminId) return
-    onCreate({ startDate, endDate, reason: reason.trim(), adminId })
+    if (!reason.trim()) return
+
+    if (mode === 'single') {
+      if (!singleDate) return
+      const start = startTime ? `${singleDate}T${startTime}` : singleDate
+      const end = endTime ? `${singleDate}T${endTime}` : singleDate
+      onCreate({ startDate: start, endDate: end, reason: reason.trim() })
+    } else {
+      if (!startDate || !endDate) return
+      onCreate({ startDate, endDate, reason: reason.trim() })
+    }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Request Day Off</h3>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-gray-900 mb-1">Request Day Off</h3>
+        <p className="text-xs text-gray-500 mb-5">Your request will be sent to the CEO/MD for approval</p>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-                min={startDate}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-          </div>
-
+          {/* Duration type toggle */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Admin</label>
-            <select
-              value={adminId}
-              onChange={(e) => setAdminId(e.target.value)}
-              required
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-            >
-              <option value="" disabled>Select an admin</option>
-              {admins.map((a) => (
-                <option key={a.userId} value={a.userId}>
-                  {a.name} ({a.email})
-                </option>
-              ))}
-            </select>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Duration</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMode('single')}
+                className={`px-4 py-2.5 text-sm font-medium rounded-xl border-2 transition-all ${
+                  mode === 'single'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                Single Day
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('multiple')}
+                className={`px-4 py-2.5 text-sm font-medium rounded-xl border-2 transition-all ${
+                  mode === 'multiple'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                Multiple Days
+              </button>
+            </div>
           </div>
 
+          {/* Single day mode */}
+          {mode === 'single' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={singleDate}
+                  onChange={(e) => setSingleDate(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Time Range <span className="text-gray-400 font-normal">(optional — leave blank for full day)</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">From</span>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="w-full rounded-xl border border-gray-300 pl-12 pr-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">To</span>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="w-full rounded-xl border border-gray-300 pl-12 pr-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Multiple days mode */}
+          {mode === 'multiple' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                  min={startDate}
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Reason */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
             <textarea
@@ -211,7 +262,7 @@ function CreateModal({
               required
               rows={3}
               placeholder="Why do you need time off?"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
             />
           </div>
 
@@ -219,14 +270,14 @@ function CreateModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               {isPending ? 'Submitting...' : 'Submit Request'}
             </button>
@@ -238,58 +289,6 @@ function CreateModal({
 }
 
 /* ─── Forward Modal ─── */
-function ForwardModal({
-  admins,
-  onClose,
-  onForward,
-  isPending,
-}: {
-  admins: AdminInfo[]
-  onClose: () => void
-  onForward: (adminId: string) => void
-  isPending: boolean
-}) {
-  const [selected, setSelected] = useState(admins[0]?.userId ?? '')
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Forward Request</h3>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Forward to Admin</label>
-          <select
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-          >
-            {admins.map((a) => (
-              <option key={a.userId} value={a.userId}>
-                {a.name} ({a.email})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onForward(selected)}
-            disabled={isPending || !selected}
-            className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {isPending ? 'Forwarding...' : 'Forward'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 /* ─── Main Page ─── */
 export default function DayOffsPage() {
   const { user } = useAuth()
@@ -299,7 +298,6 @@ export default function DayOffsPage() {
   const isAdminOrOwner = isTopTier || role === 'ADMIN'
   const isApprover = isAdminOrOwner || role === 'TEAM_LEAD'
 
-  const { data: admins } = useAdmins()
   const { data: myDayOffs, isLoading: myLoading } = useMyDayOffs()
   const { data: pendingDayOffs, isLoading: pendingLoading } = usePendingDayOffs()
   const { data: allDayOffs, isLoading: allLoading } = useAllDayOffs()
@@ -307,13 +305,10 @@ export default function DayOffsPage() {
   const createMutation = useCreateDayOff()
   const approveMutation = useApproveDayOff()
   const rejectMutation = useRejectDayOff()
-  const forwardMutation = useForwardDayOff()
 
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [forwardingRequestId, setForwardingRequestId] = useState<string | null>(null)
   const [allFilter, setAllFilter] = useState<'ALL' | DayOffStatus>('ALL')
 
-  const adminList = admins ?? []
 
   const filteredAll = useMemo(() => {
     if (!allDayOffs) return []
@@ -321,7 +316,7 @@ export default function DayOffsPage() {
     return allDayOffs.filter((r: DayOffRequest) => r.status === allFilter)
   }, [allDayOffs, allFilter])
 
-  const isActing = approveMutation.isPending || rejectMutation.isPending || forwardMutation.isPending
+  const isActing = approveMutation.isPending || rejectMutation.isPending
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -362,10 +357,8 @@ export default function DayOffsPage() {
                 key={req.requestId}
                 req={req}
                 showActions={false}
-                isAdmin={false}
                 onApprove={() => {}}
                 onReject={() => {}}
-                onForward={() => {}}
                 isActing={false}
               />
             ))}
@@ -373,8 +366,8 @@ export default function DayOffsPage() {
         )}
       </section>}
 
-      {/* ── Section 2: Pending Approvals (ADMIN / TEAM_LEAD / OWNER) ── */}
-      {isApprover && (
+      {/* ── Section 2: Pending Approvals (CEO / MD only) ── */}
+      {(role === 'CEO' || role === 'MD') && (
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Pending Approvals</h2>
           {pendingLoading ? (
@@ -390,10 +383,8 @@ export default function DayOffsPage() {
                   key={req.requestId}
                   req={req}
                   showActions={true}
-                  isAdmin={isAdminOrOwner}
                   onApprove={() => approveMutation.mutate(req.requestId)}
                   onReject={() => rejectMutation.mutate(req.requestId)}
-                  onForward={() => setForwardingRequestId(req.requestId)}
                   isActing={isActing}
                 />
               ))}
@@ -439,8 +430,7 @@ export default function DayOffsPage() {
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">Employee</th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">Dates</th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">Reason</th>
-                      <th className="text-left px-4 py-3 font-semibold text-gray-600">Team Lead</th>
-                      <th className="text-left px-4 py-3 font-semibold text-gray-600">Admin</th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600">Approved By</th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
                     </tr>
                   </thead>
@@ -454,16 +444,17 @@ export default function DayOffsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                          {fmtDate(req.startDate)} &ndash; {fmtDate(req.endDate)}
+                          {req.startDate.slice(0, 10) === req.endDate.slice(0, 10)
+                            ? fmtDate(req.startDate)
+                            : `${fmtDate(req.startDate)} – ${fmtDate(req.endDate)}`}
                         </td>
                         <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{req.reason}</td>
                         <td className="px-4 py-3">
-                          <span className="text-gray-600">{req.teamLeadName ?? 'N/A'}</span>
-                          <span className="ml-1"><StatusBadge status={req.teamLeadStatus} /></span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-gray-600">{req.adminName ?? 'N/A'}</span>
-                          <span className="ml-1"><StatusBadge status={req.adminStatus} /></span>
+                          <span className="font-medium text-gray-700">
+                            {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED'
+                              ? req.adminName
+                              : 'Awaiting CEO/MD'}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status={req.status} />
@@ -481,7 +472,6 @@ export default function DayOffsPage() {
       {/* ── Modals ── */}
       {showCreateModal && (
         <CreateModal
-          admins={adminList}
           onClose={() => setShowCreateModal(false)}
           isPending={createMutation.isPending}
           onCreate={(data) => {
@@ -492,19 +482,6 @@ export default function DayOffsPage() {
         />
       )}
 
-      {forwardingRequestId && (
-        <ForwardModal
-          admins={adminList}
-          onClose={() => setForwardingRequestId(null)}
-          isPending={forwardMutation.isPending}
-          onForward={(adminId) => {
-            forwardMutation.mutate(
-              { requestId: forwardingRequestId, forwardToId: adminId },
-              { onSuccess: () => setForwardingRequestId(null) }
-            )
-          }}
-        />
-      )}
     </div>
   )
 }

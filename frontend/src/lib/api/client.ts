@@ -83,8 +83,9 @@ async function request<T>(
     let errorMessage = `HTTP error ${response.status}`
     let errorCode: string | undefined
     try {
-      const errorBody = await response.json() as { message?: string; code?: string }
-      if (errorBody.message) errorMessage = errorBody.message
+      const errorBody = await response.json() as { message?: string; error?: string; code?: string }
+      if (errorBody.error) errorMessage = errorBody.error
+      else if (errorBody.message) errorMessage = errorBody.message
       if (errorBody.code) errorCode = errorBody.code
     } catch {
       // ignore JSON parse errors

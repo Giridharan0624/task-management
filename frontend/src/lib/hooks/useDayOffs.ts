@@ -8,7 +8,6 @@ import {
   getAllDayOffs,
   approveDayOff,
   rejectDayOff,
-  forwardDayOff,
 } from '@/lib/api/dayoffApi'
 
 const dayOffKeys = {
@@ -50,7 +49,7 @@ export function useAllDayOffs() {
 export function useCreateDayOff() {
   const invalidateAll = useInvalidateAll()
   return useMutation({
-    mutationFn: (data: { startDate: string; endDate: string; reason: string; adminId: string }) =>
+    mutationFn: (data: { startDate: string; endDate: string; reason: string }) =>
       createDayOff(data),
     onSuccess: invalidateAll,
   })
@@ -68,15 +67,6 @@ export function useRejectDayOff() {
   const invalidateAll = useInvalidateAll()
   return useMutation({
     mutationFn: (requestId: string) => rejectDayOff(requestId),
-    onSuccess: invalidateAll,
-  })
-}
-
-export function useForwardDayOff() {
-  const invalidateAll = useInvalidateAll()
-  return useMutation({
-    mutationFn: ({ requestId, forwardToId }: { requestId: string; forwardToId: string }) =>
-      forwardDayOff(requestId, forwardToId),
     onSuccess: invalidateAll,
   })
 }

@@ -70,12 +70,13 @@ export default function UsersPage() {
   const userMap = new Map((users ?? []).map((u) => [u.userId, u.name || u.email]))
   if (currentUser) userMap.set(currentUser.userId, currentUser.name || currentUser.email)
 
-  // Owner sees tabbed view (Admins | Members), Admin sees only Members
-  const admins = (users ?? []).filter((u) => u.systemRole === 'ADMIN')
+  // Filter users by role groups
+  const ceoMd = (users ?? []).filter((u) => u.systemRole === 'CEO' || u.systemRole === 'MD')
+  const adminsOnly = (users ?? []).filter((u) => u.systemRole === 'ADMIN')
   const members = (users ?? []).filter((u) => u.systemRole === 'MEMBER')
 
-  const rawDisplayedUsers = isOwner
-    ? (activeTab === 'ADMIN' ? admins : members)
+  const rawDisplayedUsers = isTopTier
+    ? (activeTab === 'ADMIN' ? [...ceoMd, ...adminsOnly] : members)
     : members
 
   const deptFiltered = deptFilter === 'ALL'
@@ -218,7 +219,7 @@ export default function UsersPage() {
       <div className="grid grid-cols-3 gap-4">
         {isOwner && (
           <div className="bg-red-50 rounded-xl p-4 border border-red-100">
-            <div className="text-2xl font-bold text-red-700">{admins.length}</div>
+            <div className="text-2xl font-bold text-red-700">{ceoMd.length + adminsOnly.length}</div>
             <div className="text-sm text-red-600">Admins</div>
           </div>
         )}
@@ -243,7 +244,7 @@ export default function UsersPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Admins ({admins.length})
+            Management ({ceoMd.length + adminsOnly.length})
           </button>
           <button
             onClick={() => setActiveTab('MEMBER')}
