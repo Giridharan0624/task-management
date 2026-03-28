@@ -38,8 +38,10 @@ def handler(event, context):
         in_progress_count = sum(1 for t in tasks if t.status.value == "IN_PROGRESS")
         done_count = sum(1 for t in tasks if t.status.value == "DONE")
 
-        # Estimated hours
-        total_estimated = sum(t.estimated_hours or 0 for t in tasks)
+        # Estimated hours: use project-level if set, otherwise sum task estimates
+        task_estimated_sum = sum(t.estimated_hours or 0 for t in tasks)
+        project_estimated = project.estimated_hours or 0
+        total_estimated = project_estimated if project_estimated > 0 else task_estimated_sum
         estimated_by_task = []
         for t in tasks:
             estimated_by_task.append({

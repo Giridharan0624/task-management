@@ -68,7 +68,7 @@ export function LoginForm() {
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{serverError}</p>
       )}
 
-      <Button type="submit" loading={isSubmitting} className="w-full">
+      <Button type="submit" loading={isSubmitting} className="w-full mt-2">
         Sign in
       </Button>
     </form>
