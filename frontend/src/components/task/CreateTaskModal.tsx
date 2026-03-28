@@ -6,6 +6,7 @@ import { useCreateTask } from '@/lib/hooks/useTasks'
 import { useProject } from '@/lib/hooks/useProjects'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/AvatarUpload'
 import type { TaskPriority } from '@/types/task'
 
 interface CreateTaskModalProps {
@@ -249,11 +250,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
                       onChange={() => toggleAssignee(m.userId)}
                       className="sr-only"
                     />
-                    <div className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold ${
-                      isSelected ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar url={m.user?.avatarUrl} name={name} size="sm" />
                     <div className="flex-1 min-w-0">
                       <span className={`text-sm truncate block ${isSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
                         {name}

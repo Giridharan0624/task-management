@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
+import { Avatar } from '@/components/ui/AvatarUpload'
 import type { ProjectRole } from '@/types/user'
 
 export default function ProjectDetailPage() {
@@ -72,48 +73,89 @@ export default function ProjectDetailPage() {
     )
   }
 
+  const totalTasks = tasks?.length ?? 0
+  const doneTasks = tasks?.filter((t) => t.status === 'DONE').length ?? 0
+  const inProgressTasks = tasks?.filter((t) => t.status === 'IN_PROGRESS').length ?? 0
+  const todoTasks = totalTasks - doneTasks - inProgressTasks
+  const completionPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/projects"
-            className="rounded-lg p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            aria-label="Back to projects"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            {project.description && (
-              <p className="mt-0.5 text-sm text-gray-500">{project.description}</p>
+    <div className="flex flex-col gap-5 max-w-6xl">
+      {/* Header Card */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/projects"
+              className="rounded-xl p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
+              <span className="text-white font-bold text-lg">{project.name.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+              {project.description && (
+                <p className="text-sm text-gray-400 mt-0.5">{project.description}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {permissions.canManageMembers && (
+              <Button variant="secondary" size="sm" onClick={openEditModal}>
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                Edit
+              </Button>
             )}
-            <p className="text-xs text-gray-400 mt-1">
-              {project.members?.length ?? 0} members
-            </p>
+            {permissions.canDeleteProject && (
+              <Button variant="danger" size="sm" onClick={handleDeleteProject} loading={deleteProject.isPending}>
+                Delete
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {permissions.canManageMembers && (
-            <Button variant="secondary" size="sm" onClick={openEditModal}>
-              Edit Project
-            </Button>
-          )}
-          {permissions.canDeleteProject && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handleDeleteProject}
-              loading={deleteProject.isPending}
-            >
-              Delete Project
-            </Button>
-          )}
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-indigo-700">{project.members?.length ?? 0}</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Members</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-gray-700">{totalTasks}</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Tasks</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-blue-700">{inProgressTasks}</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">In Progress</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-emerald-700">{doneTasks}</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Completed</p>
+          </div>
         </div>
+
+        {/* Progress bar */}
+        {totalTasks > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="text-gray-500">Overall Progress</span>
+              <span className="font-semibold text-gray-700">{completionPct}% complete</span>
+            </div>
+            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  completionPct >= 100 ? 'bg-emerald-500' : completionPct >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
+                }`}
+                style={{ width: `${Math.min(completionPct, 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -288,9 +330,7 @@ export default function ProjectDetailPage() {
               {projectStatus.memberProgress.map((m) => (
                 <div key={m.userId} className="bg-white rounded-xl border border-gray-200 p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <span className="text-indigo-600 font-medium text-xs">{m.name.charAt(0).toUpperCase()}</span>
-                    </div>
+                    <Avatar name={m.name} size="md" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">{m.name}</p>
                       <p className="text-xs text-gray-400">{m.projectRole}</p>
@@ -409,13 +449,7 @@ export default function ProjectDetailPage() {
                   {(project.members ?? []).map((m) => (
                     <div key={m.userId} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 border border-gray-100">
                       <div className="flex items-center gap-2.5">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
-                          m.projectRole === 'TEAM_LEAD' ? 'bg-orange-100 text-orange-600' :
-                          m.projectRole === 'ADMIN' ? 'bg-purple-100 text-purple-600' :
-                          'bg-indigo-100 text-indigo-600'
-                        }`}>
-                          {(m.user?.name || m.user?.email || m.userId).charAt(0).toUpperCase()}
-                        </div>
+                        <Avatar url={m.user?.avatarUrl} name={m.user?.name || m.user?.email || m.userId} size="md" />
                         <div>
                           <p className="text-sm font-medium text-gray-900">{m.user?.name || m.user?.email || m.userId}</p>
                           {m.user?.email && m.user?.name && (

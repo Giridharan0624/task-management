@@ -8,6 +8,7 @@ import { projectKeys } from '@/lib/hooks/useProjects'
 import { useUsers } from '@/lib/hooks/useUsers'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { Avatar } from '@/components/ui/AvatarUpload'
 
 interface MemberListProps {
   projectId: string
@@ -108,11 +109,7 @@ export function MemberList({ projectId, members, canManageMembers }: MemberListP
                 <tr key={member.userId} className="hover:bg-gray-50">
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-indigo-600 font-medium text-xs">
-                          {(member.user?.name || member.user?.email || member.userId).charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+                      <Avatar url={member.user?.avatarUrl} name={member.user?.name || member.user?.email || member.userId} size="md" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {member.user?.name ?? member.userId}

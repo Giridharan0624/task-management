@@ -25,6 +25,7 @@ class UserMapper:
             department=item.get("department"),
             location=item.get("location"),
             bio=item.get("bio"),
+            avatar_url=item.get("avatar_url"),
             skills=skills_raw,
             created_at=item.get("created_at") or item.get("createdAt", ""),
             updated_at=item.get("updated_at") or item.get("updatedAt", ""),
@@ -60,6 +61,8 @@ class UserMapper:
             item["location"] = user.location
         if user.bio:
             item["bio"] = user.bio
+        if user.avatar_url:
+            item["avatar_url"] = user.avatar_url
         if user.skills:
             item["skills"] = json.dumps(user.skills)
         return item

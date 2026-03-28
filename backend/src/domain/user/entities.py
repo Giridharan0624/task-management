@@ -20,6 +20,7 @@ class User(BaseModel):
     department: Optional[str] = None
     location: Optional[str] = None
     bio: Optional[str] = None
+    avatar_url: Optional[str] = None
     skills: list[str] = []
     created_at: str
     updated_at: str
@@ -59,6 +60,7 @@ class User(BaseModel):
             "department": self.department,
             "location": self.location,
             "bio": self.bio,
+            "avatar_url": self.avatar_url,
             "skills": self.skills,
             "created_at": self.created_at,
             "updated_at": self.updated_at,

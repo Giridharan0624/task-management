@@ -27,6 +27,7 @@ export interface UpdateProfileData {
   department?: string
   location?: string
   bio?: string
+  avatarUrl?: string
   skills?: string[]
 }
 

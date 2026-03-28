@@ -13,6 +13,7 @@ export interface User {
   department?: string
   location?: string
   bio?: string
+  avatarUrl?: string
   skills?: string[]
   createdAt: string
   updatedAt: string

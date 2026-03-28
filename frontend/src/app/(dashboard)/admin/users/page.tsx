@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
+import { Avatar } from '@/components/ui/AvatarUpload'
 import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -276,11 +277,7 @@ export default function UsersPage() {
               <tr key={u.userId} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-indigo-600 font-medium text-sm">
-                        {(u.name || u.email).charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                    <Avatar url={u.avatarUrl} name={u.name || u.email} size="md" />
                     <div className="ml-4">
                       <button
                         type="button"
@@ -515,11 +512,7 @@ export default function UsersPage() {
           <div className="space-y-5">
             {/* Header */}
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-xl">
-                  {(viewUser.name || viewUser.email).charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <Avatar url={viewUser.avatarUrl} name={viewUser.name || viewUser.email} size="lg" />
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{viewUser.name || 'Unnamed'}</h3>
                 <p className="text-sm text-gray-500">{viewUser.email}</p>

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
+import { Avatar } from '@/components/ui/AvatarUpload'
 import Link from 'next/link'
 import type { MyTask } from '@/lib/api/userApi'
 import type { TaskPriority } from '@/types/task'
@@ -308,7 +309,7 @@ function AssignModal({
                     {isSel && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                   </div>
                   <input type="checkbox" checked={isSel} onChange={() => toggle(u.userId)} className="sr-only" />
-                  <div className="h-7 w-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-600 flex-shrink-0">{u.name.charAt(0).toUpperCase()}</div>
+                  <Avatar name={u.name} size="sm" />
                   <span className="text-sm text-gray-900">{u.name}</span>
                   <span className="text-xs text-gray-400 ml-auto">{u.email}</span>
                 </label>

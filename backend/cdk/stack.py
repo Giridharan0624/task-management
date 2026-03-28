@@ -206,7 +206,7 @@ class TaskManagementStack(Stack):
 
         # ─── User handlers ───────────────────────────────────────────────────
         add_api_lambda("GetProfile", "handlers.user.get_profile.handler", "GET", users_me)
-        add_api_lambda("UpdateProfile", "handlers.user.update_profile.handler", "PUT", users_me)
+        add_api_lambda("UpdateProfile", "handlers.user.update_profile.handler", "PUT", users_me, cognito_policies=["cognito-idp:AdminUpdateUserAttributes"])
         add_api_lambda("MyTasks", "handlers.user.my_tasks.handler", "GET", users_me_tasks)
         add_api_lambda("ListUsers", "handlers.user.list_users.handler", "GET", users)
 

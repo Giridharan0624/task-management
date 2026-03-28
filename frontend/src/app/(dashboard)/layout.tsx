@@ -2,9 +2,11 @@
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Spinner } from '@/components/ui/Spinner'
+import { Avatar } from '@/components/ui/AvatarUpload'
+import { getProfile } from '@/lib/api/userApi'
 
 const ownerNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -70,6 +72,8 @@ function NavIcon({ type }: { type: string }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, signOut } = useAuth()
   const router = useRouter()
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>()
+  const [profileName, setProfileName] = useState<string | undefined>()
   const pathname = usePathname()
 
   useEffect(() => {
@@ -77,6 +81,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/login')
     }
   }, [user, isLoading, router])
+
+  useEffect(() => {
+    if (user) {
+      getProfile().then((p) => { setAvatarUrl(p?.avatarUrl); setProfileName(p?.name) }).catch(() => {})
+    }
+  }, [user])
 
   if (isLoading) {
     return (
@@ -130,13 +140,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* User info */}
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-              <span className="text-white font-medium text-sm">
-                {(user.name || user.email).charAt(0).toUpperCase()}
-              </span>
-            </div>
+            <Avatar url={avatarUrl} name={profileName || user.name || user.email} size="md" />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user.name || user.email}</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{profileName || user.name || user.email}</p>
               <span className="inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded bg-indigo-50 text-indigo-600 tracking-wide">{user.systemRole}</span>
             </div>
           </div>

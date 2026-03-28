@@ -1,6 +1,8 @@
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
+import boto3
 from pydantic import BaseModel
 
 from handlers.shared.auth_context import extract_auth_context
@@ -9,6 +11,9 @@ from handlers.shared.validate_body import validate_body
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
 from shared.errors import NotFoundError
 
+cognito_client = boto3.client("cognito-idp", region_name=os.environ.get("AWS_REGION", "ap-south-1"))
+USER_POOL_ID = os.environ.get("USER_POOL_ID", "")
+
 
 class UpdateProfileRequest(BaseModel):
     name: Optional[str] = None
@@ -16,6 +21,7 @@ class UpdateProfileRequest(BaseModel):
     designation: Optional[str] = None
     location: Optional[str] = None
     bio: Optional[str] = None
+    avatar_url: Optional[str] = None
     skills: Optional[list[str]] = None
 
 
@@ -30,10 +36,13 @@ def handler(event, context):
 
         from domain.user.entities import User
 
+        new_name = body.name if body.name is not None else user.name
+
         updated_user = User(
             user_id=user.user_id,
+            employee_id=user.employee_id,
             email=user.email,
-            name=body.name if body.name is not None else user.name,
+            name=new_name,
             system_role=user.system_role,
             created_by=user.created_by,
             phone=body.phone if body.phone is not None else user.phone,
@@ -41,11 +50,24 @@ def handler(event, context):
             department=user.department,
             location=body.location if body.location is not None else user.location,
             bio=body.bio if body.bio is not None else user.bio,
+            avatar_url=body.avatar_url if body.avatar_url is not None else user.avatar_url,
             skills=body.skills if body.skills is not None else user.skills,
             created_at=user.created_at,
             updated_at=datetime.now(timezone.utc).isoformat(),
         )
         user_repo.update(updated_user)
+
+        # Sync name to Cognito so JWT reflects the change on next login
+        if body.name is not None and body.name != user.name and USER_POOL_ID:
+            try:
+                cognito_client.admin_update_user_attributes(
+                    UserPoolId=USER_POOL_ID,
+                    Username=user.email,
+                    UserAttributes=[{"Name": "name", "Value": new_name}],
+                )
+            except Exception:
+                pass  # Non-critical — DynamoDB is the source of truth
+
         return build_success(200, updated_user.to_dict())
     except Exception as e:
         return build_error(e)

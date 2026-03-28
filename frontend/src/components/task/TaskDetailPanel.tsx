@@ -11,6 +11,7 @@ import type { Permissions } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Avatar } from '@/components/ui/AvatarUpload'
 
 interface TaskDetailPanelProps {
   task: Task | null
@@ -53,6 +54,12 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   if (user) nameMap.set(user.userId, user.name || user.email)
 
   const resolveName = (userId: string) => nameMap.get(userId) || userId
+
+  const avatarMap = new Map<string, string | undefined>()
+  for (const m of members) {
+    avatarMap.set(m.userId, m.user?.avatarUrl)
+  }
+  const resolveAvatar = (userId: string) => avatarMap.get(userId)
 
   const {
     register,
@@ -298,9 +305,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                     {task.assignedTo.map((userId) => (
                       <div key={userId} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                            <span className="text-white font-semibold text-xs">{resolveName(userId).charAt(0).toUpperCase()}</span>
-                          </div>
+                          <Avatar url={resolveAvatar(userId)} name={resolveName(userId)} size="md" />
                           <span className="text-sm font-medium text-gray-900">{resolveName(userId)}</span>
                         </div>
                         {permissions.canAssignTask && (
@@ -414,9 +419,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                       <div key={comment.commentId} className="rounded-xl bg-gray-50 p-3.5">
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                              <span className="text-white text-[10px] font-bold">{resolveName(comment.authorId).charAt(0).toUpperCase()}</span>
-                            </div>
+                            <Avatar url={resolveAvatar(comment.authorId)} name={resolveName(comment.authorId)} size="sm" />
                             <span className="text-xs font-semibold text-gray-900">{resolveName(comment.authorId)}</span>
                           </div>
                           <span className="text-[10px] text-gray-400">

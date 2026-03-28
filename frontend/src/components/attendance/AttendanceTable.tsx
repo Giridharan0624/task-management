@@ -2,9 +2,11 @@
 
 import { useTodayAttendance } from '@/lib/hooks/useAttendance'
 import { useAllDayOffs } from '@/lib/hooks/useDayOffs'
+import { useUsers } from '@/lib/hooks/useUsers'
 import { LiveTimer } from './LiveTimer'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
+import { Avatar } from '@/components/ui/AvatarUpload'
 
 function getToday() {
   return new Date().toISOString().slice(0, 10)
@@ -13,6 +15,12 @@ function getToday() {
 export function AttendanceTable() {
   const { data: records, isLoading } = useTodayAttendance()
   const { data: allDayOffs } = useAllDayOffs()
+  const { data: allUsers } = useUsers()
+
+  // Build avatar lookup from users
+  const avatarMap = new Map<string, string | undefined>()
+  for (const u of allUsers ?? []) avatarMap.set(u.userId, u.avatarUrl)
+  const getAvatar = (userId: string) => avatarMap.get(userId)
 
   const attendance = records ?? []
   const today = getToday()
@@ -50,9 +58,7 @@ export function AttendanceTable() {
           <div className="flex flex-wrap gap-2">
             {onDayOff.map((d) => (
               <div key={d.requestId} className="inline-flex items-center gap-2 bg-white rounded-lg border border-amber-200 px-3 py-1.5">
-                <div className="h-6 w-6 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-amber-700 font-medium text-xs">{d.userName.charAt(0).toUpperCase()}</span>
-                </div>
+                <Avatar url={getAvatar(d.userId)} name={d.userName} size="sm" />
                 <div>
                   <span className="text-sm font-medium text-gray-900">{d.userName}</span>
                   {d.employeeId && <span className="text-xs text-gray-400 ml-1">({d.employeeId})</span>}
@@ -104,11 +110,7 @@ export function AttendanceTable() {
                 <tr key={record.userId} className="hover:bg-gray-50">
                   <td className="px-5 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-indigo-600 font-medium text-xs">
-                          {record.userName.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+                      <Avatar url={getAvatar(record.userId)} name={record.userName} size="sm" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">{record.userName}</p>
                         <p className="text-xs text-gray-400">{record.systemRole}</p>

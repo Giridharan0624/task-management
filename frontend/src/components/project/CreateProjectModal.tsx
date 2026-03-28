@@ -7,6 +7,7 @@ import { useUsers } from '@/lib/hooks/useUsers'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/AvatarUpload'
 
 interface CreateProjectModalProps {
   isOpen: boolean
@@ -126,11 +127,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-indigo-600 text-xs font-medium">
-                            {(u.name || u.email).charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        <Avatar url={u.avatarUrl} name={u.name || u.email} size="sm" />
                         <span className="text-sm text-gray-900 truncate">{u.name || u.email}</span>
                         <span className="text-xs text-gray-400 ml-auto flex-shrink-0">{u.systemRole}</span>
                       </div>
