@@ -26,5 +26,13 @@ class IUserRepository(ABC):
         ...
 
     @abstractmethod
+    def find_by_employee_id(self, employee_id: str) -> Optional[User]:
+        ...
+
+    @abstractmethod
+    def get_next_employee_number(self) -> int:
+        ...
+
+    @abstractmethod
     def delete(self, user_id: str) -> None:
         ...

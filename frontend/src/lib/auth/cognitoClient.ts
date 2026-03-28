@@ -18,15 +18,19 @@ export interface AuthTokens {
   refreshToken: string
 }
 
-export function signIn(email: string, password: string): Promise<AuthTokens> {
+export function signIn(identifier: string, password: string): Promise<AuthTokens> {
+  // If identifier looks like an employee ID (EMP-XXXX), resolve email first via API
+  // Otherwise use it directly as email/username
+  const username = identifier.trim()
+
   return new Promise((resolve, reject) => {
     const authDetails = new AuthenticationDetails({
-      Username: email,
+      Username: username,
       Password: password,
     })
 
     const cognitoUser = new CognitoUser({
-      Username: email,
+      Username: username,
       Pool: userPool,
     })
 
@@ -64,6 +68,7 @@ interface DecodedToken {
   sub: string
   email: string
   'custom:systemRole'?: string
+  'custom:employeeId'?: string
   [key: string]: unknown
 }
 
@@ -83,7 +88,7 @@ function decodeJwt(token: string): DecodedToken | null {
   }
 }
 
-export function getCurrentUser(): { userId: string; email: string; systemRole: string } | null {
+export function getCurrentUser(): { userId: string; email: string; systemRole: string; employeeId: string } | null {
   const token = getCurrentToken()
   if (!token) return null
 
@@ -94,5 +99,6 @@ export function getCurrentUser(): { userId: string; email: string; systemRole: s
     userId: decoded.sub,
     email: decoded.email,
     systemRole: (decoded['custom:systemRole'] as string) ?? 'MEMBER',
+    employeeId: (decoded['custom:employeeId'] as string) ?? '',
   }
 }

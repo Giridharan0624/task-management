@@ -174,7 +174,7 @@ class CreateUserUseCase:
 
         # Create in Cognito
         try:
-            user_id = self._cognito.create_user(email, name, password, target_role)
+            user_id = self._cognito.create_user(email, name, password, target_role, employee_id)
             self._cognito.set_permanent_password(email, password)
         except Exception as e:
             msg = str(e)
@@ -184,6 +184,10 @@ class CreateUserUseCase:
                 )
             raise
 
+        # Generate employee ID
+        next_num = self._user_repo.get_next_employee_number()
+        employee_id = f"EMP-{next_num:04d}"
+
         # Create in DynamoDB
         user = User.create(
             user_id=user_id,
@@ -191,6 +195,7 @@ class CreateUserUseCase:
             name=name,
             system_role=role_enum,
             created_by=caller_user_id,
+            employee_id=employee_id,
         )
         # Set department at creation time
         if dto.get("department"):

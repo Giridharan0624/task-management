@@ -3,6 +3,7 @@ export type ProjectRole = 'ADMIN' | 'TEAM_LEAD' | 'MEMBER'
 
 export interface User {
   userId: string
+  employeeId?: string
   email: string
   name: string
   systemRole: SystemRole

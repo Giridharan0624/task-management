@@ -10,6 +10,7 @@ from domain.user.value_objects import SystemRole
 
 class User(BaseModel):
     user_id: str
+    employee_id: Optional[str] = None
     email: str
     name: str
     system_role: SystemRole
@@ -31,10 +32,12 @@ class User(BaseModel):
         name: str,
         system_role: SystemRole = SystemRole.MEMBER,
         created_by: Optional[str] = None,
+        employee_id: Optional[str] = None,
     ) -> "User":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
             user_id=user_id,
+            employee_id=employee_id,
             email=email,
             name=name,
             system_role=system_role,
@@ -46,6 +49,7 @@ class User(BaseModel):
     def to_dict(self) -> dict:
         return {
             "user_id": self.user_id,
+            "employee_id": self.employee_id,
             "email": self.email,
             "name": self.name,
             "system_role": self.system_role.value,

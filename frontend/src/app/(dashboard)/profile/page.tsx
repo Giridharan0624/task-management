@@ -103,6 +103,11 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm text-gray-500">{displayProfile.email}</span>
               <Badge className={ROLE_COLORS[displayProfile.systemRole]}>{displayProfile.systemRole}</Badge>
+              {profile?.employeeId && (
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-mono font-medium text-gray-700">
+                  {profile.employeeId}
+                </span>
+              )}
             </div>
             {(profile?.designation || profile?.department) && (
               <p className="text-sm text-gray-500 mt-0.5">
@@ -214,6 +219,7 @@ export default function ProfilePage() {
 
             {/* Details grid */}
             <div className="grid grid-cols-2 gap-4">
+              <Field label="Employee ID" value={profile?.employeeId} />
               <Field label="Email" value={displayProfile.email} />
               <Field label="Phone" value={profile?.phone} />
               <Field label="Designation" value={profile?.designation} />

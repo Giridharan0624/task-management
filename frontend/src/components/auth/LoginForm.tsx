@@ -39,17 +39,13 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <Input
-        label="Email"
-        type="email"
-        autoComplete="email"
-        placeholder="you@example.com"
+        label="Email or Employee ID"
+        type="text"
+        autoComplete="username"
+        placeholder="you@example.com or EMP-0001"
         error={errors.email?.message}
         {...register('email', {
-          required: 'Email is required',
-          pattern: {
-            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-            message: 'Enter a valid email address',
-          },
+          required: 'Email or Employee ID is required',
         })}
       />
       <Input

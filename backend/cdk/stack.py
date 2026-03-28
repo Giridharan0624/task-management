@@ -41,6 +41,13 @@ class TaskManagementStack(Stack):
             projection_type=dynamodb.ProjectionType.ALL,
         )
 
+        table.add_global_secondary_index(
+            index_name="GSI2",
+            partition_key=dynamodb.Attribute(name="GSI2PK", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="GSI2SK", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL,
+        )
+
         # ─── Cognito ─────────────────────────────────────────────────────────
         user_pool = cognito.UserPool(
             self,
@@ -55,6 +62,7 @@ class TaskManagementStack(Stack):
             ),
             custom_attributes={
                 "systemRole": cognito.StringAttribute(min_len=1, max_len=20, mutable=True),
+                "employeeId": cognito.StringAttribute(min_len=1, max_len=20, mutable=True),
             },
             password_policy=cognito.PasswordPolicy(
                 min_length=8,
@@ -220,6 +228,16 @@ class TaskManagementStack(Stack):
         )
         add_api_lambda("GetUserProgress", "handlers.user.get_user_progress.handler", "GET", user_progress)
         add_api_lambda("UpdateUserDepartment", "handlers.user.update_user_department.handler", "PUT", users_department)
+
+        # ─── Public endpoint (no auth) — resolve employee ID to email for login
+        resolve_employee = api.root.add_resource("resolve-employee")
+        resolve_fn = _lambda.Function(self, "ResolveEmployee", handler="handlers.user.resolve_employee.handler", **lambda_defaults)
+        table.grant_read_data(resolve_fn)
+        resolve_employee.add_method(
+            "GET",
+            apigw.LambdaIntegration(resolve_fn),
+            authorization_type=apigw.AuthorizationType.NONE,
+        )
 
         # ─── Attendance handlers ────────────────────────────────────────────
         attendance = api.root.add_resource("attendance")

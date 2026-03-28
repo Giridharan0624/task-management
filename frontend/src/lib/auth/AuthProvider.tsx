@@ -33,6 +33,7 @@ function decodeJwtForUser(token: string): User | null {
     const decoded = JSON.parse(jsonPayload) as Record<string, unknown>
     return {
       userId: decoded.sub as string,
+      employeeId: (decoded['custom:employeeId'] as string) ?? undefined,
       email: decoded.email as string,
       name: (decoded.name as string) ?? (decoded.email as string),
       systemRole: ((decoded['custom:systemRole'] as string) ?? 'MEMBER') as User['systemRole'],
@@ -59,8 +60,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const tokens = await cognitoSignIn(email, password)
+  const signIn = useCallback(async (identifier: string, password: string) => {
+    let loginEmail = identifier.trim()
+
+    // If it looks like an employee ID (EMP-XXXX), resolve to email first
+    if (/^EMP-\d+$/i.test(loginEmail)) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
+      const res = await fetch(`${apiUrl}/resolve-employee?employeeId=${loginEmail}`)
+      if (!res.ok) throw new Error('Employee ID not found')
+      const data = await res.json()
+      loginEmail = data.email
+    }
+
+    const tokens = await cognitoSignIn(loginEmail, password)
     const idToken = tokens.idToken
     localStorage.setItem('auth_token', idToken)
     setToken(idToken)

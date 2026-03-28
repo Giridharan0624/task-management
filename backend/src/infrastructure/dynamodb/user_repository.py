@@ -57,6 +57,31 @@ class UserDynamoRepository(IUserRepository):
 
         return users
 
+    def find_by_employee_id(self, employee_id: str) -> Optional[User]:
+        response = self._table.query(
+            IndexName="GSI2",
+            KeyConditionExpression=Key("GSI2PK").eq(f"EMPLOYEE#{employee_id}")
+            & Key("GSI2SK").eq("PROFILE"),
+        )
+        items = response.get("Items", [])
+        if not items:
+            return None
+        return UserMapper.to_domain(items[0])
+
+    def get_next_employee_number(self) -> int:
+        """Scan all users and find the highest employee number to generate next."""
+        users = self.find_all()
+        max_num = 0
+        for u in users:
+            if u.employee_id and u.employee_id.startswith("EMP-"):
+                try:
+                    num = int(u.employee_id.split("-")[1])
+                    if num > max_num:
+                        max_num = num
+                except (ValueError, IndexError):
+                    pass
+        return max_num + 1
+
     def delete(self, user_id: str) -> None:
         self._table.delete_item(
             Key={"PK": f"USER#{user_id}", "SK": "PROFILE"}

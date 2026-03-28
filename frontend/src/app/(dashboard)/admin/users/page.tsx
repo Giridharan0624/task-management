@@ -281,7 +281,12 @@ export default function UsersPage() {
                       >
                         {u.name || 'Unnamed'}
                       </button>
-                      <div className="text-sm text-gray-500">{u.email}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">{u.email}</span>
+                        {u.employeeId && (
+                          <span className="text-[10px] font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{u.employeeId}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -512,6 +517,11 @@ export default function UsersPage() {
                 <p className="text-sm text-gray-500">{viewUser.email}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className={ROLE_COLORS[viewUser.systemRole]}>{viewUser.systemRole}</Badge>
+                  {viewUser.employeeId && (
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-mono font-medium text-gray-700">
+                      {viewUser.employeeId}
+                    </span>
+                  )}
                   {viewUser.designation && (
                     <span className="text-xs text-gray-500">{viewUser.designation}</span>
                   )}

@@ -15,6 +15,7 @@ class UserMapper:
 
         return User(
             user_id=item.get("user_id") or item.get("userId", ""),
+            employee_id=item.get("employee_id"),
             email=item.get("email", ""),
             name=item.get("name", ""),
             system_role=SystemRole(item.get("system_role") or item.get("systemRole", "MEMBER")),
@@ -43,6 +44,10 @@ class UserMapper:
             "created_at": user.created_at,
             "updated_at": user.updated_at,
         }
+        if user.employee_id:
+            item["employee_id"] = user.employee_id
+            item["GSI2PK"] = f"EMPLOYEE#{user.employee_id}"
+            item["GSI2SK"] = "PROFILE"
         if user.created_by:
             item["created_by"] = user.created_by
         if user.phone:

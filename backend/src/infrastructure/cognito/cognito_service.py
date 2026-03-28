@@ -9,18 +9,21 @@ USER_POOL_ID = os.environ.get("USER_POOL_ID", "")
 
 class CognitoService(IIdentityService):
     @staticmethod
-    def create_user(email: str, name: str, temp_password: str, system_role: str) -> str:
+    def create_user(email: str, name: str, temp_password: str, system_role: str, employee_id: str = "") -> str:
         """Create a Cognito user and return their sub (userId)."""
+        attrs = [
+            {"Name": "email", "Value": email},
+            {"Name": "email_verified", "Value": "true"},
+            {"Name": "name", "Value": name},
+            {"Name": "custom:systemRole", "Value": system_role},
+        ]
+        if employee_id:
+            attrs.append({"Name": "custom:employeeId", "Value": employee_id})
         response = cognito_client.admin_create_user(
             UserPoolId=USER_POOL_ID,
             Username=email,
             TemporaryPassword=temp_password,
-            UserAttributes=[
-                {"Name": "email", "Value": email},
-                {"Name": "email_verified", "Value": "true"},
-                {"Name": "name", "Value": name},
-                {"Name": "custom:systemRole", "Value": system_role},
-            ],
+            UserAttributes=attrs,
             MessageAction="SUPPRESS",
         )
         # Extract the sub attribute
