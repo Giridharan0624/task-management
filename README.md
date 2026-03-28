@@ -1,6 +1,57 @@
-# Task Management System
+# TaskFlow — Task Management System
 
-A serverless task management application built on AWS with a Next.js frontend. Supports multi-user collaboration with role-based access control, project-based task organization, multi-assignee tasks, deadlines, and progress comments.
+A full-stack serverless task management platform built on AWS with a Next.js frontend. Designed for organizations to manage projects, assign tasks, track time, handle day-off requests, and monitor team attendance — all with a multi-tier role-based access control system.
+
+**Live Demo:** [task-management.vercel.app](https://task-management.vercel.app)
+
+---
+
+## Features
+
+### User & Role Management
+- **5-tier role hierarchy:** OWNER > CEO > MD > ADMIN > MEMBER
+- OWNER creates CEO, MD, and ADMIN accounts; ADMINs create MEMBERs
+- Auto-generated unique Employee IDs (EMP-0001, EMP-0002, ...)
+- Login via email or Employee ID
+- Full bio/profile with Cloudinary avatar uploads
+- Department-based categorization (Development, Designing, Management, Research)
+- Searchable user directory with department filters
+
+### Project Management
+- Create projects with team members and a Team Lead (one per project)
+- Kanban board (To Do / In Progress / Done) per project
+- Project progress tracking with completion percentage
+- Edit project details, manage members, view progress — all in one page
+- Members see only tasks assigned to them; leads and admins see all
+
+### Task Management
+- Create tasks inside projects with deadlines, priority, and multi-assignee support
+- Direct task assignment (outside projects) for quick ad-hoc tasks
+- Members can only update task status (To Do → In Progress → Done)
+- OWNER/CEO/MD/ADMIN can edit all task fields
+- Progress comments on tasks
+- Starting a timer on a task auto-moves it to "In Progress"
+
+### Clockify-Style Time Tracker
+- Select a project (or "Direct Tasks") → select a task → start timer
+- Live ticking timer on dashboard
+- Switch tasks (auto-stops current, starts new)
+- Multiple sessions per day with cumulative hours
+- Session history with task names and timestamps
+- Team attendance table with live timers for active users
+
+### Day Off Requests
+- Members and Admins can request single-day or multi-day leave
+- Optional time range for partial-day requests
+- Auto-routed to CEO/MD for approval (no manual selection)
+- Approve / Reject with approver name recorded
+- Day-off banner on team attendance showing who's on leave today
+
+### Attendance & Reporting
+- Daily attendance tracking via the time tracker
+- Monthly attendance reports with CSV download
+- Per-task time breakdown in reports
+- Team attendance dashboard for OWNER/CEO/MD/ADMIN
 
 ---
 
@@ -8,222 +59,94 @@ A serverless task management application built on AWS with a Next.js frontend. S
 
 | Layer | Technology |
 |---|---|
-| Backend runtime | Python 3.12 on AWS Lambda |
+| Backend | Python 3.12, AWS Lambda |
 | Infrastructure | AWS CDK (Python) |
 | API | AWS API Gateway (REST) |
 | Auth | AWS Cognito (JWT) |
-| Database | AWS DynamoDB (single-table) |
-| Frontend | Next.js 14 (App Router) |
-| Frontend auth | amazon-cognito-identity-js |
-| Frontend data | React Query (@tanstack/react-query) |
+| Database | AWS DynamoDB (single-table design) |
+| Frontend | Next.js 16 (App Router), TypeScript |
 | Styling | Tailwind CSS |
-
----
-
-## Project Structure
-
-```
-task-management/
-├── backend/
-│   ├── cdk/                     # AWS CDK infrastructure (Python)
-│   │   ├── app.py               # CDK app entry point
-│   │   ├── stack.py             # Full stack definition
-│   │   ├── cdk.json             # CDK config
-│   │   └── requirements.txt     # aws-cdk-lib, constructs
-│   ├── layers/                  # Lambda Layer dependencies (gitignored)
-│   │   └── python/              # pip install -t layers/python
-│   ├── requirements.txt         # boto3, pydantic
-│   ├── requirements-dev.txt     # pytest, moto, boto3-stubs
-│   ├── pyproject.toml           # pytest + ruff config
-│   └── src/                     # Lambda function source (DDD)
-│       ├── domain/              # Pure business rules — no AWS deps
-│       │   ├── project/         # Project, ProjectMember entities
-│       │   ├── task/            # Task entity (multi-assign, deadline)
-│       │   ├── comment/         # ProgressComment entity
-│       │   └── user/            # User entity, IIdentityService port
-│       ├── application/         # Use cases (orchestration layer)
-│       │   ├── project/         # CRUD, member management
-│       │   ├── task/            # CRUD, assign, my-tasks
-│       │   ├── comment/         # Create + list comments
-│       │   └── user/            # Profile, admin, progress
-│       ├── infrastructure/      # DynamoDB repos, Cognito, mappers
-│       │   ├── dynamodb/        # Repository implementations
-│       │   ├── mappers/         # Entity ↔ DynamoDB item mappers
-│       │   └── cognito/         # CognitoService (implements IIdentityService)
-│       ├── handlers/            # Lambda entry points (composition root)
-│       │   ├── project/         # 7 handlers (CRUD + members)
-│       │   ├── task/            # 6 handlers (CRUD + assign)
-│       │   ├── comment/         # 2 handlers (create + list)
-│       │   ├── user/            # 9 handlers (profile, admin, progress)
-│       │   └── shared/          # auth_context, response, validate_body
-│       └── shared/              # Cross-cutting errors
-└── frontend/                    # Next.js 14 App Router
-    └── src/
-        ├── app/                 # Pages (route groups)
-        │   ├── (auth)/          # login, register
-        │   └── (dashboard)/     # protected pages with sidebar
-        │       ├── dashboard/   # Overview
-        │       ├── projects/    # Project list + detail (kanban)
-        │       ├── my-tasks/    # Tasks assigned to current user
-        │       ├── admin/users/ # User management (OWNER/ADMIN)
-        │       └── profile/     # Edit own profile
-        ├── components/          # UI + feature components
-        │   ├── ui/              # Badge, Button, Input, Modal, Spinner
-        │   ├── project/         # ProjectCard, ProjectList, CreateProjectModal, MemberList
-        │   └── task/            # TaskCard, TaskKanban, TaskDetailPanel, CreateTaskModal
-        ├── lib/                 # API client, auth, hooks
-        │   ├── api/             # projectApi, taskApi, commentApi, userApi, client
-        │   ├── auth/            # AuthProvider, cognitoClient
-        │   └── hooks/           # useProjects, useTasks, useComments, useUsers, usePermission
-        └── types/               # project, task, comment, user
-```
+| Font | Lexend (Google Fonts) |
+| State Management | React Query (@tanstack/react-query) |
+| Image Storage | Cloudinary (unsigned uploads) |
+| Deployment | Vercel (frontend), AWS (backend) |
 
 ---
 
 ## Architecture
 
-### Backend — Domain-Driven Design
-
-The backend is organized into four strict layers. Dependencies flow inward — outer layers depend on inner layers, never the reverse.
+### Backend — Domain-Driven Design (DDD)
 
 ```
-handlers/ → application/ → domain/ ← infrastructure/
+handlers/        → Lambda entry points (parse request, return response)
+    ↓ calls
+application/     → Use cases (business logic + RBAC enforcement)
+    ↓ calls
+infrastructure/  → DynamoDB repositories, Cognito service, mappers
+    ↑ implements
+domain/          → Pure entities, enums, repository interfaces (no AWS code)
 ```
-
-| Layer | Responsibility |
-|---|---|
-| `domain/` | Entities (`User`, `Project`, `ProjectMember`, `Task`, `ProgressComment`), value objects (enums), repository interfaces (ABCs), identity service port |
-| `application/` | Use case classes — orchestrate domain logic, enforce RBAC, no AWS code |
-| `infrastructure/` | Concrete DynamoDB repositories, bidirectional mappers, Cognito service |
-| `handlers/` | Lambda entry points — parse event, wire dependencies, call use case, return HTTP response |
 
 ### Frontend — Next.js App Router
 
+| Route | Description |
+|---|---|
+| `/login` | Authentication page |
+| `/dashboard` | Role-specific overview with stats, timer, attendance |
+| `/my-tasks` | All Tasks (OWNER/CEO/MD) or My Tasks (ADMIN/MEMBER) |
+| `/projects` | Project list with progress bars |
+| `/projects/[id]` | Kanban board, members, progress tabs |
+| `/admin/users` | User management with department filters |
+| `/attendance` | Monthly attendance reports with CSV export |
+| `/day-offs` | Day-off request and approval management |
+| `/profile` | User profile with avatar upload |
+
+---
+
+## Role Hierarchy & Permissions
+
 ```
-(auth)/              login, register — no sidebar
-(dashboard)/         protected pages — sidebar layout
-  dashboard/         overview with project + task summary
-  projects/          project list + project detail (kanban board)
-  projects/[id]/members/  member management
-  my-tasks/          all tasks assigned to current user
-  admin/users/       user management (OWNER/ADMIN only)
-  profile/           edit own profile
+OWNER (system account — manages the organization)
+├── CEO  (full access, approves day-offs)
+├── MD   (full access, approves day-offs)
+│   ├── ADMIN (manages projects, tasks, members)
+│   │   └── MEMBER (works on assigned tasks)
 ```
+
+| Action | OWNER | CEO | MD | ADMIN | TEAM LEAD | MEMBER |
+|---|---|---|---|---|---|---|
+| Create CEO/MD | Yes | — | — | — | — | — |
+| Create Admin | Yes | Yes | Yes | — | — | — |
+| Create Member | Yes | Yes | Yes | Yes | — | — |
+| View all users | Yes | Yes | Yes | Members only | — | — |
+| Create projects | Yes | Yes | Yes | Yes | — | — |
+| Create tasks | Yes | Yes | Yes | Yes | Yes | — |
+| View all tasks | Yes | Yes | Yes | Yes | Yes | Assigned only |
+| Edit any task | Yes | Yes | Yes | Yes | Yes | Status only |
+| Approve day-offs | — | Yes | Yes | — | — | — |
+| Request day-offs | — | — | — | Yes | — | Yes |
+| View attendance | Yes | Yes | Yes | Yes | — | Own only |
+| Assign direct tasks | Yes | Yes | Yes | Yes | — | — |
 
 ---
 
 ## Database Design
 
-Single DynamoDB table: **`TaskManagementTable`** with one GSI.
+**Single DynamoDB table:** `TaskManagementTable` with GSI1 and GSI2.
 
-### Key Schema
-
-| Item Type | PK | SK | GSI1PK | GSI1SK |
-|---|---|---|---|---|
-| User | `USER#{userId}` | `PROFILE` | `USER_EMAIL#{email}` | `PROFILE` |
-| Project | `PROJECT#{projectId}` | `METADATA` | — | — |
-| ProjectMember | `PROJECT#{projectId}` | `MEMBER#{userId}` | `USER#{userId}` | `PROJECT#{projectId}` |
-| Task | `PROJECT#{projectId}` | `TASK#{taskId}` | `TASK#{taskId}` | `PROJECT#{projectId}` |
-| Comment | `TASK#{taskId}` | `COMMENT#{timestamp}#{id}` | — | — |
-
-### Access Patterns
-
-| Pattern | Operation |
-|---|---|
-| Get user by ID | `GetItem PK=USER#{id} SK=PROFILE` |
-| Get user by email | `Query GSI1 GSI1PK=USER_EMAIL#{email}` |
-| Get project | `GetItem PK=PROJECT#{id} SK=METADATA` |
-| List projects for user | `Query GSI1 GSI1PK=USER#{userId}` → fetch each project |
-| Get project members | `Query PK=PROJECT#{id} SK begins_with MEMBER#` |
-| List tasks in project | `Query PK=PROJECT#{id} SK begins_with TASK#` |
-| Get task by ID | `Query GSI1 GSI1PK=TASK#{taskId}` |
-| List comments on task | `Query PK=TASK#{taskId} SK begins_with COMMENT#` |
-| Delete project (cascade) | `Query PK=PROJECT#{id}` → batch delete all items |
-
----
-
-## API Endpoints
-
-All routes require `Authorization: <Cognito ID token>`.
-
-### Users
-
-| Method | Path | RBAC | Description |
-|---|---|---|---|
-| `GET` | `/users/me` | Any | Get own profile |
-| `PUT` | `/users/me` | Any | Update own profile |
-| `GET` | `/users/me/tasks` | Any | List tasks assigned to caller |
-| `GET` | `/users` | OWNER / ADMIN | List all users |
-| `POST` | `/users` | OWNER / ADMIN | Create user (Cognito + DynamoDB) |
-| `DELETE` | `/users/{userId}` | OWNER / ADMIN | Delete user |
-| `PUT` | `/users/role` | OWNER | Change user system role |
-| `GET` | `/users/{userId}/progress` | OWNER / ADMIN | View user task progress |
-
-### Projects
-
-| Method | Path | RBAC | Description |
-|---|---|---|---|
-| `POST` | `/projects` | OWNER / ADMIN | Create project |
-| `GET` | `/projects` | Any | List projects for caller |
-| `GET` | `/projects/{projectId}` | Project member / OWNER | Get project + members |
-| `DELETE` | `/projects/{projectId}` | Project Admin / OWNER | Delete project (cascades) |
-
-### Project Members
-
-| Method | Path | RBAC | Description |
-|---|---|---|---|
-| `POST` | `/projects/{projectId}/members` | Project Admin / OWNER | Add member |
-| `DELETE` | `/projects/{projectId}/members/{userId}` | Project Admin / OWNER | Remove member |
-| `PUT` | `/projects/{projectId}/members/{userId}/role` | Project Admin / OWNER | Update member role |
-
-### Tasks
-
-| Method | Path | RBAC | Description |
-|---|---|---|---|
-| `POST` | `/projects/{projectId}/tasks` | OWNER / ADMIN | Create task (deadline required) |
-| `GET` | `/projects/{projectId}/tasks` | Project member / OWNER | List tasks |
-| `GET` | `/projects/{projectId}/tasks/{taskId}` | Project member / OWNER | Get task |
-| `PUT` | `/projects/{projectId}/tasks/{taskId}` | OWNER / ADMIN / assigned member (status only) | Update task |
-| `DELETE` | `/projects/{projectId}/tasks/{taskId}` | OWNER / Project Admin | Delete task (cascades comments) |
-| `PUT` | `/projects/{projectId}/tasks/{taskId}/assign` | OWNER / ADMIN | Assign task to members (list) |
-
-### Progress Comments
-
-| Method | Path | RBAC | Description |
-|---|---|---|---|
-| `POST` | `/projects/{projectId}/tasks/{taskId}/comments` | Assigned member / OWNER / ADMIN | Post progress update |
-| `GET` | `/projects/{projectId}/tasks/{taskId}/comments` | Project member / OWNER | List comments |
-
----
-
-## RBAC
-
-Two independent role dimensions:
-
-### System Role (stored on User, set in Cognito `custom:systemRole`)
-
-| Role | Capabilities |
-|---|---|
-| **OWNER** | Full system access — manage all users, projects, tasks. One per system. |
-| **ADMIN** | Create projects, create users (members only), manage projects they belong to |
-| **MEMBER** | View assigned tasks, update task status, post progress comments |
-
-### Project Role (stored per `ProjectMember` item)
-
-| Action | Admin | Member |
+| Item | PK | SK |
 |---|---|---|
-| View project & tasks | Yes | Yes |
-| Create / update task | Yes | No |
-| Assign task | Yes | No |
-| Delete task | Yes | No |
-| Delete project | Yes | No |
-| Manage members | Yes | No |
-| Update task status (own) | Yes | Yes |
-| Post progress comments | Yes | Yes |
+| User | `USER#{userId}` | `PROFILE` |
+| Project | `PROJECT#{projectId}` | `METADATA` |
+| Project Member | `PROJECT#{projectId}` | `MEMBER#{userId}` |
+| Task | `PROJECT#{projectId}` | `TASK#{taskId}` |
+| Direct Task | `PROJECT#DIRECT` | `TASK#{taskId}` |
+| Comment | `TASK#{taskId}` | `COMMENT#{ts}#{id}` |
+| Attendance | `USER#{userId}` | `ATTENDANCE#{date}` |
+| Day Off | `USER#{userId}` | `DAYOFF#{ts}#{id}` |
 
-RBAC is enforced at two points:
-1. **API Gateway** — validates JWT signature/expiry via Cognito authorizer
-2. **Use case layer** — checks system role + project membership, raises `AuthorizationError` → `403`
+**GSI1:** Email lookups, project membership, task lookups
+**GSI2:** Employee ID lookups
 
 ---
 
@@ -235,8 +158,9 @@ RBAC is enforced at two points:
 - AWS CDK CLI (`npm install -g aws-cdk`)
 - Python 3.12
 - Node.js 18+
+- Cloudinary account (for avatar uploads)
 
-### Deploy the Backend
+### 1. Deploy the Backend
 
 ```bash
 cd backend
@@ -244,53 +168,46 @@ cd backend
 # Install CDK dependencies
 pip install -r cdk/requirements.txt
 
-# Bundle Lambda dependencies into layer
-pip install -r requirements.txt -t layers/python \
+# Bundle Lambda dependencies
+pip install -r requirements.txt -t src/ \
   --only-binary :all: \
   --platform manylinux2014_x86_64 \
   --implementation cp \
   --python-version 3.12
 
-# Bootstrap CDK (first time per account/region)
-cd cdk
-cdk bootstrap
+# Bootstrap CDK (first time)
+cd cdk && cdk bootstrap
 
 # Deploy
 cdk deploy
-
-# Note the outputs:
-#   ApiUrl           → paste into frontend .env.local
-#   UserPoolId       → paste into frontend .env.local
-#   UserPoolClientId → paste into frontend .env.local
 ```
 
-### Seed the Admin User
+Note the outputs: `ApiUrl`, `UserPoolId`, `UserPoolClientId`
+
+### 2. Seed the OWNER Account
 
 ```bash
 # Create Cognito user
 aws cognito-idp admin-create-user \
   --user-pool-id <UserPoolId> \
-  --username admin@taskmanager.com \
-  --user-attributes Name=email,Value=admin@taskmanager.com \
+  --username admin@yourcompany.com \
+  --user-attributes Name=email,Value=admin@yourcompany.com \
     Name=email_verified,Value=true \
-    Name=name,Value=Admin \
+    Name=name,Value="Company Name" \
     Name=custom:systemRole,Value=OWNER \
   --message-action SUPPRESS
 
 # Set permanent password
 aws cognito-idp admin-set-user-password \
   --user-pool-id <UserPoolId> \
-  --username admin@taskmanager.com \
-  --password "Admin@123" \
+  --username admin@yourcompany.com \
+  --password "YourPassword@123" \
   --permanent
-
-# Seed DynamoDB (update admin-item.json with the Cognito sub)
-aws dynamodb put-item \
-  --table-name TaskManagementTable \
-  --item file://admin-item.json
 ```
 
-### Run the Frontend
+The OWNER profile is auto-created in DynamoDB on first login.
+
+### 3. Run the Frontend Locally
 
 ```bash
 cd frontend
@@ -298,101 +215,120 @@ npm install
 npm run dev
 ```
 
-Create `.env.local` with CDK deploy outputs:
+Create `frontend/.env.local`:
 
-```
+```env
 NEXT_PUBLIC_API_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=<UserPoolId>
 NEXT_PUBLIC_COGNITO_CLIENT_ID=<UserPoolClientId>
 NEXT_PUBLIC_AWS_REGION=ap-south-1
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=<your_cloud_name>
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=<your_upload_preset>
 ```
 
-### Redeployment
+### 4. Deploy Frontend to Vercel
 
-After code changes, redeploy with:
+1. Push to GitHub
+2. Import repo in Vercel → set **Root Directory** to `frontend`
+3. Add the environment variables above
+4. Deploy
 
-```bash
-cd backend/cdk
-cdk deploy
-```
+### 5. Cloudinary Setup (for profile images)
+
+1. Create account at [cloudinary.com](https://cloudinary.com)
+2. Go to Settings → Upload → Add upload preset
+3. Set Signing Mode to **Unsigned**, folder to `taskflow-avatars`
+4. Copy the cloud name and preset name to your env variables
 
 ---
 
 ## Data Models
 
 ### User
-```
-user_id       string (Cognito sub)
-email         string
-name          string
-system_role   OWNER | ADMIN | MEMBER
-created_by    user_id (optional — who created this user)
-created_at    ISO 8601 datetime
-updated_at    ISO 8601 datetime
-```
+| Field | Type | Description |
+|---|---|---|
+| user_id | string | Cognito sub (UUID) |
+| employee_id | string | Auto-generated (EMP-0001) |
+| email | string | Unique, used for login |
+| name | string | Display name |
+| system_role | enum | OWNER, CEO, MD, ADMIN, MEMBER |
+| department | string | Set by admin (Development, Designing, etc.) |
+| designation | string | Job title |
+| phone | string | Contact number |
+| location | string | City/office |
+| bio | string | About section |
+| avatar_url | string | Cloudinary image URL |
+| skills | list | Skill tags |
+| created_by | string | User ID of creator |
 
 ### Project
-```
-project_id    UUID
-name          string
-description   string (optional)
-created_by    user_id
-created_at    ISO 8601 datetime
-updated_at    ISO 8601 datetime
-```
-
-### ProjectMember
-```
-project_id    UUID
-user_id       UUID
-project_role  ADMIN | MEMBER
-joined_at     ISO 8601 datetime
-```
+| Field | Type | Description |
+|---|---|---|
+| project_id | UUID | Unique identifier |
+| name | string | Project name |
+| description | string | Optional description |
+| estimated_hours | float | Time budget for progress tracking |
+| created_by | string | Creator's user ID |
 
 ### Task
-```
-task_id       UUID
-project_id    UUID
-title         string
-description   string (optional)
-status        TODO | IN_PROGRESS | DONE
-priority      LOW | MEDIUM | HIGH
-assigned_to   list[user_id]  (one or more assignees)
-assigned_by   user_id (optional — who last assigned)
-created_by    user_id
-deadline      ISO 8601 datetime (required)
-created_at    ISO 8601 datetime
-updated_at    ISO 8601 datetime
-```
+| Field | Type | Description |
+|---|---|---|
+| task_id | UUID | Unique identifier |
+| project_id | UUID | Parent project (or "DIRECT" for standalone) |
+| title | string | Task title |
+| status | enum | TODO, IN_PROGRESS, DONE |
+| priority | enum | LOW, MEDIUM, HIGH |
+| assigned_to | list | One or more user IDs |
+| deadline | datetime | Required due date/time |
+| estimated_hours | float | Time estimate |
 
-### ProgressComment
-```
-comment_id    UUID
-task_id       UUID
-project_id    UUID
-author_id     user_id
-message       string
-created_at    ISO 8601 datetime
-```
+### Attendance (per user per day)
+| Field | Type | Description |
+|---|---|---|
+| sessions | list | Multiple sign-in/out sessions with task context |
+| total_hours | float | Cumulative hours across all sessions |
+| Each session has | | task_id, project_id, task_title, project_name, hours |
+
+### Day Off Request
+| Field | Type | Description |
+|---|---|---|
+| request_id | UUID | Unique identifier |
+| start_date | datetime | Leave start |
+| end_date | datetime | Leave end |
+| reason | string | Reason for leave |
+| status | enum | PENDING, APPROVED, REJECTED |
+| admin_id | string | CEO/MD who approves |
 
 ---
 
 ## Key Design Decisions
 
-**AWS CDK over SAM** — programmatic infrastructure definition in Python. DRY Lambda creation via helper function. Shared Lambda Layer for dependencies keeps `src/` clean.
+| Decision | Rationale |
+|---|---|
+| **AWS CDK** over SAM | Programmatic infrastructure in Python, DRY Lambda creation |
+| **Single-table DynamoDB** | All access patterns in one table, minimal round-trips |
+| **Lambda Layers** | Dependencies separated from source code, clean `src/` |
+| **5-tier roles** | OWNER > CEO > MD > ADMIN > MEMBER mirrors real org hierarchies |
+| **DDD architecture** | Clean layer separation, no AWS deps in domain/application |
+| **Unsigned Cloudinary uploads** | Direct browser-to-Cloudinary, no backend proxy needed |
+| **snake_case ↔ camelCase auto-conversion** | Backend uses Python conventions, frontend uses JS conventions, API client converts automatically |
+| **JWT + DynamoDB dual source** | Cognito JWT for auth, DynamoDB for full profile (avatar, bio, etc.) |
+| **Direct tasks** | Tasks outside projects using `project_id="DIRECT"` — same table, no schema change |
 
-**Single-table DynamoDB** — all access patterns served with at most one DynamoDB call. Querying `PK=PROJECT#{projectId}` returns project metadata, members, and tasks in one partition.
+---
 
-**Lambda Layer for dependencies** — `boto3`, `pydantic`, etc. are bundled in a shared Lambda Layer (`layers/python/`), not in `src/`. This keeps the source directory clean with only application code.
+## Redeployment
 
-**Project role vs system role** — a user can be a Member on one project and Admin on another. The OWNER system role has full access across all projects without needing project membership.
+```bash
+# Backend
+cd backend/cdk && cdk deploy
 
-**Multi-assignee tasks** — `assigned_to` is stored as a DynamoDB list. GSI2 was removed since list fields can't be used as GSI keys. Assignee lookups iterate per-project tasks instead.
+# Frontend (auto-deploys on git push to Vercel)
+git add . && git commit -m "update" && git push
+```
 
-**Progress comments** — members post progress updates on tasks they're assigned to. Comments use `PK=TASK#{taskId}, SK=COMMENT#{timestamp}#{commentId}` for chronological ordering.
+---
 
-**DDD with no DI container** — use cases receive repository instances via constructor injection, wired in each handler. No framework overhead on Lambda cold starts.
+## License
 
-**Pydantic v2 for validation** — request bodies validated using Pydantic models in each handler. Invalid input returns `400` before business logic runs.
-
-**snake_case → camelCase API client** — backend returns snake_case, frontend `transformKeys()` in the API client auto-converts all response keys to camelCase.
+Private project. All rights reserved.
