@@ -12,6 +12,7 @@ export interface Task {
   assignedBy?: string
   createdBy: string
   deadline: string
+  estimatedHours?: number
   createdAt: string
   updatedAt: string
 }

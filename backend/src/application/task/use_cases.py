@@ -76,6 +76,7 @@ class CreateTaskUseCase:
             assigned_to=assigned_to,
             assigned_by=caller_user_id if assigned_to else None,
             deadline=deadline,
+            estimated_hours=dto.get("estimated_hours"),
         )
         self._task_repo.save(task)
         return task.to_dict()
@@ -190,6 +191,8 @@ class UpdateTaskUseCase:
             except ValueError:
                 raise ValidationError(f"Invalid priority: {dto['priority']}")
 
+        estimated_hours = dto.get("estimated_hours", task.estimated_hours)
+
         now = datetime.now(timezone.utc).isoformat()
         updated_task = Task(
             task_id=task.task_id,
@@ -202,6 +205,7 @@ class UpdateTaskUseCase:
             assigned_by=assigned_by,
             created_by=task.created_by,
             deadline=deadline,
+            estimated_hours=estimated_hours,
             created_at=task.created_at,
             updated_at=now,
         )

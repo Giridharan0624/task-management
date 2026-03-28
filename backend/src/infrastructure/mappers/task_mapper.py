@@ -25,6 +25,7 @@ class TaskMapper:
             assigned_by=item.get("assigned_by"),
             created_by=item["created_by"],
             deadline=item.get("deadline"),
+            estimated_hours=float(item["estimated_hours"]) if item.get("estimated_hours") is not None else None,
             created_at=item["created_at"],
             updated_at=item["updated_at"],
         )
@@ -53,4 +54,6 @@ class TaskMapper:
             item["assigned_to"] = task.assigned_to
         if task.assigned_by is not None:
             item["assigned_by"] = task.assigned_by
+        if task.estimated_hours is not None:
+            item["estimated_hours"] = str(task.estimated_hours)
         return item

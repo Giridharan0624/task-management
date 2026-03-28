@@ -172,6 +172,8 @@ class TaskManagementStack(Stack):
         add_api_lambda("GetProject", "handlers.project.get_project.handler", "GET", project)
         add_api_lambda("UpdateProject", "handlers.project.update_project.handler", "PUT", project)
         add_api_lambda("DeleteProject", "handlers.project.delete_project.handler", "DELETE", project)
+        project_status = project.add_resource("status")
+        add_api_lambda("GetProjectStatus", "handlers.project.get_project_status.handler", "GET", project_status)
         add_api_lambda("AddMember", "handlers.project.add_member.handler", "POST", members)
         add_api_lambda("RemoveMember", "handlers.project.remove_member.handler", "DELETE", member)
         add_api_lambda("UpdateMemberRole", "handlers.project.update_member_role.handler", "PUT", member_role)

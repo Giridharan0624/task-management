@@ -17,6 +17,7 @@ class CreateTaskRequest(BaseModel):
     status: Optional[str] = None
     assigned_to: list[str] = []
     deadline: str
+    estimated_hours: Optional[float] = None
 
 
 def handler(event, context):

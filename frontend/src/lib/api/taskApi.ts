@@ -7,6 +7,7 @@ export interface CreateTaskData {
   status?: TaskStatus
   priority?: TaskPriority
   deadline: string
+  estimatedHours?: number
   assignedTo?: string[]
 }
 
@@ -16,6 +17,7 @@ export interface UpdateTaskData {
   status?: TaskStatus
   priority?: TaskPriority
   deadline?: string
+  estimatedHours?: number
   assignedTo?: string[]
 }
 

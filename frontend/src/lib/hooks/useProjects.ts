@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getProjects,
   getProject,
+  getProjectStatus,
   createProject,
   updateProject,
   deleteProject,
@@ -12,6 +13,7 @@ import {
 export const projectKeys = {
   all: ['projects'] as const,
   detail: (projectId: string) => ['projects', projectId] as const,
+  status: (projectId: string) => ['projects', projectId, 'status'] as const,
 }
 
 export function useProjects() {
@@ -47,6 +49,14 @@ export function useUpdateProject(projectId: string) {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
       queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
+  })
+}
+
+export function useProjectStatus(projectId: string) {
+  return useQuery({
+    queryKey: projectKeys.status(projectId),
+    queryFn: () => getProjectStatus(projectId),
+    enabled: !!projectId,
   })
 }
 

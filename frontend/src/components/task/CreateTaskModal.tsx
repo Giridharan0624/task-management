@@ -20,6 +20,7 @@ interface FormValues {
   priority: TaskPriority
   deadlineDate: string
   deadlineTime: string
+  estimatedHours: string
 }
 
 const priorityConfig = [
@@ -59,12 +60,14 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
 
   const onSubmit = async (values: FormValues) => {
     const deadline = `${values.deadlineDate}T${values.deadlineTime}`
+    const estHours = values.estimatedHours ? parseFloat(values.estimatedHours) : undefined
     await createTask.mutateAsync({
       title: values.title,
       description: values.description || undefined,
       status: 'TODO',
       priority: values.priority,
       deadline,
+      estimatedHours: estHours,
       assignedTo: selectedAssignees.length > 0 ? selectedAssignees : undefined,
     })
     reset()
@@ -130,6 +133,29 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
                 </label>
               )
             })}
+          </div>
+        </div>
+
+        {/* Estimated Hours */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold text-gray-800">
+            Estimated Hours <span className="font-normal text-gray-400">(for progress tracking)</span>
+          </label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              placeholder="e.g. 8"
+              className="w-full rounded-xl border border-gray-200 pl-10 pr-12 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              {...register('estimatedHours')}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">hours</span>
           </div>
         </div>
 

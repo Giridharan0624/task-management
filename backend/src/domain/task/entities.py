@@ -19,6 +19,7 @@ class Task(BaseModel):
     assigned_by: Optional[str] = None
     created_by: str
     deadline: str
+    estimated_hours: Optional[float] = None
     created_at: str
     updated_at: str
 
@@ -35,6 +36,7 @@ class Task(BaseModel):
         priority: TaskPriority = TaskPriority.MEDIUM,
         assigned_to: list[str] | None = None,
         assigned_by: Optional[str] = None,
+        estimated_hours: Optional[float] = None,
     ) -> "Task":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
@@ -48,6 +50,7 @@ class Task(BaseModel):
             assigned_by=assigned_by,
             created_by=created_by,
             deadline=deadline,
+            estimated_hours=estimated_hours,
             created_at=now,
             updated_at=now,
         )
@@ -64,6 +67,7 @@ class Task(BaseModel):
             "assigned_by": self.assigned_by,
             "created_by": self.created_by,
             "deadline": self.deadline,
+            "estimated_hours": self.estimated_hours,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

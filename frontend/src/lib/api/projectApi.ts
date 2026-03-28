@@ -58,3 +58,39 @@ export async function updateMemberRole(
 export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
   return apiClient.get<ProjectMember[]>(`/projects/${projectId}/members`)
 }
+
+export interface TaskProgress {
+  taskId: string
+  title: string
+  status: string
+  priority: string
+  estimatedHours: number
+  trackedHours: number
+  progressPercent: number
+  assignedTo: string[]
+  deadline: string
+}
+
+export interface MemberProgress {
+  userId: string
+  name: string
+  projectRole: string
+  trackedHours: number
+}
+
+export interface ProjectStatus {
+  projectId: string
+  projectName: string
+  totalTasks: number
+  taskCounts: { TODO: number; IN_PROGRESS: number; DONE: number }
+  totalEstimatedHours: number
+  totalTrackedHours: number
+  timeProgressPercent: number
+  completionPercent: number
+  taskProgress: TaskProgress[]
+  memberProgress: MemberProgress[]
+}
+
+export async function getProjectStatus(projectId: string): Promise<ProjectStatus> {
+  return apiClient.get<ProjectStatus>(`/projects/${projectId}/status`)
+}
