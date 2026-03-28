@@ -27,10 +27,10 @@ class Task(BaseModel):
     def create(
         cls,
         task_id: str,
-        project_id: str = "DIRECT",
-        title: str = "",
+        title: str,
         created_by: str,
         deadline: str,
+        project_id: str = "DIRECT",
         description: Optional[str] = None,
         status: TaskStatus = TaskStatus.TODO,
         priority: TaskPriority = TaskPriority.MEDIUM,

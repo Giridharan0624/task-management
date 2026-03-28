@@ -113,6 +113,11 @@ class ListProjectsForUserUseCase:
         self._project_repo = project_repo
         self._user_repo = user_repo
 
+    def __init__(self, project_repo: IProjectRepository, user_repo: IUserRepository, task_repo=None):
+        self._project_repo = project_repo
+        self._user_repo = user_repo
+        self._task_repo = task_repo
+
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> list[dict]:
         if caller_system_role in PRIVILEGED_ROLES:
             projects = self._project_repo.find_all()
@@ -123,6 +128,15 @@ class ListProjectsForUserUseCase:
             d = p.to_dict()
             members = self._project_repo.find_members(p.project_id)
             d["member_count"] = len(members)
+            if self._task_repo:
+                tasks = self._task_repo.find_by_project(p.project_id)
+                total = len(tasks)
+                done = sum(1 for t in tasks if t.status.value == "DONE")
+                in_progress = sum(1 for t in tasks if t.status.value == "IN_PROGRESS")
+                d["task_count"] = total
+                d["done_count"] = done
+                d["in_progress_count"] = in_progress
+                d["completion_percent"] = round((done / total) * 100) if total > 0 else 0
             result.append(d)
         return result
 

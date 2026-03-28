@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useMyAttendance, useSignIn, useSignOut } from '@/lib/hooks/useAttendance'
 import { useProjects } from '@/lib/hooks/useProjects'
-import { useTasks } from '@/lib/hooks/useTasks'
+import { useTasks, useDirectTasks } from '@/lib/hooks/useTasks'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { LiveTimer } from './LiveTimer'
 import { Button } from '@/components/ui/Button'
@@ -24,51 +24,54 @@ function TaskSelector({
 }) {
   const { user } = useAuth()
   const { data: projects } = useProjects()
-  const [projectId, setProjectId] = useState('')
+  const { data: directTasks } = useDirectTasks()
+  const [source, setSource] = useState('')
   const [taskId, setTaskId] = useState('')
-  const { data: tasks } = useTasks(projectId)
+  const { data: projectTasks } = useTasks(source === 'DIRECT' ? '' : source)
 
-  const selectedProject = (projects ?? []).find((p) => p.projectId === projectId)
+  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
-  const filteredTasks = (tasks ?? []).filter(
-    (t) => isPrivileged || t.assignedTo.includes(user?.userId ?? '')
-  )
+  // Get tasks based on selected source
+  const availableTasks = source === 'DIRECT'
+    ? (directTasks ?? []).filter((t) => isPrivileged || t.assignedTo.includes(user?.userId ?? ''))
+    : (projectTasks ?? []).filter((t) => isPrivileged || t.assignedTo.includes(user?.userId ?? ''))
 
-  const selectedTask = filteredTasks.find((t) => t.taskId === taskId)
+  const selectedTask = availableTasks.find((t) => t.taskId === taskId)
+  const selectedProject = (projects ?? []).find((p) => p.projectId === source)
 
   const handleStart = () => {
-    if (!selectedTask || !selectedProject) return
+    if (!selectedTask) return
     onStart({
       taskId: selectedTask.taskId,
-      projectId: selectedProject.projectId,
+      projectId: source === 'DIRECT' ? 'DIRECT' : (selectedProject?.projectId ?? ''),
       taskTitle: selectedTask.title,
-      projectName: selectedProject.name,
+      projectName: source === 'DIRECT' ? 'Direct Task' : (selectedProject?.name ?? ''),
     })
-    setProjectId('')
+    setSource('')
     setTaskId('')
   }
 
   return (
     <div className="flex items-center gap-2">
       <select
-        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        value={projectId}
-        onChange={(e) => { setProjectId(e.target.value); setTaskId('') }}
+        className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+        value={source}
+        onChange={(e) => { setSource(e.target.value); setTaskId('') }}
       >
-        <option value="">Select Project</option>
+        <option value="">Select Source</option>
+        <option value="DIRECT">Direct Tasks</option>
         {(projects ?? []).map((p) => (
           <option key={p.projectId} value={p.projectId}>{p.name}</option>
         ))}
       </select>
       <select
-        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        disabled={!projectId}
+        className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+        disabled={!source}
         value={taskId}
         onChange={(e) => setTaskId(e.target.value)}
       >
         <option value="">Select Task</option>
-        {filteredTasks.map((t) => (
+        {availableTasks.map((t) => (
           <option key={t.taskId} value={t.taskId}>{t.title}</option>
         ))}
       </select>
@@ -76,7 +79,7 @@ function TaskSelector({
         variant="primary"
         size="sm"
         onClick={handleStart}
-        disabled={!taskId || !projectId || loading}
+        disabled={!taskId || !source || loading}
         loading={loading}
         className="whitespace-nowrap"
       >

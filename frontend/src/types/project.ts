@@ -10,4 +10,8 @@ export interface Project {
   estimatedHours?: number
   members?: ProjectMember[]
   memberCount?: number
+  taskCount?: number
+  doneCount?: number
+  inProgressCount?: number
+  completionPercent?: number
 }
