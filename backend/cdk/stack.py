@@ -173,6 +173,7 @@ class TaskManagementStack(Stack):
         user_progress = user_by_id.add_resource("progress")
         users_role = users.add_resource("role")
         users_department = users.add_resource("department")
+        users_admins = users.add_resource("admins")
 
         # ─── Project handlers ────────────────────────────────────────────────
         add_api_lambda("CreateProject", "handlers.project.create_project.handler", "POST", projects)
@@ -228,6 +229,7 @@ class TaskManagementStack(Stack):
         )
         add_api_lambda("GetUserProgress", "handlers.user.get_user_progress.handler", "GET", user_progress)
         add_api_lambda("UpdateUserDepartment", "handlers.user.update_user_department.handler", "PUT", users_department)
+        add_api_lambda("ListAdmins", "handlers.user.list_admins.handler", "GET", users_admins)
 
         # ─── Public endpoint (no auth) — resolve employee ID to email for login
         resolve_employee = api.root.add_resource("resolve-employee")
@@ -252,6 +254,24 @@ class TaskManagementStack(Stack):
         add_api_lambda("ListTodayAttendance", "handlers.attendance.list_today_attendance.handler", "GET", attendance_today)
         attendance_report = attendance.add_resource("report")
         add_api_lambda("GetAttendanceReport", "handlers.attendance.get_report.handler", "GET", attendance_report)
+
+        # ─── Day Off handlers ──────────────────────────────────────────────
+        dayoffs = api.root.add_resource("day-offs")
+        dayoffs_my = dayoffs.add_resource("my")
+        dayoffs_pending = dayoffs.add_resource("pending")
+        dayoffs_all = dayoffs.add_resource("all")
+        dayoff_by_id = dayoffs.add_resource("{requestId}")
+        dayoff_approve = dayoff_by_id.add_resource("approve")
+        dayoff_reject = dayoff_by_id.add_resource("reject")
+        dayoff_forward = dayoff_by_id.add_resource("forward")
+
+        add_api_lambda("CreateDayOff", "handlers.dayoff.create_request.handler", "POST", dayoffs)
+        add_api_lambda("MyDayOffs", "handlers.dayoff.my_requests.handler", "GET", dayoffs_my)
+        add_api_lambda("PendingDayOffs", "handlers.dayoff.pending_approvals.handler", "GET", dayoffs_pending)
+        add_api_lambda("AllDayOffs", "handlers.dayoff.all_requests.handler", "GET", dayoffs_all)
+        add_api_lambda("ApproveDayOff", "handlers.dayoff.approve.handler", "PUT", dayoff_approve)
+        add_api_lambda("RejectDayOff", "handlers.dayoff.reject.handler", "PUT", dayoff_reject)
+        add_api_lambda("ForwardDayOff", "handlers.dayoff.forward.handler", "PUT", dayoff_forward)
 
         # ─── Outputs ─────────────────────────────────────────────────────────
         CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")

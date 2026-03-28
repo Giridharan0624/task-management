@@ -54,6 +54,17 @@ export function deleteUser(userId: string): Promise<void> {
   return apiClient.del<void>(`/users/${userId}`)
 }
 
+export interface AdminInfo {
+  userId: string
+  name: string
+  email: string
+  employeeId?: string
+}
+
+export function getAdmins(): Promise<AdminInfo[]> {
+  return apiClient.get<AdminInfo[]>('/users/admins')
+}
+
 export interface MyTask {
   taskId: string
   projectId: string

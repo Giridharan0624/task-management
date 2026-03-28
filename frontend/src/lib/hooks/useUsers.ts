@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getUsers, updateUserRole, updateUserDepartment, getUserProgress, createUser, deleteUser, getMyTasks } from '@/lib/api/userApi'
+import { getUsers, getAdmins, updateUserRole, updateUserDepartment, getUserProgress, createUser, deleteUser, getMyTasks } from '@/lib/api/userApi'
 
 const userKeys = {
   all: ['users'] as const,
@@ -13,6 +13,13 @@ export function useUsers() {
   return useQuery({
     queryKey: userKeys.all,
     queryFn: getUsers,
+  })
+}
+
+export function useAdmins() {
+  return useQuery({
+    queryKey: ['admins'],
+    queryFn: getAdmins,
   })
 }
 
