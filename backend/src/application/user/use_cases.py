@@ -172,6 +172,10 @@ class CreateUserUseCase:
         if existing:
             raise ValidationError(f"User with email {email} already exists")
 
+        # Generate employee ID
+        next_num = self._user_repo.get_next_employee_number()
+        employee_id = f"EMP-{next_num:04d}"
+
         # Create in Cognito
         try:
             user_id = self._cognito.create_user(email, name, password, target_role, employee_id)
@@ -183,10 +187,6 @@ class CreateUserUseCase:
                     "Password must be at least 8 characters with uppercase, lowercase, and numbers"
                 )
             raise
-
-        # Generate employee ID
-        next_num = self._user_repo.get_next_employee_number()
-        employee_id = f"EMP-{next_num:04d}"
 
         # Create in DynamoDB
         user = User.create(
