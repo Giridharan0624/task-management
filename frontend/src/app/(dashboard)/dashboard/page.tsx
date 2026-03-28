@@ -19,134 +19,168 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  TODO: 'bg-yellow-100 text-yellow-800',
-  IN_PROGRESS: 'bg-blue-100 text-blue-800',
-  DONE: 'bg-green-100 text-green-800',
+  TODO: 'bg-amber-50 text-amber-700 border border-amber-200',
+  IN_PROGRESS: 'bg-blue-50 text-blue-700 border border-blue-200',
+  DONE: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  HIGH: 'bg-red-100 text-red-800',
-  MEDIUM: 'bg-orange-100 text-orange-800',
-  LOW: 'bg-gray-100 text-gray-600',
+  HIGH: 'bg-red-50 text-red-700 border border-red-200',
+  MEDIUM: 'bg-orange-50 text-orange-700 border border-orange-200',
+  LOW: 'bg-slate-50 text-slate-600 border border-slate-200',
 }
 
-function SummaryCard({
-  label,
-  value,
-  color,
-  bgColor,
-}: {
+/* ─── Stat Card ─── */
+function StatCard({ icon, label, value, color, gradient, href }: {
+  icon: React.ReactNode
   label: string
   value: number | string
   color: string
-  bgColor?: string
+  gradient: string
+  href?: string
 }) {
+  const content = (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <div className={`h-10 w-10 rounded-xl ${gradient} flex items-center justify-center`}>
+          {icon}
+        </div>
+      </div>
+      <p className={`text-3xl font-bold ${color}`}>{value}</p>
+      <p className="text-xs font-medium text-gray-400 mt-1 uppercase tracking-wider">{label}</p>
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer block">
+        {content}
+      </Link>
+    )
+  }
+
   return (
-    <div className={`rounded-xl border border-gray-200 p-5 shadow-sm ${bgColor || 'bg-white'}`}>
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className={`mt-1 text-3xl font-bold ${color}`}>{value}</p>
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+      {content}
     </div>
   )
 }
 
+/* ─── Quick Action Card ─── */
+function ActionCard({ href, icon, title, subtitle }: {
+  href: string; icon: React.ReactNode; title: string; subtitle: string
+}) {
+  return (
+    <Link href={href} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group">
+      <div className="h-11 w-11 rounded-xl bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors flex-shrink-0">
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-gray-900">{title}</p>
+        <p className="text-xs text-gray-400">{subtitle}</p>
+      </div>
+      <svg className="h-4 w-4 text-gray-300 ml-auto group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </Link>
+  )
+}
+
+/* ─── Section Header ─── */
+function SectionHeader({ title, href, linkText }: { title: string; href?: string; linkText?: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <h2 className="text-base font-bold text-gray-900">{title}</h2>
+      {href && <Link href={href} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">{linkText ?? 'View all'}</Link>}
+    </div>
+  )
+}
+
+/* ─── Task Row ─── */
+function TaskRow({ task }: { task: any }) {
+  return (
+    <Link href={`/projects/${task.projectId}`} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors group">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+          <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate group-hover:text-indigo-600 transition-colors">{task.title}</p>
+          <p className="text-xs text-gray-400">{task.projectName}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+        <Badge className={STATUS_COLORS[task.status]}>{task.status.replace('_', ' ')}</Badge>
+        <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
+      </div>
+    </Link>
+  )
+}
+
+/* ─── Icons ─── */
+const Icons = {
+  users: <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
+  members: <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+  projects: <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>,
+  tasks: <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
+  todo: <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  progress: <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
+  done: <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  manage: <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
+  create: <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>,
+  viewTasks: <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
+}
+
+/* ─── Owner Dashboard ─── */
 function OwnerDashboard() {
   const { data: users, isLoading: usersLoading } = useUsers()
   const { data: projects, isLoading: projectsLoading } = useProjects()
   const { data: myTasks } = useMyTasks()
 
-  const adminCount = (users ?? []).filter((u) => u.systemRole === 'ADMIN').length
+  const adminCount = (users ?? []).filter((u) => u.systemRole === 'ADMIN' || u.systemRole === 'CEO' || u.systemRole === 'MD').length
   const memberCount = (users ?? []).filter((u) => u.systemRole === 'MEMBER').length
-  const totalTasks = (myTasks ?? []).length
 
-  const isLoading = usersLoading || projectsLoading
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner size="lg" />
-      </div>
-    )
-  }
+  if (usersLoading || projectsLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   return (
     <>
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <SummaryCard label="Total Admins" value={adminCount} color="text-red-700" bgColor="bg-red-50" />
-        <SummaryCard label="Total Members" value={memberCount} color="text-blue-700" bgColor="bg-blue-50" />
-        <SummaryCard label="Total Projects" value={projects?.length ?? 0} color="text-indigo-700" bgColor="bg-indigo-50" />
-        <SummaryCard label="Total Tasks" value={totalTasks} color="text-green-700" bgColor="bg-green-50" />
+        <StatCard icon={Icons.users} label="Admins" value={adminCount} color="text-violet-700" gradient="bg-gradient-to-br from-violet-500 to-purple-600" href="/admin/users" />
+        <StatCard icon={Icons.members} label="Members" value={memberCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/admin/users" />
+        <StatCard icon={Icons.projects} label="Projects" value={projects?.length ?? 0} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-blue-600" href="/projects" />
+        <StatCard icon={Icons.tasks} label="All Tasks" value={(myTasks ?? []).length} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
       </div>
 
-      {/* Attendance */}
       <AttendanceButton />
 
-      {/* Team Attendance Today */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Team Attendance Today</h2>
+      <div className="space-y-4">
+        <SectionHeader title="Team Attendance" />
         <AttendanceTable />
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex gap-3">
-        <Link
-          href="/admin/users"
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-        >
-          <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-gray-900">Manage Users</p>
-            <p className="text-xs text-gray-500">Add or manage admins and members</p>
-          </div>
-        </Link>
-        <Link
-          href="/projects"
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-        >
-          <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-gray-900">Create Project</p>
-            <p className="text-xs text-gray-500">Start a new project</p>
-          </div>
-        </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <ActionCard href="/admin/users" icon={Icons.manage} title="Manage Users" subtitle="Add or manage team members" />
+        <ActionCard href="/projects" icon={Icons.create} title="Create Project" subtitle="Start a new project" />
       </div>
 
-      {/* Recent Projects */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Projects</h2>
-          <Link href="/projects" className="text-sm font-medium text-blue-600 hover:underline">
-            View all
-          </Link>
-        </div>
+      <div className="space-y-3">
+        <SectionHeader title="Recent Projects" href="/projects" />
         {(projects ?? []).length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-gray-200 py-10 text-center">
-            <p className="text-gray-500 text-sm">No projects yet.</p>
-            <Link href="/projects" className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline">
-              Create your first project
-            </Link>
+          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-12 text-center">
+            <p className="text-gray-400 text-sm">No projects yet</p>
+            <Link href="/projects" className="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Create your first project</Link>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {(projects ?? []).slice(0, 5).map((project) => (
-              <Link
-                key={project.projectId}
-                href={`/projects/${project.projectId}`}
-                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm hover:shadow-md hover:border-blue-200 transition-all"
-              >
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+            {(projects ?? []).slice(0, 5).map((p) => (
+              <Link key={p.projectId} href={`/projects/${p.projectId}`} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors group">
                 <div>
-                  <p className="font-medium text-gray-900">{project.name}</p>
-                  {project.description && (
-                    <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">{project.description}</p>
-                  )}
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{p.name}</p>
+                  {p.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{p.description}</p>}
                 </div>
-                <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
+                <svg className="h-4 w-4 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
               </Link>
             ))}
           </div>
@@ -156,6 +190,7 @@ function OwnerDashboard() {
   )
 }
 
+/* ─── Admin Dashboard ─── */
 function AdminDashboard() {
   const { data: myTasks, isLoading: myTasksLoading } = useMyTasks()
   const { data: users, isLoading: usersLoading } = useUsers()
@@ -166,121 +201,41 @@ function AdminDashboard() {
   const doneCount = allTasks.filter((t) => t.status === 'DONE').length
   const memberCount = (users ?? []).filter((u) => u.systemRole === 'MEMBER').length
 
-  const previewTasks = allTasks.slice(0, 5)
-
-  const isLoading = myTasksLoading || usersLoading
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner size="lg" />
-      </div>
-    )
-  }
+  if (myTasksLoading || usersLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   return (
     <>
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <SummaryCard label="To Do" value={todoCount} color="text-yellow-700" bgColor="bg-yellow-50" />
-        <SummaryCard label="In Progress" value={progressCount} color="text-blue-700" bgColor="bg-blue-50" />
-        <SummaryCard label="Done" value={doneCount} color="text-green-700" bgColor="bg-green-50" />
-        <SummaryCard label="My Members" value={memberCount} color="text-indigo-700" bgColor="bg-indigo-50" />
+        <StatCard icon={Icons.todo} label="To Do" value={todoCount} color="text-amber-700" gradient="bg-gradient-to-br from-amber-400 to-orange-500" href="/my-tasks" />
+        <StatCard icon={Icons.progress} label="In Progress" value={progressCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/my-tasks" />
+        <StatCard icon={Icons.done} label="Done" value={doneCount} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
+        <StatCard icon={Icons.members} label="My Members" value={memberCount} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-purple-600" href="/admin/users" />
       </div>
 
-      {/* Attendance */}
       <AttendanceButton />
 
-      {/* Team Attendance Today */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Team Attendance Today</h2>
+      <div className="space-y-4">
+        <SectionHeader title="Team Attendance" />
         <AttendanceTable />
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex gap-3">
-        <Link
-          href="/my-tasks"
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-        >
-          <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-gray-900">View Tasks</p>
-            <p className="text-xs text-gray-500">See all your assigned tasks</p>
-          </div>
-        </Link>
-        <Link
-          href="/admin/users"
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-        >
-          <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-gray-900">Manage Members</p>
-            <p className="text-xs text-gray-500">Add or manage members</p>
-          </div>
-        </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <ActionCard href="/my-tasks" icon={Icons.viewTasks} title="View Tasks" subtitle="See all assigned tasks" />
+        <ActionCard href="/admin/users" icon={Icons.manage} title="Manage Members" subtitle="Add or manage members" />
       </div>
 
-      {/* My Tasks Preview */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">My Tasks</h2>
-          <Link href="/my-tasks" className="text-sm font-medium text-blue-600 hover:underline">
-            View all
-          </Link>
-        </div>
-        {previewTasks.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-gray-200 py-10 text-center">
-            <p className="text-gray-500 text-sm">No tasks assigned to you yet.</p>
+      <div className="space-y-3">
+        <SectionHeader title="My Tasks" href="/my-tasks" />
+        {allTasks.length === 0 ? (
+          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-12 text-center">
+            <p className="text-gray-400 text-sm">No tasks assigned to you yet</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {previewTasks.map((task) => (
-                  <tr key={task.taskId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-3">
-                      <Link
-                        href={`/projects/${task.projectId}`}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-                      >
-                        {task.title}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{task.projectName}</span>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <Badge className={STATUS_COLORS[task.status]}>
-                        {task.status.replace('_', ' ')}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <Badge className={PRIORITY_COLORS[task.priority]}>
-                        {task.priority}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+            {allTasks.slice(0, 5).map((task) => <TaskRow key={task.taskId} task={task} />)}
             {allTasks.length > 5 && (
-              <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-center">
-                <Link href="/my-tasks" className="text-sm font-medium text-blue-600 hover:underline">
-                  View all {allTasks.length} tasks
-                </Link>
+              <div className="text-center py-3 bg-gray-50">
+                <Link href="/my-tasks" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">View all {allTasks.length} tasks</Link>
               </div>
             )}
           </div>
@@ -290,112 +245,45 @@ function AdminDashboard() {
   )
 }
 
+/* ─── Member Dashboard ─── */
 function MemberDashboard() {
-  const { data: myTasks, isLoading: myTasksLoading } = useMyTasks()
+  const { data: myTasks, isLoading } = useMyTasks()
 
   const allTasks = myTasks ?? []
   const todoCount = allTasks.filter((t) => t.status === 'TODO').length
   const progressCount = allTasks.filter((t) => t.status === 'IN_PROGRESS').length
   const doneCount = allTasks.filter((t) => t.status === 'DONE').length
 
-  const previewTasks = allTasks.slice(0, 5)
-
-  if (myTasksLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner size="lg" />
-      </div>
-    )
-  }
+  if (isLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   return (
     <>
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <SummaryCard label="Total Tasks" value={allTasks.length} color="text-indigo-700" bgColor="bg-indigo-50" />
-        <SummaryCard label="To Do" value={todoCount} color="text-yellow-700" bgColor="bg-yellow-50" />
-        <SummaryCard label="In Progress" value={progressCount} color="text-blue-700" bgColor="bg-blue-50" />
-        <SummaryCard label="Done" value={doneCount} color="text-green-700" bgColor="bg-green-50" />
+        <StatCard icon={Icons.tasks} label="Total Tasks" value={allTasks.length} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-purple-600" href="/my-tasks" />
+        <StatCard icon={Icons.todo} label="To Do" value={todoCount} color="text-amber-700" gradient="bg-gradient-to-br from-amber-400 to-orange-500" href="/my-tasks" />
+        <StatCard icon={Icons.progress} label="In Progress" value={progressCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/my-tasks" />
+        <StatCard icon={Icons.done} label="Done" value={doneCount} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
       </div>
 
-      {/* Attendance */}
       <AttendanceButton />
 
-      {/* Quick Action */}
-      <div className="flex gap-3">
-        <Link
-          href="/my-tasks"
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-        >
-          <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-gray-900">View All Tasks</p>
-            <p className="text-xs text-gray-500">See all your assigned tasks</p>
-          </div>
-        </Link>
+      <div className="grid grid-cols-1 gap-3">
+        <ActionCard href="/my-tasks" icon={Icons.viewTasks} title="View All Tasks" subtitle="See all your assigned tasks" />
       </div>
 
-      {/* My Tasks Preview */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">My Tasks</h2>
-          <Link href="/my-tasks" className="text-sm font-medium text-blue-600 hover:underline">
-            View all
-          </Link>
-        </div>
-        {previewTasks.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-gray-200 py-10 text-center">
-            <p className="text-gray-500 text-sm">No tasks assigned to you yet.</p>
-            <Link href="/projects" className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline">
-              Go to Projects
-            </Link>
+      <div className="space-y-3">
+        <SectionHeader title="My Tasks" href="/my-tasks" />
+        {allTasks.length === 0 ? (
+          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-12 text-center">
+            <p className="text-gray-400 text-sm">No tasks assigned to you yet</p>
+            <Link href="/projects" className="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Go to Projects</Link>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {previewTasks.map((task) => (
-                  <tr key={task.taskId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-3">
-                      <Link
-                        href={`/projects/${task.projectId}`}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-                      >
-                        {task.title}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{task.projectName}</span>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <Badge className={STATUS_COLORS[task.status]}>
-                        {task.status.replace('_', ' ')}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <Badge className={PRIORITY_COLORS[task.priority]}>
-                        {task.priority}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+            {allTasks.slice(0, 5).map((task) => <TaskRow key={task.taskId} task={task} />)}
             {allTasks.length > 5 && (
-              <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-center">
-                <Link href="/my-tasks" className="text-sm font-medium text-blue-600 hover:underline">
-                  View all {allTasks.length} tasks
-                </Link>
+              <div className="text-center py-3 bg-gray-50">
+                <Link href="/my-tasks" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">View all {allTasks.length} tasks</Link>
               </div>
             )}
           </div>
@@ -405,18 +293,19 @@ function MemberDashboard() {
   )
 }
 
+/* ─── Main ─── */
 export default function DashboardPage() {
   const { user } = useAuth()
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6 max-w-6xl">
       {/* Greeting */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
           </h1>
-          <p className="mt-1 text-gray-500">Here&apos;s what&apos;s happening today.</p>
+          <p className="mt-0.5 text-sm text-gray-400">Here&apos;s what&apos;s happening today.</p>
         </div>
         <Badge className={ROLE_COLORS[user?.systemRole ?? 'MEMBER']}>
           {user?.systemRole}

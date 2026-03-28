@@ -5,6 +5,8 @@ from typing import Optional
 
 from domain.attendance.entities import Attendance
 from domain.attendance.repository import IAttendanceRepository
+from domain.task.repository import ITaskRepository
+from domain.task.value_objects import TaskStatus
 from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
@@ -15,9 +17,23 @@ def _today() -> str:
 
 
 class SignInUseCase:
-    def __init__(self, attendance_repo: IAttendanceRepository, user_repo: IUserRepository):
+    def __init__(self, attendance_repo: IAttendanceRepository, user_repo: IUserRepository, task_repo: ITaskRepository = None):
         self._attendance_repo = attendance_repo
         self._user_repo = user_repo
+        self._task_repo = task_repo
+
+    def _auto_move_task_to_in_progress(self, task_id: str) -> None:
+        """Move task to IN_PROGRESS if it's currently TODO."""
+        if not self._task_repo or not task_id:
+            return
+        task = self._task_repo.find_by_id(task_id)
+        if task and task.status == TaskStatus.TODO:
+            from datetime import datetime, timezone
+            from domain.task.entities import Task
+            updated = Task(
+                **{**task.model_dump(), "status": TaskStatus.IN_PROGRESS, "updated_at": datetime.now(timezone.utc).isoformat()}
+            )
+            self._task_repo.update(updated)
 
     def execute(
         self,
@@ -46,6 +62,7 @@ class SignInUseCase:
                     project_name=project_name,
                 )
                 self._attendance_repo.save(switched)
+                self._auto_move_task_to_in_progress(task_id)
                 return switched.to_dict()
             else:
                 raise ValidationError("You are already signed in. Provide a task to switch.")
@@ -59,6 +76,7 @@ class SignInUseCase:
                 project_name=project_name,
             )
             self._attendance_repo.save(updated)
+            self._auto_move_task_to_in_progress(task_id)
             return updated.to_dict()
         else:
             # First session of the day
@@ -73,6 +91,7 @@ class SignInUseCase:
                 project_name=project_name,
             )
             self._attendance_repo.save(attendance)
+            self._auto_move_task_to_in_progress(task_id)
             return attendance.to_dict()
 
 

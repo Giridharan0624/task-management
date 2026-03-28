@@ -199,6 +199,13 @@ class AddProjectMemberUseCase:
         except ValueError:
             raise ValidationError(f"Invalid project role: {project_role_value}")
 
+        # Only one TEAM_LEAD per project
+        if project_role == ProjectRole.TEAM_LEAD:
+            existing_members = self._project_repo.find_members(project_id)
+            for m in existing_members:
+                if m.project_role == ProjectRole.TEAM_LEAD:
+                    raise ValidationError("This project already has a Team Lead. Remove the current one first.")
+
         member = ProjectMember.create(
             project_id=project_id,
             user_id=target_user_id,
@@ -252,6 +259,13 @@ class UpdateMemberRoleUseCase:
             new_role = ProjectRole(new_role_value)
         except ValueError:
             raise ValidationError(f"Invalid project role: {new_role_value}")
+
+        # Only one TEAM_LEAD per project
+        if new_role == ProjectRole.TEAM_LEAD:
+            existing_members = self._project_repo.find_members(project_id)
+            for m in existing_members:
+                if m.project_role == ProjectRole.TEAM_LEAD and m.user_id != target_user_id:
+                    raise ValidationError("This project already has a Team Lead. Remove the current one first.")
 
         updated_member = ProjectMember(
             project_id=target_member.project_id,

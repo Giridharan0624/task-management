@@ -170,10 +170,21 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         aria-hidden="true"
       />
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-lg bg-white shadow-2xl overflow-y-auto flex flex-col">
+      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-xl bg-gray-50 shadow-2xl overflow-y-auto flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-semibold text-gray-900">Task Details</h2>
+        <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-white z-10 border-b border-gray-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              aria-label="Close panel"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h2 className="text-base font-semibold text-gray-900">Task Details</h2>
+          </div>
           <div className="flex items-center gap-2">
             {permissions.canUpdateTask && !isEditing && (
               <Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>
@@ -185,19 +196,10 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 Delete
               </Button>
             )}
-            <button
-              onClick={onClose}
-              className="rounded-md p-1 text-gray-400 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Close panel"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         </div>
 
-        <div className="flex-1 px-6 py-6">
+        <div className="flex-1 px-6 py-5">
           {isEditing ? (
             <form onSubmit={handleSubmit(handleSave)} className="flex flex-col gap-4">
               <Input
@@ -262,116 +264,114 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
               </div>
             </form>
           ) : (
-            <div className="flex flex-col gap-6">
-              {/* Title */}
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Title</p>
-                <p className="text-base font-semibold text-gray-900">{task.title}</p>
-              </div>
-
-              {/* Status + Priority */}
-              <div className="flex items-center gap-3">
-                {permissions.canUpdateStatus && isAssigned && !permissions.canUpdateTask ? (
-                  <select
-                    value={task.status}
-                    onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
-                    disabled={statusUpdating}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="TODO">To Do</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="DONE">Done</option>
-                  </select>
-                ) : (
-                  <Badge variant={task.status}>{statusLabel[task.status]}</Badge>
-                )}
-                <Badge variant={task.priority}>{priorityLabel[task.priority]}</Badge>
-              </div>
-
-              {/* Description */}
-              {task.description && (
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Description</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{task.description}</p>
-                </div>
-              )}
-
-              {/* Metadata */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Assigned To</p>
-                  {task.assignedTo && task.assignedTo.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {task.assignedTo.map((userId) => (
-                        <span
-                          key={userId}
-                          className="inline-flex items-center gap-1 rounded-full bg-indigo-50 pl-2.5 pr-1.5 py-0.5 text-xs font-medium text-indigo-700"
-                        >
-                          {resolveName(userId)}
-                          {permissions.canAssignTask && (
-                            <button
-                              onClick={() => handleUnassign(userId)}
-                              className="ml-0.5 rounded-full p-0.5 hover:bg-indigo-200 transition-colors"
-                              title="Remove assignee"
-                            >
-                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          )}
-                        </span>
-                      ))}
-                    </div>
+            <div className="flex flex-col gap-4">
+              {/* Title + Status Card */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">{task.title}</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  {permissions.canUpdateStatus && isAssigned && !permissions.canUpdateTask ? (
+                    <select
+                      value={task.status}
+                      onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
+                      disabled={statusUpdating}
+                      className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="TODO">To Do</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="DONE">Done</option>
+                    </select>
                   ) : (
-                    <p className="text-sm text-gray-500">Unassigned</p>
+                    <Badge variant={task.status}>{statusLabel[task.status]}</Badge>
                   )}
+                  <Badge variant={task.priority}>{priorityLabel[task.priority]}</Badge>
                 </div>
-                {task.assignedBy && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Assigned By</p>
-                    <p className="text-sm text-gray-700">{resolveName(task.assignedBy)}</p>
-                  </div>
+                {task.description && (
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{task.description}</p>
                 )}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Created By</p>
-                  <p className="text-sm text-gray-700">{resolveName(task.createdBy)}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Deadline</p>
-                  <p className="text-sm text-gray-700">
-                    {new Date(task.deadline).toLocaleDateString('en-US', {
-                      year: 'numeric', month: 'long', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit',
-                    })}
-                  </p>
-                </div>
-                {task.estimatedHours != null && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Estimated</p>
-                    <p className="text-sm text-gray-700">{task.estimatedHours}h</p>
+              </div>
+
+              {/* Assignees Card */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Assigned To</p>
+                {task.assignedTo && task.assignedTo.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {task.assignedTo.map((userId) => (
+                      <div key={userId} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                            <span className="text-white font-semibold text-xs">{resolveName(userId).charAt(0).toUpperCase()}</span>
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{resolveName(userId)}</span>
+                        </div>
+                        {permissions.canAssignTask && (
+                          <button
+                            onClick={() => handleUnassign(userId)}
+                            className="rounded-lg p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Remove"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No one assigned yet</p>
                 )}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Created At</p>
-                  <p className="text-sm text-gray-700">
-                    {new Date(task.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric', month: 'short', day: 'numeric',
-                    })}
-                  </p>
+              </div>
+
+              {/* Details Card */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Details</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Deadline</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(task.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  {task.estimatedHours != null && (
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Estimated</p>
+                      <p className="text-sm font-medium text-gray-900">{task.estimatedHours} hours</p>
+                    </div>
+                  )}
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Created By</p>
+                    <p className="text-sm font-medium text-gray-900">{resolveName(task.createdBy)}</p>
+                  </div>
+                  {task.assignedBy && (
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Assigned By</p>
+                      <p className="text-sm font-medium text-gray-900">{resolveName(task.assignedBy)}</p>
+                    </div>
+                  )}
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Created</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Assign section */}
+              {/* Assign section */}
               {permissions.canAssignTask && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                   {showAssignInput ? (
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium text-gray-700">Add Assignee</label>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Add Assignee</p>
                       {availableMembers.length === 0 ? (
-                        <p className="text-sm text-gray-500 italic">All members are already assigned.</p>
+                        <p className="text-sm text-gray-400 italic">All members are already assigned.</p>
                       ) : (
                         <select
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           value={selectedAssignee}
                           onChange={(e) => setSelectedAssignee(e.target.value)}
                         >
@@ -385,40 +385,41 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                       )}
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleAssign} loading={assignTask.isPending} disabled={!selectedAssignee}>
-                          Assign
+                          Add
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }}
-                        >
+                        <Button size="sm" variant="secondary" onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }}>
                           Cancel
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="secondary"
+                    <button
                       onClick={() => setShowAssignInput(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors"
                     >
-                      Assign Task
-                    </Button>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      Add Assignee
+                    </button>
                   )}
                 </div>
               )}
 
               {/* Progress Comments */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Progress Updates</p>
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Progress Updates</p>
 
                 {comments && comments.length > 0 ? (
                   <div className="flex flex-col gap-3 mb-4">
                     {comments.map((comment) => (
-                      <div key={comment.commentId} className="rounded-lg bg-gray-50 p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-indigo-700">{resolveName(comment.authorId)}</span>
-                          <span className="text-xs text-gray-400">
+                      <div key={comment.commentId} className="rounded-xl bg-gray-50 p-3.5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                              <span className="text-white text-[10px] font-bold">{resolveName(comment.authorId).charAt(0).toUpperCase()}</span>
+                            </div>
+                            <span className="text-xs font-semibold text-gray-900">{resolveName(comment.authorId)}</span>
+                          </div>
+                          <span className="text-[10px] text-gray-400">
                             {new Date(comment.createdAt).toLocaleDateString('en-US', {
                               month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                             })}
@@ -433,24 +434,22 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 )}
 
                 {canComment && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex gap-2 items-start">
                     <textarea
-                      rows={2}
+                      rows={1}
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="Post a progress update..."
-                      className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      placeholder="Write an update..."
+                      className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white resize-none transition-all"
                     />
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={handlePostComment}
-                        loading={createComment.isPending}
-                        disabled={!commentText.trim()}
-                      >
-                        Post Update
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handlePostComment}
+                      loading={createComment.isPending}
+                      disabled={!commentText.trim()}
+                    >
+                      Post
+                    </Button>
                   </div>
                 )}
               </div>

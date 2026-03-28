@@ -120,13 +120,26 @@ class ListTasksForProjectUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         # Owner/Admin can list any project's tasks; others must be project members
+        caller_member = None
         if caller_system_role not in PRIVILEGED_ROLES:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
                 raise AuthorizationError("You are not a member of this project")
 
         tasks = self._task_repo.find_by_project(project_id)
-        return [t.to_dict() for t in tasks]
+
+        # Members only see tasks assigned to them; Team Leads and above see all
+        if caller_system_role in PRIVILEGED_ROLES:
+            return [t.to_dict() for t in tasks]
+
+        if not caller_member:
+            caller_member = self._project_repo.find_member(project_id, caller_user_id)
+
+        if caller_member and caller_member.project_role in (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD):
+            return [t.to_dict() for t in tasks]
+
+        # Regular MEMBER — only assigned tasks
+        return [t.to_dict() for t in tasks if caller_user_id in t.assigned_to]
 
 
 class UpdateTaskUseCase:
@@ -294,26 +307,39 @@ class GetMyAssignedTasksUseCase:
         self._project_repo = project_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str = None) -> list[dict]:
-        # Owner/Admin see ALL tasks across all projects
+        my_tasks = []
+
+        # Include direct tasks (no project)
+        direct_tasks = self._task_repo.find_by_project("DIRECT")
+        if caller_system_role in PRIVILEGED_ROLES:
+            for task in direct_tasks:
+                task_dict = task.to_dict()
+                task_dict["project_name"] = "Direct Task"
+                my_tasks.append(task_dict)
+        else:
+            for task in direct_tasks:
+                if caller_user_id in task.assigned_to:
+                    task_dict = task.to_dict()
+                    task_dict["project_name"] = "Direct Task"
+                    my_tasks.append(task_dict)
+
+        # Project tasks
         if caller_system_role in PRIVILEGED_ROLES:
             projects = self._project_repo.find_all()
-            my_tasks = []
             for project in projects:
                 tasks = self._task_repo.find_by_project(project.project_id)
                 for task in tasks:
                     task_dict = task.to_dict()
                     task_dict["project_name"] = project.name
                     my_tasks.append(task_dict)
-            return my_tasks
+        else:
+            projects = self._project_repo.find_projects_for_user(caller_user_id)
+            for project in projects:
+                tasks = self._task_repo.find_by_project(project.project_id)
+                for task in tasks:
+                    if caller_user_id in task.assigned_to:
+                        task_dict = task.to_dict()
+                        task_dict["project_name"] = project.name
+                        my_tasks.append(task_dict)
 
-        # Members see only tasks assigned to them
-        projects = self._project_repo.find_projects_for_user(caller_user_id)
-        my_tasks = []
-        for project in projects:
-            tasks = self._task_repo.find_by_project(project.project_id)
-            for task in tasks:
-                if caller_user_id in task.assigned_to:
-                    task_dict = task.to_dict()
-                    task_dict["project_name"] = project.name
-                    my_tasks.append(task_dict)
         return my_tasks

@@ -5,6 +5,7 @@ from handlers.shared.auth_context import extract_auth_context
 from handlers.shared.response import build_error, build_success
 from infrastructure.dynamodb.attendance_repository import AttendanceDynamoRepository
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
+from infrastructure.dynamodb.task_repository import TaskDynamoRepository
 
 
 def handler(event, context):
@@ -18,7 +19,8 @@ def handler(event, context):
 
         attendance_repo = AttendanceDynamoRepository()
         user_repo = UserDynamoRepository()
-        use_case = SignInUseCase(attendance_repo, user_repo)
+        task_repo = TaskDynamoRepository()
+        use_case = SignInUseCase(attendance_repo, user_repo, task_repo)
         result = use_case.execute(
             caller_user_id=auth.user_id,
             caller_system_role=auth.system_role,

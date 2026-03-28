@@ -10,7 +10,7 @@ from domain.task.value_objects import TaskStatus, TaskPriority
 
 class Task(BaseModel):
     task_id: str
-    project_id: str
+    project_id: str = "DIRECT"
     title: str
     description: Optional[str] = None
     status: TaskStatus = TaskStatus.TODO
@@ -27,8 +27,8 @@ class Task(BaseModel):
     def create(
         cls,
         task_id: str,
-        project_id: str,
-        title: str,
+        project_id: str = "DIRECT",
+        title: str = "",
         created_by: str,
         deadline: str,
         description: Optional[str] = None,

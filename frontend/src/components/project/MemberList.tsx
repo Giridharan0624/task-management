@@ -24,6 +24,8 @@ export function MemberList({ projectId, members, canManageMembers }: MemberListP
   const [selectedRole, setSelectedRole] = useState<ProjectRole>('MEMBER')
   const [addError, setAddError] = useState('')
 
+  const hasTeamLead = members.some((m) => m.projectRole === 'TEAM_LEAD')
+
   const memberUserIds = new Set(members.map((m) => m.userId))
   const availableUsers = (allUsers ?? []).filter(
     (u) => !memberUserIds.has(u.userId) && u.systemRole !== 'OWNER'
@@ -190,6 +192,7 @@ export function MemberList({ projectId, members, canManageMembers }: MemberListP
               onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
             >
               <option value="MEMBER">Member</option>
+              {!hasTeamLead && <option value="TEAM_LEAD">Team Lead</option>}
               <option value="ADMIN">Admin</option>
             </select>
           </div>

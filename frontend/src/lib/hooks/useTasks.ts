@@ -5,12 +5,16 @@ import {
   updateTask,
   deleteTask,
   assignTask,
+  getDirectTasks,
+  createDirectTask,
   type CreateTaskData,
   type UpdateTaskData,
+  type CreateDirectTaskData,
 } from '@/lib/api/taskApi'
 
 export const taskKeys = {
   all: (projectId: string) => ['tasks', projectId] as const,
+  direct: ['tasks', 'direct'] as const,
 }
 
 export function useTasks(projectId: string) {
@@ -59,6 +63,25 @@ export function useAssignTask(projectId: string) {
       assignTask(projectId, taskId, assignedTo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.all(projectId) })
+    },
+  })
+}
+
+// Direct tasks
+export function useDirectTasks() {
+  return useQuery({
+    queryKey: taskKeys.direct,
+    queryFn: getDirectTasks,
+  })
+}
+
+export function useCreateDirectTask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CreateDirectTaskData) => createDirectTask(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.direct })
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
     },
   })
 }

@@ -52,3 +52,21 @@ export async function assignTask(
 ): Promise<Task> {
   return apiClient.put<Task>(`/projects/${projectId}/tasks/${taskId}/assign`, { assignedTo })
 }
+
+// Direct tasks (no project)
+export interface CreateDirectTaskData {
+  title: string
+  description?: string
+  priority?: TaskPriority
+  deadline: string
+  assignedTo: string[]
+  estimatedHours?: number
+}
+
+export async function createDirectTask(data: CreateDirectTaskData): Promise<Task> {
+  return apiClient.post<Task>('/direct-tasks', data)
+}
+
+export async function getDirectTasks(): Promise<Task[]> {
+  return apiClient.get<Task[]>('/direct-tasks')
+}
