@@ -76,7 +76,7 @@ async function request<T>(
     // Token expired — clear auth and redirect to login
     if (response.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('auth_token')
-      window.location.href = '/login'
+      window.location.replace('/login')
       throw new ApiClientError('Session expired. Please log in again.', 401)
     }
 

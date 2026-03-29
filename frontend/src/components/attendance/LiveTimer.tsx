@@ -7,10 +7,11 @@ interface LiveTimerProps {
   className?: string
 }
 
-function formatElapsed(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
+function formatElapsed(totalSeconds: number): string {
+  const sec = Math.max(0, Math.floor(totalSeconds))
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = sec % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
@@ -19,7 +20,10 @@ export function LiveTimer({ startTime, className = '' }: LiveTimerProps) {
 
   useEffect(() => {
     const start = new Date(startTime).getTime()
-    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000))
+    const tick = () => {
+      const diff = Math.max(0, Math.floor((Date.now() - start) / 1000))
+      setElapsed(diff)
+    }
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)

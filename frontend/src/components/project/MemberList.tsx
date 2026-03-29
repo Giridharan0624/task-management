@@ -14,9 +14,11 @@ interface MemberListProps {
   projectId: string
   members: ProjectMember[]
   canManageMembers: boolean
+  callerProjectRole?: string
+  callerSystemRole?: string
 }
 
-export function MemberList({ projectId, members, canManageMembers }: MemberListProps) {
+export function MemberList({ projectId, members, canManageMembers, callerProjectRole, callerSystemRole }: MemberListProps) {
   const queryClient = useQueryClient()
   const { data: allUsers } = useUsers()
   const [showAddModal, setShowAddModal] = useState(false)
@@ -189,8 +191,8 @@ export function MemberList({ projectId, members, canManageMembers }: MemberListP
               onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
             >
               <option value="MEMBER">Member</option>
-              {!hasTeamLead && <option value="TEAM_LEAD">Team Lead</option>}
-              <option value="ADMIN">Admin</option>
+              {callerProjectRole !== 'TEAM_LEAD' && !hasTeamLead && <option value="TEAM_LEAD">Team Lead</option>}
+              {callerProjectRole !== 'TEAM_LEAD' && <option value="ADMIN">Admin</option>}
             </select>
           </div>
 

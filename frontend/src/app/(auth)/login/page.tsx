@@ -1,6 +1,31 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth/AuthProvider'
 import { LoginForm } from '@/components/auth/LoginForm'
+import { Spinner } from '@/components/ui/Spinner'
 
 export default function LoginPage() {
+  const { user, isLoading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace('/dashboard')
+    }
+  }, [user, isLoading, router])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  if (user) return null
+
   return (
     <div className="flex min-h-screen">
       {/* Left — branding */}
@@ -15,7 +40,7 @@ export default function LoginPage() {
             <span className="text-2xl font-bold">TaskFlow</span>
           </div>
           <h1 className="text-4xl font-bold leading-tight mb-4">
-            Manage your team's work, effortlessly.
+            Manage your team&apos;s work, effortlessly.
           </h1>
           <p className="text-lg text-indigo-200 leading-relaxed">
             Track projects, assign tasks, monitor progress, and keep your team in sync — all in one place.

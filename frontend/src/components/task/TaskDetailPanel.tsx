@@ -26,7 +26,8 @@ interface EditFormValues {
   status: TaskStatus
   priority: TaskPriority
   deadline: string
-  estimatedHours: string
+  estHours: string
+  estMinutes: string
 }
 
 export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskDetailPanelProps) {
@@ -76,7 +77,8 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         status: task.status,
         priority: task.priority,
         deadline: task.deadline ? task.deadline.slice(0, 16) : '',
-        estimatedHours: task.estimatedHours ? String(task.estimatedHours) : '',
+        estHours: task.estimatedHours ? String(Math.floor(task.estimatedHours)) : '',
+        estMinutes: task.estimatedHours ? String(Math.round((task.estimatedHours % 1) * 60)) : '',
       })
       setIsEditing(false)
       setShowAssignInput(false)
@@ -96,7 +98,9 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   if (!task) return null
 
   const handleSave = async (values: EditFormValues) => {
-    const estHours = values.estimatedHours ? parseFloat(values.estimatedHours) : undefined
+    const h = parseInt(values.estHours || '0', 10)
+    const m = parseInt(values.estMinutes || '0', 10)
+    const estHours = (h || m) ? h + m / 60 : undefined
     await updateTask.mutateAsync({
       taskId: task.taskId,
       data: {
@@ -251,11 +255,21 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 type="datetime-local"
                 {...register('deadline')}
               />
-              <Input
-                label="Estimated Hours"
-                type="number"
-                {...register('estimatedHours')}
-              />
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Estimated Time</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative">
+                    <input type="number" min="0" max="999" placeholder="0" {...register('estHours')}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">hrs</span>
+                  </div>
+                  <div className="relative">
+                    <input type="number" min="0" max="59" placeholder="0" {...register('estMinutes')}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
+                  </div>
+                </div>
+              </div>
               {updateTask.error && (
                 <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
                   {updateTask.error instanceof Error ? updateTask.error.message : 'Update failed'}
@@ -343,7 +357,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   {task.estimatedHours != null && (
                     <div className="bg-gray-50 rounded-xl p-3">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Estimated</p>
-                      <p className="text-sm font-medium text-gray-900">{task.estimatedHours} hours</p>
+                      <p className="text-sm font-medium text-gray-900">{Math.floor(task.estimatedHours!)}h {Math.round((task.estimatedHours! % 1) * 60)}m</p>
                     </div>
                   )}
                   <div className="bg-gray-50 rounded-xl p-3">

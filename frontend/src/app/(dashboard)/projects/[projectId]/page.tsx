@@ -215,6 +215,8 @@ export default function ProjectDetailPage() {
           projectId={projectId}
           members={project.members ?? []}
           canManageMembers={permissions.canManageMembers}
+          callerProjectRole={projectRole}
+          callerSystemRole={user?.systemRole}
         />
       )}
 

@@ -28,7 +28,7 @@ export function LoginForm() {
     setServerError(null)
     try {
       await signIn(values.email, values.password)
-      router.push('/dashboard')
+      router.replace('/dashboard')
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : 'Sign in failed. Please try again.'
