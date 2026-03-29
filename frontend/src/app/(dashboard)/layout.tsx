@@ -144,13 +144,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* User info */}
       <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center gap-3 mb-3">
+        <Link href="/profile" onClick={closeSidebar} className="flex items-center gap-3 mb-3 rounded-lg p-1 -m-1 hover:bg-gray-50 transition-colors">
           <Avatar url={avatarUrl} name={profileName || user.name || user.email} size="md" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">{profileName || user.name || user.email}</p>
             <span className="inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded bg-indigo-50 text-indigo-600 tracking-wide">{user.systemRole}</span>
           </div>
-        </div>
+        </Link>
         <button
           onClick={signOut}
           className="w-full flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors"
@@ -186,7 +186,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
           <span className="text-sm font-bold text-gray-900">TaskFlow</span>
-          <Avatar url={avatarUrl} name={profileName || user.name || user.email} size="sm" />
+          <Link href="/profile">
+            <Avatar url={avatarUrl} name={profileName || user.name || user.email} size="sm" />
+          </Link>
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 w-full min-w-0">
