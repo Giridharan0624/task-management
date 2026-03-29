@@ -222,100 +222,132 @@ export default function ProjectDetailPage() {
 
       {activeTab === 'progress' && projectStatus && (
         <div className="space-y-6">
-          {/* Overview Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-              <p className="text-2xl font-bold text-indigo-700">{projectStatus.completionPercent}%</p>
-              <p className="text-xs text-indigo-600">Tasks Done</p>
+          {/* Health Badge + Overall Score */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                    projectStatus.health === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                    projectStatus.health === 'ON_TRACK' ? 'bg-green-100 text-green-700' :
+                    projectStatus.health === 'AT_RISK' ? 'bg-amber-100 text-amber-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    <span className={`h-2 w-2 rounded-full ${
+                      projectStatus.health === 'COMPLETED' ? 'bg-emerald-500' :
+                      projectStatus.health === 'ON_TRACK' ? 'bg-green-500' :
+                      projectStatus.health === 'AT_RISK' ? 'bg-amber-500' :
+                      'bg-red-500'
+                    }`} />
+                    {projectStatus.health.replace('_', ' ')}
+                  </span>
+                  {projectStatus.overdueCount > 0 && (
+                    <span className="text-xs text-red-500 font-medium">{projectStatus.overdueCount} overdue</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">Schedule health based on task deadlines</p>
+              </div>
+              <div className="text-center sm:text-right">
+                <p className="text-4xl font-bold text-indigo-700">{projectStatus.overallScore}%</p>
+                <p className="text-xs text-gray-400">Overall Score</p>
+              </div>
             </div>
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-              <p className="text-2xl font-bold text-blue-700">{projectStatus.timeProgressPercent}%</p>
-              <p className="text-xs text-blue-600">Time Used</p>
-            </div>
-            <div className="bg-green-50 rounded-xl p-4 border border-green-100">
-              <p className="text-2xl font-bold text-green-700">{projectStatus.totalTrackedHours}h</p>
-              <p className="text-xs text-green-600">Tracked</p>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <p className="text-2xl font-bold text-gray-700">{projectStatus.totalEstimatedHours}h</p>
-              <p className="text-xs text-gray-500">Estimated</p>
-            </div>
-          </div>
 
-          {/* Overall Progress Bars */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-gray-700">Task Completion</span>
-                <span className="text-gray-500">{projectStatus.taskCounts.DONE}/{projectStatus.totalTasks} tasks</span>
+            {/* Three progress bars */}
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="font-medium text-gray-600">Task Completion</span>
+                  <span className="text-gray-500">{projectStatus.taskCounts.DONE}/{projectStatus.totalTasks} done</span>
+                </div>
+                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${projectStatus.completionPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                    style={{ width: `${Math.min(projectStatus.completionPercent, 100)}%` }} />
+                </div>
               </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${projectStatus.completionPercent >= 100 ? 'bg-green-500' : projectStatus.completionPercent >= 60 ? 'bg-blue-500' : 'bg-amber-500'}`}
-                  style={{ width: `${Math.min(projectStatus.completionPercent, 100)}%` }}
-                />
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="font-medium text-gray-600">Weighted Progress</span>
+                  <span className="text-gray-500">{projectStatus.weightedProgress}%</span>
+                </div>
+                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(projectStatus.weightedProgress, 100)}%` }} />
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-gray-700">Time Budget</span>
-                <span className="text-gray-500">{projectStatus.totalTrackedHours}h / {projectStatus.totalEstimatedHours}h</span>
-              </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${projectStatus.timeProgressPercent > 100 ? 'bg-red-500' : projectStatus.timeProgressPercent >= 80 ? 'bg-amber-500' : 'bg-green-500'}`}
-                  style={{ width: `${Math.min(projectStatus.timeProgressPercent, 100)}%` }}
-                />
-              </div>
-              {projectStatus.timeProgressPercent > 100 && (
-                <p className="text-xs text-red-500 mt-1 font-medium">Over budget by {(projectStatus.timeProgressPercent - 100).toFixed(1)}%</p>
+              {projectStatus.totalEstimatedHours > 0 && (
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium text-gray-600">Time Budget</span>
+                    <span className="text-gray-500">{projectStatus.totalTrackedHours}h / {projectStatus.totalEstimatedHours}h</span>
+                  </div>
+                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${projectStatus.timeBudgetPercent > 100 ? 'bg-red-500' : projectStatus.timeBudgetPercent >= 80 ? 'bg-amber-500' : 'bg-teal-500'}`}
+                      style={{ width: `${Math.min(projectStatus.timeBudgetPercent, 100)}%` }} />
+                  </div>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Task Progress Table */}
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+              <p className="text-2xl font-bold text-amber-600">{projectStatus.taskCounts.TODO}</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">To Do</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+              <p className="text-2xl font-bold text-blue-600">{projectStatus.taskCounts.IN_PROGRESS}</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">In Progress</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+              <p className="text-2xl font-bold text-emerald-600">{projectStatus.taskCounts.DONE}</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Completed</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+              <p className="text-2xl font-bold text-red-600">{projectStatus.overdueCount}</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Overdue</p>
+            </div>
+          </div>
+
+          {/* Task Breakdown */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Task Breakdown</h3>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Task</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estimated</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracked</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
+            <h3 className="text-sm font-bold text-gray-900 mb-3">Task Breakdown</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/80">
+                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Task</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Status</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Time</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Progress</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-50">
                   {projectStatus.taskProgress.map((t) => (
-                    <tr key={t.taskId} className="hover:bg-gray-50">
+                    <tr key={t.taskId} className={`hover:bg-gray-50/50 ${t.isOverdue ? 'bg-red-50/30' : ''}`}>
                       <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-gray-900">{t.title}</p>
+                        <p className="font-medium text-gray-900">{t.title}</p>
+                        {t.isOverdue && <span className="text-[10px] text-red-500 font-semibold">OVERDUE</span>}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          t.status === 'DONE' ? 'bg-green-100 text-green-700' :
-                          t.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
-                          'bg-yellow-100 text-yellow-700'
+                          t.status === 'DONE' ? 'bg-emerald-50 text-emerald-700' :
+                          t.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700' :
+                          'bg-amber-50 text-amber-700'
                         }`}>{t.status.replace('_', ' ')}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{t.estimatedHours}h</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{t.trackedHours}h</td>
-                      <td className="px-4 py-3 w-40">
+                      <td className="px-4 py-3 text-gray-500">
+                        {t.trackedHours > 0 && <span>{t.trackedHours}h tracked</span>}
+                        {t.estimatedHours > 0 && <span className="text-gray-400"> / {t.estimatedHours}h est</span>}
+                      </td>
+                      <td className="px-4 py-3 w-32">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                t.progressPercent > 100 ? 'bg-red-500' :
-                                t.progressPercent >= 80 ? 'bg-amber-500' : 'bg-green-500'
-                              }`}
-                              style={{ width: `${Math.min(t.progressPercent, 100)}%` }}
-                            />
+                            <div className={`h-full rounded-full ${
+                              t.statusProgress >= 100 ? 'bg-emerald-500' : t.statusProgress >= 50 ? 'bg-blue-500' : 'bg-gray-300'
+                            }`} style={{ width: `${t.statusProgress}%` }} />
                           </div>
-                          <span className={`text-xs font-medium ${t.progressPercent > 100 ? 'text-red-600' : 'text-gray-500'}`}>
-                            {t.progressPercent}%
-                          </span>
+                          <span className="text-xs font-medium text-gray-500">{t.statusProgress}%</span>
                         </div>
                       </td>
                     </tr>
@@ -325,21 +357,27 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* Member Contribution */}
+          {/* Team Contribution */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Team Contribution</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <h3 className="text-sm font-bold text-gray-900 mb-3">Team Contribution</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {projectStatus.memberProgress.map((m) => (
-                <div key={m.userId} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center gap-2 mb-2">
+                <div key={m.userId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <div className="flex items-center gap-3 mb-3">
                     <Avatar name={m.name} size="md" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{m.name}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{m.name}</p>
                       <p className="text-xs text-gray-400">{m.projectRole}</p>
                     </div>
                   </div>
-                  <p className="text-xl font-bold text-indigo-700">{m.trackedHours}h</p>
-                  <p className="text-xs text-gray-500">tracked</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500">{m.doneTasks}/{m.totalTasks} tasks done</span>
+                    <span className="text-xs font-semibold text-indigo-600">{m.completionPercent}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+                    <div className="h-full rounded-full bg-indigo-500" style={{ width: `${m.completionPercent}%` }} />
+                  </div>
+                  <p className="text-xs text-gray-400">{m.trackedHours}h tracked</p>
                 </div>
               ))}
             </div>

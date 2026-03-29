@@ -67,7 +67,9 @@ export interface TaskProgress {
   priority: string
   estimatedHours: number
   trackedHours: number
-  progressPercent: number
+  statusProgress: number
+  timeProgress: number
+  isOverdue: boolean
   assignedTo: string[]
   deadline: string
 }
@@ -77,6 +79,9 @@ export interface MemberProgress {
   name: string
   projectRole: string
   trackedHours: number
+  totalTasks: number
+  doneTasks: number
+  completionPercent: number
 }
 
 export interface ProjectStatus {
@@ -84,10 +89,16 @@ export interface ProjectStatus {
   projectName: string
   totalTasks: number
   taskCounts: { TODO: number; IN_PROGRESS: number; DONE: number }
+  completionPercent: number
+  weightedProgress: number
+  overallScore: number
+  timeBudgetPercent: number
   totalEstimatedHours: number
   totalTrackedHours: number
-  timeProgressPercent: number
-  completionPercent: number
+  health: 'ON_TRACK' | 'AT_RISK' | 'BEHIND' | 'COMPLETED'
+  overdueCount: number
+  atRiskCount: number
+  onTrackCount: number
   taskProgress: TaskProgress[]
   memberProgress: MemberProgress[]
 }
