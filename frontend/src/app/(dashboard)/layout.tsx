@@ -87,6 +87,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, isLoading, router])
 
+  const { data: pendingDayOffs } = usePendingDayOffs()
+  const { data: myTasks } = useMyTasks()
+
   useEffect(() => {
     if (user) {
       getProfile().then((p) => { setAvatarUrl(p?.avatarUrl); setProfileName(p?.name) }).catch(() => {})
@@ -107,8 +110,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const closeSidebar = () => setSidebarOpen(false)
 
   const isPrivileged = user.systemRole === 'OWNER' || user.systemRole === 'CEO' || user.systemRole === 'MD' || user.systemRole === 'ADMIN'
-  const { data: pendingDayOffs } = usePendingDayOffs()
-  const { data: myTasks } = useMyTasks()
 
   const pendingCount = isPrivileged ? (pendingDayOffs ?? []).length : 0
   const todoTaskCount = (myTasks ?? []).filter((t) => t.status === 'TODO' || t.status === 'IN_PROGRESS').length

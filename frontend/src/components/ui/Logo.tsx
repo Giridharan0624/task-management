@@ -6,43 +6,35 @@ interface LogoProps {
   className?: string
 }
 
-const iconSizes = {
-  sm: 'w-6 h-6',
-  md: 'w-8 h-8',
-  lg: 'w-10 h-10',
-  xl: 'w-12 h-12',
-}
-
-const textSizes = {
-  sm: 'text-sm',
-  md: 'text-[15px]',
-  lg: 'text-lg',
-  xl: 'text-2xl',
+const config = {
+  sm: { icon: 'w-7 h-7', text: 'text-[15px]', gap: 'gap-2' },
+  md: { icon: 'w-9 h-9', text: 'text-[17px]', gap: 'gap-2.5' },
+  lg: { icon: 'w-11 h-11', text: 'text-xl', gap: 'gap-3' },
+  xl: { icon: 'w-14 h-14', text: 'text-2xl', gap: 'gap-3.5' },
 }
 
 export function Logo({ size = 'md', showText = true, className }: LogoProps) {
+  const s = config[size]
+
   return (
-    <div className={clsx('flex items-center gap-2.5', className)}>
+    <div className={clsx('flex items-center', s.gap, className)}>
+      {/* Icon mark */}
       <div className={clsx(
-        iconSizes[size],
-        'relative rounded-xl flex items-center justify-center',
+        s.icon,
+        'relative rounded-[22%] flex items-center justify-center',
         'bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-500',
-        'shadow-md shadow-indigo-500/20',
+        'shadow-lg shadow-indigo-500/25',
+        'ring-1 ring-indigo-400/10',
       )}>
-        {/*
-          Logo concept: A "T" + "F" monogram fused into a forward-pointing arrow shape.
-          The T crossbar extends right and angles down into an arrow,
-          forming the F's horizontal strokes — symbolizing tasks flowing forward.
-        */}
-        <svg viewBox="0 0 32 32" fill="none" className="w-[62%] h-[62%]">
-          {/* Vertical stem of T/F */}
+        <svg viewBox="0 0 32 32" fill="none" className="w-[58%] h-[58%]">
+          {/* Vertical stem */}
           <path
             d="M10 7v18"
             stroke="white"
-            strokeWidth="3"
+            strokeWidth="3.2"
             strokeLinecap="round"
           />
-          {/* Top crossbar of T — extends into forward arrow */}
+          {/* Top crossbar → forward arrow */}
           <path
             d="M10 7h10l4 4"
             stroke="white"
@@ -50,22 +42,22 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* Middle bar of F — shorter, also flows forward */}
+          {/* Middle bar → shorter flow arrow */}
           <path
             d="M10 16h8l3 3"
-            stroke="rgba(255,255,255,0.6)"
+            stroke="rgba(255,255,255,0.55)"
             strokeWidth="2.4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
       </div>
+
+      {/* Wordmark */}
       {showText && (
-        <span className={clsx(
-          textSizes[size],
-          'font-bold tracking-tight text-gray-900',
-        )}>
-          Task<span className="text-indigo-600">Flow</span>
+        <span className={clsx(s.text, 'font-extrabold tracking-tight select-none')}>
+          <span className="text-gray-900">Task</span>
+          <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Flow</span>
         </span>
       )}
     </div>
