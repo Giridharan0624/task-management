@@ -52,9 +52,9 @@ function TaskSelector({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
       <select
-        className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+        className="w-full sm:flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all min-w-0"
         value={source}
         onChange={(e) => { setSource(e.target.value); setTaskId('') }}
       >
@@ -65,7 +65,7 @@ function TaskSelector({
         ))}
       </select>
       <select
-        className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+        className="w-full sm:flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all min-w-0"
         disabled={!source}
         value={taskId}
         onChange={(e) => setTaskId(e.target.value)}

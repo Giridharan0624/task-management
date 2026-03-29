@@ -320,9 +320,9 @@ export default function DayOffsPage() {
   const isActing = approveMutation.isPending || rejectMutation.isPending
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="w-full max-w-6xl mx-auto space-y-8">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Day Off Requests</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -332,7 +332,7 @@ export default function DayOffsPage() {
         {!isOwner && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-sm transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-sm transition-colors self-start sm:self-auto"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -397,9 +397,10 @@ export default function DayOffsPage() {
       {/* ── Section 3: All Requests (OWNER / ADMIN) ── */}
       {isAdminOrOwner && (
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">All Requests</h2>
-            <div className="flex items-center gap-2">
+            <div className="overflow-x-auto">
+            <div className="flex items-center gap-2 flex-nowrap">
               {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((f) => (
                 <button
                   key={f}
@@ -413,6 +414,7 @@ export default function DayOffsPage() {
                   {f}
                 </button>
               ))}
+            </div>
             </div>
           </div>
 

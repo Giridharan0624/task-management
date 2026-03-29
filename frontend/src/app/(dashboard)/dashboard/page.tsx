@@ -298,9 +298,9 @@ export default function DashboardPage() {
   const { user } = useAuth()
 
   return (
-    <div className="flex flex-col gap-6 max-w-6xl">
+    <div className="flex flex-col gap-6 w-full max-w-6xl">
       {/* Greeting */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome back, {user?.name?.split(' ')[0] ?? 'there'}

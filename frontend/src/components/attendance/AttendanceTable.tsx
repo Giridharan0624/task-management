@@ -71,7 +71,7 @@ export function AttendanceTable() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-green-50 rounded-lg p-3 text-center border border-green-100">
           <p className="text-xl font-bold text-green-700">{signedIn.length}</p>
           <p className="text-xs text-green-600">Working Now</p>
@@ -95,7 +95,7 @@ export function AttendanceTable() {
           <p className="text-gray-500 text-sm">No one has started tracking today yet.</p>
         </div>
       ) : attendance.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>

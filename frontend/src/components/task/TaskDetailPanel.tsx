@@ -177,7 +177,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         aria-hidden="true"
       />
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-xl bg-gray-50 shadow-2xl overflow-y-auto flex flex-col">
+      <div className="fixed right-0 top-0 z-50 h-full w-full sm:max-w-xl bg-gray-50 shadow-2xl overflow-y-auto flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-white z-10 border-b border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">

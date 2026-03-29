@@ -124,14 +124,14 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             {isPrivileged ? 'Team Attendance Report' : 'My Attendance Report'}
           </h1>
           <p className="text-gray-500 mt-1">{monthLabel}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <select
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
             value={selectedMonth}
@@ -172,7 +172,7 @@ export default function AttendancePage() {
                 <p className="text-gray-500 text-sm">No attendance records for {monthLabel}.</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -210,7 +210,7 @@ export default function AttendancePage() {
           {taskStats.size > 0 && (
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Per-Task Breakdown</h2>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -243,7 +243,7 @@ export default function AttendancePage() {
             {(records ?? []).length === 0 ? (
               <p className="text-gray-500 text-sm">No records.</p>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>

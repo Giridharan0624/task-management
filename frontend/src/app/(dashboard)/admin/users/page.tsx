@@ -152,7 +152,7 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             {isOwner ? 'User Management' : 'Member Management'}
@@ -188,8 +188,9 @@ export default function UsersPage() {
       </div>
 
       {/* Department Filter */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mr-1">Department:</span>
+      <div className="overflow-x-auto">
+      <div className="flex items-center gap-2 flex-nowrap">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mr-1 flex-shrink-0">Department:</span>
         {['ALL', 'Development', 'Designing', 'Management', 'Research'].map((dept) => {
           const isActive = deptFilter === (dept === 'ALL' ? 'ALL' : dept)
           const count = dept === 'ALL'
@@ -215,9 +216,10 @@ export default function UsersPage() {
           )
         })}
       </div>
+      </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {isOwner && (
           <div className="bg-red-50 rounded-xl p-4 border border-red-100">
             <div className="text-2xl font-bold text-red-700">{ceoMd.length + adminsOnly.length}</div>
@@ -261,7 +263,7 @@ export default function UsersPage() {
       )}
 
       {/* User Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

@@ -100,7 +100,7 @@ export default function ProfilePage() {
   const dp = profile || user
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
+    <div className="w-full max-w-4xl mx-auto space-y-5">
       {/* Profile Card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
         <div className="px-6 pt-6 pb-5">

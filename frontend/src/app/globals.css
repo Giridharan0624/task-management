@@ -3,23 +3,33 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    @apply scroll-smooth;
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
   * {
     @apply transition-colors duration-150;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
   }
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  @media (min-width: 1024px) {
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { @apply bg-transparent; }
+    ::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded-full; }
+    ::-webkit-scrollbar-thumb:hover { @apply bg-gray-400; }
   }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+  @media (max-width: 1023px) {
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; }
   }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

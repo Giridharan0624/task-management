@@ -331,4 +331,4 @@ git add . && git commit -m "update" && git push
 
 ## License
 
-Private project. All rights reserved.
+Private project. All rights reserved

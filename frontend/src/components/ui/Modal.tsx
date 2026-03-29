@@ -54,7 +54,7 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'md'
       <div
         className={clsx(
           'relative z-10 w-full rounded-2xl bg-white shadow-2xl',
-          'mx-4 max-h-[90vh] flex flex-col',
+          'mx-2 sm:mx-4 max-h-[90vh] flex flex-col',
           sizeClasses[size],
           className
         )}

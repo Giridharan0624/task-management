@@ -43,7 +43,7 @@ export default function DirectTasksPage() {
   if (isLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Direct Tasks</h1>

@@ -83,9 +83,9 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="max-w-6xl space-y-5">
+    <div className="w-full max-w-6xl space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
           <p className="text-sm text-gray-400 mt-0.5">
@@ -126,24 +126,22 @@ export default function TasksPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { key: 'ALL' as FilterStatus, label: 'Total', value: visibleTasks.length, color: 'indigo' },
-          { key: 'TODO' as FilterStatus, label: 'To Do', value: todoCount, color: 'amber' },
-          { key: 'IN_PROGRESS' as FilterStatus, label: 'In Progress', value: progressCount, color: 'blue' },
-          { key: 'DONE' as FilterStatus, label: 'Done', value: doneCount, color: 'emerald' },
-        ].map(({ key, label, value, color }) => (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {([
+          { key: 'ALL' as FilterStatus, label: 'Total', value: visibleTasks.length, active: 'border-indigo-300 bg-indigo-50', text: 'text-indigo-700' },
+          { key: 'TODO' as FilterStatus, label: 'To Do', value: todoCount, active: 'border-amber-300 bg-amber-50', text: 'text-amber-700' },
+          { key: 'IN_PROGRESS' as FilterStatus, label: 'In Progress', value: progressCount, active: 'border-blue-300 bg-blue-50', text: 'text-blue-700' },
+          { key: 'DONE' as FilterStatus, label: 'Done', value: doneCount, active: 'border-emerald-300 bg-emerald-50', text: 'text-emerald-700' },
+        ]).map(({ key, label, value, active, text }) => (
           <button
             key={key}
             onClick={() => setFilter(key)}
-            className={`rounded-2xl p-4 border text-left transition-all ${
-              filter === key
-                ? `border-${color}-300 bg-${color}-50 shadow-sm`
-                : 'border-gray-100 bg-white hover:shadow-sm'
+            className={`rounded-2xl p-3 sm:p-4 border text-left transition-all ${
+              filter === key ? `${active} shadow-sm` : 'border-gray-100 bg-white hover:shadow-sm'
             }`}
           >
-            <p className={`text-2xl font-bold text-${color}-700`}>{value}</p>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
+            <p className={`text-xl sm:text-2xl font-bold ${text}`}>{value}</p>
+            <p className="text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
           </button>
         ))}
       </div>
@@ -168,6 +166,8 @@ export default function TasksPage() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80">
@@ -231,6 +231,31 @@ export default function TasksPage() {
               })}
             </tbody>
           </table>
+          </div>
+          {/* Mobile card view */}
+          <div className="sm:hidden divide-y divide-gray-50">
+            {filteredTasks.map((task) => {
+              const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'DONE'
+              const isDirect = task.projectId === 'DIRECT'
+              return (
+                <Link key={task.taskId} href={isDirect ? '/my-tasks' : `/projects/${task.projectId}`} className="block px-4 py-3 hover:bg-gray-50">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
+                    <Badge className={STATUS_COLORS[task.status]}>{task.status.replace('_', ' ')}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDirect ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-500'}`}>
+                      {isDirect ? 'Direct' : task.projectName}
+                    </span>
+                    <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
+                    <span className={`text-[10px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                      {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       )}
 
