@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { Spinner } from '@/components/ui/Spinner'
+import { Logo } from '@/components/ui/Logo'
 
 export default function LoginPage() {
   const { user, isLoading } = useAuth()
@@ -42,14 +43,7 @@ export default function LoginPage() {
         }} />
 
         <div className="relative z-10 max-w-lg">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold text-gray-900 tracking-tight">TaskFlow</span>
-          </div>
+          <Logo size="xl" className="mb-10" />
 
           <h1 className="text-5xl font-bold leading-[1.1] mb-5 text-gray-900 text-balance animate-fade-in">
             Manage your team&apos;s work,{' '}
@@ -80,13 +74,8 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
         <div className="w-full max-w-sm animate-fade-in">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-10 justify-center">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-gray-900">TaskFlow</span>
+          <div className="lg:hidden flex justify-center mb-10">
+            <Logo size="lg" />
           </div>
 
           <div className="mb-8">
