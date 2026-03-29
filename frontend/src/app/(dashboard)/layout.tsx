@@ -7,6 +7,8 @@ import Link from 'next/link'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { getProfile } from '@/lib/api/userApi'
+import { usePendingDayOffs } from '@/lib/hooks/useDayOffs'
+import { useMyTasks } from '@/lib/hooks/useUsers'
 
 const ownerNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -103,6 +105,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = getNavItems(user.systemRole)
   const closeSidebar = () => setSidebarOpen(false)
 
+  const isPrivileged = user.systemRole === 'OWNER' || user.systemRole === 'CEO' || user.systemRole === 'MD' || user.systemRole === 'ADMIN'
+  const { data: pendingDayOffs } = usePendingDayOffs()
+  const { data: myTasks } = useMyTasks()
+
+  const pendingCount = isPrivileged ? (pendingDayOffs ?? []).length : 0
+  const todoTaskCount = (myTasks ?? []).filter((t) => t.status === 'TODO' || t.status === 'IN_PROGRESS').length
+
+  const getBadgeCount = (href: string): number => {
+    if (href === '/day-offs' && pendingCount > 0) return pendingCount
+    if (href === '/my-tasks' && todoTaskCount > 0) return todoTaskCount
+    return 0
+  }
+
   const sidebarContent = (
     <>
       {/* Logo */}
@@ -124,6 +139,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <nav className="flex-1 min-h-0 px-3 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const badgeCount = getBadgeCount(item.href)
           return (
             <Link
               key={item.href}
@@ -139,6 +155,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <NavIcon type={item.icon} />
               </span>
               {item.name}
+              {badgeCount > 0 && (
+                <span className="ml-auto inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-[10px] font-bold text-white tabular-nums shadow-sm">
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </span>
+              )}
             </Link>
           )
         })}
