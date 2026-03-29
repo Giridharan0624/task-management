@@ -44,17 +44,19 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'md'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
+      {/* Backdrop with blur */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+        style={{ animationDuration: '0.2s' }}
         onClick={onClose}
         aria-hidden="true"
       />
       {/* Panel */}
       <div
         className={clsx(
-          'relative z-10 w-full rounded-2xl bg-white shadow-2xl',
-          'mx-2 sm:mx-4 max-h-[90vh] flex flex-col',
+          'relative z-10 w-full rounded-2xl bg-white shadow-elevated',
+          'mx-3 sm:mx-4 max-h-[90vh] flex flex-col',
+          'animate-fade-in-scale',
           sizeClasses[size],
           className
         )}
@@ -63,12 +65,12 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'md'
         aria-labelledby="modal-title"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-          <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+          <h2 id="modal-title" className="text-base font-bold text-gray-900">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-xl p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             aria-label="Close modal"
           >
             <svg

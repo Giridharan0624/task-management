@@ -11,23 +11,23 @@ import { AttendanceButton } from '@/components/attendance/AttendanceButton'
 import { AttendanceTable } from '@/components/attendance/AttendanceTable'
 
 const ROLE_COLORS: Record<string, string> = {
-  OWNER: 'bg-purple-100 text-purple-800',
-  CEO: 'bg-violet-100 text-violet-800',
-  MD: 'bg-fuchsia-100 text-fuchsia-800',
-  ADMIN: 'bg-red-100 text-red-800',
-  MEMBER: 'bg-blue-100 text-blue-800',
+  OWNER: 'bg-purple-100 text-purple-800 ring-1 ring-inset ring-purple-200',
+  CEO: 'bg-violet-100 text-violet-800 ring-1 ring-inset ring-violet-200',
+  MD: 'bg-fuchsia-100 text-fuchsia-800 ring-1 ring-inset ring-fuchsia-200',
+  ADMIN: 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200',
+  MEMBER: 'bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200',
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  TODO: 'bg-amber-50 text-amber-700 border border-amber-200',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700 border border-blue-200',
-  DONE: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  TODO: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
+  IN_PROGRESS: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200',
+  DONE: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  HIGH: 'bg-red-50 text-red-700 border border-red-200',
-  MEDIUM: 'bg-orange-50 text-orange-700 border border-orange-200',
-  LOW: 'bg-slate-50 text-slate-600 border border-slate-200',
+  HIGH: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
+  MEDIUM: 'bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200',
+  LOW: 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200',
 }
 
 /* ─── Stat Card ─── */
@@ -41,26 +41,26 @@ function StatCard({ icon, label, value, color, gradient, href }: {
 }) {
   const content = (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <div className={`h-10 w-10 rounded-xl ${gradient} flex items-center justify-center`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className={`h-10 w-10 rounded-xl ${gradient} flex items-center justify-center shadow-sm`}>
           {icon}
         </div>
       </div>
-      <p className={`text-3xl font-bold ${color}`}>{value}</p>
-      <p className="text-xs font-medium text-gray-400 mt-1 uppercase tracking-wider">{label}</p>
+      <p className={`text-3xl font-bold ${color} tracking-tight`}>{value}</p>
+      <p className="text-[10px] font-semibold text-gray-400 mt-1.5 uppercase tracking-widest">{label}</p>
     </>
   )
 
   if (href) {
     return (
-      <Link href={href} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer block">
+      <Link href={href} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card hover:shadow-card-hover hover:border-indigo-200/60 transition-all duration-200 cursor-pointer block hover-lift">
         {content}
       </Link>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card">
       {content}
     </div>
   )
@@ -71,7 +71,7 @@ function ActionCard({ href, icon, title, subtitle }: {
   href: string; icon: React.ReactNode; title: string; subtitle: string
 }) {
   return (
-    <Link href={href} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group">
+    <Link href={href} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-card hover:shadow-card-hover hover:border-indigo-200/60 transition-all duration-200 group hover-lift">
       <div className="h-11 w-11 rounded-xl bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors flex-shrink-0">
         {icon}
       </div>
@@ -79,7 +79,7 @@ function ActionCard({ href, icon, title, subtitle }: {
         <p className="text-sm font-semibold text-gray-900">{title}</p>
         <p className="text-xs text-gray-400">{subtitle}</p>
       </div>
-      <svg className="h-4 w-4 text-gray-300 ml-auto group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg className="h-4 w-4 text-gray-300 ml-auto group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
       </svg>
     </Link>
@@ -90,8 +90,8 @@ function ActionCard({ href, icon, title, subtitle }: {
 function SectionHeader({ title, href, linkText }: { title: string; href?: string; linkText?: string }) {
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-base font-bold text-gray-900">{title}</h2>
-      {href && <Link href={href} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">{linkText ?? 'View all'}</Link>}
+      <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{title}</h2>
+      {href && <Link href={href} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider transition-colors">{linkText ?? 'View all'}</Link>}
     </div>
   )
 }
@@ -99,7 +99,7 @@ function SectionHeader({ title, href, linkText }: { title: string; href?: string
 /* ─── Task Row ─── */
 function TaskRow({ task }: { task: any }) {
   return (
-    <Link href={`/projects/${task.projectId}`} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors group">
+    <Link href={`/projects/${task.projectId}`} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/80 transition-colors group">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
           <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -146,7 +146,7 @@ function OwnerDashboard() {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 stagger-fade">
         <StatCard icon={Icons.users} label="Admins" value={adminCount} color="text-violet-700" gradient="bg-gradient-to-br from-violet-500 to-purple-600" href="/admin/users" />
         <StatCard icon={Icons.members} label="Members" value={memberCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/admin/users" />
         <StatCard icon={Icons.projects} label="Projects" value={projects?.length ?? 0} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-blue-600" href="/projects" />
@@ -170,17 +170,17 @@ function OwnerDashboard() {
         {(projects ?? []).length === 0 ? (
           <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-12 text-center">
             <p className="text-gray-400 text-sm">No projects yet</p>
-            <Link href="/projects" className="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Create your first project</Link>
+            <Link href="/projects" className="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">Create your first project</Link>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden divide-y divide-gray-50">
             {(projects ?? []).slice(0, 5).map((p) => (
-              <Link key={p.projectId} href={`/projects/${p.projectId}`} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors group">
+              <Link key={p.projectId} href={`/projects/${p.projectId}`} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50/80 transition-colors group">
                 <div>
                   <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{p.name}</p>
                   {p.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{p.description}</p>}
                 </div>
-                <svg className="h-4 w-4 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                <svg className="h-4 w-4 text-gray-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
               </Link>
             ))}
           </div>
@@ -205,7 +205,7 @@ function AdminDashboard() {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 stagger-fade">
         <StatCard icon={Icons.todo} label="To Do" value={todoCount} color="text-amber-700" gradient="bg-gradient-to-br from-amber-400 to-orange-500" href="/my-tasks" />
         <StatCard icon={Icons.progress} label="In Progress" value={progressCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/my-tasks" />
         <StatCard icon={Icons.done} label="Done" value={doneCount} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
@@ -231,11 +231,11 @@ function AdminDashboard() {
             <p className="text-gray-400 text-sm">No tasks assigned to you yet</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden divide-y divide-gray-50">
             {allTasks.slice(0, 5).map((task) => <TaskRow key={task.taskId} task={task} />)}
             {allTasks.length > 5 && (
-              <div className="text-center py-3 bg-gray-50">
-                <Link href="/my-tasks" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">View all {allTasks.length} tasks</Link>
+              <div className="text-center py-3 bg-gray-50/60">
+                <Link href="/my-tasks" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider transition-colors">View all {allTasks.length} tasks</Link>
               </div>
             )}
           </div>
@@ -258,7 +258,7 @@ function MemberDashboard() {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 stagger-fade">
         <StatCard icon={Icons.tasks} label="Total Tasks" value={allTasks.length} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-purple-600" href="/my-tasks" />
         <StatCard icon={Icons.todo} label="To Do" value={todoCount} color="text-amber-700" gradient="bg-gradient-to-br from-amber-400 to-orange-500" href="/my-tasks" />
         <StatCard icon={Icons.progress} label="In Progress" value={progressCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/my-tasks" />
@@ -276,14 +276,14 @@ function MemberDashboard() {
         {allTasks.length === 0 ? (
           <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-12 text-center">
             <p className="text-gray-400 text-sm">No tasks assigned to you yet</p>
-            <Link href="/projects" className="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Go to Projects</Link>
+            <Link href="/projects" className="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">Go to Projects</Link>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden divide-y divide-gray-50">
             {allTasks.slice(0, 5).map((task) => <TaskRow key={task.taskId} task={task} />)}
             {allTasks.length > 5 && (
-              <div className="text-center py-3 bg-gray-50">
-                <Link href="/my-tasks" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">View all {allTasks.length} tasks</Link>
+              <div className="text-center py-3 bg-gray-50/60">
+                <Link href="/my-tasks" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider transition-colors">View all {allTasks.length} tasks</Link>
               </div>
             )}
           </div>
@@ -298,11 +298,11 @@ export default function DashboardPage() {
   const { user } = useAuth()
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-6xl">
+    <div className="flex flex-col gap-6 w-full max-w-6xl animate-fade-in">
       {/* Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
           </h1>
           <p className="mt-0.5 text-sm text-gray-400">Here&apos;s what&apos;s happening today.</p>

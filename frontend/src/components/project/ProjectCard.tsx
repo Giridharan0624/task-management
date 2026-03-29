@@ -11,6 +11,20 @@ interface ProjectCardProps {
   isDeleting?: boolean
 }
 
+const PROJECT_GRADIENTS = [
+  'from-indigo-500 to-violet-600',
+  'from-cyan-500 to-blue-600',
+  'from-emerald-500 to-teal-600',
+  'from-amber-500 to-orange-600',
+  'from-rose-500 to-pink-600',
+  'from-fuchsia-500 to-purple-600',
+]
+
+function getGradient(name: string): string {
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  return PROJECT_GRADIENTS[hash % PROJECT_GRADIENTS.length]
+}
+
 export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting }: ProjectCardProps) {
   const router = useRouter()
 
@@ -36,13 +50,13 @@ export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting }:
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex cursor-pointer flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-indigo-200"
+      className="group relative flex cursor-pointer flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-card transition-all duration-200 hover:shadow-card-hover hover:border-indigo-200/60 hover-lift"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">{project.name.charAt(0).toUpperCase()}</span>
+          <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${getGradient(project.name)} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+            <span className="text-white font-bold text-sm drop-shadow-sm">{project.name.charAt(0).toUpperCase()}</span>
           </div>
           <div>
             <h3 className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
@@ -72,13 +86,13 @@ export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting }:
       {/* Progress bar */}
       {taskCount > 0 && (
         <div className="mb-3">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-gray-500">Progress</span>
-            <span className="font-semibold text-gray-700">{completionPercent}%</span>
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-gray-500 font-medium">Progress</span>
+            <span className="font-bold text-gray-700">{completionPercent}%</span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${
+              className={`h-full rounded-full transition-all duration-500 ${
                 completionPercent >= 100 ? 'bg-emerald-500' : completionPercent >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
               }`}
               style={{ width: `${Math.min(completionPercent, 100)}%` }}
@@ -91,17 +105,17 @@ export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting }:
       <div className="flex items-center gap-3 mb-3">
         {taskCount > 0 ? (
           <>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-amber-400"></span>
-              <span className="text-xs text-gray-500">{todoCount} todo</span>
+              <span className="text-[11px] font-medium text-gray-500">{todoCount} todo</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-blue-500"></span>
-              <span className="text-xs text-gray-500">{inProgressCount} active</span>
+              <span className="text-[11px] font-medium text-gray-500">{inProgressCount} active</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span className="text-xs text-gray-500">{doneCount} done</span>
+              <span className="text-[11px] font-medium text-gray-500">{doneCount} done</span>
             </div>
           </>
         ) : (
@@ -110,8 +124,8 @@ export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting }:
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between text-[11px] font-medium text-gray-400 pt-3 border-t border-gray-50">
+        <div className="flex items-center gap-1.5">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           <span>{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
         </div>

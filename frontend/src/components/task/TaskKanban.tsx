@@ -16,17 +16,16 @@ interface TaskKanbanProps {
   members?: ProjectMember[]
 }
 
-const COLUMNS: { status: TaskStatus; label: string; headerColor: string }[] = [
-  { status: 'TODO', label: 'To Do', headerColor: 'bg-gray-100 text-gray-700' },
-  { status: 'IN_PROGRESS', label: 'In Progress', headerColor: 'bg-blue-100 text-blue-700' },
-  { status: 'DONE', label: 'Done', headerColor: 'bg-green-100 text-green-700' },
+const COLUMNS: { status: TaskStatus; label: string; dot: string; headerColor: string }[] = [
+  { status: 'TODO', label: 'To Do', dot: 'bg-amber-400', headerColor: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200' },
+  { status: 'IN_PROGRESS', label: 'In Progress', dot: 'bg-blue-400', headerColor: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200' },
+  { status: 'DONE', label: 'Done', dot: 'bg-emerald-400', headerColor: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' },
 ]
 
 export function TaskKanban({ projectId, tasks, permissions, members = [] }: TaskKanbanProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // Build userId -> name lookup
   const nameMap = new Map<string, string>()
   for (const m of members) {
     nameMap.set(m.userId, m.user?.name || m.user?.email || m.userId)
@@ -45,17 +44,16 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {COLUMNS.map(({ status, label, headerColor }) => {
+        {COLUMNS.map(({ status, label, dot, headerColor }) => {
           const columnTasks = tasksByStatus(status)
           return (
-            <div key={status} className="flex flex-col gap-3 rounded-xl bg-gray-50 p-4 border border-gray-200">
+            <div key={status} className="flex flex-col gap-3 rounded-2xl bg-gray-50/80 p-4 border border-gray-100">
               <div className="flex items-center justify-between">
-                <span
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${headerColor}`}
-                >
+                <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${headerColor}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
                   {label}
                 </span>
-                <span className="text-sm font-medium text-gray-400">{columnTasks.length}</span>
+                <span className="text-xs font-semibold text-gray-400">{columnTasks.length}</span>
               </div>
 
               <div className="flex flex-col gap-2 min-h-[120px]">
@@ -70,9 +68,9 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
               {status === 'TODO' && permissions.canCreateTask && (
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-1 text-sm text-gray-400 hover:text-blue-600 transition-colors mt-1"
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-indigo-600 transition-colors mt-1 px-1"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                   Add task

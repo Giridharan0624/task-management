@@ -39,23 +39,23 @@ export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
   return (
     <button
       onClick={() => onClick(task)}
-      className="w-full text-left rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-blue-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+      className="w-full text-left rounded-xl border border-gray-100 bg-white p-4 shadow-card hover:shadow-card-hover hover:border-indigo-200/60 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 hover-lift"
     >
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-gray-900 line-clamp-2">{task.title}</p>
+      <div className="flex flex-col gap-2.5">
+        <p className="text-sm font-semibold text-gray-900 line-clamp-2">{task.title}</p>
 
         <div className="flex flex-wrap gap-1.5">
           <Badge variant={task.status}>{statusLabel[task.status]}</Badge>
           <Badge variant={task.priority}>{priorityLabel[task.priority]}</Badge>
         </div>
 
-        <div className="flex items-center justify-between text-xs text-gray-400 mt-1">
+        <div className="flex items-center justify-between text-xs text-gray-400 mt-0.5">
           {task.assignedTo && task.assignedTo.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {task.assignedTo.map((userId) => (
                 <span
                   key={userId}
-                  className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 truncate max-w-[120px]"
+                  className="inline-flex items-center rounded-lg bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 truncate max-w-[120px]"
                   title={resolve(userId)}
                 >
                   {resolve(userId)}
@@ -63,10 +63,10 @@ export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
               ))}
             </div>
           ) : (
-            <span className="italic">Unassigned</span>
+            <span className="italic text-gray-300">Unassigned</span>
           )}
           {deadlineFormatted && (
-            <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
+            <span className={isOverdue ? 'text-red-500 font-semibold' : 'text-gray-400'}>
               {deadlineFormatted}
             </span>
           )}

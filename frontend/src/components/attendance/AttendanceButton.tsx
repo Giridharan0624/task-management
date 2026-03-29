@@ -31,7 +31,6 @@ function TaskSelector({
 
   const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
 
-  // Get tasks based on selected source
   const availableTasks = source === 'DIRECT'
     ? (directTasks ?? []).filter((t) => isPrivileged || t.assignedTo.includes(user?.userId ?? ''))
     : (projectTasks ?? []).filter((t) => isPrivileged || t.assignedTo.includes(user?.userId ?? ''))
@@ -51,25 +50,18 @@ function TaskSelector({
     setTaskId('')
   }
 
+  const selectClass = "w-full sm:flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white outline-none transition-all min-w-0"
+
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-      <select
-        className="w-full sm:flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all min-w-0"
-        value={source}
-        onChange={(e) => { setSource(e.target.value); setTaskId('') }}
-      >
+      <select className={selectClass} value={source} onChange={(e) => { setSource(e.target.value); setTaskId('') }}>
         <option value="">Select Source</option>
         <option value="DIRECT">Direct Tasks</option>
         {(projects ?? []).map((p) => (
           <option key={p.projectId} value={p.projectId}>{p.name}</option>
         ))}
       </select>
-      <select
-        className="w-full sm:flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition-all min-w-0"
-        disabled={!source}
-        value={taskId}
-        onChange={(e) => setTaskId(e.target.value)}
-      >
+      <select className={selectClass} disabled={!source} value={taskId} onChange={(e) => setTaskId(e.target.value)}>
         <option value="">Select Task</option>
         {availableTasks.map((t) => (
           <option key={t.taskId} value={t.taskId}>{t.title}</option>
@@ -96,27 +88,22 @@ export function AttendanceButton() {
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex items-center justify-center">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-card flex items-center justify-center">
         <Spinner />
       </div>
     )
   }
 
-  // Not signed in today — show task selector to start
   if (!attendance) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-card">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-sm font-medium text-gray-900">Time Tracker</p>
-            <p className="text-xs text-gray-500">Select a project and task to start tracking</p>
+            <p className="text-sm font-semibold text-gray-900">Time Tracker</p>
+            <p className="text-xs text-gray-400">Select a project and task to start tracking</p>
           </div>
         </div>
-        <TaskSelector
-          onStart={(data) => signIn.mutate(data)}
-          loading={signIn.isPending}
-          buttonLabel="Start"
-        />
+        <TaskSelector onStart={(data) => signIn.mutate(data)} loading={signIn.isPending} buttonLabel="Start" />
         {signIn.error && (
           <p className="mt-2 text-sm text-red-600">
             {signIn.error instanceof Error ? signIn.error.message : 'Failed to start timer'}
@@ -128,29 +115,27 @@ export function AttendanceButton() {
 
   const { sessions, totalHours, status, currentSignInAt, currentTask } = attendance
 
-  // Timer is running
   if (status === 'SIGNED_IN') {
     return (
-      <div className="rounded-xl border-2 border-green-200 bg-green-50 p-5 shadow-sm">
-        {/* Active timer */}
+      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-5 shadow-card">
         <div className="flex items-center justify-between mb-3">
           <div>
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
-              <p className="text-sm font-medium text-green-800">
+              <p className="text-sm font-semibold text-emerald-800">
                 {currentTask ? currentTask.taskTitle : 'Working'}
               </p>
             </div>
             {currentTask && (
-              <p className="text-xs text-green-600 mt-0.5 ml-4">{currentTask.projectName}</p>
+              <p className="text-xs text-emerald-600 mt-0.5 ml-4">{currentTask.projectName}</p>
             )}
           </div>
           <div className="flex items-center gap-3">
             {currentSignInAt && (
-              <LiveTimer startTime={currentSignInAt} className="text-2xl font-bold text-green-700 font-mono" />
+              <LiveTimer startTime={currentSignInAt} className="text-2xl font-bold text-emerald-700 font-mono tracking-tight" />
             )}
             <Button variant="danger" size="sm" onClick={() => signOut.mutate()} loading={signOut.isPending}>
               Stop
@@ -158,20 +143,14 @@ export function AttendanceButton() {
           </div>
         </div>
 
-        {/* Switch task */}
-        <div className="border-t border-green-200 pt-3">
-          <p className="text-xs font-medium text-green-700 mb-2">Switch to another task:</p>
-          <TaskSelector
-            onStart={(data) => signIn.mutate(data)}
-            loading={signIn.isPending}
-            buttonLabel="Switch"
-          />
+        <div className="border-t border-emerald-200 pt-3">
+          <p className="text-xs font-semibold text-emerald-700 mb-2">Switch to another task:</p>
+          <TaskSelector onStart={(data) => signIn.mutate(data)} loading={signIn.isPending} buttonLabel="Switch" />
         </div>
 
-        {/* Today's summary */}
         {sessions.length > 1 && (
-          <div className="border-t border-green-200 pt-3 mt-3">
-            <p className="text-xs text-green-600">{sessions.length} sessions today &middot; {totalHours.toFixed(1)}h logged</p>
+          <div className="border-t border-emerald-200 pt-3 mt-3">
+            <p className="text-xs text-emerald-600">{sessions.length} sessions today &middot; {totalHours.toFixed(1)}h logged</p>
           </div>
         )}
 
@@ -184,29 +163,24 @@ export function AttendanceButton() {
     )
   }
 
-  // Signed out — show history + restart
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-card">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-sm font-medium text-gray-900">Time Tracker</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-semibold text-gray-900">Time Tracker</p>
+          <p className="text-xs text-gray-400">
             {sessions.length} session{sessions.length !== 1 ? 's' : ''} today &middot; {totalHours.toFixed(1)}h total
           </p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-indigo-700">{totalHours.toFixed(1)}h</p>
+          <p className="text-2xl font-bold text-indigo-700 tracking-tight">{totalHours.toFixed(1)}h</p>
         </div>
       </div>
 
-      {/* Session history */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {sessions.map((s, i) => (
-          <div
-            key={i}
-            className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600"
-          >
-            <span className="font-medium">{s.taskTitle || 'General'}</span>
+          <div key={i} className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-50 text-gray-600 border border-gray-100">
+            <span className="font-semibold">{s.taskTitle || 'General'}</span>
             {': '}
             {formatTime(s.signInAt)}
             {s.signOutAt ? ` — ${formatTime(s.signOutAt)}` : ' — now'}
@@ -215,14 +189,9 @@ export function AttendanceButton() {
         ))}
       </div>
 
-      {/* Start new timer */}
       <div className="border-t border-gray-100 pt-3">
-        <p className="text-xs font-medium text-gray-700 mb-2">Start a new timer:</p>
-        <TaskSelector
-          onStart={(data) => signIn.mutate(data)}
-          loading={signIn.isPending}
-          buttonLabel="Start"
-        />
+        <p className="text-xs font-semibold text-gray-700 mb-2">Start a new timer:</p>
+        <TaskSelector onStart={(data) => signIn.mutate(data)} loading={signIn.isPending} buttonLabel="Start" />
       </div>
 
       {signIn.error && (

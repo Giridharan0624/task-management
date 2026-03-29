@@ -185,9 +185,20 @@ class CreateUserUseCase:
         if existing:
             raise ValidationError(f"User with email {email} already exists")
 
-        # Generate employee ID
+        # Generate a unique employee ID
         next_num = self._user_repo.get_next_employee_number()
         employee_id = f"EMP-{next_num:04d}"
+
+        # Ensure employee ID is unique (guard against race conditions)
+        if self._user_repo.find_by_employee_id(employee_id):
+            # Collision — increment until we find an unused one
+            for offset in range(1, 100):
+                candidate = f"EMP-{next_num + offset:04d}"
+                if not self._user_repo.find_by_employee_id(candidate):
+                    employee_id = candidate
+                    break
+            else:
+                raise ValidationError("Unable to generate a unique employee ID")
 
         # Create in Cognito
         try:

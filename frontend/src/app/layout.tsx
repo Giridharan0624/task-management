@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from 'next'
-import { Lexend } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 
-const lexend = Lexend({ subsets: ['latin'] })
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'Task Management',
+  title: 'TaskFlow',
   description: 'Serverless task management system',
 }
 
@@ -21,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={lexend.className}>
+    <html lang="en" className={outfit.variable}>
+      <body className={outfit.className}>
         <Providers>{children}</Providers>
       </body>
     </html>

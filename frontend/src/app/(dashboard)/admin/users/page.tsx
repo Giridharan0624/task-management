@@ -231,7 +231,7 @@ export default function UsersPage() {
           <div className="text-sm text-blue-600">Members</div>
         </div>
         <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-          <div className="text-2xl font-bold text-indigo-700">{(users ?? []).length}</div>
+          <div className="text-2xl font-bold text-indigo-700">{(users ?? []).filter((u) => u.systemRole !== 'OWNER').length}</div>
           <div className="text-sm text-indigo-600">Total Users</div>
         </div>
       </div>
