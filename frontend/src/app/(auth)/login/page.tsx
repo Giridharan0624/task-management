@@ -70,6 +70,11 @@ export default function LoginPage() {
               </span>
             ))}
           </div>
+
+          {/* NEUROSTACK attribution */}
+          <p className="mt-12 text-xs text-gray-400 animate-fade-in-delay-3" style={{ opacity: 0 }}>
+            Powered by <span className="font-semibold text-gray-500">NEUROSTACK</span>
+          </p>
         </div>
       </div>
 
@@ -91,7 +96,7 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-8 text-center text-xs text-gray-400">
-            Powered by TaskFlow &middot; Secure login via AWS Cognito
+            Powered by <span className="font-semibold text-gray-500">NEUROSTACK</span> &middot; Secure login via AWS Cognito
           </p>
         </div>
       </div>

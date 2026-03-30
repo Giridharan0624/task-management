@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 
 interface LoginFormValues {
@@ -48,9 +49,8 @@ export function LoginForm() {
           required: 'Email or Employee ID is required',
         })}
       />
-      <Input
+      <PasswordInput
         label="Password"
-        type="password"
         autoComplete="current-password"
         placeholder="Enter your password"
         error={errors.password?.message}

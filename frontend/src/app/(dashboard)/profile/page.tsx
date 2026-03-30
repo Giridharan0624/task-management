@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { updateProfile, getProfile } from '@/lib/api/userApi'
 import { AvatarUpload } from '@/components/ui/AvatarUpload'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -549,18 +550,9 @@ function ChangePasswordSection() {
             </div>
           )}
 
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Current Password</label>
-            <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Enter current password" className={inputClass} />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">New Password</label>
-            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" className={inputClass} />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Confirm New Password</label>
-            <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Re-enter new password" className={inputClass} />
-          </div>
+          <PasswordInput label="Current Password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Enter current password" />
+          <PasswordInput label="New Password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" />
+          <PasswordInput label="Confirm New Password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Re-enter new password" />
           <p className="text-[11px] text-gray-400">
             Must be at least 8 characters with uppercase, lowercase, and a number.
           </p>

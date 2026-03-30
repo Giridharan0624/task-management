@@ -7,6 +7,7 @@ import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
@@ -406,8 +407,7 @@ export default function UsersPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <Input
-              type="password"
+            <PasswordInput
               placeholder="Min 8 characters, 1 uppercase, 1 number"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}

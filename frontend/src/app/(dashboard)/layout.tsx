@@ -185,6 +185,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           Sign Out
         </button>
       </div>
+
+      {/* NEUROSTACK branding */}
+      <p className="text-center text-[10px] text-gray-400 pb-3">
+        Powered by <span className="font-semibold text-gray-500">NEUROSTACK</span>
+      </p>
     </>
   )
 
