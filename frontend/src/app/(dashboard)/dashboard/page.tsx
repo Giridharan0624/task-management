@@ -142,6 +142,10 @@ function OwnerDashboard() {
   const adminCount = (users ?? []).filter((u) => u.systemRole === 'ADMIN' || u.systemRole === 'CEO' || u.systemRole === 'MD').length
   const memberCount = (users ?? []).filter((u) => u.systemRole === 'MEMBER').length
 
+  const nameMap = new Map<string, string>()
+  for (const u of users ?? []) nameMap.set(u.userId, u.name || u.email)
+  const resolveName = (id: string) => nameMap.get(id) || 'Unknown'
+
   if (usersLoading || projectsLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   return (
@@ -178,7 +182,11 @@ function OwnerDashboard() {
               <Link key={p.projectId} href={`/projects/${p.projectId}`} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50/80 transition-colors group">
                 <div>
                   <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{p.name}</p>
-                  {p.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{p.description}</p>}
+                  <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                    {p.createdBy && <span>by {resolveName(p.createdBy)}</span>}
+                    {p.createdBy && p.description && <span> · </span>}
+                    {p.description && <span>{p.description}</span>}
+                  </p>
                 </div>
                 <svg className="h-4 w-4 text-gray-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
               </Link>

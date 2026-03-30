@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useProjects, useDeleteProject } from '@/lib/hooks/useProjects'
+import { useUsers } from '@/lib/hooks/useUsers'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { ProjectCard } from './ProjectCard'
 import { CreateProjectModal } from './CreateProjectModal'
@@ -13,7 +14,12 @@ export function ProjectList() {
   const { user } = useAuth()
   const systemPerms = useSystemPermission(user?.systemRole)
   const { data: projects, isLoading, error } = useProjects()
+  const { data: allUsers } = useUsers()
   const deleteProject = useDeleteProject()
+
+  const nameMap = new Map<string, string>()
+  for (const u of allUsers ?? []) nameMap.set(u.userId, u.name || u.email)
+  if (user) nameMap.set(user.userId, user.name || user.email)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -76,6 +82,7 @@ export function ProjectList() {
               canDeleteProject={systemPerms.canCreateProject}
               onDelete={handleDelete}
               isDeleting={deletingId === project.projectId}
+              creatorName={nameMap.get(project.createdBy)}
             />
           ))}
         </div>

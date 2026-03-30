@@ -186,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen bg-[var(--color-bg)]">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm lg:hidden animate-fade-in" style={{ animationDuration: '0.2s' }} onClick={closeSidebar} />
+        <div className="fixed inset-0 z-30 lg:hidden" onClick={closeSidebar} />
       )}
 
       {/* Sidebar — light, refined */}

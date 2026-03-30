@@ -44,17 +44,16 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'md'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop with blur */}
+      {/* Backdrop — transparent, click to close */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
-        style={{ animationDuration: '0.2s' }}
+        className="absolute inset-0"
         onClick={onClose}
         aria-hidden="true"
       />
       {/* Panel */}
       <div
         className={clsx(
-          'relative z-10 w-full rounded-2xl bg-white shadow-elevated',
+          'relative z-10 w-full rounded-2xl bg-white shadow-2xl ring-1 ring-gray-200/50',
           'mx-3 sm:mx-4 max-h-[90vh] flex flex-col',
           'animate-fade-in-scale',
           sizeClasses[size],

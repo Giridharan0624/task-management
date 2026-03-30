@@ -75,6 +75,10 @@ export interface MyTask {
   status: import('@/types/task').TaskStatus
   priority: import('@/types/task').TaskPriority
   assignedTo: string[]
+  assignedBy?: string
+  assignedByName?: string
+  createdBy: string
+  createdByName?: string
   deadline: string
   createdAt: string
   updatedAt: string

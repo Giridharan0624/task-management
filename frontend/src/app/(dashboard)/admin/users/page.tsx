@@ -270,6 +270,7 @@ export default function UsersPage() {
               <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">User</th>
               <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Department</th>
               <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Role</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Created By</th>
               <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Joined</th>
               <th className="px-6 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-widest">Actions</th>
             </tr>
@@ -332,6 +333,9 @@ export default function UsersPage() {
                   </Badge>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {u.createdBy ? (userMap.get(u.createdBy) || '—') : '—'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -360,7 +364,7 @@ export default function UsersPage() {
             ))}
             {displayedUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
 
                   {isOwner && activeTab === 'ADMIN'
                     ? 'No admins found. Click "Add User" to create one.'
@@ -478,23 +482,38 @@ export default function UsersPage() {
       <Modal
         isOpen={selectedUser !== null}
         onClose={() => setSelectedUser(null)}
-        title={`Change role: ${selectedUser?.name || selectedUser?.email || ''}`}
+        title={`Change Role`}
+        size="sm"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Current role: <Badge className={ROLE_COLORS[selectedUser?.systemRole ?? 'MEMBER']}>{selectedUser?.systemRole}</Badge>
-          </p>
-          <div className="flex gap-2">
-            {['ADMIN', 'MEMBER'].map((role) => (
-              <Button
-                key={role}
-                variant={selectedUser?.systemRole === role ? 'primary' : 'secondary'}
-                onClick={() => selectedUser && handleRoleChange(selectedUser.userId, role)}
-                disabled={updateRole.isPending}
-              >
-                {role}
-              </Button>
-            ))}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <Avatar url={selectedUser?.avatarUrl} name={selectedUser?.name || selectedUser?.email || ''} size="md" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">{selectedUser?.name || selectedUser?.email}</p>
+              <p className="text-xs text-gray-400">Current: <Badge className={ROLE_COLORS[selectedUser?.systemRole ?? 'MEMBER']}>{selectedUser?.systemRole}</Badge></p>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Select new role</p>
+            <div className="grid grid-cols-2 gap-2">
+              {['ADMIN', 'MEMBER'].map((role) => {
+                const isActive = selectedUser?.systemRole === role
+                return (
+                  <button
+                    key={role}
+                    onClick={() => selectedUser && handleRoleChange(selectedUser.userId, role)}
+                    disabled={updateRole.isPending}
+                    className={`py-3 rounded-xl text-sm font-semibold border-2 transition-all duration-200 ${
+                      isActive
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {role}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </Modal>

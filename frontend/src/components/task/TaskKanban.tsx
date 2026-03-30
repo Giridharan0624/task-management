@@ -30,7 +30,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
   for (const m of members) {
     nameMap.set(m.userId, m.user?.name || m.user?.email || m.userId)
   }
-  const resolveName = (userId: string) => nameMap.get(userId) || userId
+  const resolveName = (userId: string) => nameMap.get(userId) || 'Unknown'
 
   const tasksByStatus = (status: TaskStatus) =>
     tasks.filter((t) => t.status === status)

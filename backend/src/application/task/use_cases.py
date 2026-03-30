@@ -9,6 +9,7 @@ from domain.project.value_objects import ProjectRole
 from domain.task.entities import Task
 from domain.task.repository import ITaskRepository
 from domain.task.value_objects import TaskPriority, TaskStatus
+from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 _TASK_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD)
@@ -302,9 +303,21 @@ class AssignTaskUseCase:
 
 class GetMyAssignedTasksUseCase:
     """Get all tasks assigned to the caller across all projects."""
-    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository, user_repo: IUserRepository | None = None):
         self._task_repo = task_repo
         self._project_repo = project_repo
+        self._user_repo = user_repo
+
+    def _build_name_map(self, user_ids: set[str]) -> dict[str, str]:
+        """Resolve user IDs to names."""
+        if not self._user_repo or not user_ids:
+            return {}
+        name_map: dict[str, str] = {}
+        for uid in user_ids:
+            user = self._user_repo.find_by_id(uid)
+            if user:
+                name_map[uid] = user.name or user.email
+        return name_map
 
     def execute(self, caller_user_id: str, caller_system_role: str = None) -> list[dict]:
         my_tasks = []
@@ -341,5 +354,19 @@ class GetMyAssignedTasksUseCase:
                         task_dict = task.to_dict()
                         task_dict["project_name"] = project.name
                         my_tasks.append(task_dict)
+
+        # Resolve assigned_by and created_by user IDs to names
+        user_ids_to_resolve: set[str] = set()
+        for t in my_tasks:
+            if t.get("assigned_by"):
+                user_ids_to_resolve.add(t["assigned_by"])
+            if t.get("created_by"):
+                user_ids_to_resolve.add(t["created_by"])
+        name_map = self._build_name_map(user_ids_to_resolve)
+        for t in my_tasks:
+            if t.get("assigned_by") and t["assigned_by"] in name_map:
+                t["assigned_by_name"] = name_map[t["assigned_by"]]
+            if t.get("created_by") and t["created_by"] in name_map:
+                t["created_by_name"] = name_map[t["created_by"]]
 
         return my_tasks

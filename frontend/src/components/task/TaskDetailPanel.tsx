@@ -52,7 +52,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   }
   if (user) nameMap.set(user.userId, user.name || user.email)
 
-  const resolveName = (userId: string) => nameMap.get(userId) || userId
+  const resolveName = (userId: string) => nameMap.get(userId) || 'Unknown'
 
   const avatarMap = new Map<string, string | undefined>()
   for (const m of members) {
@@ -173,7 +173,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 z-40"
         style={{ animationDuration: '0.2s' }}
         onClick={onClose}
         aria-hidden="true"

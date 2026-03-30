@@ -51,7 +51,7 @@ export default function TasksPage() {
   const nameMap = new Map<string, string>()
   for (const u of allUsers ?? []) nameMap.set(u.userId, u.name || u.email)
   if (user) nameMap.set(user.userId, user.name || user.email)
-  const resolveName = (id: string) => nameMap.get(id) || id
+  const resolveName = (id: string) => nameMap.get(id) || 'Unknown'
 
   if (isLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
@@ -176,9 +176,10 @@ export default function TasksPage() {
                 {!isMember && (
                   <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Assigned To</th>
                 )}
+                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Assigned By</th>
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Deadline</th>
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">Priority</th>
+                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Priority</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -214,6 +215,9 @@ export default function TasksPage() {
                         </div>
                       </td>
                     )}
+                    <td className="px-5 py-3.5 whitespace-nowrap text-sm text-gray-500">
+                      {task.assignedByName || (task.assignedBy ? resolveName(task.assignedBy) : '—')}
+                    </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
                         {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

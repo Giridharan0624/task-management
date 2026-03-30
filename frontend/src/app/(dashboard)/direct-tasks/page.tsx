@@ -36,7 +36,7 @@ export default function DirectTasksPage() {
   const nameMap = new Map<string, string>()
   for (const u of allUsers ?? []) nameMap.set(u.userId, u.name || u.email)
   if (user) nameMap.set(user.userId, user.name || user.email)
-  const resolveName = (id: string) => nameMap.get(id) || id
+  const resolveName = (id: string) => nameMap.get(id) || 'Unknown'
 
   const allTasks = tasks ?? []
 
