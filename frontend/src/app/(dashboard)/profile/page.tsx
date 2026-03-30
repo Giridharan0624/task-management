@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
 import { updateProfile, getProfile } from '@/lib/api/userApi'
 import { AvatarUpload } from '@/components/ui/AvatarUpload'
 import type { User } from '@/types/user'
@@ -241,6 +242,132 @@ export default function ProfilePage() {
         )}
 
       </div>
+
+      {/* Security — Change Password */}
+      <ChangePasswordSection />
     </div>
+  )
+}
+
+function ChangePasswordSection() {
+  const { changePassword } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async () => {
+    setError('')
+    setSuccess(false)
+
+    if (!currentPw || !newPw || !confirmPw) {
+      setError('All fields are required')
+      return
+    }
+    if (newPw.length < 8) {
+      setError('New password must be at least 8 characters')
+      return
+    }
+    if (newPw !== confirmPw) {
+      setError('New passwords do not match')
+      return
+    }
+    if (currentPw === newPw) {
+      setError('New password must be different from current password')
+      return
+    }
+
+    setSaving(true)
+    try {
+      await changePassword(currentPw, newPw)
+      setSuccess(true)
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+      setOpen(false)
+      setTimeout(() => setSuccess(false), 4000)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to change password'
+      if (msg.includes('Incorrect')) {
+        setError('Current password is incorrect')
+      } else if (msg.includes('policy') || msg.includes('Password')) {
+        setError('Password must have 8+ characters with uppercase, lowercase, and a number')
+      } else {
+        setError(msg)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleClose = () => {
+    setOpen(false)
+    setCurrentPw('')
+    setNewPw('')
+    setConfirmPw('')
+    setError('')
+  }
+
+  return (
+    <>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Security</h3>
+        </div>
+        <div className="px-6 py-5">
+          {success && (
+            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 mb-4 animate-fade-in">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Password changed successfully.
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Password</p>
+              <p className="text-xs text-gray-400 mt-0.5">Manage your account password</p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+              Change Password
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <Modal isOpen={open} onClose={handleClose} title="Change Password" size="sm">
+        <div className="space-y-4">
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">
+              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Current Password</label>
+            <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Enter current password" className={inputClass} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">New Password</label>
+            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" className={inputClass} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Confirm New Password</label>
+            <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Re-enter new password" className={inputClass} />
+          </div>
+          <p className="text-[11px] text-gray-400">
+            Must be at least 8 characters with uppercase, lowercase, and a number.
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
+            <Button size="sm" onClick={handleSubmit} loading={saving}>Change Password</Button>
+          </div>
+        </div>
+      </Modal>
+    </>
   )
 }

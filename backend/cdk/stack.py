@@ -276,6 +276,14 @@ class TaskManagementStack(Stack):
         add_api_lambda("ApproveDayOff", "handlers.dayoff.approve.handler", "PUT", dayoff_approve)
         add_api_lambda("RejectDayOff", "handlers.dayoff.reject.handler", "PUT", dayoff_reject)
 
+        # ─── Task Update handlers ──────────────────────────────────────────
+        task_updates = api.root.add_resource("task-updates")
+        task_updates_me = task_updates.add_resource("me")
+
+        add_api_lambda("SubmitTaskUpdate", "handlers.taskupdate.submit_update.handler", "POST", task_updates)
+        add_api_lambda("ListTaskUpdates", "handlers.taskupdate.list_updates.handler", "GET", task_updates)
+        add_api_lambda("MyTaskUpdate", "handlers.taskupdate.my_update.handler", "GET", task_updates_me)
+
         # ─── Outputs ─────────────────────────────────────────────────────────
         CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")
         CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id, description="Cognito User Pool ID")

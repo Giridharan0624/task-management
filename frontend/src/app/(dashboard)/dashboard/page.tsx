@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { AttendanceButton } from '@/components/attendance/AttendanceButton'
 import { AttendanceTable } from '@/components/attendance/AttendanceTable'
+import { TaskUpdateCard } from '@/components/taskupdate/TaskUpdateCard'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800 ring-1 ring-inset ring-purple-200',
@@ -220,6 +221,11 @@ function AdminDashboard() {
 
       <AttendanceButton />
 
+      <div className="space-y-3">
+        <SectionHeader title="Task Update" />
+        <TaskUpdateCard />
+      </div>
+
       <div className="space-y-4">
         <SectionHeader title="Team Attendance" />
         <AttendanceTable />
@@ -272,6 +278,11 @@ function MemberDashboard() {
       </div>
 
       <AttendanceButton />
+
+      <div className="space-y-3">
+        <SectionHeader title="Task Update" />
+        <TaskUpdateCard />
+      </div>
 
       <div className="grid grid-cols-1 gap-3">
         <ActionCard href="/my-tasks" icon={Icons.viewTasks} title="View All Tasks" subtitle="See all your assigned tasks" />

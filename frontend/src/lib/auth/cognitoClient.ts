@@ -49,6 +49,31 @@ export function signIn(identifier: string, password: string): Promise<AuthTokens
   })
 }
 
+export function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        reject(new Error('Session expired. Please sign in again.'))
+        return
+      }
+
+      currentUser.changePassword(oldPassword, newPassword, (err, result) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    })
+  })
+}
+
 export function signOut(): void {
   const currentUser = userPool.getCurrentUser()
   if (currentUser) {

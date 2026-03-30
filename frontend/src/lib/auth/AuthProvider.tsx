@@ -5,6 +5,7 @@ import type { User } from '@/types/user'
 import {
   signIn as cognitoSignIn,
   signOut as cognitoSignOut,
+  changePassword as cognitoChangePassword,
   getCurrentToken,
   getCurrentUser,
 } from './cognitoClient'
@@ -16,6 +17,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => void
   updateUser: (updates: Partial<User>) => void
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -90,8 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser((prev) => prev ? { ...prev, ...updates } : null)
   }, [])
 
+  const changePassword = useCallback(async (oldPassword: string, newPassword: string) => {
+    await cognitoChangePassword(oldPassword, newPassword)
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, updateUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, updateUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   )
