@@ -157,8 +157,6 @@ function OwnerDashboard() {
         <StatCard icon={Icons.tasks} label="All Tasks" value={(myTasks ?? []).length} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
       </div>
 
-      <AttendanceButton />
-
       <div className="space-y-4">
         <SectionHeader title="Team Attendance" />
         <AttendanceTable />

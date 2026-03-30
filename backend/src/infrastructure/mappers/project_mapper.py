@@ -38,12 +38,13 @@ class ProjectMapper:
             project_id=item["project_id"],
             user_id=item["user_id"],
             project_role=ProjectRole(item["project_role"]),
+            added_by=item.get("added_by"),
             joined_at=item["joined_at"],
         )
 
     @staticmethod
     def member_to_dynamo(member: ProjectMember) -> dict:
-        return {
+        item = {
             "PK": f"PROJECT#{member.project_id}",
             "SK": f"MEMBER#{member.user_id}",
             "GSI1PK": f"USER#{member.user_id}",
@@ -53,3 +54,6 @@ class ProjectMapper:
             "project_role": member.project_role.value,
             "joined_at": member.joined_at,
         }
+        if member.added_by:
+            item["added_by"] = member.added_by
+        return item

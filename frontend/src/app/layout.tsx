@@ -10,7 +10,10 @@ const outfit = Outfit({
 })
 
 export const metadata: Metadata = {
-  title: 'TaskFlow',
+  title: {
+    default: 'TaskFlow',
+    template: 'TaskFlow | %s',
+  },
   description: 'Serverless task management system',
 }
 

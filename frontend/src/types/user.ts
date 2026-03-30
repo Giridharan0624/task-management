@@ -23,6 +23,8 @@ export interface ProjectMember {
   projectId: string
   userId: string
   projectRole: ProjectRole
+  addedBy?: string
+  addedByName?: string
   joinedAt: string
   user?: User
 }

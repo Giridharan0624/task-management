@@ -10,6 +10,7 @@ import { Logo } from '@/components/ui/Logo'
 import { getProfile } from '@/lib/api/userApi'
 import { usePendingDayOffs } from '@/lib/hooks/useDayOffs'
 import { useMyTasks } from '@/lib/hooks/useUsers'
+import { useTimerTitle } from '@/lib/hooks/useTimerTitle'
 
 const ownerNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -89,6 +90,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const { data: pendingDayOffs } = usePendingDayOffs()
   const { data: myTasks } = useMyTasks()
+  useTimerTitle()
 
   useEffect(() => {
     if (user) {

@@ -104,6 +104,9 @@ class GetProjectUseCase:
             user = self._user_repo.find_by_id(m.user_id)
             if user:
                 member_dict["user"] = user.to_dict()
+            if m.added_by:
+                adder = self._user_repo.find_by_id(m.added_by)
+                member_dict["added_by_name"] = adder.name or adder.email if adder else None
             enriched_members.append(member_dict)
         return {**project.to_dict(), "members": enriched_members}
 
@@ -224,6 +227,7 @@ class AddProjectMemberUseCase:
             project_id=project_id,
             user_id=target_user_id,
             project_role=project_role,
+            added_by=caller_user_id,
         )
         self._project_repo.save_member(member)
         return member.to_dict()

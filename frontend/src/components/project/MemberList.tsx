@@ -86,7 +86,7 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
       {members.length === 0 ? (
         <p className="text-center text-gray-500 py-8">No members yet. Add members to get started.</p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
+        <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-card">
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/80">
               <tr>
@@ -95,6 +95,9 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
                 </th>
                 <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-gray-500">
                   Role
+                </th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  Added By
                 </th>
                 <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-gray-500">
                   Joined
@@ -128,6 +131,9 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
                     >
                       {member.projectRole}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    {member.addedByName || '—'}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {new Date(member.joinedAt).toLocaleDateString()}

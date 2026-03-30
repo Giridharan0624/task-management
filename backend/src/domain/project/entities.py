@@ -53,6 +53,7 @@ class ProjectMember(BaseModel):
     project_id: str
     user_id: str
     project_role: ProjectRole
+    added_by: Optional[str] = None
     joined_at: str
 
     @classmethod
@@ -61,19 +62,24 @@ class ProjectMember(BaseModel):
         project_id: str,
         user_id: str,
         project_role: ProjectRole = ProjectRole.MEMBER,
+        added_by: Optional[str] = None,
     ) -> "ProjectMember":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
             project_id=project_id,
             user_id=user_id,
             project_role=project_role,
+            added_by=added_by,
             joined_at=now,
         )
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "project_id": self.project_id,
             "user_id": self.user_id,
             "project_role": self.project_role.value,
             "joined_at": self.joined_at,
         }
+        if self.added_by:
+            d["added_by"] = self.added_by
+        return d
