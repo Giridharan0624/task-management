@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { useUpdateTask, useDeleteTask, useAssignTask } from '@/lib/hooks/useTasks'
 import { useComments, useCreateComment } from '@/lib/hooks/useComments'
 import { useProject } from '@/lib/hooks/useProjects'
+import { useAdmins } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
@@ -12,6 +14,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { Select } from '@/components/ui/Select'
+import { UserSelect } from '@/components/ui/UserSelect'
 
 interface TaskDetailPanelProps {
   task: Task | null
@@ -44,6 +48,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
 
   const { data: comments } = useComments(projectId, task?.taskId ?? '')
   const createComment = useCreateComment(projectId, task?.taskId ?? '')
+  const { data: admins } = useAdmins()
 
   const members = project?.members ?? []
   const nameMap = new Map<string, string>()
@@ -51,6 +56,9 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     nameMap.set(m.userId, m.user?.name || m.user?.email || m.userId)
   }
   if (user) nameMap.set(user.userId, user.name || user.email)
+  for (const a of admins ?? []) {
+    if (!nameMap.has(a.userId)) nameMap.set(a.userId, a.name || a.email)
+  }
 
   const resolveName = (userId: string) => nameMap.get(userId) || 'Unknown'
 
@@ -64,6 +72,8 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<EditFormValues>()
 
@@ -141,10 +151,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   const handleStatusChange = async (newStatus: TaskStatus) => {
     setStatusUpdating(true)
     try {
-      await updateTask.mutateAsync({
-        taskId: task.taskId,
-        data: { status: newStatus },
-      })
+      await updateTask.mutateAsync({ taskId: task.taskId, data: { status: newStatus } })
     } finally {
       setStatusUpdating(false)
     }
@@ -153,298 +160,227 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   const isAssigned = task.assignedTo?.includes(user?.userId ?? '')
   const isOwnerOrAdmin = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
   const canComment = isAssigned || isOwnerOrAdmin
-
   const assignedSet = new Set(task.assignedTo ?? [])
   const availableMembers = members.filter((m) => !assignedSet.has(m.userId))
 
-  const statusLabel: Record<TaskStatus, string> = {
-    TODO: 'To Do',
-    IN_PROGRESS: 'In Progress',
-    DONE: 'Done',
-  }
+  const isOverdue = task.deadline && task.status !== 'DONE' && new Date(task.deadline) < new Date()
 
-  const priorityLabel: Record<TaskPriority, string> = {
-    LOW: 'Low',
-    MEDIUM: 'Medium',
-    HIGH: 'High',
-  }
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40"
-        style={{ animationDuration: '0.2s' }}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+  const panel = (
+    <div className="fixed inset-0 z-[9998] overflow-y-auto" onClick={onClose}>
+      <div className="min-h-full flex items-center justify-center py-8 px-4">
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full sm:max-w-xl bg-[var(--color-bg)] shadow-2xl overflow-y-auto flex flex-col animate-slide-in-right">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-[0_25px_60px_-12px_rgba(0,0,0,0.15),0_10px_30px_-8px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.04)] flex flex-col max-h-[90vh] animate-fade-in-scale"
+      >
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="rounded-xl p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200"
-              aria-label="Close panel"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Task Details</h2>
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <h2 className="text-base font-bold text-gray-900">Task Details</h2>
+          <div className="flex items-center gap-1.5">
             {permissions.canUpdateTask && !isEditing && (
-              <Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>
-                Edit
-              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>Edit</Button>
             )}
             {permissions.canDeleteTask && (
-              <Button size="sm" variant="danger" onClick={handleDelete} loading={deleteTask.isPending}>
-                Delete
-              </Button>
+              <Button size="sm" variant="danger" onClick={handleDelete} loading={deleteTask.isPending}>Delete</Button>
             )}
+            <button onClick={onClose} className="rounded-xl p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 px-6 py-5">
+        {/* Content */}
+        <div className="flex-1 px-6 py-5 overflow-y-auto min-h-0">
           {isEditing ? (
             <form onSubmit={handleSubmit(handleSave)} className="flex flex-col gap-4">
-              <Input
-                label="Title"
-                error={errors.title?.message}
-                {...register('title', { required: 'Title is required' })}
-              />
+              <Input label="Title" error={errors.title?.message} {...register('title', { required: 'Title is required' })} />
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-gray-700">Description</label>
-                <textarea
-                  rows={4}
-                  className="block w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 resize-none transition-all"
-                  {...register('description')}
-                />
+                <label className="text-xs font-semibold text-gray-500">Description</label>
+                <textarea rows={3} className="block w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 resize-none transition-all" {...register('description')} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-gray-700">Status</label>
-                  <select
-                    className="block w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all"
-                    {...register('status')}
-                  >
-                    <option value="TODO">To Do</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="DONE">Done</option>
-                  </select>
+                  <label className="text-xs font-semibold text-gray-500">Status</label>
+                  <Select
+                    value={watch('status')}
+                    onChange={(v) => setValue('status', v as TaskStatus)}
+                    options={[{ value: 'TODO', label: 'To Do' }, { value: 'IN_PROGRESS', label: 'In Progress' }, { value: 'DONE', label: 'Done' }]}
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-gray-700">Priority</label>
-                  <select
-                    className="block w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all"
-                    {...register('priority')}
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                  </select>
+                  <label className="text-xs font-semibold text-gray-500">Priority</label>
+                  <Select
+                    value={watch('priority')}
+                    onChange={(v) => setValue('priority', v as TaskPriority)}
+                    options={[{ value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'HIGH', label: 'High' }]}
+                  />
                 </div>
               </div>
-              <Input
-                label="Deadline"
-                type="datetime-local"
-                {...register('deadline')}
-              />
+              <Input label="Deadline" type="datetime-local" {...register('deadline')} />
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Estimated Time</label>
+                <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Estimated Time</label>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
-                    <input type="number" min="0" max="999" placeholder="0" {...register('estHours')}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all" />
+                    <input type="number" min="0" max="999" placeholder="0" {...register('estHours')} className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 pr-12 text-sm focus:ring-2 focus:ring-indigo-500/40 transition-all" />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">hrs</span>
                   </div>
                   <div className="relative">
-                    <input type="number" min="0" max="59" placeholder="0" {...register('estMinutes')}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all" />
+                    <input type="number" min="0" max="59" placeholder="0" {...register('estMinutes')} className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 pr-12 text-sm focus:ring-2 focus:ring-indigo-500/40 transition-all" />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
                   </div>
                 </div>
               </div>
               {updateTask.error && (
-                <p className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
                   {updateTask.error instanceof Error ? updateTask.error.message : 'Update failed'}
                 </p>
               )}
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="secondary" type="button" onClick={() => setIsEditing(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" loading={isSubmitting}>
-                  Save Changes
-                </Button>
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="secondary" type="button" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button type="submit" loading={isSubmitting}>Save</Button>
               </div>
             </form>
           ) : (
-            <div className="flex flex-col gap-4">
-              {/* Title + Status Card */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">{task.title}</h3>
-                <div className="flex items-center gap-2 mb-3">
+            <div className="space-y-7 flex flex-col min-h-full">
+
+              {/* Title + badges */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{task.title}</h3>
+                <div className="flex items-center gap-2 flex-wrap">
                   {permissions.canUpdateStatus && isAssigned && !permissions.canUpdateTask ? (
-                    <select
+                    <Select
                       value={task.status}
-                      onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
+                      onChange={(v) => handleStatusChange(v as TaskStatus)}
                       disabled={statusUpdating}
-                      className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
-                    >
-                      <option value="TODO">To Do</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="DONE">Done</option>
-                    </select>
+                      options={[{ value: 'TODO', label: 'To Do' }, { value: 'IN_PROGRESS', label: 'In Progress' }, { value: 'DONE', label: 'Done' }]}
+                      className="w-36"
+                    />
                   ) : (
-                    <Badge variant={task.status}>{statusLabel[task.status]}</Badge>
+                    <Badge variant={task.status}>{task.status === 'IN_PROGRESS' ? 'In Progress' : task.status === 'TODO' ? 'To Do' : 'Done'}</Badge>
                   )}
-                  <Badge variant={task.priority}>{priorityLabel[task.priority]}</Badge>
+                  <Badge variant={task.priority}>{task.priority}</Badge>
+                  {isOverdue && (
+                    <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md ring-1 ring-inset ring-red-200">OVERDUE</span>
+                  )}
                 </div>
                 {task.description && (
-                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{task.description}</p>
+                  <p className="text-sm text-gray-600 leading-relaxed mt-3 whitespace-pre-wrap">{task.description}</p>
                 )}
               </div>
 
-              {/* Assignees Card */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Assigned To</p>
+              {/* Assignees */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Assigned To</p>
                 {task.assignedTo && task.assignedTo.length > 0 ? (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5">
                     {task.assignedTo.map((userId) => (
-                      <div key={userId} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                      <div key={userId} className="flex items-center justify-between py-1.5">
                         <div className="flex items-center gap-2.5">
-                          <Avatar url={resolveAvatar(userId)} name={resolveName(userId)} size="md" />
+                          <Avatar url={resolveAvatar(userId)} name={resolveName(userId)} size="sm" />
                           <span className="text-sm font-medium text-gray-900">{resolveName(userId)}</span>
                         </div>
                         {permissions.canAssignTask && (
-                          <button
-                            onClick={() => handleUnassign(userId)}
-                            className="rounded-lg p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200"
-                            title="Remove"
-                          >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                          <button onClick={() => handleUnassign(userId)} className="text-gray-300 hover:text-red-500 transition-colors" title="Remove">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 italic">No one assigned yet</p>
+                  <p className="text-sm text-gray-300 italic">No one assigned</p>
+                )}
+                {permissions.canAssignTask && (
+                  showAssignInput ? (
+                    <div className="mt-2 space-y-2">
+                      {availableMembers.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic">All members assigned.</p>
+                      ) : (
+                        <UserSelect
+                          users={availableMembers.map((m) => ({ userId: m.userId, name: m.user?.name || m.user?.email || m.userId, email: m.user?.email || '', avatarUrl: m.user?.avatarUrl, extra: m.projectRole }))}
+                          value={selectedAssignee}
+                          onChange={setSelectedAssignee}
+                          placeholder="Search member..."
+                        />
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleAssign} loading={assignTask.isPending} disabled={!selectedAssignee}>Add</Button>
+                        <button onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowAssignInput(true)} className="flex items-center gap-1 mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      Add assignee
+                    </button>
+                  )
                 )}
               </div>
 
-              {/* Details Card */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Details</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Deadline</p>
-                    <p className="text-sm font-semibold text-gray-900">
+              {/* Meta grid */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Details</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <p className="text-[10px] text-gray-400 mb-0.5">Deadline</p>
+                    <p className={`text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
                       {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(task.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      <span className="text-gray-400 font-normal ml-1">
+                        {new Date(task.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </p>
                   </div>
                   {task.estimatedHours != null && (
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Estimated</p>
-                      <p className="text-sm font-semibold text-gray-900">{Math.floor(task.estimatedHours!)}h {Math.round((task.estimatedHours! % 1) * 60)}m</p>
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-0.5">Estimated</p>
+                      <p className="text-sm font-medium text-gray-900">{Math.floor(task.estimatedHours)}h {Math.round((task.estimatedHours % 1) * 60)}m</p>
                     </div>
                   )}
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Created By</p>
-                    <p className="text-sm font-semibold text-gray-900">{resolveName(task.createdBy)}</p>
+                  <div>
+                    <p className="text-[10px] text-gray-400 mb-0.5">Created by</p>
+                    <p className="text-sm font-medium text-gray-900">{resolveName(task.createdBy)}</p>
                   </div>
                   {task.assignedBy && (
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Assigned By</p>
-                      <p className="text-sm font-semibold text-gray-900">{resolveName(task.assignedBy)}</p>
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-0.5">Assigned by</p>
+                      <p className="text-sm font-medium text-gray-900">{resolveName(task.assignedBy)}</p>
                     </div>
                   )}
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Created</p>
-                    <p className="text-sm font-semibold text-gray-900">
+                  <div>
+                    <p className="text-[10px] text-gray-400 mb-0.5">Created</p>
+                    <p className="text-sm font-medium text-gray-900">
                       {new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Assign section */}
-              {permissions.canAssignTask && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card">
-                  {showAssignInput ? (
-                    <div className="flex flex-col gap-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Add Assignee</p>
-                      {availableMembers.length === 0 ? (
-                        <p className="text-sm text-gray-400 italic">All members are already assigned.</p>
-                      ) : (
-                        <select
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
-                          value={selectedAssignee}
-                          onChange={(e) => setSelectedAssignee(e.target.value)}
-                        >
-                          <option value="">-- Select a member --</option>
-                          {availableMembers.map((m) => (
-                            <option key={m.userId} value={m.userId}>
-                              {m.user?.name || m.user?.email || m.userId} ({m.projectRole})
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={handleAssign} loading={assignTask.isPending} disabled={!selectedAssignee}>
-                          Add
-                        </Button>
-                        <Button size="sm" variant="secondary" onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowAssignInput(true)}
-                      className="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all duration-200"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      Add Assignee
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Progress Comments */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Progress Updates</p>
+              {/* Comments — grows to fill remaining space */}
+              <div className="pt-2 border-t border-gray-100 flex-1 flex flex-col">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                  Updates {comments && comments.length > 0 && <span className="text-indigo-500">({comments.length})</span>}
+                </p>
 
                 {comments && comments.length > 0 ? (
-                  <div className="flex flex-col gap-3 mb-4">
+                  <div className="space-y-2 mb-3 flex-1">
                     {comments.map((comment) => (
-                      <div key={comment.commentId} className="rounded-xl bg-gray-50 p-3.5">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <Avatar url={resolveAvatar(comment.authorId)} name={resolveName(comment.authorId)} size="sm" />
+                      <div key={comment.commentId} className="flex gap-2.5">
+                        <Avatar url={resolveAvatar(comment.authorId)} name={resolveName(comment.authorId)} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-xs font-bold text-gray-900">{resolveName(comment.authorId)}</span>
+                            <span className="text-[10px] text-gray-400">
+                              {new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           </div>
-                          <span className="text-[10px] text-gray-400">
-                            {new Date(comment.createdAt).toLocaleDateString('en-US', {
-                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                            })}
-                          </span>
+                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{comment.message}</p>
                         </div>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.message}</p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 mb-4">No progress updates yet.</p>
+                  <p className="text-sm text-gray-300 mb-3 flex-1">No updates yet.</p>
                 )}
 
                 {canComment && (
@@ -454,16 +390,9 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
                       placeholder="Write an update..."
-                      className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:bg-white resize-none transition-all"
+                      className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/40 focus:bg-white resize-none transition-all"
                     />
-                    <Button
-                      size="sm"
-                      onClick={handlePostComment}
-                      loading={createComment.isPending}
-                      disabled={!commentText.trim()}
-                    >
-                      Post
-                    </Button>
+                    <Button size="sm" onClick={handlePostComment} loading={createComment.isPending} disabled={!commentText.trim()}>Post</Button>
                   </div>
                 )}
               </div>
@@ -471,6 +400,9 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
           )}
         </div>
       </div>
-    </>
+      </div>
+    </div>
   )
+
+  return createPortal(panel, document.body)
 }

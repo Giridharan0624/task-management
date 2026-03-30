@@ -11,9 +11,13 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { Select } from '@/components/ui/Select'
+import { UserMultiSelect } from '@/components/ui/UserSelect'
+import { TaskDetailPanel } from '@/components/task/TaskDetailPanel'
 import Link from 'next/link'
 import type { MyTask } from '@/lib/api/userApi'
-import type { TaskPriority } from '@/types/task'
+import type { Task, TaskPriority } from '@/types/task'
+import type { Permissions } from '@/lib/hooks/usePermission'
 
 type FilterStatus = 'ALL' | 'TODO' | 'IN_PROGRESS' | 'DONE'
 type TabType = 'my' | 'all'
@@ -42,6 +46,7 @@ export default function TasksPage() {
   const [activeTab, setActiveTab] = useState<TabType>('my')
   const [showAssign, setShowAssign] = useState(false)
   const [search, setSearch] = useState('')
+  const [selectedDirectTask, setSelectedDirectTask] = useState<Task | null>(null)
 
   const isTopTier = TOP_TIER.includes(user?.systemRole ?? '')
   const isAdmin = user?.systemRole === 'ADMIN'
@@ -188,14 +193,26 @@ export default function TasksPage() {
                 const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'DONE'
                 const isDirect = task.projectId === 'DIRECT'
                 return (
-                  <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => {
+                    if (isDirect) {
+                      setSelectedDirectTask({
+                        taskId: task.taskId, projectId: 'DIRECT', title: task.title,
+                        description: task.description, status: task.status, priority: task.priority,
+                        assignedTo: task.assignedTo, assignedBy: task.assignedBy, createdBy: task.createdBy,
+                        deadline: task.deadline, createdAt: task.createdAt, updatedAt: task.updatedAt,
+                      } as Task)
+                    }
+                  }}>
                     <td className="px-5 py-3.5">
-                      <Link
-                        href={isDirect ? '/my-tasks' : `/projects/${task.projectId}`}
-                        className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors"
-                      >
-                        {task.title}
-                      </Link>
+                      {isDirect ? (
+                        <span className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                          {task.title}
+                        </span>
+                      ) : (
+                        <Link href={`/projects/${task.projectId}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                          {task.title}
+                        </Link>
+                      )}
                       {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
                     </td>
                     <td className="px-5 py-3.5">
@@ -243,7 +260,18 @@ export default function TasksPage() {
               const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'DONE'
               const isDirect = task.projectId === 'DIRECT'
               return (
-                <Link key={task.taskId} href={isDirect ? '/my-tasks' : `/projects/${task.projectId}`} className="block px-4 py-3 hover:bg-gray-50">
+                <div key={task.taskId} onClick={() => {
+                  if (isDirect) {
+                    setSelectedDirectTask({
+                      taskId: task.taskId, projectId: 'DIRECT', title: task.title,
+                      description: task.description, status: task.status, priority: task.priority,
+                      assignedTo: task.assignedTo, assignedBy: task.assignedBy, createdBy: task.createdBy,
+                      deadline: task.deadline, createdAt: task.createdAt, updatedAt: task.updatedAt,
+                    } as Task)
+                  } else {
+                    window.location.href = `/projects/${task.projectId}`
+                  }
+                }} className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
                     <Badge className={STATUS_COLORS[task.status]}>{task.status.replace('_', ' ')}</Badge>
@@ -257,11 +285,29 @@ export default function TasksPage() {
                       {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
-                </Link>
+                </div>
               )
             })}
           </div>
         </div>
+      )}
+
+      {/* Direct Task Detail Panel */}
+      {selectedDirectTask && (
+        <TaskDetailPanel
+          task={selectedDirectTask}
+          projectId="DIRECT"
+          permissions={{
+            canCreateTask: isTopTier || isAdmin,
+            canUpdateTask: isTopTier || isAdmin,
+            canUpdateStatus: true,
+            canDeleteTask: isTopTier || isAdmin,
+            canAssignTask: isTopTier || isAdmin,
+            canManageMembers: false,
+            canDeleteProject: false,
+          }}
+          onClose={() => setSelectedDirectTask(null)}
+        />
       )}
 
       {/* Assign Task Modal */}
@@ -315,12 +361,11 @@ function AssignModal({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Priority</label>
-            <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </select>
+            <Select
+              value={priority}
+              onChange={(v) => setPriority(v as TaskPriority)}
+              options={[{ value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'HIGH', label: 'High' }]}
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
@@ -329,22 +374,12 @@ function AssignModal({
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-800 mb-1">Assign To ({selected.length})</label>
-          <div className="max-h-36 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-50">
-            {users.map((u) => {
-              const isSel = selected.includes(u.userId)
-              return (
-                <label key={u.userId} className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all ${isSel ? 'bg-indigo-50/70' : 'hover:bg-gray-50'}`}>
-                  <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 transition-all ${isSel ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
-                    {isSel && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                  </div>
-                  <input type="checkbox" checked={isSel} onChange={() => toggle(u.userId)} className="sr-only" />
-                  <Avatar name={u.name} size="sm" />
-                  <span className="text-sm text-gray-900">{u.name}</span>
-                  <span className="text-xs text-gray-400 ml-auto">{u.email}</span>
-                </label>
-              )
-            })}
-          </div>
+          <UserMultiSelect
+            users={users.map((u) => ({ userId: u.userId, name: u.name, email: u.email }))}
+            selected={selected}
+            onChange={setSelected}
+            placeholder="Search users..."
+          />
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>

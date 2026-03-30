@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { UserSelect } from '@/components/ui/UserSelect'
 
 interface CreateProjectModalProps {
   isOpen: boolean
@@ -86,18 +87,12 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         {/* Team Lead Selection */}
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">Team Lead</label>
-          <select
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <UserSelect
+            users={availableUsers.map((u) => ({ userId: u.userId, name: u.name || u.email, email: u.email, avatarUrl: u.avatarUrl, extra: u.systemRole }))}
             value={teamLeadId}
-            onChange={(e) => setTeamLeadId(e.target.value)}
-          >
-            <option value="">-- Select a Team Lead --</option>
-            {availableUsers.map((u) => (
-              <option key={u.userId} value={u.userId}>
-                {u.name || u.email} ({u.systemRole})
-              </option>
-            ))}
-          </select>
+            onChange={setTeamLeadId}
+            placeholder="Select a Team Lead"
+          />
         </div>
 
         {/* Team Members Selection */}

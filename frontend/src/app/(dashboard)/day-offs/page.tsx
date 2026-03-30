@@ -15,6 +15,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 /* ─── Status Badge ─── */
 function StatusBadge({ status }: { status: DayOffStatus | ApprovalStatus }) {
@@ -137,7 +138,7 @@ function CreateModal({
   const inputClass = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none transition-all hover:border-gray-300"
 
   return (
-    <Modal isOpen onClose={onClose} title="Request Day Off">
+    <Modal isOpen onClose={onClose} title="Request Day Off" size="lg">
       <p className="text-xs text-gray-400 mb-5">Your request will be sent to the CEO/MD for approval</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -182,14 +183,8 @@ function CreateModal({
                 Time Range <span className="text-gray-400">(optional — leave blank for full day)</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 uppercase">From</span>
-                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full rounded-xl border border-gray-200 pl-14 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none transition-all" />
-                </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 uppercase">To</span>
-                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full rounded-xl border border-gray-200 pl-14 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none transition-all" />
-                </div>
+                <TimePicker value={startTime} onChange={setStartTime} placeholder="From" />
+                <TimePicker value={endTime} onChange={setEndTime} placeholder="To" />
               </div>
             </div>
           </div>

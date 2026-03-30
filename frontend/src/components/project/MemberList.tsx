@@ -9,6 +9,8 @@ import { useUsers } from '@/lib/hooks/useUsers'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { UserSelect } from '@/components/ui/UserSelect'
+import { Select } from '@/components/ui/Select'
 
 interface MemberListProps {
   projectId: string
@@ -20,7 +22,7 @@ interface MemberListProps {
 
 export function MemberList({ projectId, members, canManageMembers, callerProjectRole, callerSystemRole }: MemberListProps) {
   const queryClient = useQueryClient()
-  const { data: allUsers } = useUsers()
+  const { data: allUsers, isLoading: usersLoading, isError: usersError } = useUsers()
   const [showAddModal, setShowAddModal] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [selectedUserId, setSelectedUserId] = useState('')
@@ -30,8 +32,9 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
   const hasTeamLead = members.some((m) => m.projectRole === 'TEAM_LEAD')
 
   const memberUserIds = new Set(members.map((m) => m.userId))
+  const topTierRoles = new Set(['OWNER', 'CEO', 'MD'])
   const availableUsers = (allUsers ?? []).filter(
-    (u) => !memberUserIds.has(u.userId) && u.systemRole !== 'OWNER'
+    (u) => !memberUserIds.has(u.userId) && !topTierRoles.has(u.systemRole)
   )
 
   const addMemberMutation = useMutation({
@@ -171,21 +174,18 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
-            {availableUsers.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">No available users to add. Create users first from the Users page.</p>
+            {usersLoading ? (
+              <p className="text-sm text-gray-500 italic">Loading users...</p>
+            ) : usersError ? (
+              <p className="text-sm text-red-600 italic">Failed to load users. You may not have permission.</p>
+            ) : availableUsers.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">All users are already members of this project.</p>
             ) : (
-              <select
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              <UserSelect
+                users={availableUsers.map((u) => ({ userId: u.userId, name: u.name || u.email, email: u.email, avatarUrl: u.avatarUrl, extra: u.systemRole }))}
                 value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-              >
-                <option value="">-- Select a user --</option>
-                {availableUsers.map((u) => (
-                  <option key={u.userId} value={u.userId}>
-                    {u.name || u.email} ({u.email}) - {u.systemRole}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedUserId}
+              />
             )}
           </div>
 
@@ -204,16 +204,17 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
                 )
               }
 
+              const roleOptions = [
+                { value: 'MEMBER', label: 'Member' },
+                ...(showTeamLead ? [{ value: 'TEAM_LEAD', label: 'Team Lead' }] : []),
+                ...(showAdmin ? [{ value: 'ADMIN', label: 'Admin' }] : []),
+              ]
               return (
-                <select
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                <Select
                   value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
-                >
-                  <option value="MEMBER">Member</option>
-                  {showTeamLead && <option value="TEAM_LEAD">Team Lead</option>}
-                  {showAdmin && <option value="ADMIN">Admin</option>}
-                </select>
+                  onChange={(v) => setSelectedRole(v as ProjectRole)}
+                  options={roleOptions}
+                />
               )
             })()}
           </div>

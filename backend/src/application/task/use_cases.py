@@ -154,16 +154,19 @@ class UpdateTaskUseCase:
         project_id = dto["project_id"]
         task_id = dto["task_id"]
 
-        project = self._project_repo.find_by_id(project_id)
-        if not project:
-            raise NotFoundError(f"Project {project_id} not found")
+        if project_id != "DIRECT":
+            project = self._project_repo.find_by_id(project_id)
+            if not project:
+                raise NotFoundError(f"Project {project_id} not found")
 
         task = self._task_repo.find_by_id(task_id)
         if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
         # Owner/Admin/Team Lead can update any task; Member can only update status of their assigned tasks
-        if _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
+        if project_id == "DIRECT" and caller_system_role in PRIVILEGED_ROLES:
+            pass
+        elif project_id != "DIRECT" and _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
             pass
         elif caller_system_role == SystemRole.MEMBER.value:
             if caller_user_id not in task.assigned_to:
@@ -236,15 +239,19 @@ class DeleteTaskUseCase:
         project_id = dto["project_id"]
         task_id = dto["task_id"]
 
-        project = self._project_repo.find_by_id(project_id)
-        if not project:
-            raise NotFoundError(f"Project {project_id} not found")
+        if project_id != "DIRECT":
+            project = self._project_repo.find_by_id(project_id)
+            if not project:
+                raise NotFoundError(f"Project {project_id} not found")
 
         task = self._task_repo.find_by_id(task_id)
         if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
-        if not _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
+        if project_id == "DIRECT":
+            if caller_system_role not in PRIVILEGED_ROLES:
+                raise AuthorizationError("Only privileged users can delete direct tasks")
+        elif not _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
             raise AuthorizationError("Only owners, admins, and team leads can delete tasks")
 
         # Cascade delete comments

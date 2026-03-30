@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
+import { Select } from '@/components/ui/Select'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { User } from '@/types/user'
 
@@ -155,10 +156,10 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            {isOwner ? 'User Management' : 'Member Management'}
+            {isTopTier ? 'User Management' : 'Member Management'}
           </h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {isOwner ? 'Manage admins and members' : 'Manage members'}
+            {isTopTier ? 'Manage admins and members' : 'Manage members'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -166,7 +167,7 @@ export default function UsersPage() {
             {currentUser?.systemRole}
           </Badge>
           <Button variant="primary" onClick={() => setShowAddUser(true)}>
-            + Add {isOwner ? 'User' : 'Member'}
+            + Add {isTopTier ? 'User' : 'Member'}
           </Button>
         </div>
       </div>
@@ -220,7 +221,7 @@ export default function UsersPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 stagger-fade">
-        {isOwner && (
+        {isTopTier && (
           <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
             <div className="text-2xl font-bold text-red-700">{ceoMd.length + adminsOnly.length}</div>
             <div className="text-[10px] font-semibold text-red-600 uppercase tracking-wider">Admins</div>
@@ -237,7 +238,7 @@ export default function UsersPage() {
       </div>
 
       {/* Tabs (Owner only) */}
-      {isOwner && (
+      {isTopTier && (
         <div className="flex gap-2 border-b border-gray-200 pb-0">
           <button
             onClick={() => setActiveTab('ADMIN')}
@@ -305,17 +306,18 @@ export default function UsersPage() {
                       (currentUser?.systemRole === 'ADMIN' && u.systemRole === 'MEMBER')
                     if (canEditDept) {
                       return (
-                        <select
+                        <Select
                           value={u.department || ''}
-                          onChange={(e) => updateDept.mutate({ userId: u.userId, department: e.target.value })}
-                          className="rounded-full bg-teal-50 border-0 px-2.5 py-0.5 text-xs font-medium text-teal-700 focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:bg-teal-100 transition-colors"
-                        >
-                          <option value="">No Dept</option>
-                          <option value="Development">Development</option>
-                          <option value="Designing">Designing</option>
-                          <option value="Management">Management</option>
-                          <option value="Research">Research</option>
-                        </select>
+                          onChange={(v) => updateDept.mutate({ userId: u.userId, department: v })}
+                          placeholder="No Dept"
+                          options={[
+                            { value: 'Development', label: 'Development' },
+                            { value: 'Designing', label: 'Designing' },
+                            { value: 'Management', label: 'Management' },
+                            { value: 'Research', label: 'Research' },
+                          ]}
+                          className="w-32"
+                        />
                       )
                     }
                     return u.department ? (
@@ -350,7 +352,7 @@ export default function UsersPage() {
                     )}
                     {u.systemRole !== 'OWNER' && u.userId !== currentUser?.userId && (
                       (() => {
-                        const canDelete = isOwner || (currentUser?.systemRole === 'ADMIN' && u.systemRole !== 'ADMIN')
+                        const canDelete = isTopTier || (currentUser?.systemRole === 'ADMIN' && u.systemRole !== 'ADMIN')
                         return canDelete ? (
                           <Button variant="danger" size="sm" onClick={() => setDeleteTarget(u)}>
                             Delete
@@ -366,7 +368,7 @@ export default function UsersPage() {
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
 
-                  {isOwner && activeTab === 'ADMIN'
+                  {isTopTier && activeTab === 'ADMIN'
                     ? 'No admins found. Click "Add User" to create one.'
                     : 'No members found. Click "Add Member" to create one.'}
                 </td>
@@ -413,29 +415,25 @@ export default function UsersPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            <Select
               value={newRole}
-              onChange={(e) => setNewRole(e.target.value)}
-            >
-              {creatableRoles.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+              onChange={setNewRole}
+              options={creatableRoles.map((r) => ({ value: r, label: r }))}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-            <select
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            <Select
               value={newDepartment}
-              onChange={(e) => setNewDepartment(e.target.value)}
-            >
-              <option value="">-- Select Department --</option>
-              <option value="Development">Development</option>
-              <option value="Designing">Designing</option>
-              <option value="Management">Management</option>
-              <option value="Research">Research</option>
-            </select>
+              onChange={setNewDepartment}
+              placeholder="Select Department"
+              options={[
+                { value: 'Development', label: 'Development' },
+                { value: 'Designing', label: 'Designing' },
+                { value: 'Management', label: 'Management' },
+                { value: 'Research', label: 'Research' },
+              ]}
+            />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => { setShowAddUser(false); setError(''); setNewDepartment('') }}>

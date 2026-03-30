@@ -12,6 +12,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { Task, TaskPriority } from '@/types/task'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { Select } from '@/components/ui/Select'
+import { UserMultiSelect } from '@/components/ui/UserSelect'
 
 const STATUS_COLORS: Record<string, string> = {
   TODO: 'bg-amber-50 text-amber-700 border border-amber-200',
@@ -156,11 +158,11 @@ function CreateDirectTaskModal({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Priority</label>
-            <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </select>
+            <Select
+              value={priority}
+              onChange={(v) => setPriority(v as TaskPriority)}
+              options={[{ value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'HIGH', label: 'High' }]}
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
@@ -170,22 +172,12 @@ function CreateDirectTaskModal({
 
         <div>
           <label className="block text-sm font-semibold text-gray-800 mb-1">Assign To ({selected.length} selected)</label>
-          <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-50">
-            {users.map((u) => {
-              const isSelected = selected.includes(u.userId)
-              return (
-                <label key={u.userId} className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all ${isSelected ? 'bg-indigo-50/70' : 'hover:bg-gray-50'}`}>
-                  <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
-                    {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                  </div>
-                  <input type="checkbox" checked={isSelected} onChange={() => toggle(u.userId)} className="sr-only" />
-                  <Avatar name={u.name} size="sm" />
-                  <span className="text-sm text-gray-900">{u.name}</span>
-                  <span className="text-xs text-gray-400 ml-auto">{u.email}</span>
-                </label>
-              )
-            })}
-          </div>
+          <UserMultiSelect
+            users={users.map((u) => ({ userId: u.userId, name: u.name, email: u.email }))}
+            selected={selected}
+            onChange={setSelected}
+            placeholder="Search users..."
+          />
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { LiveTimer } from './LiveTimer'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { Select } from '@/components/ui/Select'
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
@@ -50,23 +51,29 @@ function TaskSelector({
     setTaskId('')
   }
 
-  const selectClass = "w-full sm:flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white outline-none transition-all min-w-0"
+  const sourceOptions = [
+    { value: 'DIRECT', label: 'Direct Tasks' },
+    ...(projects ?? []).map((p) => ({ value: p.projectId, label: p.name })),
+  ]
+  const taskOptions = availableTasks.map((t) => ({ value: t.taskId, label: t.title }))
 
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-      <select className={selectClass} value={source} onChange={(e) => { setSource(e.target.value); setTaskId('') }}>
-        <option value="">Select Source</option>
-        <option value="DIRECT">Direct Tasks</option>
-        {(projects ?? []).map((p) => (
-          <option key={p.projectId} value={p.projectId}>{p.name}</option>
-        ))}
-      </select>
-      <select className={selectClass} disabled={!source} value={taskId} onChange={(e) => setTaskId(e.target.value)}>
-        <option value="">Select Task</option>
-        {availableTasks.map((t) => (
-          <option key={t.taskId} value={t.taskId}>{t.title}</option>
-        ))}
-      </select>
+      <Select
+        value={source}
+        onChange={(v) => { setSource(v); setTaskId('') }}
+        options={sourceOptions}
+        placeholder="Select Source"
+        className="sm:flex-1"
+      />
+      <Select
+        value={taskId}
+        onChange={setTaskId}
+        options={taskOptions}
+        placeholder="Select Task"
+        disabled={!source}
+        className="sm:flex-1"
+      />
       <Button
         variant="primary"
         size="sm"

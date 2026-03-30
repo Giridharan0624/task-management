@@ -13,6 +13,7 @@ export function useUsers() {
   return useQuery({
     queryKey: userKeys.all,
     queryFn: getUsers,
+    retry: 1,
   })
 }
 

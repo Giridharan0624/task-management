@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 
 interface DatePickerProps {
@@ -11,6 +12,7 @@ interface DatePickerProps {
   placeholder?: string
   className?: string
   required?: boolean
+  align?: 'left' | 'right' | 'auto'
 }
 
 const DAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
@@ -35,8 +37,11 @@ function pad(n: number) {
   return String(n).padStart(2, '0')
 }
 
-export function DatePicker({ value, onChange, max, min, placeholder = 'Select date', className, required }: DatePickerProps) {
+export function DatePicker({ value, onChange, max, min, placeholder = 'Select date', className, required, align = 'auto' }: DatePickerProps) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const [showMonthList, setShowMonthList] = useState(false)
+  const [showYearList, setShowYearList] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const today = new Date()
@@ -45,15 +50,37 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
   const [viewYear, setViewYear] = useState(selectedDate?.getFullYear() ?? today.getFullYear())
   const [viewMonth, setViewMonth] = useState(selectedDate?.getMonth() ?? today.getMonth())
 
+  const updatePos = () => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const calHeight = 400
+    const calWidth = 280
+    const spaceBelow = window.innerHeight - rect.bottom
+
+    setPos({
+      top: spaceBelow >= calHeight ? rect.bottom + 4 : Math.max(4, rect.top - calHeight - 4),
+      left: Math.min(rect.left, window.innerWidth - calWidth - 8),
+    })
+  }
+
   useEffect(() => {
     if (!open) return
+    updatePos()
+
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Element
+      if (ref.current && !ref.current.contains(target) && !target.closest?.('[data-datepicker-dropdown]')) {
         setOpen(false)
       }
     }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    window.addEventListener('scroll', updatePos, true)
+    window.addEventListener('resize', updatePos)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      window.removeEventListener('scroll', updatePos, true)
+      window.removeEventListener('resize', updatePos)
+    }
   }, [open])
 
   useEffect(() => {
@@ -123,17 +150,77 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
       {/* Also keep a hidden native input for form required validation */}
       {required && <input type="text" value={value} required tabIndex={-1} className="sr-only" onChange={() => {}} />}
 
-      {/* Dropdown calendar */}
-      {open && (
-        <div className="absolute z-50 mt-2 right-0 w-[280px] bg-white rounded-2xl shadow-2xl ring-1 ring-gray-200/50 p-4 animate-fade-in-scale" style={{ animationDuration: '0.15s' }}>
+      {/* Dropdown calendar — portal to body */}
+      {open && createPortal(
+        <div
+          data-datepicker-dropdown
+          className="fixed z-[9999] w-[280px] bg-white rounded-2xl shadow-2xl ring-1 ring-gray-200/50 p-4 animate-fade-in-scale"
+          style={{ animationDuration: '0.15s', top: pos.top, left: pos.left }}
+        >
           {/* Month/Year header */}
           <div className="flex items-center justify-between mb-3">
             <button type="button" onClick={prevMonth} className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <span className="text-sm font-bold text-gray-900">
-              {MONTHS[viewMonth]} {viewYear}
-            </span>
+            <div className="flex items-center gap-1">
+              {/* Month selector */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setShowMonthList(!showMonthList); setShowYearList(false) }}
+                  className="text-[13px] font-bold text-gray-900 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-2 py-1 transition-all"
+                >
+                  {MONTHS[viewMonth].slice(0, 3)}
+                  <svg className="w-3 h-3 ml-0.5 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {showMonthList && (
+                  <div className="absolute top-full left-0 mt-1 w-32 bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 z-10 max-h-48 overflow-y-auto">
+                    {MONTHS.map((m, i) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => { setViewMonth(i); setShowMonthList(false) }}
+                        className={clsx(
+                          'w-full text-left px-3 py-1.5 text-xs font-medium transition-colors',
+                          viewMonth === i ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-700 hover:bg-gray-50'
+                        )}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Year selector */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setShowYearList(!showYearList); setShowMonthList(false) }}
+                  className="text-[13px] font-bold text-gray-900 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-2 py-1 transition-all"
+                >
+                  {viewYear}
+                  <svg className="w-3 h-3 ml-0.5 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {showYearList && (
+                  <div className="absolute top-full right-0 mt-1 w-24 bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 z-10 max-h-48 overflow-y-auto">
+                    {Array.from({ length: 100 }, (_, i) => today.getFullYear() - i).map((y) => (
+                      <button
+                        key={y}
+                        type="button"
+                        onClick={() => { setViewYear(y); setShowYearList(false) }}
+                        className={clsx(
+                          'w-full text-left px-3 py-1.5 text-xs font-medium transition-colors',
+                          viewYear === y ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-700 hover:bg-gray-50'
+                        )}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <button type="button" onClick={nextMonth} className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </button>
@@ -200,7 +287,8 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
               Today
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

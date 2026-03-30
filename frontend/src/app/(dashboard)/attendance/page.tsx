@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useAttendanceReport } from '@/lib/hooks/useAttendance'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import type { Attendance } from '@/types/attendance'
 
@@ -101,12 +102,18 @@ export default function AttendancePage() {
           <p className="text-sm text-gray-400 mt-0.5">{monthLabel}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select className={selectClass} value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
-            {months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
-          <select className={selectClass} value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
-            {[2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <Select
+            value={String(selectedMonth)}
+            onChange={(v) => setSelectedMonth(Number(v))}
+            options={months.map((m) => ({ value: String(m.value), label: m.label }))}
+            className="w-36"
+          />
+          <Select
+            value={String(selectedYear)}
+            onChange={(v) => setSelectedYear(Number(v))}
+            options={[2025, 2026, 2027].map((y) => ({ value: String(y), label: String(y) }))}
+            className="w-24"
+          />
           <Button onClick={handleDownload} disabled={!records || records.length === 0}>
             Download CSV
           </Button>
