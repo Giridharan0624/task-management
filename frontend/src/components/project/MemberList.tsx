@@ -86,29 +86,29 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
       {members.length === 0 ? (
         <p className="text-center text-gray-500 py-8">No members yet. Add members to get started.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-gray-50/80">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-gray-500">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-gray-500">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-gray-500">
                   Joined
                 </th>
                 {canManageMembers && (
-                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-gray-500">
                     Actions
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-50">
               {members.map((member) => (
-                <tr key={member.userId} className="hover:bg-gray-50">
+                <tr key={member.userId} className="hover:bg-gray-50/60 transition-colors">
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Avatar url={member.user?.avatarUrl} name={member.user?.name || member.user?.email || member.userId} size="md" />
@@ -185,15 +185,31 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Project Role</label>
-            <select
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
-            >
-              <option value="MEMBER">Member</option>
-              {callerProjectRole !== 'TEAM_LEAD' && !hasTeamLead && <option value="TEAM_LEAD">Team Lead</option>}
-              {callerProjectRole !== 'TEAM_LEAD' && <option value="ADMIN">Admin</option>}
-            </select>
+            {(() => {
+              const isSystemOwner = callerSystemRole === 'OWNER' || callerSystemRole === 'CEO' || callerSystemRole === 'MD'
+              const canAssignLeadAndAdmin = isSystemOwner || callerProjectRole === 'ADMIN'
+              const showTeamLead = canAssignLeadAndAdmin && !hasTeamLead
+              const showAdmin = canAssignLeadAndAdmin
+
+              // If only "Member" is available, show it as a static label
+              if (!showTeamLead && !showAdmin) {
+                return (
+                  <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">Member</p>
+                )
+              }
+
+              return (
+                <select
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
+                >
+                  <option value="MEMBER">Member</option>
+                  {showTeamLead && <option value="TEAM_LEAD">Team Lead</option>}
+                  {showAdmin && <option value="ADMIN">Admin</option>}
+                </select>
+              )
+            })()}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

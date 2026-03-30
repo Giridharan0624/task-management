@@ -150,14 +150,14 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             {isOwner ? 'User Management' : 'Member Management'}
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-sm text-gray-400 mt-0.5">
             {isOwner ? 'Manage admins and members' : 'Manage members'}
           </p>
         </div>
@@ -183,7 +183,7 @@ export default function UsersPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by name, email, designation, or department..."
-          className="w-full rounded-xl border border-gray-200 pl-10 pr-4 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all hover:border-gray-300"
         />
       </div>
 
@@ -219,20 +219,20 @@ export default function UsersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 stagger-fade">
         {isOwner && (
-          <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+          <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
             <div className="text-2xl font-bold text-red-700">{ceoMd.length + adminsOnly.length}</div>
-            <div className="text-sm text-red-600">Admins</div>
+            <div className="text-[10px] font-semibold text-red-600 uppercase tracking-wider">Admins</div>
           </div>
         )}
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+        <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
           <div className="text-2xl font-bold text-blue-700">{members.length}</div>
-          <div className="text-sm text-blue-600">Members</div>
+          <div className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Members</div>
         </div>
-        <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+        <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
           <div className="text-2xl font-bold text-indigo-700">{(users ?? []).filter((u) => u.systemRole !== 'OWNER').length}</div>
-          <div className="text-sm text-indigo-600">Total Users</div>
+          <div className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">Total Users</div>
         </div>
       </div>
 
@@ -263,20 +263,20 @@ export default function UsersPage() {
       )}
 
       {/* User Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-100">
+          <thead className="bg-gray-50/80">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">User</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Department</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Role</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Joined</th>
+              <th className="px-6 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-widest">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-gray-50">
             {displayedUsers.map((u) => (
-              <tr key={u.userId} className="hover:bg-gray-50 transition-colors">
+              <tr key={u.userId} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <Avatar url={u.avatarUrl} name={u.name || u.email} size="md" />

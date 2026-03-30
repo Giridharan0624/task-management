@@ -43,10 +43,10 @@ export default function DirectTasksPage() {
   if (isLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>
 
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Direct Tasks</h1>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Direct Tasks</h1>
           <p className="text-sm text-gray-400 mt-0.5">Tasks assigned directly to people, outside of projects</p>
         </div>
         {systemPerms.canAssignTasks && (
@@ -67,7 +67,7 @@ export default function DirectTasksPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden divide-y divide-gray-50">
           {allTasks.map((task: Task) => (
             <div key={task.taskId} className="px-5 py-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between gap-4">
