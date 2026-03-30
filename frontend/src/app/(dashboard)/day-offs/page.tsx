@@ -14,6 +14,7 @@ import type { DayOffRequest, DayOffStatus, ApprovalStatus } from '@/types/dayoff
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 /* ─── Status Badge ─── */
 function StatusBadge({ status }: { status: DayOffStatus | ApprovalStatus }) {
@@ -174,7 +175,7 @@ function CreateModal({
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Date</label>
-              <input type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} required className={inputClass} />
+              <DatePicker value={singleDate} onChange={setSingleDate} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -199,11 +200,11 @@ function CreateModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className={inputClass} />
+              <DatePicker value={startDate} onChange={setStartDate} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">End Date</label>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required min={startDate} className={inputClass} />
+              <DatePicker value={endDate} onChange={setEndDate} min={startDate} />
             </div>
           </div>
         )}

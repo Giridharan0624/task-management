@@ -27,6 +27,10 @@ class UserMapper:
             bio=item.get("bio"),
             avatar_url=item.get("avatar_url"),
             skills=skills_raw,
+            date_of_birth=item.get("date_of_birth"),
+            college_name=item.get("college_name"),
+            area_of_interest=item.get("area_of_interest"),
+            hobby=item.get("hobby"),
             created_at=item.get("created_at") or item.get("createdAt", ""),
             updated_at=item.get("updated_at") or item.get("updatedAt", ""),
         )
@@ -65,4 +69,12 @@ class UserMapper:
             item["avatar_url"] = user.avatar_url
         if user.skills:
             item["skills"] = json.dumps(user.skills)
+        if user.date_of_birth:
+            item["date_of_birth"] = user.date_of_birth
+        if user.college_name:
+            item["college_name"] = user.college_name
+        if user.area_of_interest:
+            item["area_of_interest"] = user.area_of_interest
+        if user.hobby:
+            item["hobby"] = user.hobby
         return item

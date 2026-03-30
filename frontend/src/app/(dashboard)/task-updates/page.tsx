@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTaskUpdates } from '@/lib/hooks/useTaskUpdates'
 import { Spinner } from '@/components/ui/Spinner'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { TaskUpdate } from '@/types/taskupdate'
 
@@ -94,13 +95,7 @@ export default function TaskUpdatesPage() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Task Updates</h1>
           <p className="text-sm text-gray-400 mt-0.5">{dateLabel}</p>
         </div>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          max={getToday()}
-          className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none transition-all hover:border-gray-300"
-        />
+        <DatePicker value={selectedDate} onChange={setSelectedDate} max={getToday()} className="w-48" />
       </div>
 
       {/* Stats */}

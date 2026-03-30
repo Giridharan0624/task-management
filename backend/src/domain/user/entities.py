@@ -22,6 +22,10 @@ class User(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     skills: list[str] = []
+    date_of_birth: Optional[str] = None
+    college_name: Optional[str] = None
+    area_of_interest: Optional[str] = None
+    hobby: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -62,6 +66,10 @@ class User(BaseModel):
             "bio": self.bio,
             "avatar_url": self.avatar_url,
             "skills": self.skills,
+            "date_of_birth": self.date_of_birth,
+            "college_name": self.college_name,
+            "area_of_interest": self.area_of_interest,
+            "hobby": self.hobby,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

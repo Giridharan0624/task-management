@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { DatePicker } from '@/components/ui/DatePicker'
 import Link from 'next/link'
 import type { MyTask } from '@/lib/api/userApi'
 import type { TaskPriority } from '@/types/task'
@@ -323,8 +324,7 @@ function AssignModal({
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <input type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} required
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+            <DatePicker value={deadlineDate} onChange={setDeadlineDate} />
           </div>
         </div>
         <div>

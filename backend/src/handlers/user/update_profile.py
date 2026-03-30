@@ -23,6 +23,10 @@ class UpdateProfileRequest(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     skills: Optional[list[str]] = None
+    date_of_birth: Optional[str] = None
+    college_name: Optional[str] = None
+    area_of_interest: Optional[str] = None
+    hobby: Optional[str] = None
 
 
 def handler(event, context):
@@ -52,6 +56,10 @@ def handler(event, context):
             bio=body.bio if body.bio is not None else user.bio,
             avatar_url=body.avatar_url if body.avatar_url is not None else user.avatar_url,
             skills=body.skills if body.skills is not None else user.skills,
+            date_of_birth=body.date_of_birth if body.date_of_birth is not None else user.date_of_birth,
+            college_name=body.college_name if body.college_name is not None else user.college_name,
+            area_of_interest=body.area_of_interest if body.area_of_interest is not None else user.area_of_interest,
+            hobby=body.hobby if body.hobby is not None else user.hobby,
             created_at=user.created_at,
             updated_at=datetime.now(timezone.utc).isoformat(),
         )

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { updateProfile, getProfile } from '@/lib/api/userApi'
 import { AvatarUpload } from '@/components/ui/AvatarUpload'
+import { DatePicker } from '@/components/ui/DatePicker'
 import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -52,6 +53,13 @@ export default function ProfilePage() {
   const [location, setLocation] = useState('')
   const [bio, setBio] = useState('')
   const [skillsText, setSkillsText] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [collegeName, setCollegeName] = useState('')
+  const [areaOfInterest, setAreaOfInterest] = useState('')
+  const [hobby, setHobby] = useState('')
+  const [bioDataConfirmed, setBioDataConfirmed] = useState(false)
+  const [bioDataSaving, setBioDataSaving] = useState(false)
+  const [bioDataSuccess, setBioDataSuccess] = useState(false)
 
   useEffect(() => {
     getProfile().then((p) => {
@@ -62,6 +70,10 @@ export default function ProfilePage() {
       setLocation(p.location || '')
       setBio(p.bio || '')
       setSkillsText((p.skills ?? []).join(', '))
+      setDateOfBirth(p.dateOfBirth || '')
+      setCollegeName(p.collegeName || '')
+      setAreaOfInterest(p.areaOfInterest || '')
+      setHobby(p.hobby || '')
     })
   }, [])
 
@@ -242,6 +254,136 @@ export default function ProfilePage() {
         )}
 
       </div>
+
+      {/* Bio Data — not for OWNER */}
+      {!isOwner && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Bio Data</h3>
+          </div>
+          <div className="px-6 py-5">
+            {bioDataSuccess && (
+              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 mb-4 animate-fade-in">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Bio data saved successfully.
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Name */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Full Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+              </div>
+
+              {/* Date of Birth */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Date of Birth</label>
+                <DatePicker value={dateOfBirth} onChange={setDateOfBirth} max={new Date().toISOString().slice(0, 10)} />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Phone Number</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={inputClass} />
+              </div>
+
+              {/* Email — read only */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Email ID</label>
+                <input value={dp.email} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm text-gray-400 cursor-not-allowed" />
+              </div>
+
+              {/* College Name */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">College Name</label>
+                <input value={collegeName} onChange={(e) => setCollegeName(e.target.value)} placeholder="University / College" className={inputClass} />
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Location</label>
+                <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chennai, India" className={inputClass} />
+              </div>
+
+              {/* Join Date — read only */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Join Date</label>
+                <input value={dp.createdAt ? new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm text-gray-400 cursor-not-allowed" />
+              </div>
+
+              {/* Role — read only */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Role</label>
+                <input value={dp.systemRole} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm text-gray-400 cursor-not-allowed" />
+              </div>
+
+              {/* Area of Interest */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Area of Interest</label>
+                <input value={areaOfInterest} onChange={(e) => setAreaOfInterest(e.target.value)} placeholder="Web Development, AI, etc." className={inputClass} />
+              </div>
+
+              {/* Hobby */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">Hobby</label>
+                <input value={hobby} onChange={(e) => setHobby(e.target.value)} placeholder="Reading, Music, etc." className={inputClass} />
+              </div>
+            </div>
+
+            {/* Confirmation checkbox + Submit */}
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <label className="flex items-start gap-3 cursor-pointer mb-4">
+                <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
+                  bioDataConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                }`}>
+                  {bioDataConfirmed && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <input
+                  type="checkbox"
+                  checked={bioDataConfirmed}
+                  onChange={(e) => setBioDataConfirmed(e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="text-sm text-gray-600">I confirm that the above details are true and correct.</span>
+              </label>
+
+              <div className="flex justify-end">
+                <Button
+                  disabled={!bioDataConfirmed || bioDataSaving}
+                  loading={bioDataSaving}
+                  onClick={async () => {
+                    setBioDataSaving(true)
+                    setBioDataSuccess(false)
+                    try {
+                      const skills = skillsText.split(',').map((s) => s.trim()).filter(Boolean)
+                      const updated = await updateProfile({
+                        name, phone, location, bio, skills, designation,
+                        dateOfBirth, collegeName, areaOfInterest, hobby,
+                      })
+                      setProfile(updated)
+                      updateUser({ name })
+                      setBioDataSuccess(true)
+                      setBioDataConfirmed(false)
+                      setTimeout(() => setBioDataSuccess(false), 4000)
+                    } catch {
+                      alert('Failed to save bio data')
+                    } finally {
+                      setBioDataSaving(false)
+                    }
+                  }}
+                >
+                  Submit Bio Data
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Security — Change Password */}
       <ChangePasswordSection />

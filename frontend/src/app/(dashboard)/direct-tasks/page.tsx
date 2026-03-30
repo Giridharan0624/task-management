@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { Task, TaskPriority } from '@/types/task'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 const STATUS_COLORS: Record<string, string> = {
   TODO: 'bg-amber-50 text-amber-700 border border-amber-200',
@@ -163,7 +164,7 @@ function CreateDirectTaskModal({
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <input type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} required className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+            <DatePicker value={deadlineDate} onChange={setDeadlineDate} />
           </div>
         </div>
 

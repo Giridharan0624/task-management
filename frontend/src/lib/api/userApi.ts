@@ -29,6 +29,10 @@ export interface UpdateProfileData {
   bio?: string
   avatarUrl?: string
   skills?: string[]
+  dateOfBirth?: string
+  collegeName?: string
+  areaOfInterest?: string
+  hobby?: string
 }
 
 export function updateProfile(data: UpdateProfileData): Promise<User> {

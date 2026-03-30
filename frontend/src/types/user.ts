@@ -15,6 +15,10 @@ export interface User {
   bio?: string
   avatarUrl?: string
   skills?: string[]
+  dateOfBirth?: string
+  collegeName?: string
+  areaOfInterest?: string
+  hobby?: string
   createdAt: string
   updatedAt: string
 }
