@@ -152,6 +152,41 @@ export default function TasksPage() {
         ))}
       </div>
 
+      {/* Progress bar */}
+      {visibleTasks.length > 0 && (() => {
+        const pct = Math.round((doneCount * 100 + progressCount * 50) / visibleTasks.length)
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Overall Progress</span>
+              <span className="text-sm font-bold text-gray-900">{pct}%</span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
+                }`}
+                style={{ width: `${Math.min(pct, 100)}%` }}
+              />
+            </div>
+            <div className="flex items-center gap-4 mt-2">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
+                <span className="text-[11px] text-gray-500">{todoCount} to do</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-blue-500" />
+                <span className="text-[11px] text-gray-500">{progressCount} in progress</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="text-[11px] text-gray-500">{doneCount} done</span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Search */}
       <div className="relative">
         <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -184,7 +219,7 @@ export default function TasksPage() {
                 )}
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Assigned By</th>
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Deadline</th>
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</th>
+                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Progress</th>
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Priority</th>
               </tr>
             </thead>
@@ -238,12 +273,26 @@ export default function TasksPage() {
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
-                        {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                         {isOverdue && ' !'}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <Badge className={STATUS_COLORS[task.status]}>{task.status.replace('_', ' ')}</Badge>
+                      {(() => {
+                        const pct = task.status === 'DONE' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0
+                        return (
+                          <div className="flex items-center gap-2 min-w-[120px]">
+                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-500 ${
+                                pct >= 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-blue-500' : 'bg-gray-200'
+                              }`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className={`text-[11px] font-bold ${
+                              pct >= 100 ? 'text-emerald-600' : pct > 0 ? 'text-blue-600' : 'text-gray-400'
+                            }`}>{pct}%</span>
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-5 py-3.5">
                       <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
@@ -272,17 +321,28 @@ export default function TasksPage() {
                     window.location.href = `/projects/${task.projectId}`
                   }
                 }} className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="flex items-start justify-between gap-2 mb-1">
                     <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
-                    <Badge className={STATUS_COLORS[task.status]}>{task.status.replace('_', ' ')}</Badge>
+                    <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
                   </div>
+                  {/* Progress bar */}
+                  {(() => {
+                    const pct = task.status === 'DONE' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0
+                    return (
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-blue-500' : 'bg-gray-200'}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className={`text-[10px] font-bold ${pct >= 100 ? 'text-emerald-600' : pct > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{pct}%</span>
+                      </div>
+                    )
+                  })()}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDirect ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-500'}`}>
                       {isDirect ? 'Direct' : task.projectName}
                     </span>
-                    <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
                     <span className={`text-[10px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
-                      {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                     </span>
                   </div>
                 </div>
@@ -369,7 +429,7 @@ function AssignModal({
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <DatePicker value={deadlineDate} onChange={setDeadlineDate} />
+            <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
           </div>
         </div>
         <div>

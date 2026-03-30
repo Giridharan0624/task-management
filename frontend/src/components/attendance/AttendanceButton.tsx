@@ -133,7 +133,7 @@ export function AttendanceButton() {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
               <p className="text-sm font-semibold text-emerald-800">
-                {currentTask ? currentTask.taskTitle : 'Working'}
+                {currentTask?.taskTitle || 'Working'}
               </p>
             </div>
             {currentTask && (

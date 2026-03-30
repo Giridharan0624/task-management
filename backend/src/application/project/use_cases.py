@@ -139,7 +139,7 @@ class ListProjectsForUserUseCase:
                 d["task_count"] = total
                 d["done_count"] = done
                 d["in_progress_count"] = in_progress
-                d["completion_percent"] = round((done / total) * 100) if total > 0 else 0
+                d["completion_percent"] = round((done * 100 + in_progress * 50) / total) if total > 0 else 0
             result.append(d)
         return result
 

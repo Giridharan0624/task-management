@@ -81,7 +81,7 @@ export default function DirectTasksPage() {
                     <Badge className={STATUS_COLORS[task.status]}>{task.status.replace('_', ' ')}</Badge>
                     <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
                     <span className="text-xs text-gray-400">
-                      Due {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {task.deadline ? `Due ${new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'No deadline'}
                     </span>
                   </div>
                 </div>
@@ -166,7 +166,7 @@ function CreateDirectTaskModal({
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <DatePicker value={deadlineDate} onChange={setDeadlineDate} />
+            <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
           </div>
         </div>
 

@@ -192,13 +192,11 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Project Role</label>
             {(() => {
-              const isSystemOwner = callerSystemRole === 'OWNER' || callerSystemRole === 'CEO' || callerSystemRole === 'MD'
-              const canAssignLeadAndAdmin = isSystemOwner || callerProjectRole === 'ADMIN'
-              const showTeamLead = canAssignLeadAndAdmin && !hasTeamLead
-              const showAdmin = canAssignLeadAndAdmin
+              const isPrivileged = callerSystemRole === 'OWNER' || callerSystemRole === 'CEO' || callerSystemRole === 'MD' || callerSystemRole === 'ADMIN'
+              const showTeamLead = isPrivileged && !hasTeamLead
 
               // If only "Member" is available, show it as a static label
-              if (!showTeamLead && !showAdmin) {
+              if (!showTeamLead) {
                 return (
                   <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">Member</p>
                 )
@@ -207,7 +205,6 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
               const roleOptions = [
                 { value: 'MEMBER', label: 'Member' },
                 ...(showTeamLead ? [{ value: 'TEAM_LEAD', label: 'Team Lead' }] : []),
-                ...(showAdmin ? [{ value: 'ADMIN', label: 'Admin' }] : []),
               ]
               return (
                 <Select

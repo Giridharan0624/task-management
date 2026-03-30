@@ -320,9 +320,13 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
+            {user?.systemRole === 'OWNER'
+              ? `Welcome, ${user?.name ?? 'there'}`
+              : `Welcome back, ${user?.name?.split(' ')[0] ?? 'there'}`}
           </h1>
-          <p className="mt-0.5 text-sm text-gray-400">Here&apos;s what&apos;s happening today.</p>
+          <p className="mt-0.5 text-sm text-gray-400">
+            {user?.systemRole === 'OWNER' ? 'Company dashboard overview.' : "Here's what's happening today."}
+          </p>
         </div>
         <Badge className={ROLE_COLORS[user?.systemRole ?? 'MEMBER']}>
           {user?.systemRole}

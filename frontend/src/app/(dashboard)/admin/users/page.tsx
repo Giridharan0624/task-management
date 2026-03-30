@@ -137,7 +137,7 @@ export default function UsersPage() {
       await deleteUserMutation.mutateAsync(deleteTarget.userId)
       setDeleteTarget(null)
     } catch (err: any) {
-      alert(err.message || 'Failed to delete user')
+      setError(err.message || 'Failed to delete user')
     }
   }
 
@@ -146,7 +146,7 @@ export default function UsersPage() {
       await updateRole.mutateAsync({ userId, systemRole: role })
       setSelectedUser(null)
     } catch (err: any) {
-      alert(err.message || 'Failed to update role')
+      setError(err.message || 'Failed to update role')
     }
   }
 

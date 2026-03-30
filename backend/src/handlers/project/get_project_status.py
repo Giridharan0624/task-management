@@ -68,8 +68,8 @@ def handler(event, context):
         in_progress_count = sum(1 for t in tasks if t.status.value == "IN_PROGRESS")
         done_count = sum(1 for t in tasks if t.status.value == "DONE")
 
-        # ── Method 1: Simple Task Completion ──
-        completion_pct = round((done_count / total_tasks) * 100, 1) if total_tasks > 0 else 0
+        # ── Method 1: Task Completion (IN_PROGRESS = 50% credit) ──
+        completion_pct = round((done_count * 100 + in_progress_count * 50) / total_tasks, 1) if total_tasks > 0 else 0
 
         # ── Method 2: Weighted Progress (Workfront-style) ──
         # Each task contributes based on: (weight * status_progress)
@@ -138,9 +138,8 @@ def handler(event, context):
             if completion_pct >= 100:
                 health = "COMPLETED"
 
-        # ── Method 5: Overall Score (weighted combination) ──
-        # 40% task completion + 60% weighted progress
-        overall_score = round(completion_pct * 0.4 + weighted_pct * 0.6, 1) if total_tasks > 0 else 0
+        # ── Method 5: Overall Score — same as completion ──
+        overall_score = completion_pct
 
         # ── Per-task progress ──
         task_progress = []
@@ -179,7 +178,8 @@ def handler(event, context):
             # Count tasks assigned to this member
             assigned_tasks = [t for t in tasks if m.user_id in t.assigned_to]
             done_tasks = sum(1 for t in assigned_tasks if t.status.value == "DONE")
-            member_pct = round((done_tasks / len(assigned_tasks)) * 100) if assigned_tasks else 0
+            ip_tasks = sum(1 for t in assigned_tasks if t.status.value == "IN_PROGRESS")
+            member_pct = round((done_tasks * 100 + ip_tasks * 50) / len(assigned_tasks)) if assigned_tasks else 0
 
             member_progress.append({
                 "user_id": m.user_id,

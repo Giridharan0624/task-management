@@ -30,7 +30,6 @@ export default function ProjectDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
-  const [editEstHours, setEditEstHours] = useState('')
   const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'progress'>('tasks')
   const { data: projectStatus } = useProjectStatus(projectId)
 
@@ -47,13 +46,11 @@ export default function ProjectDetailPage() {
   const openEditModal = () => {
     setEditName(project?.name ?? '')
     setEditDesc(project?.description ?? '')
-    setEditEstHours(project?.estimatedHours ? String(project.estimatedHours) : '')
     setShowEditModal(true)
   }
 
   const handleUpdateProject = async () => {
-    const estHours = editEstHours ? parseFloat(editEstHours) : undefined
-    await updateProject.mutateAsync({ name: editName, description: editDesc, estimatedHours: estHours })
+    await updateProject.mutateAsync({ name: editName, description: editDesc })
     setShowEditModal(false)
   }
 
@@ -77,7 +74,7 @@ export default function ProjectDetailPage() {
   const doneTasks = tasks?.filter((t) => t.status === 'DONE').length ?? 0
   const inProgressTasks = tasks?.filter((t) => t.status === 'IN_PROGRESS').length ?? 0
   const todoTasks = totalTasks - doneTasks - inProgressTasks
-  const completionPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
+  const completionPct = totalTasks > 0 ? Math.round((doneTasks * 100 + inProgressTasks * 50) / totalTasks) : 0
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-6xl">
@@ -274,18 +271,6 @@ export default function ProjectDetailPage() {
                   <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(projectStatus.weightedProgress, 100)}%` }} />
                 </div>
               </div>
-              {projectStatus.totalEstimatedHours > 0 && (
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="font-medium text-gray-600">Time Budget</span>
-                    <span className="text-gray-500">{projectStatus.totalTrackedHours}h / {projectStatus.totalEstimatedHours}h</span>
-                  </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${projectStatus.timeBudgetPercent > 100 ? 'bg-red-500' : projectStatus.timeBudgetPercent >= 80 ? 'bg-amber-500' : 'bg-teal-500'}`}
-                      style={{ width: `${Math.min(projectStatus.timeBudgetPercent, 100)}%` }} />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -338,7 +323,6 @@ export default function ProjectDetailPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-500">
                         {t.trackedHours > 0 && <span>{t.trackedHours}h tracked</span>}
-                        {t.estimatedHours > 0 && <span className="text-gray-400"> / {t.estimatedHours}h est</span>}
                       </td>
                       <td className="px-4 py-3 w-32">
                         <div className="flex items-center gap-2">
@@ -408,27 +392,6 @@ export default function ProjectDetailPage() {
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Time Budget</label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  placeholder="e.g. 100"
-                  value={editEstHours}
-                  onChange={(e) => setEditEstHours(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-16 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">hours</span>
-              </div>
             </div>
 
             {/* Metadata */}

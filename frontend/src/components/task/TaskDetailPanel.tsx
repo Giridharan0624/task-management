@@ -30,8 +30,6 @@ interface EditFormValues {
   status: TaskStatus
   priority: TaskPriority
   deadline: string
-  estHours: string
-  estMinutes: string
 }
 
 export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskDetailPanelProps) {
@@ -85,8 +83,6 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         status: task.status,
         priority: task.priority,
         deadline: task.deadline ? task.deadline.slice(0, 16) : '',
-        estHours: task.estimatedHours ? String(Math.floor(task.estimatedHours)) : '',
-        estMinutes: task.estimatedHours ? String(Math.round((task.estimatedHours % 1) * 60)) : '',
       })
       setIsEditing(false)
       setShowAssignInput(false)
@@ -106,9 +102,6 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   if (!task) return null
 
   const handleSave = async (values: EditFormValues) => {
-    const h = parseInt(values.estHours || '0', 10)
-    const m = parseInt(values.estMinutes || '0', 10)
-    const estHours = (h || m) ? h + m / 60 : undefined
     await updateTask.mutateAsync({
       taskId: task.taskId,
       data: {
@@ -117,7 +110,6 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         status: values.status,
         priority: values.priority,
         deadline: values.deadline || undefined,
-        estimatedHours: estHours,
       },
     })
     setIsEditing(false)
@@ -218,19 +210,6 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 </div>
               </div>
               <Input label="Deadline" type="datetime-local" {...register('deadline')} />
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Estimated Time</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="relative">
-                    <input type="number" min="0" max="999" placeholder="0" {...register('estHours')} className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 pr-12 text-sm focus:ring-2 focus:ring-indigo-500/40 transition-all" />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">hrs</span>
-                  </div>
-                  <div className="relative">
-                    <input type="number" min="0" max="59" placeholder="0" {...register('estMinutes')} className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 pr-12 text-sm focus:ring-2 focus:ring-indigo-500/40 transition-all" />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
-                  </div>
-                </div>
-              </div>
               {updateTask.error && (
                 <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
                   {updateTask.error instanceof Error ? updateTask.error.message : 'Update failed'}
@@ -325,18 +304,16 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   <div>
                     <p className="text-[10px] text-gray-400 mb-0.5">Deadline</p>
                     <p className={`text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
-                      {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      <span className="text-gray-400 font-normal ml-1">
-                        {new Date(task.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      {task.deadline ? (
+                        <>
+                          {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          <span className="text-gray-400 font-normal ml-1">
+                            {new Date(task.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </>
+                      ) : <span className="text-gray-300">No deadline</span>}
                     </p>
                   </div>
-                  {task.estimatedHours != null && (
-                    <div>
-                      <p className="text-[10px] text-gray-400 mb-0.5">Estimated</p>
-                      <p className="text-sm font-medium text-gray-900">{Math.floor(task.estimatedHours)}h {Math.round((task.estimatedHours % 1) * 60)}m</p>
-                    </div>
-                  )}
                   <div>
                     <p className="text-[10px] text-gray-400 mb-0.5">Created by</p>
                     <p className="text-sm font-medium text-gray-900">{resolveName(task.createdBy)}</p>

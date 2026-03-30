@@ -46,6 +46,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -57,9 +58,11 @@ export default function ProfilePage() {
   const [collegeName, setCollegeName] = useState('')
   const [areaOfInterest, setAreaOfInterest] = useState('')
   const [hobby, setHobby] = useState('')
+  const [editConfirmed, setEditConfirmed] = useState(false)
   const [bioDataConfirmed, setBioDataConfirmed] = useState(false)
   const [bioDataSaving, setBioDataSaving] = useState(false)
   const [bioDataSuccess, setBioDataSuccess] = useState(false)
+  const [bioDataError, setBioDataError] = useState('')
 
   useEffect(() => {
     getProfile().then((p) => {
@@ -80,16 +83,21 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true)
     setSuccess(false)
+    setSaveError('')
     try {
       const skills = skillsText.split(',').map((s) => s.trim()).filter(Boolean)
-      const updated = await updateProfile({ name, phone, designation, location, bio, skills })
+      const updated = await updateProfile({
+        name, phone, designation, location, bio, skills,
+        dateOfBirth, collegeName, areaOfInterest, hobby,
+      })
       setProfile(updated)
       updateUser({ name })
       setEditing(false)
+      setEditConfirmed(false)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
-    } catch {
-      alert('Failed to update profile')
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to update profile')
     } finally {
       setSaving(false)
     }
@@ -105,11 +113,13 @@ export default function ProfilePage() {
       setSkillsText((profile.skills ?? []).join(', '))
     }
     setEditing(false)
+    setEditConfirmed(false)
   }
 
   if (!user) return null
   const dp = profile || user
   const isOwner = dp.systemRole === 'OWNER'
+  const bioDataSubmitted = !!(profile?.dateOfBirth)
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -117,24 +127,24 @@ export default function ProfilePage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900 tracking-tight">Profile</h1>
-        {!editing && (
+        {!editing && (isOwner || bioDataSubmitted) && (
           <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            Edit Profile
+            {isOwner ? 'Edit Company Profile' : 'Edit Profile'}
           </Button>
-        )}
-        {editing && (
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={handleCancel}>Cancel</Button>
-            <Button size="sm" onClick={handleSave} loading={saving}>Save</Button>
-          </div>
         )}
       </div>
 
-      {/* Success banner */}
+      {/* Success/Error banner */}
       {success && (
         <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 animate-fade-in">
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           Profile updated successfully.
+        </div>
+      )}
+      {saveError && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          {saveError}
         </div>
       )}
 
@@ -157,7 +167,7 @@ export default function ProfilePage() {
             <div className="flex-1 min-w-0">
               {editing ? (
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Full Name</label>
+                  <label className="text-xs font-medium text-gray-400 mb-1 block">{isOwner ? 'Company Name' : 'Full Name'}</label>
                   <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
                 </div>
               ) : (
@@ -198,13 +208,17 @@ export default function ProfilePage() {
         </Section>
 
         {/* Contact & Work section — hidden for OWNER (company account) */}
-        {!isOwner && (
+        {!isOwner && bioDataSubmitted && (
           <Section title="Contact & Work">
             {editing ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-medium text-gray-400 mb-1 block">Phone</label>
                   <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={inputClass} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-400 mb-1 block">Date of Birth</label>
+                  <DatePicker value={dateOfBirth} onChange={setDateOfBirth} max={new Date().toISOString().slice(0, 10)} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-400 mb-1 block">Designation</label>
@@ -218,21 +232,37 @@ export default function ProfilePage() {
                   <label className="text-xs font-medium text-gray-400 mb-1 block">Location</label>
                   <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chennai, India" className={inputClass} />
                 </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-400 mb-1 block">College Name</label>
+                  <input value={collegeName} onChange={(e) => setCollegeName(e.target.value)} placeholder="University / College" className={inputClass} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-400 mb-1 block">Area of Interest</label>
+                  <input value={areaOfInterest} onChange={(e) => setAreaOfInterest(e.target.value)} placeholder="Web Development, AI, etc." className={inputClass} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-400 mb-1 block">Hobby</label>
+                  <input value={hobby} onChange={(e) => setHobby(e.target.value)} placeholder="Reading, Music, etc." className={inputClass} />
+                </div>
               </div>
             ) : (
               <dl className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6">
                 <Field label="Phone" value={profile?.phone} />
+                <Field label="Date of Birth" value={profile?.dateOfBirth ? new Date(profile.dateOfBirth + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined} />
                 <Field label="Designation" value={profile?.designation} />
                 <Field label="Department" value={profile?.department} />
                 <Field label="Location" value={profile?.location} />
+                <Field label="College" value={profile?.collegeName} />
+                <Field label="Area of Interest" value={profile?.areaOfInterest} />
+                <Field label="Hobby" value={profile?.hobby} />
                 <Field label="Joined" value={dp.createdAt ? new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined} />
               </dl>
             )}
           </Section>
         )}
 
-        {/* Skills section — hidden for OWNER (company account) */}
-        {!isOwner && (
+        {/* Skills section — hidden for OWNER, shown after bio data submitted */}
+        {!isOwner && bioDataSubmitted && (
           <Section title="Skills">
             {editing ? (
               <div>
@@ -253,10 +283,33 @@ export default function ProfilePage() {
           </Section>
         )}
 
+        {/* Edit mode: checkbox + save/cancel at bottom */}
+        {editing && (isOwner || bioDataSubmitted) && (
+          <div className="border-t border-gray-100 px-6 py-5">
+            <label className="flex items-start gap-3 cursor-pointer mb-4">
+              <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
+                editConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+              }`}>
+                {editConfirmed && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <input type="checkbox" checked={editConfirmed} onChange={(e) => setEditConfirmed(e.target.checked)} className="sr-only" />
+              <span className="text-sm text-gray-600">I confirm that the above details are true and correct.</span>
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={handleCancel}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} loading={saving} disabled={!editConfirmed}>Save Changes</Button>
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* Bio Data — not for OWNER */}
-      {!isOwner && (
+      {/* Bio Data form — only shown once (before first submission), hidden for OWNER */}
+      {!isOwner && !bioDataSubmitted && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Bio Data</h3>
@@ -266,6 +319,12 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 mb-4 animate-fade-in">
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Bio data saved successfully.
+              </div>
+            )}
+            {bioDataError && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 mb-4">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {bioDataError}
               </div>
             )}
 
@@ -359,6 +418,7 @@ export default function ProfilePage() {
                   onClick={async () => {
                     setBioDataSaving(true)
                     setBioDataSuccess(false)
+                    setBioDataError('')
                     try {
                       const skills = skillsText.split(',').map((s) => s.trim()).filter(Boolean)
                       const updated = await updateProfile({
@@ -370,8 +430,8 @@ export default function ProfilePage() {
                       setBioDataSuccess(true)
                       setBioDataConfirmed(false)
                       setTimeout(() => setBioDataSuccess(false), 4000)
-                    } catch {
-                      alert('Failed to save bio data')
+                    } catch (err: unknown) {
+                      setBioDataError(err instanceof Error ? err.message : 'Failed to save bio data')
                     } finally {
                       setBioDataSaving(false)
                     }

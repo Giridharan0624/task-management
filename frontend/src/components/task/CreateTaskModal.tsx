@@ -23,8 +23,6 @@ interface FormValues {
   priority: TaskPriority
   deadlineDate: string
   deadlineTime: string
-  estHours: string
-  estMinutes: string
 }
 
 const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none transition-all hover:border-gray-300 placeholder:text-gray-400"
@@ -53,16 +51,12 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
 
   const onSubmit = async (values: FormValues) => {
     const deadline = `${values.deadlineDate}T${values.deadlineTime || '09:00'}`
-    const h = parseInt(values.estHours || '0', 10)
-    const m = parseInt(values.estMinutes || '0', 10)
-    const estHours = (h || m) ? h + m / 60 : undefined
     await createTask.mutateAsync({
       title: values.title,
       description: values.description || undefined,
       status: 'TODO',
       priority: values.priority,
       deadline,
-      estimatedHours: estHours,
       assignedTo: selectedAssignees.length > 0 ? selectedAssignees : undefined,
     })
     reset()
@@ -98,38 +92,22 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
         </div>
 
         {/* Priority + Estimated Time */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Priority</label>
-            <div className="flex gap-1.5">
-              {([
-                { value: 'LOW' as const, label: 'Low', active: 'bg-slate-100 border-slate-400 text-slate-700', idle: 'bg-slate-50 border-slate-200 text-slate-500' },
-                { value: 'MEDIUM' as const, label: 'Med', active: 'bg-amber-100 border-amber-400 text-amber-700', idle: 'bg-amber-50 border-amber-200 text-amber-600' },
-                { value: 'HIGH' as const, label: 'High', active: 'bg-red-100 border-red-400 text-red-700', idle: 'bg-red-50 border-red-200 text-red-500' },
-              ]).map((p) => (
-                <label key={p.value} className="flex-1 cursor-pointer">
-                  <input type="radio" value={p.value} {...register('priority')} className="sr-only" />
-                  <div className={`text-center py-2 rounded-lg border-2 text-xs font-bold transition-all ${
-                    currentPriority === p.value ? p.active : p.idle + ' hover:border-gray-300'
-                  }`}>{p.label}</div>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Estimated Time <span className="text-gray-300">(opt)</span></label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <input type="number" min="0" max="999" placeholder="0" {...register('estHours')}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-indigo-500/40 outline-none transition-all" />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">hrs</span>
-              </div>
-              <div className="relative flex-1">
-                <input type="number" min="0" max="59" placeholder="0" {...register('estMinutes')}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-indigo-500/40 outline-none transition-all" />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">min</span>
-              </div>
-            </div>
+        {/* Priority */}
+        <div>
+          <label className="text-xs font-medium text-gray-500 mb-1 block">Priority</label>
+          <div className="flex gap-1.5">
+            {([
+              { value: 'LOW' as const, label: 'Low', active: 'bg-slate-100 border-slate-400 text-slate-700', idle: 'bg-slate-50 border-slate-200 text-slate-500' },
+              { value: 'MEDIUM' as const, label: 'Med', active: 'bg-amber-100 border-amber-400 text-amber-700', idle: 'bg-amber-50 border-amber-200 text-amber-600' },
+              { value: 'HIGH' as const, label: 'High', active: 'bg-red-100 border-red-400 text-red-700', idle: 'bg-red-50 border-red-200 text-red-500' },
+            ]).map((p) => (
+              <label key={p.value} className="flex-1 cursor-pointer">
+                <input type="radio" value={p.value} {...register('priority')} className="sr-only" />
+                <div className={`text-center py-2 rounded-lg border-2 text-xs font-bold transition-all ${
+                  currentPriority === p.value ? p.active : p.idle + ' hover:border-gray-300'
+                }`}>{p.label}</div>
+              </label>
+            ))}
           </div>
         </div>
 
@@ -140,6 +118,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
             <DatePicker
               value={watch('deadlineDate') || ''}
               onChange={(v) => setValue('deadlineDate', v, { shouldValidate: true })}
+              min={new Date().toISOString().slice(0, 10)}
             />
             <TimePicker
               value={watch('deadlineTime') || ''}
