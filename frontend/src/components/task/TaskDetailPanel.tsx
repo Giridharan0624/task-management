@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { useUpdateTask, useDeleteTask, useAssignTask } from '@/lib/hooks/useTasks'
 import { useComments, useCreateComment } from '@/lib/hooks/useComments'
 import { useProject } from '@/lib/hooks/useProjects'
-import { useAdmins } from '@/lib/hooks/useUsers'
+import { useAdmins, useUsers } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
@@ -47,23 +47,30 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   const { data: comments } = useComments(projectId, task?.taskId ?? '')
   const createComment = useCreateComment(projectId, task?.taskId ?? '')
   const { data: admins } = useAdmins()
+  const { data: allUsers } = useUsers()
 
   const members = project?.members ?? []
   const nameMap = new Map<string, string>()
+  const avatarMap = new Map<string, string | undefined>()
+
+  // Add all users (if available — privileged users can fetch this)
+  for (const u of allUsers ?? []) {
+    nameMap.set(u.userId, u.name || u.email)
+    if (u.avatarUrl) avatarMap.set(u.userId, u.avatarUrl)
+  }
+  // Add project members (enriched with user data)
   for (const m of members) {
     nameMap.set(m.userId, m.user?.name || m.user?.email || m.userId)
+    if (m.user?.avatarUrl) avatarMap.set(m.userId, m.user.avatarUrl)
   }
+  // Add current user
   if (user) nameMap.set(user.userId, user.name || user.email)
+  // Add admins/owners
   for (const a of admins ?? []) {
     if (!nameMap.has(a.userId)) nameMap.set(a.userId, a.name || a.email)
   }
 
   const resolveName = (userId: string) => nameMap.get(userId) || 'Unknown'
-
-  const avatarMap = new Map<string, string | undefined>()
-  for (const m of members) {
-    avatarMap.set(m.userId, m.user?.avatarUrl)
-  }
   const resolveAvatar = (userId: string) => avatarMap.get(userId)
 
   const {

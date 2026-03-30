@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { useDirectTasks, useCreateDirectTask } from '@/lib/hooks/useTasks'
 import { useUsers } from '@/lib/hooks/useUsers'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
+import { useAdmins } from '@/lib/hooks/useUsers'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -35,9 +36,12 @@ export default function DirectTasksPage() {
   const createTask = useCreateDirectTask()
   const [showCreate, setShowCreate] = useState(false)
 
+  const { data: adminList } = useAdmins()
+
   // Build name resolver
   const nameMap = new Map<string, string>()
   for (const u of allUsers ?? []) nameMap.set(u.userId, u.name || u.email)
+  for (const a of adminList ?? []) { if (!nameMap.has(a.userId)) nameMap.set(a.userId, a.name || a.email) }
   if (user) nameMap.set(user.userId, user.name || user.email)
   const resolveName = (id: string) => nameMap.get(id) || 'Unknown'
 

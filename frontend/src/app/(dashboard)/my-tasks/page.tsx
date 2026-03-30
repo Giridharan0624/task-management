@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
+import { useMyTasks, useUsers, useAdmins } from '@/lib/hooks/useUsers'
 import { useCreateDirectTask } from '@/lib/hooks/useTasks'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
@@ -53,9 +53,12 @@ export default function TasksPage() {
   const isMember = user?.systemRole === 'MEMBER'
   const showTabs = isAdmin // Only admins get two tabs
 
-  // Name resolver
+  const { data: adminList } = useAdmins()
+
+  // Name resolver — combines all users + admins + current user
   const nameMap = new Map<string, string>()
   for (const u of allUsers ?? []) nameMap.set(u.userId, u.name || u.email)
+  for (const a of adminList ?? []) { if (!nameMap.has(a.userId)) nameMap.set(a.userId, a.name || a.email) }
   if (user) nameMap.set(user.userId, user.name || user.email)
   const resolveName = (id: string) => nameMap.get(id) || 'Unknown'
 

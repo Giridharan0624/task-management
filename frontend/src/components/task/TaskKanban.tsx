@@ -8,6 +8,7 @@ import { TaskCard } from './TaskCard'
 import { TaskDetailPanel } from './TaskDetailPanel'
 import { CreateTaskModal } from './CreateTaskModal'
 import { Button } from '@/components/ui/Button'
+import { useAdmins } from '@/lib/hooks/useUsers'
 
 interface TaskKanbanProps {
   projectId: string
@@ -26,9 +27,14 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
+  const { data: admins } = useAdmins()
+
   const nameMap = new Map<string, string>()
   for (const m of members) {
     nameMap.set(m.userId, m.user?.name || m.user?.email || m.userId)
+  }
+  for (const a of admins ?? []) {
+    if (!nameMap.has(a.userId)) nameMap.set(a.userId, a.name || a.email)
   }
   const resolveName = (userId: string) => nameMap.get(userId) || 'Unknown'
 
