@@ -225,7 +225,7 @@ class TaskManagementStack(Stack):
         )
         create_user_fn.add_environment("GMAIL_USER", "giridharans0624@gmail.com")
         create_user_fn.add_environment("GMAIL_APP_PASSWORD", "mxhd sjrb rbny zexn")
-        create_user_fn.add_environment("APP_URL", "http://localhost:3000")
+        create_user_fn.add_environment("APP_URL", "https://task-flow-ns.vercel.app")
         add_api_lambda(
             "DeleteUser",
             "handlers.user.delete_user.handler",
