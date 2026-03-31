@@ -71,6 +71,11 @@ class TaskManagementStack(Stack):
                 require_digits=True,
                 require_symbols=False,
             ),
+            user_verification=cognito.UserVerificationConfig(
+                email_subject="TaskFlow — Password Reset Code",
+                email_body="Hi,\n\nYour TaskFlow password reset verification code is: {####}\n\nThis code is valid for one use only and expires shortly.\n\nIf you did not request this, please ignore this email.\n\nPowered by NEUROSTACK",
+                email_style=cognito.VerificationEmailStyle.CODE,
+            ),
             removal_policy=RemovalPolicy.DESTROY,
         )
 
@@ -211,13 +216,16 @@ class TaskManagementStack(Stack):
         add_api_lambda("ListUsers", "handlers.user.list_users.handler", "GET", users)
 
         # ─── User management (with Cognito admin permissions) ────────────────
-        add_api_lambda(
+        create_user_fn = add_api_lambda(
             "CreateUser",
             "handlers.user.create_user.handler",
             "POST",
             users,
-            cognito_policies=["cognito-idp:AdminCreateUser", "cognito-idp:AdminSetUserPassword"],
+            cognito_policies=["cognito-idp:AdminCreateUser"],
         )
+        create_user_fn.add_environment("GMAIL_USER", "giridharans0624@gmail.com")
+        create_user_fn.add_environment("GMAIL_APP_PASSWORD", "mxhd sjrb rbny zexn")
+        create_user_fn.add_environment("APP_URL", "http://localhost:3000")
         add_api_lambda(
             "DeleteUser",
             "handlers.user.delete_user.handler",

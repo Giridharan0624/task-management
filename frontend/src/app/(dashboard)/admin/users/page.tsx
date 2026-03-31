@@ -46,7 +46,6 @@ export default function UsersPage() {
   // Form state
   const [newEmail, setNewEmail] = useState('')
   const [newName, setNewName] = useState('')
-  const [newPassword, setNewPassword] = useState('')
   const [newRole, setNewRole] = useState('MEMBER')
   const [newDepartment, setNewDepartment] = useState('')
 
@@ -105,26 +104,20 @@ export default function UsersPage() {
 
   const handleCreateUser = async () => {
     setError('')
-    if (!newEmail || !newName || !newPassword || !newDepartment) {
+    if (!newEmail || !newName || !newDepartment) {
       setError('All fields are required')
-      return
-    }
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters')
       return
     }
     try {
       await createUserMutation.mutateAsync({
         email: newEmail,
         name: newName,
-        password: newPassword,
         systemRole: newRole,
         department: newDepartment,
       })
       setShowAddUser(false)
       setNewEmail('')
       setNewName('')
-      setNewPassword('')
       setNewRole('MEMBER')
       setNewDepartment('')
     } catch (err: any) {
@@ -390,10 +383,12 @@ export default function UsersPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <Input
-              type="email"
+              type="text"
               placeholder="user@example.com"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
+              autoComplete="new-email-address"
+              name="new-user-email-field"
             />
           </div>
           <div>
@@ -403,14 +398,8 @@ export default function UsersPage() {
               placeholder="Full name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <PasswordInput
-              placeholder="Min 8 characters, 1 uppercase, 1 number"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-user-name"
+              name="new-user-name-field"
             />
           </div>
           <div>

@@ -1,20 +1,28 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import type { CognitoUser } from 'amazon-cognito-identity-js'
 import type { User } from '@/types/user'
 import {
   signIn as cognitoSignIn,
+  completeNewPassword as cognitoCompleteNewPassword,
   signOut as cognitoSignOut,
   changePassword as cognitoChangePassword,
   getCurrentToken,
-  getCurrentUser,
 } from './cognitoClient'
+
+interface PendingPasswordChange {
+  cognitoUser: CognitoUser
+  userAttributes: Record<string, string>
+}
 
 interface AuthContextValue {
   user: User | null
   token: string | null
   isLoading: boolean
+  needsPasswordChange: boolean
   signIn: (email: string, password: string) => Promise<void>
+  completePasswordChange: (newPassword: string) => Promise<void>
   signOut: () => void
   updateUser: (updates: Partial<User>) => void
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>
@@ -51,6 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [pendingPasswordChange, setPendingPasswordChange] = useState<PendingPasswordChange | null>(null)
+
+  const needsPasswordChange = pendingPasswordChange !== null
 
   useEffect(() => {
     const storedToken = getCurrentToken()
@@ -65,8 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (identifier: string, password: string) => {
     let loginEmail = identifier.trim()
 
-    // If it looks like an employee ID (EMP-XXXX), resolve to email first
-    if (/^EMP-\d+$/i.test(loginEmail)) {
+    // If it looks like an employee ID, resolve to email first
+    if (/^(EMP-\d+|[A-Z]{2,4}-[A-Z]{3}-\d{2}[A-Z0-9]+)$/i.test(loginEmail)) {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
       const res = await fetch(`${apiUrl}/resolve-employee?employeeId=${loginEmail}`)
       if (!res.ok) throw new Error('Employee ID not found')
@@ -74,30 +85,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginEmail = data.email
     }
 
-    const tokens = await cognitoSignIn(loginEmail, password)
+    const result = await cognitoSignIn(loginEmail, password)
+
+    if (result.type === 'NEW_PASSWORD_REQUIRED') {
+      // User needs to set a new password — don't set tokens yet
+      setPendingPasswordChange({
+        cognitoUser: result.cognitoUser,
+        userAttributes: result.userAttributes,
+      })
+      return
+    }
+
+    // Normal success
+    const idToken = result.tokens.idToken
+    localStorage.setItem('auth_token', idToken)
+    setToken(idToken)
+    setUser(decodeJwtForUser(idToken))
+  }, [])
+
+  const completePasswordChange = useCallback(async (newPassword: string) => {
+    if (!pendingPasswordChange) throw new Error('No pending password change')
+
+    const tokens = await cognitoCompleteNewPassword(
+      pendingPasswordChange.cognitoUser,
+      newPassword,
+      pendingPasswordChange.userAttributes,
+    )
+
     const idToken = tokens.idToken
     localStorage.setItem('auth_token', idToken)
     setToken(idToken)
-    const decoded = decodeJwtForUser(idToken)
-    setUser(decoded)
-  }, [])
+    setUser(decodeJwtForUser(idToken))
+    setPendingPasswordChange(null)
+  }, [pendingPasswordChange])
 
   const signOut = useCallback(() => {
     cognitoSignOut()
     setToken(null)
     setUser(null)
+    setPendingPasswordChange(null)
   }, [])
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser((prev) => prev ? { ...prev, ...updates } : null)
   }, [])
 
-  const changePassword = useCallback(async (oldPassword: string, newPassword: string) => {
+  const changePasswordFn = useCallback(async (oldPassword: string, newPassword: string) => {
     await cognitoChangePassword(oldPassword, newPassword)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, updateUser, changePassword }}>
+    <AuthContext.Provider value={{
+      user, token, isLoading, needsPasswordChange,
+      signIn, completePasswordChange, signOut, updateUser,
+      changePassword: changePasswordFn,
+    }}>
       {children}
     </AuthContext.Provider>
   )

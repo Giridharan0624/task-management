@@ -87,8 +87,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
-            <p className="mt-1.5 text-sm text-gray-500">Sign in to continue to your workspace</p>
+            <NeedsPwHeading />
           </div>
 
           <div className="bg-white rounded-2xl p-7 shadow-card border border-gray-100">
@@ -101,5 +100,23 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function NeedsPwHeading() {
+  const { needsPasswordChange } = useAuth()
+  if (needsPasswordChange) {
+    return (
+      <>
+        <h2 className="text-2xl font-bold text-gray-900">Create Your Password</h2>
+        <p className="mt-1.5 text-sm text-gray-500">Please set a new password to continue</p>
+      </>
+    )
+  }
+  return (
+    <>
+      <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+      <p className="mt-1.5 text-sm text-gray-500">Sign in to continue to your workspace</p>
+    </>
   )
 }

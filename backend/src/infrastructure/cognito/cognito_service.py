@@ -32,16 +32,6 @@ class CognitoService(IIdentityService):
         return sub
 
     @staticmethod
-    def set_permanent_password(email: str, password: str) -> None:
-        """Set a permanent password for a user."""
-        cognito_client.admin_set_user_password(
-            UserPoolId=USER_POOL_ID,
-            Username=email,
-            Password=password,
-            Permanent=True,
-        )
-
-    @staticmethod
     def delete_user(email: str) -> None:
         """Delete a Cognito user by email/username."""
         cognito_client.admin_delete_user(

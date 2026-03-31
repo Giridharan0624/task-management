@@ -20,7 +20,6 @@ const ownerNav = [
   { name: 'Projects', href: '/projects', icon: 'board' },
   { name: 'Attendance', href: '/attendance', icon: 'clock' },
   { name: 'Day Offs', href: '/day-offs', icon: 'calendar' },
-  { name: 'Profile', href: '/profile', icon: 'user' },
 ]
 
 const adminNav = [
@@ -31,7 +30,6 @@ const adminNav = [
   { name: 'Projects', href: '/projects', icon: 'board' },
   { name: 'Attendance', href: '/attendance', icon: 'clock' },
   { name: 'Day Offs', href: '/day-offs', icon: 'calendar' },
-  { name: 'Profile', href: '/profile', icon: 'user' },
 ]
 
 const memberNav = [
@@ -40,7 +38,6 @@ const memberNav = [
   { name: 'Projects', href: '/projects', icon: 'board' },
   { name: 'Attendance', href: '/attendance', icon: 'clock' },
   { name: 'Day Offs', href: '/day-offs', icon: 'calendar' },
-  { name: 'Profile', href: '/profile', icon: 'user' },
 ]
 
 function getNavItems(role?: string) {

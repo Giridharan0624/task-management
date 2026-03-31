@@ -10,10 +10,6 @@ class IIdentityService(ABC):
         """Create a user in the identity provider and return their unique ID."""
 
     @abstractmethod
-    def set_permanent_password(self, email: str, password: str) -> None:
-        """Set a permanent password for a user."""
-
-    @abstractmethod
     def delete_user(self, email: str) -> None:
         """Delete a user from the identity provider."""
 

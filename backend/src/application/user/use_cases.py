@@ -1,4 +1,8 @@
 from __future__ import annotations
+import logging
+import os
+import secrets
+import string
 import uuid
 from datetime import datetime, timezone
 
@@ -147,11 +151,21 @@ class CreateUserUseCase:
         self._user_repo = user_repo
         self._cognito = cognito_service
 
+    @staticmethod
+    def _generate_otp(length: int = 12) -> str:
+        """Generate a secure one-time password meeting Cognito policy."""
+        alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits
+        while True:
+            otp = ''.join(secrets.choice(alphabet) for _ in range(length))
+            if (any(c.isupper() for c in otp) and
+                any(c.islower() for c in otp) and
+                any(c.isdigit() for c in otp)):
+                return otp
+
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         target_role = dto.get("system_role", "MEMBER")
         email = dto["email"]
         name = dto["name"]
-        password = dto["password"]
 
         # Validate the target role
         try:
@@ -162,6 +176,13 @@ class CreateUserUseCase:
         # Cannot create an owner
         if role_enum == SystemRole.OWNER:
             raise AuthorizationError("Cannot create an owner account")
+
+        # Only one CEO and one MD allowed
+        if role_enum in (SystemRole.CEO, SystemRole.MD):
+            all_users = self._user_repo.find_all()
+            existing = [u for u in all_users if u.system_role == role_enum]
+            if existing:
+                raise ValidationError(f"A {target_role} already exists: {existing[0].name}. Only one {target_role} is allowed.")
 
         # Authorization: who can create whom
         if caller_system_role == SystemRole.OWNER.value:
@@ -200,17 +221,15 @@ class CreateUserUseCase:
             else:
                 raise ValidationError("Unable to generate a unique employee ID")
 
-        # Create in Cognito
+        # Generate one-time password
+        otp = self._generate_otp()
+
+        # Create in Cognito with OTP as temporary password
+        # User will be in FORCE_CHANGE_PASSWORD state
         try:
-            user_id = self._cognito.create_user(email, name, password, target_role, employee_id)
-            self._cognito.set_permanent_password(email, password)
+            user_id = self._cognito.create_user(email, name, otp, target_role, employee_id)
         except Exception as e:
-            msg = str(e)
-            if "Password" in msg or "password" in msg:
-                raise ValidationError(
-                    "Password must be at least 8 characters with uppercase, lowercase, and numbers"
-                )
-            raise
+            raise ValidationError(str(e))
 
         # Create in DynamoDB
         user = User.create(
@@ -228,7 +247,34 @@ class CreateUserUseCase:
             )
         self._user_repo.save(user)
 
-        return user.to_dict()
+        # Send welcome email with OTP (non-critical — don't fail user creation)
+        try:
+            from infrastructure.email.gmail_service import GmailEmailService
+            app_url = os.environ.get("APP_URL", "")
+
+            # Get company name from OWNER account
+            all_users = self._user_repo.find_all()
+            owner = next((u for u in all_users if u.system_role == SystemRole.OWNER), None)
+            company_name = owner.name if owner else "TaskFlow"
+
+            GmailEmailService.send_welcome_email(
+                recipient_email=email,
+                recipient_name=name,
+                employee_id=employee_id,
+                otp=otp,
+                app_url=app_url,
+                role=target_role,
+                department=dto.get("department", ""),
+                company_name=company_name,
+            )
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "Failed to send welcome email to %s", email, exc_info=True
+            )
+
+        result = user.to_dict()
+        result["otp"] = otp  # Return OTP in response so admin can share if email fails
+        return result
 
 
 class DeleteUserUseCase:

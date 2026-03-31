@@ -18,9 +18,20 @@ export interface AuthTokens {
   refreshToken: string
 }
 
-export function signIn(identifier: string, password: string): Promise<AuthTokens> {
-  // If identifier looks like an employee ID (EMP-XXXX), resolve email first via API
-  // Otherwise use it directly as email/username
+export interface NewPasswordRequired {
+  type: 'NEW_PASSWORD_REQUIRED'
+  cognitoUser: CognitoUser
+  userAttributes: Record<string, string>
+}
+
+export interface SignInSuccess {
+  type: 'SUCCESS'
+  tokens: AuthTokens
+}
+
+export type SignInResult = SignInSuccess | NewPasswordRequired
+
+export function signIn(identifier: string, password: string): Promise<SignInResult> {
   const username = identifier.trim()
 
   return new Promise((resolve, reject) => {
@@ -37,6 +48,40 @@ export function signIn(identifier: string, password: string): Promise<AuthTokens
     cognitoUser.authenticateUser(authDetails, {
       onSuccess: (session: CognitoUserSession) => {
         resolve({
+          type: 'SUCCESS',
+          tokens: {
+            idToken: session.getIdToken().getJwtToken(),
+            accessToken: session.getAccessToken().getJwtToken(),
+            refreshToken: session.getRefreshToken().getToken(),
+          },
+        })
+      },
+      onFailure: (err) => {
+        reject(err)
+      },
+      newPasswordRequired: (userAttributes: Record<string, string>) => {
+        // Remove immutable attributes Cognito doesn't allow in challenge response
+        delete userAttributes.email_verified
+        delete userAttributes.email
+        resolve({
+          type: 'NEW_PASSWORD_REQUIRED',
+          cognitoUser,
+          userAttributes,
+        })
+      },
+    })
+  })
+}
+
+export function completeNewPassword(
+  cognitoUser: CognitoUser,
+  newPassword: string,
+  userAttributes: Record<string, string> = {},
+): Promise<AuthTokens> {
+  return new Promise((resolve, reject) => {
+    cognitoUser.completeNewPasswordChallenge(newPassword, userAttributes, {
+      onSuccess: (session: CognitoUserSession) => {
+        resolve({
           idToken: session.getIdToken().getJwtToken(),
           accessToken: session.getAccessToken().getJwtToken(),
           refreshToken: session.getRefreshToken().getToken(),
@@ -45,6 +90,27 @@ export function signIn(identifier: string, password: string): Promise<AuthTokens
       onFailure: (err) => {
         reject(err)
       },
+    })
+  })
+}
+
+export function forgotPassword(email: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = new CognitoUser({ Username: email, Pool: userPool })
+    cognitoUser.forgotPassword({
+      onSuccess: () => resolve(),
+      onFailure: (err) => reject(err),
+      inputVerificationCode: () => resolve(),
+    })
+  })
+}
+
+export function confirmForgotPassword(email: string, code: string, newPassword: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = new CognitoUser({ Username: email, Pool: userPool })
+    cognitoUser.confirmPassword(code, newPassword, {
+      onSuccess: () => resolve(),
+      onFailure: (err) => reject(err),
     })
   })
 }
@@ -63,7 +129,7 @@ export function changePassword(oldPassword: string, newPassword: string): Promis
         return
       }
 
-      currentUser.changePassword(oldPassword, newPassword, (err, result) => {
+      currentUser.changePassword(oldPassword, newPassword, (err) => {
         if (err) {
           reject(err)
           return
