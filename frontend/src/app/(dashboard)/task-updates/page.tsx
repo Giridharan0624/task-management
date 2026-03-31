@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTaskUpdates } from '@/lib/hooks/useTaskUpdates'
+import { useUsers } from '@/lib/hooks/useUsers'
 import { Spinner } from '@/components/ui/Spinner'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Avatar } from '@/components/ui/AvatarUpload'
@@ -12,13 +13,13 @@ function getToday() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function UpdateCard({ update }: { update: TaskUpdate }) {
+function UpdateCard({ update, avatarUrl }: { update: TaskUpdate; avatarUrl?: string }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 hover-lift transition-all duration-200">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Avatar name={update.userName} size="md" />
+          <Avatar url={avatarUrl} name={update.userName} size="md" />
           <div>
             <p className="text-sm font-bold text-gray-900">{update.userName}</p>
             {update.employeeId && (
@@ -69,6 +70,12 @@ export default function TaskUpdatesPage() {
   const { user } = useAuth()
   const [selectedDate, setSelectedDate] = useState(getToday())
   const { data: updates, isLoading } = useTaskUpdates(selectedDate)
+  const { data: allUsers } = useUsers()
+
+  const avatarMap = new Map<string, string | undefined>()
+  for (const u of allUsers ?? []) {
+    if (u.avatarUrl) avatarMap.set(u.userId, u.avatarUrl)
+  }
 
   const canView = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
 
@@ -114,7 +121,7 @@ export default function TaskUpdatesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 stagger-fade">
           {updates.map((update) => (
-            <UpdateCard key={update.updateId} update={update} />
+            <UpdateCard key={update.updateId} update={update} avatarUrl={avatarMap.get(update.userId)} />
           ))}
         </div>
       )}

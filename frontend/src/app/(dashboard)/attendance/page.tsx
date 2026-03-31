@@ -152,9 +152,9 @@ export default function AttendancePage() {
                         </td>
                         <td className="px-5 py-3.5 text-sm text-gray-600">{stats.role}</td>
                         <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{stats.days}</td>
-                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{stats.totalHours.toFixed(1)}h</td>
+                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{Math.floor(stats.totalHours)}h {Math.round((stats.totalHours % 1) * 60)}m</td>
                         <td className="px-5 py-3.5 text-sm text-gray-600">
-                          {stats.days > 0 ? (stats.totalHours / stats.days).toFixed(1) : '0'}h
+                          {(() => { const avg = stats.days > 0 ? stats.totalHours / stats.days : 0; return `${Math.floor(avg)}h ${Math.round((avg % 1) * 60)}m` })()}
                         </td>
                       </tr>
                     ))}
@@ -186,7 +186,7 @@ export default function AttendancePage() {
                         <td className="px-5 py-3.5 text-sm text-gray-600">{stats.projectName}</td>
                         <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{stats.taskTitle}</td>
                         <td className="px-5 py-3.5 text-sm text-gray-600">{stats.sessions}</td>
-                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{stats.totalHours.toFixed(1)}h</td>
+                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{Math.floor(stats.totalHours)}h {Math.round((stats.totalHours % 1) * 60)}m</td>
                       </tr>
                     ))}
                   </tbody>
@@ -229,7 +229,7 @@ export default function AttendancePage() {
                             ))}
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{r.totalHours.toFixed(1)}h</td>
+                        <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{Math.floor(r.totalHours)}h {Math.round((r.totalHours % 1) * 60)}m</td>
                       </tr>
                     ))}
                   </tbody>
