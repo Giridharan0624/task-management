@@ -15,8 +15,11 @@ def build_welcome_email_html(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to TaskFlow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
+</style>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f8;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+<body style="margin:0;padding:0;background-color:#f4f4f8;font-family:'Lexend','Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f8;padding:40px 20px;">
     <tr>
       <td align="center">
