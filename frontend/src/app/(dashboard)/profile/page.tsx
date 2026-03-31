@@ -453,7 +453,7 @@ export default function ProfilePage() {
 }
 
 function ChangePasswordSection() {
-  const { changePassword } = useAuth()
+  const { changePassword, user } = useAuth()
   const [open, setOpen] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
@@ -461,6 +461,15 @@ function ChangePasswordSection() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  // Forgot password flow
+  const [forgotMode, setForgotMode] = useState<'off' | 'sent' | 'confirm'>('off')
+  const [forgotCode, setForgotCode] = useState('')
+  const [forgotNewPw, setForgotNewPw] = useState('')
+  const [forgotConfirmPw, setForgotConfirmPw] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+  const [forgotSuccess, setForgotSuccess] = useState(false)
 
   const handleSubmit = async () => {
     setError('')
@@ -506,8 +515,61 @@ function ChangePasswordSection() {
     }
   }
 
+  const handleForgotSendCode = async () => {
+    if (!user?.email) return
+    setForgotError('')
+    setForgotLoading(true)
+    try {
+      const { forgotPassword } = await import('@/lib/auth/cognitoClient')
+      await forgotPassword(user.email)
+      setForgotMode('confirm')
+    } catch (err: unknown) {
+      setForgotError(err instanceof Error ? err.message : 'Failed to send code')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const handleForgotConfirm = async () => {
+    setForgotError('')
+    if (!forgotCode.trim()) { setForgotError('Code is required'); return }
+    if (forgotNewPw.length < 8) { setForgotError('Min 8 characters'); return }
+    if (!/[A-Z]/.test(forgotNewPw)) { setForgotError('Need an uppercase letter'); return }
+    if (!/[a-z]/.test(forgotNewPw)) { setForgotError('Need a lowercase letter'); return }
+    if (!/[0-9]/.test(forgotNewPw)) { setForgotError('Need a number'); return }
+    if (forgotNewPw !== forgotConfirmPw) { setForgotError('Passwords do not match'); return }
+
+    setForgotLoading(true)
+    try {
+      const { confirmForgotPassword } = await import('@/lib/auth/cognitoClient')
+      await confirmForgotPassword(user!.email, forgotCode.trim(), forgotNewPw)
+      setForgotSuccess(true)
+      setTimeout(() => {
+        setOpen(false)
+        setForgotMode('off')
+        setForgotSuccess(false)
+        setForgotCode('')
+        setForgotNewPw('')
+        setForgotConfirmPw('')
+      }, 2000)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to reset'
+      if (msg.includes('CodeMismatch') || msg.includes('code')) setForgotError('Invalid code')
+      else if (msg.includes('Expired')) setForgotError('Code expired. Request a new one.')
+      else setForgotError(msg)
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
   const handleClose = () => {
     setOpen(false)
+    setForgotMode('off')
+    setForgotError('')
+    setForgotCode('')
+    setForgotNewPw('')
+    setForgotConfirmPw('')
+    setForgotSuccess(false)
     setCurrentPw('')
     setNewPw('')
     setConfirmPw('')
@@ -539,28 +601,54 @@ function ChangePasswordSection() {
         </div>
       </div>
 
-      <Modal isOpen={open} onClose={handleClose} title="Change Password" size="sm">
-        <div className="space-y-4">
-          {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">
-              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {error}
-            </div>
-          )}
-
-          <PasswordInput label="Current Password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Enter current password" />
-          <PasswordInput label="New Password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" />
-          <PasswordInput label="Confirm New Password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Re-enter new password" />
-          <p className="text-[11px] text-gray-400">
-            Must be at least 8 characters with uppercase, lowercase, and a number.
-          </p>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
-            <Button size="sm" onClick={handleSubmit} loading={saving}>Change Password</Button>
+      <Modal isOpen={open} onClose={handleClose} title={forgotMode === 'off' ? 'Change Password' : 'Reset Password'} size="sm">
+        {forgotSuccess ? (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <svg className="w-12 h-12 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <p className="text-lg font-bold text-gray-900">Password Reset!</p>
+            <p className="text-sm text-gray-500">Please sign in again with your new password.</p>
           </div>
-        </div>
+        ) : forgotMode === 'confirm' ? (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">A verification code has been sent to <span className="font-semibold text-gray-900">{user?.email}</span></p>
+            {forgotError && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{forgotError}</div>
+            )}
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Verification Code</label>
+              <input type="text" placeholder="Enter 6-digit code" value={forgotCode} onChange={(e) => setForgotCode(e.target.value)} autoComplete="one-time-code" className={inputClass} />
+            </div>
+            <PasswordInput label="New Password" value={forgotNewPw} onChange={(e) => setForgotNewPw(e.target.value)} placeholder="Enter new password" />
+            <PasswordInput label="Confirm Password" value={forgotConfirmPw} onChange={(e) => setForgotConfirmPw(e.target.value)} placeholder="Re-enter new password" />
+            <p className="text-[11px] text-gray-400">Min 8 characters with uppercase, lowercase, and a number.</p>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="secondary" size="sm" onClick={() => { setForgotMode('off'); setForgotError('') }}>Back</Button>
+              <Button size="sm" onClick={handleForgotConfirm} loading={forgotLoading}>Reset Password</Button>
+            </div>
+          </div>
+        ) : forgotMode === 'sent' ? null : (
+          <div className="space-y-4">
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</div>
+            )}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-semibold text-gray-700">Current Password</label>
+                <button type="button" onClick={handleForgotSendCode} disabled={forgotLoading} className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold">
+                  {forgotLoading ? 'Sending...' : 'Forgot?'}
+                </button>
+              </div>
+              <PasswordInput value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Enter current password" />
+            </div>
+            <PasswordInput label="New Password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" />
+            <PasswordInput label="Confirm New Password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Re-enter new password" />
+            <p className="text-[11px] text-gray-400">Min 8 characters with uppercase, lowercase, and a number.</p>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSubmit} loading={saving}>Change Password</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   )
