@@ -12,7 +12,7 @@ from domain.task.value_objects import STATUS_PROGRESS
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
 
-_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD)
+_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.PROJECT_MANAGER, ProjectRole.TEAM_LEAD)
 
 
 def _is_project_admin_or_privileged(

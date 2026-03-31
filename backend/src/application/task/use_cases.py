@@ -12,7 +12,7 @@ from domain.task.value_objects import TaskPriority, TaskStatus
 from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
-_TASK_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD)
+_TASK_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.PROJECT_MANAGER, ProjectRole.TEAM_LEAD)
 
 
 def _can_manage_tasks(project_repo, project_id, caller_user_id, caller_system_role):
@@ -136,7 +136,7 @@ class ListTasksForProjectUseCase:
         if not caller_member:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
 
-        if caller_member and caller_member.project_role in (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD):
+        if caller_member and caller_member.project_role in _TASK_MANAGE_ROLES:
             return [t.to_dict() for t in tasks]
 
         # Regular MEMBER — only assigned tasks

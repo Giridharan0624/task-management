@@ -15,14 +15,17 @@ import { TimePicker } from '@/components/ui/TimePicker'
 import { Select } from '@/components/ui/Select'
 import { UserMultiSelect } from '@/components/ui/UserSelect'
 import { TaskDetailPanel } from '@/components/task/TaskDetailPanel'
+import { FilterSelect } from '@/components/ui/FilterSelect'
 import Link from 'next/link'
 import type { MyTask } from '@/lib/api/userApi'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
-import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_OPTIONS } from '@/types/task'
+import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_OPTIONS, TASK_STATUS_PROGRESS } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
+import { useUpdateTask } from '@/lib/hooks/useTasks'
 
 type FilterStatus = 'ALL' | TaskStatus
 type TabType = 'my' | 'all'
+type SortOption = 'default' | 'priority' | 'deadline' | 'title' | 'status'
 
 const STATUS_COLORS: Record<string, string> = TASK_STATUS_COLORS
 
@@ -32,6 +35,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   LOW: 'bg-slate-50 text-slate-600 border border-slate-200',
 }
 
+const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 const TOP_TIER = ['OWNER', 'CEO', 'MD']
 
 export default function TasksPage() {
@@ -41,6 +45,8 @@ export default function TasksPage() {
   const systemPerms = useSystemPermission(user?.systemRole)
   const createDirectTask = useCreateDirectTask()
   const [filter, setFilter] = useState<FilterStatus>('ALL')
+  const [priorityFilter, setPriorityFilter] = useState<'ALL' | TaskPriority>('ALL')
+  const [sort, setSort] = useState<SortOption>('default')
   const [activeTab, setActiveTab] = useState<TabType>('my')
   const [showAssign, setShowAssign] = useState(false)
   const [search, setSearch] = useState('')
@@ -77,16 +83,29 @@ export default function TasksPage() {
         ? myAssignedTasks
         : allTasks
 
-  const todoCount = visibleTasks.filter((t) => t.status === 'TODO').length
-  const progressCount = visibleTasks.filter((t) => t.status === 'IN_PROGRESS').length
-  const doneCount = visibleTasks.filter((t) => t.status === 'DONE').length
+  const todoCount = visibleTasks.filter(t => t.status === 'TODO').length
+  const activeCount = visibleTasks.filter(t => t.status !== 'TODO' && t.status !== 'DONE').length
+  const doneCount = visibleTasks.filter(t => t.status === 'DONE').length
+  const overdueCount = visibleTasks.filter(t => t.status !== 'DONE' && t.deadline && new Date(t.deadline) < new Date()).length
 
-  let filteredTasks = filter === 'ALL' ? visibleTasks : visibleTasks.filter((t) => t.status === filter)
+  let filteredTasks = filter === 'ALL' ? visibleTasks : visibleTasks.filter(t => t.status === filter)
+  if (priorityFilter !== 'ALL') filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter)
   if (search.trim()) {
     const q = search.toLowerCase()
-    filteredTasks = filteredTasks.filter((t) =>
-      t.title.toLowerCase().includes(q) || (t.projectName || '').toLowerCase().includes(q)
-    )
+    filteredTasks = filteredTasks.filter(t => t.title.toLowerCase().includes(q) || (t.projectName || '').toLowerCase().includes(q))
+  }
+  // Sort
+  if (sort !== 'default') {
+    filteredTasks = [...filteredTasks].sort((a, b) => {
+      if (sort === 'priority') return (PRIORITY_ORDER[a.priority] ?? 2) - (PRIORITY_ORDER[b.priority] ?? 2)
+      if (sort === 'deadline') {
+        if (!a.deadline && !b.deadline) return 0; if (!a.deadline) return 1; if (!b.deadline) return -1
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+      }
+      if (sort === 'title') return a.title.localeCompare(b.title)
+      if (sort === 'status') return (TASK_STATUS_PROGRESS[a.status] ?? 0) - (TASK_STATUS_PROGRESS[b.status] ?? 0)
+      return 0
+    })
   }
 
   return (
@@ -133,70 +152,40 @@ export default function TasksPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-fade">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {([
-          { key: 'ALL' as FilterStatus, label: 'Total', value: visibleTasks.length, active: 'border-indigo-200 bg-indigo-50 shadow-sm', text: 'text-indigo-700' },
-          { key: 'TODO' as FilterStatus, label: 'To Do', value: todoCount, active: 'border-amber-200 bg-amber-50 shadow-sm', text: 'text-amber-700' },
-          { key: 'IN_PROGRESS' as FilterStatus, label: 'In Progress', value: progressCount, active: 'border-blue-200 bg-blue-50 shadow-sm', text: 'text-blue-700' },
-          { key: 'DONE' as FilterStatus, label: 'Done', value: doneCount, active: 'border-emerald-200 bg-emerald-50 shadow-sm', text: 'text-emerald-700' },
-        ]).map(({ key, label, value, active, text }) => (
-          <button
-            key={key}
-            onClick={() => setFilter(key)}
-            className={`rounded-2xl p-3 sm:p-4 border text-left transition-all duration-200 ${
-              filter === key ? active : 'border-gray-100 bg-white hover:shadow-card shadow-card'
-            }`}
-          >
-            <p className={`text-xl sm:text-2xl font-bold tracking-tight ${text}`}>{value}</p>
+          { key: 'ALL' as FilterStatus, label: 'Total', value: visibleTasks.length, active: 'border-indigo-200 bg-indigo-50', text: 'text-indigo-700' },
+          { key: 'TODO' as FilterStatus, label: 'To Do', value: todoCount, active: 'border-amber-200 bg-amber-50', text: 'text-amber-700' },
+          { key: 'ALL' as FilterStatus, label: 'Active', value: activeCount, active: 'border-blue-200 bg-blue-50', text: 'text-blue-700', isActive: true },
+          { key: 'DONE' as FilterStatus, label: 'Done', value: doneCount, active: 'border-emerald-200 bg-emerald-50', text: 'text-emerald-700' },
+        ] as { key: FilterStatus; label: string; value: number; active: string; text: string; isActive?: boolean }[]).map(({ key, label, value, active, text, isActive: isActiveCard }) => (
+          <button key={label} onClick={() => { if (!isActiveCard) setFilter(filter === key && key !== 'ALL' ? 'ALL' : key) }}
+            className={`rounded-xl p-3 border text-left transition-all ${filter === key && !isActiveCard ? active : 'border-gray-100 bg-white hover:border-gray-200'} shadow-sm`}>
+            <p className={`text-xl font-bold tracking-tight tabular-nums ${text}`}>{value}</p>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{label}</p>
           </button>
         ))}
       </div>
 
-      {/* Progress bar */}
-      {visibleTasks.length > 0 && (() => {
-        const pct = Math.round((doneCount * 100 + progressCount * 50) / visibleTasks.length)
-        return (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Overall Progress</span>
-              <span className="text-sm font-bold text-gray-900">{pct}%</span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
-                }`}
-                style={{ width: `${Math.min(pct, 100)}%` }}
-              />
-            </div>
-            <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                <span className="text-[11px] text-gray-500">{todoCount} to do</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-blue-500" />
-                <span className="text-[11px] text-gray-500">{progressCount} in progress</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="text-[11px] text-gray-500">{doneCount} done</span>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tasks by title or project..."
-          className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none transition-all hover:border-gray-300"
-        />
+      {/* Search + Sort + Filters */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-[12px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white focus:border-indigo-400 transition-all" />
+          {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>}
+        </div>
+        <FilterSelect value={sort} onChange={v => setSort(v as SortOption)} active={sort !== 'default'}
+          options={[{ value: 'default', label: 'Sort by' }, { value: 'priority', label: 'Priority' }, { value: 'deadline', label: 'Deadline' }, { value: 'title', label: 'Title' }, { value: 'status', label: 'Status' }]} />
+        <FilterSelect value={priorityFilter} onChange={v => setPriorityFilter(v as 'ALL' | TaskPriority)} active={priorityFilter !== 'ALL'}
+          options={[{ value: 'ALL', label: 'All Priorities' }, { value: 'HIGH', label: 'High' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'LOW', label: 'Low' }]} />
+        {(search || sort !== 'default' || priorityFilter !== 'ALL' || filter !== 'ALL') && (
+          <button onClick={() => { setSearch(''); setSort('default'); setPriorityFilter('ALL'); setFilter('ALL') }}
+            className="text-[11px] text-gray-400 hover:text-gray-600 font-medium whitespace-nowrap">Clear all</button>
+        )}
+        {overdueCount > 0 && (
+          <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 px-2 py-1.5 rounded-lg tabular-nums">{overdueCount} overdue</span>
+        )}
       </div>
 
       {/* Task Table */}
@@ -220,6 +209,7 @@ export default function TasksPage() {
                 )}
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Assigned By</th>
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Deadline</th>
+                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</th>
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Progress</th>
                 <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Priority</th>
               </tr>
@@ -279,18 +269,20 @@ export default function TasksPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
+                      <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-gray-50 text-gray-600'}`}>
+                        {TASK_STATUS_LABEL[task.status] ?? task.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
                       {(() => {
-                        const pct = task.status === 'DONE' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0
+                        const pct = TASK_STATUS_PROGRESS[task.status] ?? 0
+                        const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
                         return (
-                          <div className="flex items-center gap-2 min-w-[120px]">
+                          <div className="flex items-center gap-2 min-w-[100px]">
                             <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full transition-all duration-500 ${
-                                pct >= 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-blue-500' : 'bg-gray-200'
-                              }`} style={{ width: `${pct}%` }} />
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
                             </div>
-                            <span className={`text-[11px] font-bold ${
-                              pct >= 100 ? 'text-emerald-600' : pct > 0 ? 'text-blue-600' : 'text-gray-400'
-                            }`}>{pct}%</span>
+                            <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
                           </div>
                         )
                       })()}
@@ -326,15 +318,15 @@ export default function TasksPage() {
                     <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
                     <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
                   </div>
-                  {/* Progress bar */}
                   {(() => {
-                    const pct = task.status === 'DONE' ? 100 : task.status === 'IN_PROGRESS' ? 50 : 0
+                    const pct = TASK_STATUS_PROGRESS[task.status] ?? 0
+                    const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
                     return (
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-blue-500' : 'bg-gray-200'}`} style={{ width: `${pct}%` }} />
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
                         </div>
-                        <span className={`text-[10px] font-bold ${pct >= 100 ? 'text-emerald-600' : pct > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{pct}%</span>
+                        <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
                       </div>
                     )
                   })()}

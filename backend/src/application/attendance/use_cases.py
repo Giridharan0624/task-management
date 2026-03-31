@@ -43,6 +43,7 @@ class SignInUseCase:
         project_id: Optional[str] = None,
         task_title: Optional[str] = None,
         project_name: Optional[str] = None,
+        description: Optional[str] = None,
     ) -> dict:
         date = _today()
         existing = self._attendance_repo.find_by_user_and_date(caller_user_id, date)
@@ -53,13 +54,11 @@ class SignInUseCase:
 
         if existing and existing.is_signed_in:
             if task_id:
-                # Task switch: auto-stop current, start new
                 stopped = existing.sign_out()
                 switched = stopped.sign_in(
-                    task_id=task_id,
-                    project_id=project_id,
-                    task_title=task_title,
-                    project_name=project_name,
+                    task_id=task_id, project_id=project_id,
+                    task_title=task_title, project_name=project_name,
+                    description=description,
                 )
                 self._attendance_repo.save(switched)
                 self._auto_move_task_to_in_progress(task_id)
@@ -68,27 +67,22 @@ class SignInUseCase:
                 raise ValidationError("You are already signed in. Provide a task to switch.")
 
         if existing:
-            # Add a new session to existing attendance
             updated = existing.sign_in(
-                task_id=task_id,
-                project_id=project_id,
-                task_title=task_title,
-                project_name=project_name,
+                task_id=task_id, project_id=project_id,
+                task_title=task_title, project_name=project_name,
+                description=description,
             )
             self._attendance_repo.save(updated)
             self._auto_move_task_to_in_progress(task_id)
             return updated.to_dict()
         else:
-            # First session of the day
             attendance = Attendance.create(
                 user_id=caller_user_id,
-                user_name=user.name,
-                user_email=user.email,
+                user_name=user.name, user_email=user.email,
                 system_role=caller_system_role,
-                task_id=task_id,
-                project_id=project_id,
-                task_title=task_title,
-                project_name=project_name,
+                task_id=task_id, project_id=project_id,
+                task_title=task_title, project_name=project_name,
+                description=description,
             )
             self._attendance_repo.save(attendance)
             self._auto_move_task_to_in_progress(task_id)

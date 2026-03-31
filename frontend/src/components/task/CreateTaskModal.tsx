@@ -160,7 +160,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
                 name: m.user?.name || m.user?.email || m.userId,
                 email: m.user?.email || '',
                 avatarUrl: m.user?.avatarUrl,
-                extra: m.projectRole === 'TEAM_LEAD' ? 'Lead' : m.projectRole,
+                extra: m.projectRole === 'TEAM_LEAD' ? 'Lead' : m.projectRole === 'PROJECT_MANAGER' ? 'PM' : m.projectRole,
               }))}
               selected={selectedAssignees}
               onChange={setSelectedAssignees}

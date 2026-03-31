@@ -74,6 +74,7 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
 
   const roleBadgeColor: Record<ProjectRole, string> = {
     ADMIN: 'bg-purple-100 text-purple-700',
+    PROJECT_MANAGER: 'bg-indigo-100 text-indigo-700',
     TEAM_LEAD: 'bg-orange-100 text-orange-700',
     MEMBER: 'bg-blue-100 text-blue-700',
   }
@@ -193,19 +194,19 @@ export function MemberList({ projectId, members, canManageMembers, callerProject
             <label className="block text-sm font-medium text-gray-700 mb-1">Project Role</label>
             {(() => {
               const isPrivileged = callerSystemRole === 'OWNER' || callerSystemRole === 'CEO' || callerSystemRole === 'MD' || callerSystemRole === 'ADMIN'
-              const showTeamLead = isPrivileged && !hasTeamLead
 
-              // If only "Member" is available, show it as a static label
-              if (!showTeamLead) {
+              const roleOptions = [
+                { value: 'MEMBER', label: 'Member' },
+                { value: 'PROJECT_MANAGER', label: 'Project Manager' },
+                ...(!hasTeamLead ? [{ value: 'TEAM_LEAD', label: 'Team Lead' }] : []),
+              ]
+
+              if (!isPrivileged) {
                 return (
                   <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">Member</p>
                 )
               }
 
-              const roleOptions = [
-                { value: 'MEMBER', label: 'Member' },
-                ...(showTeamLead ? [{ value: 'TEAM_LEAD', label: 'Team Lead' }] : []),
-              ]
               return (
                 <Select
                   value={selectedRole}

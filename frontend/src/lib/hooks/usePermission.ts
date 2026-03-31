@@ -35,7 +35,8 @@ export interface SystemPermissions {
 export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole): Permissions {
   const priv = isPrivileged(systemRole)
   const isTeamLead = projectRole === 'TEAM_LEAD'
-  const canManage = priv || isTeamLead
+  const isProjectManager = projectRole === 'PROJECT_MANAGER'
+  const canManage = priv || isProjectManager || isTeamLead
   const isMember = projectRole === 'MEMBER'
 
   return {

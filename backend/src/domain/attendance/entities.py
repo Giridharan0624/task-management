@@ -14,6 +14,7 @@ class Session(BaseModel):
     project_id: Optional[str] = None
     task_title: Optional[str] = None
     project_name: Optional[str] = None
+    description: Optional[str] = None
 
 
 class Attendance(BaseModel):
@@ -36,6 +37,7 @@ class Attendance(BaseModel):
         project_id: Optional[str] = None,
         task_title: Optional[str] = None,
         project_name: Optional[str] = None,
+        description: Optional[str] = None,
     ) -> "Attendance":
         now = datetime.now(timezone.utc)
         session = Session(
@@ -44,6 +46,7 @@ class Attendance(BaseModel):
             project_id=project_id,
             task_title=task_title,
             project_name=project_name,
+            description=description,
         )
         return cls(
             user_id=user_id,
@@ -71,6 +74,7 @@ class Attendance(BaseModel):
         project_id: Optional[str] = None,
         task_title: Optional[str] = None,
         project_name: Optional[str] = None,
+        description: Optional[str] = None,
     ) -> "Attendance":
         now = datetime.now(timezone.utc)
         new_session = Session(
@@ -79,6 +83,7 @@ class Attendance(BaseModel):
             project_id=project_id,
             task_title=task_title,
             project_name=project_name,
+            description=description,
         )
         return Attendance(
             user_id=self.user_id,
@@ -107,6 +112,7 @@ class Attendance(BaseModel):
             project_id=last.project_id,
             task_title=last.task_title,
             project_name=last.project_name,
+            description=last.description,
         )
 
         updated_sessions = [*self.sessions[:-1], closed_session]
@@ -145,6 +151,7 @@ class Attendance(BaseModel):
                     "project_id": s.project_id,
                     "task_title": s.task_title,
                     "project_name": s.project_name,
+                    "description": s.description,
                 }
                 for s in self.sessions
             ],

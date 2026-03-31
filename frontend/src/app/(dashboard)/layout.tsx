@@ -11,6 +11,9 @@ import { getProfile } from '@/lib/api/userApi'
 import { usePendingDayOffs } from '@/lib/hooks/useDayOffs'
 import { useMyTasks } from '@/lib/hooks/useUsers'
 import { useTimerTitle } from '@/lib/hooks/useTimerTitle'
+import { useMyAttendance } from '@/lib/hooks/useAttendance'
+import { LiveTimer } from '@/components/attendance/LiveTimer'
+import { formatDuration } from '@/lib/utils/formatDuration'
 
 const ownerNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -79,6 +82,48 @@ function NavIcon({ type }: { type: string }) {
   }
 }
 
+function SidebarTimer() {
+  const { user } = useAuth()
+  const { data: attendance } = useMyAttendance()
+  // Owner/CEO/MD don't use the timer
+  const topTier = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD'
+  if (topTier || !attendance) return null
+
+  const isActive = attendance.status === 'SIGNED_IN'
+  const task = attendance.currentTask
+
+  if (isActive && attendance.currentSignInAt) {
+    return (
+      <Link href="/dashboard" className="mx-3 mb-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 block hover:bg-emerald-100 transition-colors">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="relative flex h-2 w-2 flex-shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <p className="text-[11px] font-semibold text-emerald-800 truncate">{task?.taskTitle || 'Working'}</p>
+        </div>
+        <div className="flex items-center justify-between">
+          <LiveTimer startTime={attendance.currentSignInAt} className="text-[14px] font-bold text-emerald-700 font-mono tabular-nums" />
+          <span className="text-[9px] text-emerald-600 font-medium">{formatDuration(attendance.totalHours)} total</span>
+        </div>
+      </Link>
+    )
+  }
+
+  if (attendance.totalHours > 0) {
+    return (
+      <div className="mx-3 mb-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Today</span>
+          <span className="text-[12px] font-bold text-gray-700 tabular-nums">{formatDuration(attendance.totalHours)}</span>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, signOut } = useAuth()
   const router = useRouter()
@@ -105,8 +150,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[var(--color-bg)]">
-        <Spinner size="lg" />
+      <div className="flex flex-col items-center justify-center h-screen bg-[var(--color-bg)] gap-4">
+        <div className="flex items-center gap-3">
+          <Logo size="lg" />
+        </div>
+        <Spinner size="md" />
+        <p className="text-[12px] text-gray-400 font-medium animate-pulse">Loading your workspace...</p>
       </div>
     )
   }
@@ -166,6 +215,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )
         })}
       </nav>
+
+      {/* Mini Timer */}
+      <SidebarTimer />
 
       {/* User info */}
       <div className="p-3 mx-3 mb-3 rounded-xl bg-gray-50 border border-gray-100">

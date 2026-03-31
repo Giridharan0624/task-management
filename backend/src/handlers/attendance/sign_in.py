@@ -28,6 +28,7 @@ def handler(event, context):
             project_id=body.get("project_id"),
             task_title=body.get("task_title"),
             project_name=body.get("project_name"),
+            description=body.get("description"),
         )
         return build_success(201, result)
     except Exception as e:

@@ -8,6 +8,7 @@ export interface AttendanceSession {
   projectId: string | null
   taskTitle: string | null
   projectName: string | null
+  description: string | null
 }
 
 export interface CurrentTask {
@@ -36,4 +37,5 @@ export interface StartTimerData {
   projectId: string
   taskTitle: string
   projectName: string
+  description?: string
 }

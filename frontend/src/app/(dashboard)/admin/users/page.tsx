@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useUsers, useCreateUser, useDeleteUser, useUpdateUserRole, useUpdateUserDepartment, useUserProgress } from '@/lib/hooks/useUsers'
+import { useTodayAttendance } from '@/lib/hooks/useAttendance'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -12,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { FilterSelect } from '@/components/ui/FilterSelect'
 import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -23,11 +25,13 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 type TabType = 'ADMIN' | 'MEMBER'
+type SortOption = 'name' | 'role' | 'department' | 'joined'
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth()
   const systemPerms = useSystemPermission(currentUser?.systemRole)
   const { data: users, isLoading } = useUsers()
+  const { data: todayAttendance } = useTodayAttendance()
   const createUserMutation = useCreateUser()
   const deleteUserMutation = useDeleteUser()
   const updateRole = useUpdateUserRole()
@@ -40,8 +44,23 @@ export default function UsersPage() {
   const [viewUser, setViewUser] = useState<User | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [deptFilter, setDeptFilter] = useState<string>('ALL')
+  const [sortBy, setSortBy] = useState<SortOption>('name')
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('ADMIN')
+
+  // Online users (currently signed in)
+  const onlineUserIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const a of todayAttendance ?? []) { if (a.status === 'SIGNED_IN') set.add(a.userId) }
+    return set
+  }, [todayAttendance])
+
+  // Department counts
+  const deptCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const u of users ?? []) { const d = u.department || 'Unassigned'; map.set(d, (map.get(d) ?? 0) + 1) }
+    return map
+  }, [users])
 
   // Form state
   const [newEmail, setNewEmail] = useState('')
@@ -85,7 +104,7 @@ export default function UsersPage() {
     ? rawDisplayedUsers
     : rawDisplayedUsers.filter((u) => (u.department || '').toLowerCase() === deptFilter.toLowerCase())
 
-  const displayedUsers = searchQuery.trim()
+  const searched = searchQuery.trim()
     ? deptFiltered.filter((u) => {
         const q = searchQuery.toLowerCase()
         return (u.name || '').toLowerCase().includes(q)
@@ -94,6 +113,25 @@ export default function UsersPage() {
           || (u.department || '').toLowerCase().includes(q)
       })
     : deptFiltered
+
+  const displayedUsers = [...searched].sort((a, b) => {
+    if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '')
+    if (sortBy === 'role') return (a.systemRole || '').localeCompare(b.systemRole || '')
+    if (sortBy === 'department') return (a.department || '').localeCompare(b.department || '')
+    if (sortBy === 'joined') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    return 0
+  })
+
+  const onlineCount = displayedUsers.filter(u => onlineUserIds.has(u.userId)).length
+
+  // CSV export
+  const exportUsersCSV = () => {
+    const header = ['Name', 'Email', 'Employee ID', 'Role', 'Department', 'Designation', 'Joined']
+    const rows = displayedUsers.map(u => [u.name || '', u.email, u.employeeId || '', u.systemRole, u.department || '', u.designation || '', u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''])
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'users-export.csv'; a.click()
+  }
 
   // Available roles for creation based on caller
   const creatableRoles = isOwner
@@ -149,85 +187,67 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
             {isTopTier ? 'User Management' : 'Member Management'}
           </h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {isTopTier ? 'Manage admins and members' : 'Manage members'}
+          <p className="text-[13px] text-gray-400 mt-0.5">
+            {displayedUsers.length} user{displayedUsers.length !== 1 ? 's' : ''}{onlineCount > 0 ? ` · ${onlineCount} online` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge className={ROLE_COLORS[currentUser?.systemRole ?? 'MEMBER']}>
-            {currentUser?.systemRole}
-          </Badge>
-          <Button variant="primary" onClick={() => setShowAddUser(true)}>
-            + Add {isTopTier ? 'User' : 'Member'}
-          </Button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportUsersCSV}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            CSV
+          </button>
+          <button onClick={() => setShowAddUser(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-gray-800 transition-all shadow-sm">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+            Add {isTopTier ? 'User' : 'Member'}
+          </button>
         </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name, email, designation, or department..."
-          className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all hover:border-gray-300"
-        />
-      </div>
-
-      {/* Department Filter */}
-      <div className="overflow-x-auto">
-      <div className="flex items-center gap-2 flex-nowrap">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mr-1 flex-shrink-0">Department:</span>
-        {['ALL', 'Development', 'Designing', 'Management', 'Research'].map((dept) => {
-          const isActive = deptFilter === (dept === 'ALL' ? 'ALL' : dept)
-          const count = dept === 'ALL'
-            ? rawDisplayedUsers.length
-            : rawDisplayedUsers.filter((u) => (u.department || '').toLowerCase() === dept.toLowerCase()).length
-          return (
-            <button
-              key={dept}
-              onClick={() => setDeptFilter(dept === 'ALL' ? 'ALL' : dept)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {dept}
-              <span className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[10px] font-bold ${
-                isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 stagger-fade">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-xl font-bold text-indigo-700 tabular-nums">{(users ?? []).filter(u => u.systemRole !== 'OWNER').length}</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Total</p>
+        </div>
         {isTopTier && (
-          <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
-            <div className="text-2xl font-bold text-red-700">{ceoMd.length + adminsOnly.length}</div>
-            <div className="text-[10px] font-semibold text-red-600 uppercase tracking-wider">Admins</div>
+          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-xl font-bold text-violet-700 tabular-nums">{ceoMd.length + adminsOnly.length}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Management</p>
           </div>
         )}
-        <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-          <div className="text-2xl font-bold text-blue-700">{members.length}</div>
-          <div className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Members</div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-xl font-bold text-blue-700 tabular-nums">{members.length}</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Members</p>
         </div>
-        <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
-          <div className="text-2xl font-bold text-indigo-700">{(users ?? []).filter((u) => u.systemRole !== 'OWNER').length}</div>
-          <div className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">Total Users</div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
+            <p className="text-xl font-bold text-emerald-700 tabular-nums">{onlineCount}</p>
+          </div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Online Now</p>
+        </div>
+      </div>
+
+      {/* Search + Sort + Department filter */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[180px] max-w-[300px]">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..."
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-[12px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all" />
+          </div>
+          <FilterSelect value={sortBy} onChange={v => setSortBy(v as SortOption)}
+            options={[{ value: 'name', label: 'Sort: Name' }, { value: 'role', label: 'Sort: Role' }, { value: 'department', label: 'Sort: Department' }, { value: 'joined', label: 'Sort: Newest' }]} />
+          <FilterSelect value={deptFilter} onChange={setDeptFilter} active={deptFilter !== 'ALL'}
+            options={[{ value: 'ALL', label: 'All Departments' }, ...Array.from(deptCounts.entries()).sort().map(([dept, count]) => ({ value: dept, label: `${dept} (${count})` }))]} />
+          {(searchQuery || deptFilter !== 'ALL') && (
+            <button onClick={() => { setSearchQuery(''); setDeptFilter('ALL') }} className="text-[11px] text-gray-400 hover:text-gray-600 font-medium">Clear</button>
+          )}
         </div>
       </div>
 
@@ -275,19 +295,21 @@ export default function UsersPage() {
               <tr key={u.userId} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <Avatar url={u.avatarUrl} name={u.name || u.email} size="md" />
-                    <div className="ml-4">
-                      <button
-                        type="button"
-                        onClick={() => setViewUser(u)}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left"
-                      >
+                    <div className="relative">
+                      <Avatar url={u.avatarUrl} name={u.name || u.email} size="md" />
+                      {onlineUserIds.has(u.userId) && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+                      )}
+                    </div>
+                    <div className="ml-3">
+                      <button type="button" onClick={() => setViewUser(u)}
+                        className="text-[13px] font-semibold text-gray-800 hover:text-indigo-600 text-left transition-colors">
                         {u.name || 'Unnamed'}
                       </button>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">{u.email}</span>
+                        <span className="text-[11px] text-gray-400">{u.email}</span>
                         {u.employeeId && (
-                          <span className="text-[10px] font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{u.employeeId}</span>
+                          <span className="text-[9px] font-mono bg-gray-100 text-gray-500 px-1 py-0.5 rounded">{u.employeeId}</span>
                         )}
                       </div>
                     </div>

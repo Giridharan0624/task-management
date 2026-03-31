@@ -17,7 +17,7 @@ import { Avatar } from '@/components/ui/AvatarUpload'
 import type { ProjectRole } from '@/types/user'
 import { TASK_STATUS_PROGRESS, TASK_STATUS_LABEL } from '@/types/task'
 import { formatDuration } from '@/lib/utils/formatDuration'
-import { TimeReportCharts } from '@/components/reports/TimeReportCharts'
+import { ProjectReport } from '@/components/reports/ProjectReport'
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -78,25 +78,48 @@ export default function ProjectDetailPage() {
   const activeTasks = totalTasks - doneTasks
   const completionPct = totalTasks > 0 ? Math.round((tasks ?? []).reduce((sum, t) => sum + (TASK_STATUS_PROGRESS[t.status] ?? 0), 0) / totalTasks) : 0
 
+  // Upcoming deadlines — tasks due in the next 7 days (not done)
+  const now = new Date()
+  const upcomingDeadlines = (tasks ?? [])
+    .filter(t => t.status !== 'DONE' && t.deadline)
+    .map(t => ({ ...t, deadlineDate: new Date(t.deadline) }))
+    .filter(t => {
+      const diff = (t.deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      return diff <= 7 // Due within 7 days (includes overdue)
+    })
+    .sort((a, b) => a.deadlineDate.getTime() - b.deadlineDate.getTime())
+
+  const healthLabel = projectStatus?.health?.replace('_', ' ') ?? ''
+  const healthConfig: Record<string, { bg: string; text: string; dot: string }> = {
+    COMPLETED: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+    ON_TRACK: { bg: 'bg-green-50 border-green-200', text: 'text-green-700', dot: 'bg-green-500' },
+    AT_RISK: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500' },
+    BEHIND: { bg: 'bg-red-50 border-red-200', text: 'text-red-700', dot: 'bg-red-500' },
+  }
+  const hc = healthConfig[projectStatus?.health ?? ''] ?? healthConfig.ON_TRACK
+
   return (
     <div className="flex flex-col gap-5 w-full max-w-6xl">
       {/* Header Card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <Link
-              href="/projects"
-              className="rounded-xl p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
+            <Link href="/projects" className="rounded-xl p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
             </Link>
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
               <span className="text-white font-bold text-lg">{project.name.charAt(0).toUpperCase()}</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+                {projectStatus && (
+                  <span className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold border ${hc.bg} ${hc.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${hc.dot}`} />
+                    {healthLabel}
+                  </span>
+                )}
+              </div>
               {project.description && (
                 <p className="text-sm text-gray-400 mt-0.5">{project.description}</p>
               )}
@@ -105,21 +128,22 @@ export default function ProjectDetailPage() {
 
           <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
             {permissions.canManageMembers && (
-              <Button variant="secondary" size="sm" onClick={openEditModal}>
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              <button onClick={openEditModal} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 Edit
-              </Button>
+              </button>
             )}
             {permissions.canDeleteProject && (
-              <Button variant="danger" size="sm" onClick={handleDeleteProject} loading={deleteProject.isPending}>
+              <button onClick={handleDeleteProject} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 Delete
-              </Button>
+              </button>
             )}
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+        {/* Stats + Progress row */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5">
           <div className="bg-gray-50 rounded-xl p-3 text-center">
             <p className="text-xl font-bold text-indigo-700">{project.members?.length ?? 0}</p>
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Members</p>
@@ -134,8 +158,14 @@ export default function ProjectDetailPage() {
           </div>
           <div className="bg-gray-50 rounded-xl p-3 text-center">
             <p className="text-xl font-bold text-emerald-700">{doneTasks}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Completed</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Done</p>
           </div>
+          {projectStatus && projectStatus.totalTrackedHours > 0 && (
+            <div className="bg-gray-50 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-violet-700">{formatDuration(projectStatus.totalTrackedHours)}</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Tracked</p>
+            </div>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -143,9 +173,9 @@ export default function ProjectDetailPage() {
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="text-gray-500">Overall Progress</span>
-              <span className="font-semibold text-gray-700">{completionPct}% complete</span>
+              <span className="font-semibold text-gray-700">{completionPct}%</span>
             </div>
-            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   completionPct >= 100 ? 'bg-emerald-500' : completionPct >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
@@ -156,6 +186,41 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Upcoming Deadlines */}
+      {upcomingDeadlines.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-50 flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <h3 className="text-[13px] font-bold text-gray-800">Upcoming Deadlines</h3>
+            <span className="text-[11px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-md tabular-nums">{upcomingDeadlines.length}</span>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {upcomingDeadlines.map(t => {
+              const isOverdue = t.deadlineDate < now
+              const diffDays = Math.ceil((t.deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+              const urgencyLabel = isOverdue
+                ? `${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} overdue`
+                : diffDays === 0 ? 'Due today'
+                : diffDays === 1 ? 'Due tomorrow'
+                : `${diffDays} days left`
+              return (
+                <div key={t.taskId} className={`flex items-center gap-3 px-5 py-2.5 ${isOverdue ? 'bg-red-50/40' : ''}`}>
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isOverdue ? 'bg-red-500' : diffDays <= 2 ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                  <p className="text-[13px] font-medium text-gray-800 flex-1 truncate">{t.title}</p>
+                  <span className="text-[10px] font-semibold text-gray-400">{TASK_STATUS_LABEL[t.status]}</span>
+                  <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${isOverdue ? 'text-red-600' : diffDays <= 2 ? 'text-amber-600' : 'text-gray-500'}`}>
+                    {urgencyLabel}
+                  </span>
+                  <span className="text-[10px] text-gray-400 tabular-nums flex-shrink-0">
+                    {t.deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200">
@@ -440,12 +505,7 @@ export default function ProjectDetailPage() {
       })()}
 
       {activeTab === 'reports' && (
-        <TimeReportCharts
-          projectId={projectId}
-          title={`${project.name} — Time Reports`}
-          subtitle="Hours worked by members on this project"
-          pieLabel="Hours by Task"
-        />
+        <ProjectReport projectId={projectId} projectName={project.name} />
       )}
 
       {/* Edit Project Modal */}
@@ -541,9 +601,10 @@ export default function ProjectDetailPage() {
                       </div>
                       <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-lg ${
                         m.projectRole === 'TEAM_LEAD' ? 'bg-orange-100 text-orange-600' :
+                        m.projectRole === 'PROJECT_MANAGER' ? 'bg-indigo-100 text-indigo-600' :
                         m.projectRole === 'ADMIN' ? 'bg-purple-100 text-purple-600' :
                         'bg-blue-100 text-blue-600'
-                      }`}>{m.projectRole === 'TEAM_LEAD' ? 'Lead' : m.projectRole}</span>
+                      }`}>{m.projectRole === 'TEAM_LEAD' ? 'Lead' : m.projectRole === 'PROJECT_MANAGER' ? 'PM' : m.projectRole}</span>
                     </div>
                   ))}
                 </div>

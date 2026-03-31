@@ -50,7 +50,7 @@ def handler(event, context):
 
         if auth.system_role not in PRIVILEGED_ROLES:
             member = project_repo.find_member(project_id, auth.user_id)
-            if not member or member.project_role not in (ProjectRole.ADMIN, ProjectRole.TEAM_LEAD):
+            if not member or member.project_role not in (ProjectRole.ADMIN, ProjectRole.PROJECT_MANAGER, ProjectRole.TEAM_LEAD):
                 return build_success(403, {"error": "Access denied"})
 
         tasks = task_repo.find_by_project(project_id)

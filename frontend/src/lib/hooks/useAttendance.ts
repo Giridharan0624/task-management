@@ -74,7 +74,7 @@ export function useSignIn() {
         } : previous?.currentTask ?? null,
         sessions: [
           ...(previous?.sessions ?? []),
-          { signInAt: now, signOutAt: null, hours: null, taskId: data?.taskId ?? null, projectId: data?.projectId ?? null, taskTitle: data?.taskTitle ?? null, projectName: data?.projectName ?? null },
+          { signInAt: now, signOutAt: null, hours: null, taskId: data?.taskId ?? null, projectId: data?.projectId ?? null, taskTitle: data?.taskTitle ?? null, projectName: data?.projectName ?? null, description: data?.description ?? null },
         ],
       }
       queryClient.setQueryData(attendanceKeys.me, optimistic)
