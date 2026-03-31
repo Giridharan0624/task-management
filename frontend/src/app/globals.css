@@ -54,14 +54,14 @@
   .dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]),
   .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--color-border) !important; }
 
-  /* Text */
-  .dark .text-gray-900 { color: #f0f0f5 !important; }
-  .dark .text-gray-800 { color: #d8dae3 !important; }
-  .dark .text-gray-700 { color: #b8bdd0 !important; }
-  .dark .text-gray-600 { color: #9ca3bf !important; }
-  .dark .text-gray-500 { color: #7f869e !important; }
-  .dark .text-gray-400 { color: #5c6380 !important; }
-  .dark .text-gray-300 { color: #3f4560 !important; }
+  /* Text — brighter for dark mode readability */
+  .dark .text-gray-900 { color: #f2f3f7 !important; }
+  .dark .text-gray-800 { color: #e0e2ea !important; }
+  .dark .text-gray-700 { color: #c5c9d6 !important; }
+  .dark .text-gray-600 { color: #a8aec2 !important; }
+  .dark .text-gray-500 { color: #8e95ae !important; }
+  .dark .text-gray-400 { color: #747c98 !important; }
+  .dark .text-gray-300 { color: #5a6280 !important; }
 
   /* Colored backgrounds — desaturated for dark mode */
   .dark .bg-indigo-50 { background-color: rgba(99,102,241,0.1) !important; }
@@ -106,7 +106,11 @@
     color: var(--color-text) !important;
   }
   .dark input::placeholder, .dark textarea::placeholder {
-    color: #4a4f6a !important;
+    color: #5c6380 !important;
+  }
+  .dark input:disabled, .dark textarea:disabled {
+    background-color: #151720 !important;
+    color: #5c6380 !important;
   }
   .dark input:focus, .dark textarea:focus {
     border-color: #6366f1 !important;
