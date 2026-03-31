@@ -295,25 +295,6 @@ export default function UsersPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {(() => {
-                    const canEditDept =
-                      (isTopTier && u.systemRole !== 'OWNER' && u.systemRole !== 'CEO' && u.systemRole !== 'MD') ||
-                      (currentUser?.systemRole === 'ADMIN' && u.systemRole === 'MEMBER')
-                    if (canEditDept) {
-                      return (
-                        <Select
-                          value={u.department || ''}
-                          onChange={(v) => updateDept.mutate({ userId: u.userId, department: v })}
-                          placeholder="No Dept"
-                          options={[
-                            { value: 'Development', label: 'Development' },
-                            { value: 'Designing', label: 'Designing' },
-                            { value: 'Management', label: 'Management' },
-                            { value: 'Research', label: 'Research' },
-                          ]}
-                          className="w-32"
-                        />
-                      )
-                    }
                     return u.department ? (
                       <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
                         {u.department}
