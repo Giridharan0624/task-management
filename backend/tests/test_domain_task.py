@@ -75,8 +75,11 @@ class TestTaskEntity:
 
 class TestTaskEnums:
     def test_all_statuses(self):
-        assert len(TaskStatus) == 3
-        assert set(s.value for s in TaskStatus) == {"TODO", "IN_PROGRESS", "DONE"}
+        assert len(TaskStatus) == 8
+        assert set(s.value for s in TaskStatus) == {
+            "TODO", "IN_PROGRESS", "DEVELOPED", "TESTING",
+            "TESTED", "DEBUGGING", "FINAL_TESTING", "DONE",
+        }
 
     def test_all_priorities(self):
         assert len(TaskPriority) == 3

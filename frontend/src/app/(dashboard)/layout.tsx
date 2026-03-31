@@ -119,7 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isPrivileged = user.systemRole === 'OWNER' || user.systemRole === 'CEO' || user.systemRole === 'MD' || user.systemRole === 'ADMIN'
 
   const pendingCount = isPrivileged ? (pendingDayOffs ?? []).length : 0
-  const todoTaskCount = (myTasks ?? []).filter((t) => t.status === 'TODO' || t.status === 'IN_PROGRESS').length
+  const todoTaskCount = (myTasks ?? []).filter((t) => t.status !== 'DONE').length
 
   const getBadgeCount = (href: string): number => {
     if (href === '/day-offs' && pendingCount > 0) return pendingCount

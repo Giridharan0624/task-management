@@ -15,6 +15,8 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { ProjectRole } from '@/types/user'
+import { TASK_STATUS_PROGRESS, TASK_STATUS_LABEL } from '@/types/task'
+import { formatDuration } from '@/lib/utils/formatDuration'
 import { TimeReportCharts } from '@/components/reports/TimeReportCharts'
 
 export default function ProjectDetailPage() {
@@ -73,9 +75,8 @@ export default function ProjectDetailPage() {
 
   const totalTasks = tasks?.length ?? 0
   const doneTasks = tasks?.filter((t) => t.status === 'DONE').length ?? 0
-  const inProgressTasks = tasks?.filter((t) => t.status === 'IN_PROGRESS').length ?? 0
-  const todoTasks = totalTasks - doneTasks - inProgressTasks
-  const completionPct = totalTasks > 0 ? Math.round((doneTasks * 100 + inProgressTasks * 50) / totalTasks) : 0
+  const activeTasks = totalTasks - doneTasks
+  const completionPct = totalTasks > 0 ? Math.round((tasks ?? []).reduce((sum, t) => sum + (TASK_STATUS_PROGRESS[t.status] ?? 0), 0) / totalTasks) : 0
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-6xl">
@@ -128,8 +129,8 @@ export default function ProjectDetailPage() {
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Tasks</p>
           </div>
           <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-blue-700">{inProgressTasks}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">In Progress</p>
+            <p className="text-xl font-bold text-blue-700">{activeTasks}</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Active</p>
           </div>
           <div className="bg-gray-50 rounded-xl p-3 text-center">
             <p className="text-xl font-bold text-emerald-700">{doneTasks}</p>
@@ -230,157 +231,213 @@ export default function ProjectDetailPage() {
         />
       )}
 
-      {activeTab === 'progress' && projectStatus && (
-        <div className="space-y-6">
-          {/* Health Badge + Overall Score */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-                    projectStatus.health === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
-                    projectStatus.health === 'ON_TRACK' ? 'bg-green-100 text-green-700' :
-                    projectStatus.health === 'AT_RISK' ? 'bg-amber-100 text-amber-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    <span className={`h-2 w-2 rounded-full ${
-                      projectStatus.health === 'COMPLETED' ? 'bg-emerald-500' :
-                      projectStatus.health === 'ON_TRACK' ? 'bg-green-500' :
-                      projectStatus.health === 'AT_RISK' ? 'bg-amber-500' :
-                      'bg-red-500'
-                    }`} />
-                    {projectStatus.health.replace('_', ' ')}
-                  </span>
-                  {projectStatus.overdueCount > 0 && (
-                    <span className="text-xs text-red-500 font-medium">{projectStatus.overdueCount} overdue</span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">Schedule health based on task deadlines</p>
-              </div>
-              <div className="text-center sm:text-right">
-                <p className="text-4xl font-bold text-indigo-700">{projectStatus.overallScore}%</p>
-                <p className="text-xs text-gray-400">Overall Score</p>
-              </div>
-            </div>
+      {activeTab === 'progress' && projectStatus && (() => {
+        const healthConfig: Record<string, { bg: string; text: string; dot: string; icon: string }> = {
+          COMPLETED: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500', icon: '🎉' },
+          ON_TRACK: { bg: 'bg-green-50 border-green-200', text: 'text-green-700', dot: 'bg-green-500', icon: '✓' },
+          AT_RISK: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500', icon: '⚠' },
+          BEHIND: { bg: 'bg-red-50 border-red-200', text: 'text-red-700', dot: 'bg-red-500', icon: '!' },
+        }
+        const hc = healthConfig[projectStatus.health] || healthConfig.ON_TRACK
+        const doneCount = projectStatus.taskCounts?.DONE ?? 0
+        const todoCount = projectStatus.taskCounts?.TODO ?? 0
+        const activeCount = (projectStatus.totalTasks ?? 0) - todoCount - doneCount
 
-            {/* Three progress bars */}
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="font-medium text-gray-600">Task Completion</span>
-                  <span className="text-gray-500">{projectStatus.taskCounts.DONE}/{projectStatus.totalTasks} done</span>
-                </div>
-                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${projectStatus.completionPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                    style={{ width: `${Math.min(projectStatus.completionPercent, 100)}%` }} />
+        return (
+        <div className="space-y-5">
+
+          {/* ── Top row: Score ring + Health + Stats ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+            {/* Score + Health card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-5">
+              {/* Circular score */}
+              <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
+                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke={projectStatus.overallScore >= 100 ? '#10b981' : '#6366f1'} strokeWidth="3" strokeDasharray={`${projectStatus.overallScore} ${100 - projectStatus.overallScore}`} strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-gray-900 tabular-nums">{projectStatus.overallScore}%</span>
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="font-medium text-gray-600">Weighted Progress</span>
-                  <span className="text-gray-500">{projectStatus.weightedProgress}%</span>
-                </div>
-                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(projectStatus.weightedProgress, 100)}%` }} />
-                </div>
+                <p className="text-[13px] font-bold text-gray-800 mb-1">Overall Score</p>
+                <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold border ${hc.bg} ${hc.text}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${hc.dot}`} />
+                  {projectStatus.health.replace('_', ' ')}
+                </span>
+                {projectStatus.overdueCount > 0 && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1.5">{projectStatus.overdueCount} overdue task{projectStatus.overdueCount > 1 ? 's' : ''}</p>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-              <p className="text-2xl font-bold text-amber-600">{projectStatus.taskCounts.TODO}</p>
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">To Do</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-              <p className="text-2xl font-bold text-blue-600">{projectStatus.taskCounts.IN_PROGRESS}</p>
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">In Progress</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-              <p className="text-2xl font-bold text-emerald-600">{projectStatus.taskCounts.DONE}</p>
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Completed</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-              <p className="text-2xl font-bold text-red-600">{projectStatus.overdueCount}</p>
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Overdue</p>
-            </div>
-          </div>
-
-          {/* Task Breakdown */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Task Breakdown</h3>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/80">
-                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Task</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Status</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Time</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-500 text-xs uppercase">Progress</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {projectStatus.taskProgress.map((t) => (
-                    <tr key={t.taskId} className={`hover:bg-gray-50/50 ${t.isOverdue ? 'bg-red-50/30' : ''}`}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{t.title}</p>
-                        {t.isOverdue && <span className="text-[10px] text-red-500 font-semibold">OVERDUE</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          t.status === 'DONE' ? 'bg-emerald-50 text-emerald-700' :
-                          t.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700' :
-                          'bg-amber-50 text-amber-700'
-                        }`}>{t.status.replace('_', ' ')}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {t.trackedHours > 0 && <span>{t.trackedHours}h tracked</span>}
-                      </td>
-                      <td className="px-4 py-3 w-32">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${
-                              t.statusProgress >= 100 ? 'bg-emerald-500' : t.statusProgress >= 50 ? 'bg-blue-500' : 'bg-gray-300'
-                            }`} style={{ width: `${t.statusProgress}%` }} />
-                          </div>
-                          <span className="text-xs font-medium text-gray-500">{t.statusProgress}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Team Contribution */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Team Contribution</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {projectStatus.memberProgress.map((m) => (
-                <div key={m.userId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Avatar name={m.name} size="md" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{m.name}</p>
-                      <p className="text-xs text-gray-400">{m.projectRole}</p>
+            {/* Progress bars card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Progress</p>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-[11px] mb-1">
+                    <span className="font-medium text-gray-600">Completion</span>
+                    <span className="font-bold text-gray-700 tabular-nums">{projectStatus.completionPercent}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${projectStatus.completionPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                      style={{ width: `${Math.min(projectStatus.completionPercent, 100)}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-[11px] mb-1">
+                    <span className="font-medium text-gray-600">Weighted</span>
+                    <span className="font-bold text-gray-700 tabular-nums">{projectStatus.weightedProgress}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.min(projectStatus.weightedProgress, 100)}%` }} />
+                  </div>
+                </div>
+                {projectStatus.totalEstimatedHours > 0 && (
+                  <div>
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="font-medium text-gray-600">Time Budget</span>
+                      <span className="font-bold text-gray-700 tabular-nums">{projectStatus.timeBudgetPercent}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${projectStatus.timeBudgetPercent > 100 ? 'bg-red-500' : 'bg-amber-400'}`}
+                        style={{ width: `${Math.min(projectStatus.timeBudgetPercent, 100)}%` }} />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-500">{m.doneTasks}/{m.totalTasks} tasks done</span>
-                    <span className="text-xs font-semibold text-indigo-600">{m.completionPercent}%</span>
+                )}
+              </div>
+            </div>
+
+            {/* Counts card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Task Counts</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2.5">
+                  <p className="text-xl font-bold text-amber-600 tabular-nums">{todoCount}</p>
+                  <p className="text-[10px] text-amber-600/70 font-semibold">To Do</p>
+                </div>
+                <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5">
+                  <p className="text-xl font-bold text-blue-600 tabular-nums">{activeCount}</p>
+                  <p className="text-[10px] text-blue-600/70 font-semibold">Active</p>
+                </div>
+                <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2.5">
+                  <p className="text-xl font-bold text-emerald-600 tabular-nums">{doneCount}</p>
+                  <p className="text-[10px] text-emerald-600/70 font-semibold">Done</p>
+                </div>
+                <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5">
+                  <p className="text-xl font-bold text-red-600 tabular-nums">{projectStatus.overdueCount}</p>
+                  <p className="text-[10px] text-red-600/70 font-semibold">Overdue</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Task Breakdown ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
+              <h3 className="text-[13px] font-bold text-gray-800">Task Breakdown</h3>
+              <span className="text-[11px] text-gray-400 tabular-nums">{projectStatus.taskProgress.length} tasks</span>
+            </div>
+            {/* Table header */}
+            <div className="grid grid-cols-[1fr_100px_80px_100px_60px] gap-2 px-5 py-2 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+              <span>Task</span>
+              <span>Status</span>
+              <span>Priority</span>
+              <span>Time</span>
+              <span className="text-right">Progress</span>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {projectStatus.taskProgress.map((t) => {
+                const color = t.statusProgress >= 100 ? '#10b981' : t.statusProgress >= 50 ? '#6366f1' : t.statusProgress >= 15 ? '#3b82f6' : '#d1d5db'
+                const statusLabel = TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL] ?? t.status.replace(/_/g, ' ')
+                return (
+                  <div key={t.taskId} className={`grid grid-cols-[1fr_100px_80px_100px_60px] gap-2 items-center px-5 py-2.5 ${t.isOverdue ? 'bg-red-50/30' : 'hover:bg-gray-50/50'} transition-colors`}>
+                    {/* Task name */}
+                    <div className="min-w-0 flex items-center gap-2">
+                      <p className="text-[13px] font-medium text-gray-800 truncate">{t.title}</p>
+                      {t.isOverdue && <span className="text-[8px] font-bold text-red-500 bg-red-50 border border-red-100 px-1 py-px rounded flex-shrink-0">OVERDUE</span>}
+                    </div>
+
+                    {/* Status */}
+                    <span className="text-[11px] font-medium text-gray-500">{statusLabel}</span>
+
+                    {/* Priority */}
+                    <div>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
+                        t.priority === 'HIGH' ? 'text-red-600' : t.priority === 'MEDIUM' ? 'text-amber-600' : 'text-gray-400'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          t.priority === 'HIGH' ? 'bg-red-500' : t.priority === 'MEDIUM' ? 'bg-amber-400' : 'bg-gray-300'
+                        }`} />
+                        {t.priority}
+                      </span>
+                    </div>
+
+                    {/* Time tracked */}
+                    <span className="text-[11px] text-gray-400 tabular-nums">
+                      {t.trackedHours > 0 ? formatDuration(t.trackedHours) : '—'}
+                    </span>
+
+                    {/* Progress */}
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${t.statusProgress}%`, backgroundColor: color }} />
+                      </div>
+                      <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{t.statusProgress}%</span>
+                    </div>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
-                    <div className="h-full rounded-full bg-indigo-500" style={{ width: `${m.completionPercent}%` }} />
+                )
+              })}
+              {projectStatus.taskProgress.length === 0 && (
+                <div className="px-5 py-8 text-center text-[13px] text-gray-300">No tasks yet</div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Team Contribution ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-50">
+              <h3 className="text-[13px] font-bold text-gray-800">Team Contribution</h3>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {projectStatus.memberProgress.map((m) => (
+                <div key={m.userId} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
+                  <Avatar name={m.name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-[13px] font-semibold text-gray-800 truncate">{m.name}</p>
+                      <span className="text-[9px] font-bold text-gray-400 uppercase">{m.projectRole}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[200px]">
+                        <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${m.completionPercent}%` }} />
+                      </div>
+                      <span className="text-[10px] font-bold text-indigo-600 tabular-nums">{m.completionPercent}%</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-400">{m.trackedHours}h tracked</p>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-[12px] font-semibold text-gray-700 tabular-nums">{m.doneTasks}/{m.totalTasks}</p>
+                    <p className="text-[10px] text-gray-400">tasks done</p>
+                  </div>
+                  {m.trackedHours > 0 && (
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[12px] font-semibold text-gray-700 tabular-nums">{formatDuration(m.trackedHours)}</p>
+                      <p className="text-[10px] text-gray-400">tracked</p>
+                    </div>
+                  )}
                 </div>
               ))}
+              {projectStatus.memberProgress.length === 0 && (
+                <div className="px-5 py-8 text-center text-[13px] text-gray-300">No members yet</div>
+              )}
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {activeTab === 'reports' && (
         <TimeReportCharts

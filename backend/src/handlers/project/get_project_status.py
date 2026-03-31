@@ -23,13 +23,7 @@ from infrastructure.dynamodb.attendance_repository import AttendanceDynamoReposi
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
 from domain.user.value_objects import PRIVILEGED_ROLES
 from domain.project.value_objects import ProjectRole
-
-# Status-based progress (50/50 rule used by many PM tools)
-STATUS_PROGRESS = {
-    "TODO": 0,
-    "IN_PROGRESS": 50,
-    "DONE": 100,
-}
+from domain.task.value_objects import STATUS_PROGRESS
 
 # Priority weights (HIGH tasks count more toward progress)
 PRIORITY_WEIGHT = {
@@ -64,12 +58,19 @@ def handler(event, context):
         now = datetime.now(timezone.utc)
 
         total_tasks = len(tasks)
-        todo_count = sum(1 for t in tasks if t.status.value == "TODO")
-        in_progress_count = sum(1 for t in tasks if t.status.value == "IN_PROGRESS")
-        done_count = sum(1 for t in tasks if t.status.value == "DONE")
 
-        # ── Method 1: Task Completion (IN_PROGRESS = 50% credit) ──
-        completion_pct = round((done_count * 100 + in_progress_count * 50) / total_tasks, 1) if total_tasks > 0 else 0
+        # Count tasks per status dynamically
+        status_counts: dict[str, int] = {}
+        for t in tasks:
+            sv = t.status.value
+            status_counts[sv] = status_counts.get(sv, 0) + 1
+        done_count = status_counts.get("DONE", 0)
+
+        # ── Method 1: Task Completion (score-based) ──
+        if total_tasks > 0:
+            completion_pct = round(sum(STATUS_PROGRESS.get(t.status.value, 0) for t in tasks) / total_tasks, 1)
+        else:
+            completion_pct = 0
 
         # ── Method 2: Weighted Progress (Workfront-style) ──
         # Each task contributes based on: (weight * status_progress)
@@ -178,8 +179,7 @@ def handler(event, context):
             # Count tasks assigned to this member
             assigned_tasks = [t for t in tasks if m.user_id in t.assigned_to]
             done_tasks = sum(1 for t in assigned_tasks if t.status.value == "DONE")
-            ip_tasks = sum(1 for t in assigned_tasks if t.status.value == "IN_PROGRESS")
-            member_pct = round((done_tasks * 100 + ip_tasks * 50) / len(assigned_tasks)) if assigned_tasks else 0
+            member_pct = round(sum(STATUS_PROGRESS.get(t.status.value, 0) for t in assigned_tasks) / len(assigned_tasks)) if assigned_tasks else 0
 
             member_progress.append({
                 "user_id": m.user_id,
@@ -197,11 +197,7 @@ def handler(event, context):
 
             # Task counts
             "total_tasks": total_tasks,
-            "task_counts": {
-                "TODO": todo_count,
-                "IN_PROGRESS": in_progress_count,
-                "DONE": done_count,
-            },
+            "task_counts": status_counts,
 
             # Progress metrics
             "completion_percent": completion_pct,       # Simple: done/total

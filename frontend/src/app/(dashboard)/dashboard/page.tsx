@@ -19,11 +19,9 @@ const ROLE_COLORS: Record<string, string> = {
   MEMBER: 'bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  TODO: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200',
-  DONE: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
-}
+import { TASK_STATUS_COLORS, TASK_STATUS_LABEL } from '@/types/task'
+
+const STATUS_COLORS: Record<string, string> = TASK_STATUS_COLORS
 
 const PRIORITY_COLORS: Record<string, string> = {
   HIGH: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',

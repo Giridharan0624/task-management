@@ -8,6 +8,7 @@ from domain.project.repository import IProjectRepository
 from domain.project.value_objects import ProjectRole
 from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
+from domain.task.value_objects import STATUS_PROGRESS
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
 
@@ -135,11 +136,9 @@ class ListProjectsForUserUseCase:
                 tasks = self._task_repo.find_by_project(p.project_id)
                 total = len(tasks)
                 done = sum(1 for t in tasks if t.status.value == "DONE")
-                in_progress = sum(1 for t in tasks if t.status.value == "IN_PROGRESS")
                 d["task_count"] = total
                 d["done_count"] = done
-                d["in_progress_count"] = in_progress
-                d["completion_percent"] = round((done * 100 + in_progress * 50) / total) if total > 0 else 0
+                d["completion_percent"] = round(sum(STATUS_PROGRESS.get(t.status.value, 0) for t in tasks) / total) if total > 0 else 0
             result.append(d)
         return result
 

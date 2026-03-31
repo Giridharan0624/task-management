@@ -88,7 +88,7 @@ export interface ProjectStatus {
   projectId: string
   projectName: string
   totalTasks: number
-  taskCounts: { TODO: number; IN_PROGRESS: number; DONE: number }
+  taskCounts: Record<string, number>
   completionPercent: number
   weightedProgress: number
   overallScore: number

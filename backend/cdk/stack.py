@@ -108,7 +108,7 @@ class TaskManagementStack(Stack):
             rest_api_name="TaskManagementApi",
             deploy_options=apigw.StageOptions(stage_name="prod"),
             default_cors_preflight_options=apigw.CorsOptions(
-                allow_origins=["https://task-flow-ns.vercel.app"],
+                allow_origins=["https://task-flow-ns.vercel.app", "http://localhost:3000"],
                 allow_methods=apigw.Cors.ALL_METHODS,
                 allow_headers=["Content-Type", "Authorization"],
             ),

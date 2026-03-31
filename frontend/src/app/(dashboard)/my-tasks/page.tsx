@@ -17,17 +17,14 @@ import { UserMultiSelect } from '@/components/ui/UserSelect'
 import { TaskDetailPanel } from '@/components/task/TaskDetailPanel'
 import Link from 'next/link'
 import type { MyTask } from '@/lib/api/userApi'
-import type { Task, TaskPriority } from '@/types/task'
+import type { Task, TaskStatus, TaskPriority } from '@/types/task'
+import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_OPTIONS } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
 
-type FilterStatus = 'ALL' | 'TODO' | 'IN_PROGRESS' | 'DONE'
+type FilterStatus = 'ALL' | TaskStatus
 type TabType = 'my' | 'all'
 
-const STATUS_COLORS: Record<string, string> = {
-  TODO: 'bg-amber-50 text-amber-700 border border-amber-200',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700 border border-blue-200',
-  DONE: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-}
+const STATUS_COLORS: Record<string, string> = TASK_STATUS_COLORS
 
 const PRIORITY_COLORS: Record<string, string> = {
   HIGH: 'bg-red-50 text-red-700 border border-red-200',

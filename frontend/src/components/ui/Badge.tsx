@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import type { TaskStatus, TaskPriority } from '@/types/task'
+import { TASK_STATUS_COLORS } from '@/types/task'
 
 type BadgeVariant = TaskStatus | TaskPriority
 
@@ -17,13 +18,15 @@ interface BadgeWithoutVariantProps {
 
 type BadgeProps = BadgeWithVariantProps | BadgeWithoutVariantProps
 
-const variantClasses: Record<BadgeVariant, string> = {
-  TODO: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200',
-  DONE: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+const priorityClasses: Record<string, string> = {
   LOW: 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200',
   MEDIUM: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
   HIGH: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
+}
+
+const variantClasses: Record<string, string> = {
+  ...TASK_STATUS_COLORS,
+  ...priorityClasses,
 }
 
 export function Badge({ variant, children, className }: BadgeProps) {

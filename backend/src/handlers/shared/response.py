@@ -7,11 +7,11 @@ from shared.errors import AppError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
-
+# Allow all origins — CORS preflight is handled by API Gateway which restricts to allowed origins.
+# Lambda responses use * so they work for any origin that passes the preflight check.
 CORS_HEADERS = {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": _ALLOWED_ORIGIN,
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
     "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
 }

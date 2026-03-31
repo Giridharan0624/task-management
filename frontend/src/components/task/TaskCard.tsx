@@ -1,7 +1,7 @@
 'use client'
 
-import type { Task } from '@/types/task'
-import { Badge } from '@/components/ui/Badge'
+import type { Task, TaskStatus } from '@/types/task'
+import { TASK_STATUS_LABEL } from '@/types/task'
 
 interface TaskCardProps {
   task: Task
@@ -9,16 +9,16 @@ interface TaskCardProps {
   resolveName?: (userId: string) => string
 }
 
-const statusLabel: Record<Task['status'], string> = {
-  TODO: 'To Do',
-  IN_PROGRESS: 'In Progress',
-  DONE: 'Done',
+const PRIORITY_DOT: Record<Task['priority'], string> = {
+  HIGH: 'bg-red-500',
+  MEDIUM: 'bg-amber-400',
+  LOW: 'bg-gray-300',
 }
 
-const priorityLabel: Record<Task['priority'], string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
+const PRIORITY_LABEL: Record<Task['priority'], string> = {
   HIGH: 'High',
+  MEDIUM: 'Med',
+  LOW: 'Low',
 }
 
 export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
@@ -28,8 +28,6 @@ export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
     ? new Date(task.deadline).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       })
     : null
 
@@ -39,39 +37,57 @@ export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
   return (
     <button
       onClick={() => onClick(task)}
-      className="w-full text-left rounded-xl border border-gray-100 bg-white p-4 shadow-card hover:shadow-card-hover hover:border-indigo-200/60 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 hover-lift"
+      className="group w-full text-left rounded-lg border border-gray-100 bg-gray-50/50 p-3 hover:bg-white hover:border-gray-200 hover:shadow-sm transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
     >
-      <div className="flex flex-col gap-2.5">
-        <p className="text-sm font-semibold text-gray-900 line-clamp-2">{task.title}</p>
+      {/* Title */}
+      <p className="text-[13px] font-medium text-gray-800 leading-snug line-clamp-2 group-hover:text-gray-950 transition-colors">
+        {task.title}
+      </p>
 
-        <div className="flex flex-wrap gap-1.5">
-          <Badge variant={task.status}>{statusLabel[task.status]}</Badge>
-          <Badge variant={task.priority}>{priorityLabel[task.priority]}</Badge>
-        </div>
+      {/* Meta row */}
+      <div className="flex items-center gap-2 mt-2">
+        {/* Priority dot */}
+        <span className="flex items-center gap-1" title={`${PRIORITY_LABEL[task.priority]} priority`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[task.priority]}`} />
+          <span className="text-[10px] text-gray-400 font-medium">{PRIORITY_LABEL[task.priority]}</span>
+        </span>
 
-        <div className="flex items-center justify-between text-xs text-gray-400 mt-0.5">
-          {task.assignedTo && task.assignedTo.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {task.assignedTo.map((userId) => (
-                <span
-                  key={userId}
-                  className="inline-flex items-center rounded-lg bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 truncate max-w-[120px]"
-                  title={resolve(userId)}
-                >
-                  {resolve(userId)}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <span className="italic text-gray-300">Unassigned</span>
-          )}
-          {deadlineFormatted && (
-            <span className={isOverdue ? 'text-red-500 font-semibold' : 'text-gray-400'}>
+        {/* Deadline */}
+        {deadlineFormatted && (
+          <>
+            <span className="text-gray-200">|</span>
+            <span className={`text-[10px] font-medium ${isOverdue ? 'text-red-500' : 'text-gray-400'}`}>
+              {isOverdue && (
+                <svg className="w-3 h-3 inline mr-0.5 -mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01" /></svg>
+              )}
               {deadlineFormatted}
             </span>
+          </>
+        )}
+      </div>
+
+      {/* Assignees */}
+      {task.assignedTo && task.assignedTo.length > 0 && (
+        <div className="flex items-center gap-1 mt-2.5">
+          {task.assignedTo.slice(0, 3).map((userId) => {
+            const name = resolve(userId)
+            const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+            return (
+              <span
+                key={userId}
+                className="inline-flex items-center justify-center w-5.5 h-5.5 rounded-full bg-gray-200 text-[9px] font-bold text-gray-600 ring-1 ring-white"
+                title={name}
+                style={{ width: 22, height: 22 }}
+              >
+                {initials}
+              </span>
+            )
+          })}
+          {task.assignedTo.length > 3 && (
+            <span className="text-[10px] text-gray-400 font-medium ml-0.5">+{task.assignedTo.length - 3}</span>
           )}
         </div>
-      </div>
+      )}
     </button>
   )
 }
