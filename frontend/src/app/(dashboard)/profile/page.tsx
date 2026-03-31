@@ -8,6 +8,7 @@ import { updateProfile, getProfile } from '@/lib/api/userApi'
 import { AvatarUpload } from '@/components/ui/AvatarUpload'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { useTheme } from '@/lib/theme/ThemeProvider'
 import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -446,8 +447,55 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Appearance */}
+      <ThemeSection />
+
       {/* Security — Change Password */}
       <ChangePasswordSection />
+    </div>
+  )
+}
+
+function ThemeSection() {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
+        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Appearance</h3>
+      </div>
+      <div className="px-6 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-900">Theme</p>
+            <p className="text-xs text-gray-400 mt-0.5">Choose your preferred appearance</p>
+          </div>
+          <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => setTheme('light')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                theme === 'light'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              Light
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                theme === 'dark'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+              Dark
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

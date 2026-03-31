@@ -56,7 +56,7 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
       {/* Wordmark */}
       {showText && (
         <span className={clsx(s.text, 'font-extrabold tracking-tight select-none')}>
-          <span className="text-gray-900">Task</span>
+          <span className="text-gray-900 dark:text-white">Task</span>
           <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Flow</span>
         </span>
       )}
