@@ -19,8 +19,10 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
-        <Spinner size="lg" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--color-bg)] gap-4">
+        <Logo size="lg" />
+        <Spinner size="md" />
+        <p className="text-[12px] text-gray-400 font-medium animate-pulse">Checking authentication...</p>
       </div>
     )
   }
@@ -30,50 +32,50 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen bg-white dark:bg-[#0f1117]">
       {/* Left — branding panel */}
-      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden items-center justify-center p-16 bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-[#0f1117] dark:via-[#141625] dark:to-[#1a1040]">
+      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden items-center justify-center p-16 bg-gradient-to-br from-gray-50 via-white to-indigo-50/50 dark:from-[#0f1117] dark:via-[#141625] dark:to-[#1a1040]">
         {/* Floating shapes */}
-        <div className="absolute top-[10%] left-[15%] w-72 h-72 rounded-full bg-indigo-100/50 dark:bg-indigo-500/10 blur-3xl animate-float" />
-        <div className="absolute bottom-[15%] right-[10%] w-64 h-64 rounded-full bg-violet-100/40 dark:bg-violet-500/10 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-[45%] left-[55%] w-48 h-48 rounded-full bg-cyan-100/30 dark:bg-cyan-500/8 blur-3xl animate-float" style={{ animationDelay: '4s' }} />
+        <div className="absolute top-[10%] left-[15%] w-72 h-72 rounded-full bg-indigo-100/40 dark:bg-indigo-500/10 blur-3xl animate-float" />
+        <div className="absolute bottom-[15%] right-[10%] w-64 h-64 rounded-full bg-violet-100/30 dark:bg-violet-500/10 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-[45%] left-[55%] w-48 h-48 rounded-full bg-cyan-100/20 dark:bg-cyan-500/8 blur-3xl animate-float" style={{ animationDelay: '4s' }} />
 
-        {/* Dot grid pattern */}
-        <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.06]" style={{
-          backgroundImage: `radial-gradient(circle, #c7d2fe 1px, transparent 1px)`,
-          backgroundSize: '28px 28px',
+        {/* Dot grid */}
+        <div className="absolute inset-0 opacity-[0.08] dark:opacity-[0.04]" style={{
+          backgroundImage: `radial-gradient(circle, #6366f1 1px, transparent 1px)`,
+          backgroundSize: '32px 32px',
         }} />
 
         <div className="relative z-10 max-w-lg">
           <Logo size="xl" className="mb-10" />
 
-          <h1 className="text-5xl font-bold leading-[1.1] mb-5 text-gray-900 dark:text-white text-balance animate-fade-in">
+          <h1 className="text-[42px] font-bold leading-[1.1] mb-5 text-gray-900 dark:text-white tracking-tight animate-fade-in">
             Manage your team&apos;s work,{' '}
-            <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-500 dark:from-indigo-400 dark:via-violet-400 dark:to-indigo-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">
               effortlessly.
             </span>
           </h1>
 
-          <p className="text-lg text-gray-500 dark:text-gray-400 leading-relaxed mb-10 animate-fade-in-delay-1" style={{ opacity: 0 }}>
-            Track projects, assign tasks, monitor progress, and keep your team in sync — all in one place.
+          <p className="text-[15px] text-gray-500 dark:text-gray-400 leading-relaxed mb-10 animate-fade-in-delay-1" style={{ opacity: 0 }}>
+            Track projects, assign tasks, monitor time, and keep your entire team in sync — all in one place.
           </p>
 
           {/* Feature pills */}
           <div className="flex flex-wrap gap-2 animate-fade-in-delay-2" style={{ opacity: 0 }}>
             {[
-              { name: 'Kanban Boards', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg> },
+              { name: 'Task Pipeline', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg> },
               { name: 'Time Tracking', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
-              { name: 'Team Management', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+              { name: 'Reports & Analytics', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
               { name: 'Role-Based Access', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> },
             ].map((feature) => (
-              <span key={feature.name} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-white/[0.1] text-gray-700 dark:text-white/80 border border-gray-100 dark:border-white/[0.15] shadow-sm dark:shadow-none">
-                <span className="text-indigo-500 dark:text-indigo-300">{feature.icon}</span>
+              <span key={feature.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/80 dark:bg-white/[0.08] text-gray-600 dark:text-white/70 border border-gray-200/60 dark:border-white/[0.1] shadow-sm">
+                <span className="text-indigo-500 dark:text-indigo-400">{feature.icon}</span>
                 {feature.name}
               </span>
             ))}
           </div>
 
-          {/* NEUROSTACK attribution */}
-          <p className="mt-12 text-xs text-gray-400 dark:text-white/40 animate-fade-in-delay-3" style={{ opacity: 0 }}>
-            Powered by <span className="font-semibold text-gray-500 dark:text-white/60">NEUROSTACK</span>
+          {/* Attribution */}
+          <p className="mt-14 text-[11px] text-gray-400 dark:text-white/30 animate-fade-in-delay-3" style={{ opacity: 0 }}>
+            Powered by <span className="font-semibold text-gray-500 dark:text-white/50">NEUROSTACK</span>
           </p>
         </div>
       </div>
@@ -82,20 +84,20 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
         <div className="w-full max-w-sm animate-fade-in">
           {/* Mobile logo */}
-          <div className="lg:hidden flex justify-center mb-10">
+          <div className="lg:hidden flex justify-center mb-8">
             <Logo size="lg" />
           </div>
 
-          <div className="mb-8">
+          <div className="mb-6">
             <NeedsPwHeading />
           </div>
 
-          <div className="bg-white dark:bg-[#1a1c25] rounded-2xl p-7 shadow-card border border-gray-100 dark:border-[#2a2d3a]">
+          <div className="bg-white dark:bg-[#1a1c25] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2a2d3a]">
             <LoginForm />
           </div>
 
-          <p className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
-            Powered by <span className="font-semibold text-gray-500 dark:text-gray-400">NEUROSTACK</span> &middot; Secure login via AWS Cognito
+          <p className="mt-6 text-center text-[10px] text-gray-400 dark:text-gray-500">
+            Powered by <span className="font-semibold text-gray-500 dark:text-gray-400">NEUROSTACK</span> · Secure login via AWS Cognito
           </p>
         </div>
       </div>
@@ -108,15 +110,15 @@ function NeedsPwHeading() {
   if (needsPasswordChange) {
     return (
       <>
-        <h2 className="text-2xl font-bold text-gray-900">Create Your Password</h2>
-        <p className="mt-1.5 text-sm text-gray-500">Please set a new password to continue</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Your Password</h2>
+        <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">Please set a new password to continue</p>
       </>
     )
   }
   return (
     <>
-      <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
-      <p className="mt-1.5 text-sm text-gray-500">Sign in to continue to your workspace</p>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white">Welcome back</h2>
+      <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">Sign in to continue to your workspace</p>
     </>
   )
 }
