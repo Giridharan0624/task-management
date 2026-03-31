@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Spinner } from './Spinner'
+import { ImageCropper } from './ImageCropper'
 
 interface AvatarUploadProps {
   currentUrl?: string
@@ -33,19 +34,35 @@ function getGradient(name: string): string {
 
 export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable = true }: AvatarUploadProps) {
   const [uploading, setUploading] = useState(false)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !cloudName || !uploadPreset) return
+    if (!file) return
+
+    // Read file and open cropper
+    const reader = new FileReader()
+    reader.onload = () => {
+      setCropSrc(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    // Reset input so same file can be selected again
+    e.target.value = ''
+  }
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropSrc(null)
+    if (!cloudName || !uploadPreset) return
 
     setUploading(true)
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', croppedBlob, 'avatar.jpg')
       formData.append('upload_preset', uploadPreset)
       formData.append('folder', 'taskflow-avatars')
 
@@ -67,46 +84,60 @@ export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable
   const initial = (name || '?').charAt(0).toUpperCase()
 
   return (
-    <div className="relative group">
-      {currentUrl ? (
-        <img
-          src={currentUrl}
-          alt={name}
-          className={`${sizeClasses[size]} rounded-2xl object-cover shadow-card ring-2 ring-white`}
-        />
-      ) : (
-        <div className={`${sizeClasses[size]} rounded-2xl bg-gradient-to-br ${getGradient(name)} flex items-center justify-center shadow-card ring-2 ring-white`}>
-          <span className="text-white font-bold drop-shadow-sm">{initial}</span>
-        </div>
-      )}
-
-      {editable && cloudName && uploadPreset && (
-        <>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="absolute inset-0 rounded-2xl bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
-          >
-            {uploading ? (
-              <Spinner size="sm" className="text-white" />
-            ) : (
-              <svg className="w-6 h-6 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            )}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
+    <>
+      <div className="relative group">
+        {currentUrl ? (
+          <img
+            src={currentUrl}
+            alt={name}
+            className={`${sizeClasses[size]} rounded-2xl object-cover shadow-card ring-2 ring-white dark:ring-[#1a1c25]`}
           />
-        </>
+        ) : (
+          <div className={`${sizeClasses[size]} rounded-2xl bg-gradient-to-br ${getGradient(name)} flex items-center justify-center shadow-card ring-2 ring-white dark:ring-[#1a1c25]`}>
+            <span className="text-white font-bold drop-shadow-sm">{initial}</span>
+          </div>
+        )}
+
+        {editable && cloudName && uploadPreset && (
+          <>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="absolute inset-0 rounded-2xl bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
+            >
+              {uploading ? (
+                <Spinner size="sm" className="text-white" />
+              ) : (
+                <svg className="w-6 h-6 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              )}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+          </>
+        )}
+      </div>
+
+      {/* Image Cropper Modal */}
+      {cropSrc && (
+        <ImageCropper
+          imageSrc={cropSrc}
+          isOpen={true}
+          onClose={() => setCropSrc(null)}
+          onCropComplete={handleCropComplete}
+          cropShape="round"
+          aspect={1}
+        />
       )}
-    </div>
+    </>
   )
 }
 
