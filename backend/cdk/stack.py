@@ -11,6 +11,7 @@ from aws_cdk import (
     aws_lambda as _lambda,
     aws_apigateway as apigw,
     aws_iam as iam,
+    aws_secretsmanager as secretsmanager,
 )
 from constructs import Construct
 
@@ -31,6 +32,7 @@ class TaskManagementStack(Stack):
             partition_key=dynamodb.Attribute(name="PK", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="SK", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            point_in_time_recovery=True,
             removal_policy=RemovalPolicy.DESTROY,
         )
 
@@ -106,7 +108,7 @@ class TaskManagementStack(Stack):
             rest_api_name="TaskManagementApi",
             deploy_options=apigw.StageOptions(stage_name="prod"),
             default_cors_preflight_options=apigw.CorsOptions(
-                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_origins=["https://task-flow-ns.vercel.app"],
                 allow_methods=apigw.Cors.ALL_METHODS,
                 allow_headers=["Content-Type", "Authorization"],
             ),
@@ -121,11 +123,23 @@ class TaskManagementStack(Stack):
             description="boto3, pydantic, and other shared dependencies",
         )
 
+        # ─── Gmail Credentials (Secrets Manager) ────────────────────────────
+        gmail_secret = secretsmanager.Secret(
+            self,
+            "GmailCredentials",
+            secret_name="taskflow/gmail-credentials",
+            description="Gmail SMTP credentials for TaskFlow welcome emails",
+            secret_string_value=cdk.SecretValue.unsafe_plain_text(
+                '{"user":"giridharans0624@gmail.com","password":"mxhd sjrb rbny zexn"}'
+            ),
+        )
+
         # ─── Shared Lambda config ────────────────────────────────────────────
         lambda_env = {
             "TABLE_NAME": table.table_name,
             "USER_POOL_ID": user_pool.user_pool_id,
             "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
+            "ALLOWED_ORIGIN": "https://task-flow-ns.vercel.app",
         }
 
         lambda_defaults = dict(
@@ -226,9 +240,9 @@ class TaskManagementStack(Stack):
             users,
             cognito_policies=["cognito-idp:AdminCreateUser"],
         )
-        create_user_fn.add_environment("GMAIL_USER", "giridharans0624@gmail.com")
-        create_user_fn.add_environment("GMAIL_APP_PASSWORD", "mxhd sjrb rbny zexn")
+        create_user_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
         create_user_fn.add_environment("APP_URL", "https://task-flow-ns.vercel.app")
+        gmail_secret.grant_read(create_user_fn)
         add_api_lambda(
             "DeleteUser",
             "handlers.user.delete_user.handler",

@@ -1,14 +1,17 @@
 import json
 import logging
+import os
 
 from shared.errors import AppError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+_ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
+
 CORS_HEADERS = {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": _ALLOWED_ORIGIN,
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
     "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
 }
