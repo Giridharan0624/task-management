@@ -63,14 +63,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const needsPasswordChange = pendingPasswordChange !== null
 
+  // Check token on load
   useEffect(() => {
     const storedToken = getCurrentToken()
     if (storedToken) {
+      try {
+        const payload = JSON.parse(atob(storedToken.split('.')[1]))
+        const expiry = payload.exp * 1000
+        if (Date.now() >= expiry) {
+          localStorage.removeItem('auth_token')
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            window.location.replace('/login')
+          }
+          setIsLoading(false)
+          return
+        }
+      } catch {
+        localStorage.removeItem('auth_token')
+        setIsLoading(false)
+        return
+      }
+
       setToken(storedToken)
       const decoded = decodeJwtForUser(storedToken)
       setUser(decoded)
     }
     setIsLoading(false)
+  }, [])
+
+  // Periodic token expiry check — every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const t = getCurrentToken()
+      if (!t) return
+      try {
+        const payload = JSON.parse(atob(t.split('.')[1]))
+        if (Date.now() >= payload.exp * 1000) {
+          localStorage.removeItem('auth_token')
+          setToken(null)
+          setUser(null)
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            window.location.replace('/login')
+          }
+        }
+      } catch { /* ignore */ }
+    }, 60000)
+    return () => clearInterval(interval)
   }, [])
 
   const signIn = useCallback(async (identifier: string, password: string) => {

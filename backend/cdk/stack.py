@@ -87,6 +87,9 @@ class TaskManagementStack(Stack):
                 user_password=True,
             ),
             generate_secret=False,
+            id_token_validity=Duration.days(1),
+            access_token_validity=Duration.days(1),
+            refresh_token_validity=Duration.days(30),
         )
 
         # ─── Cognito Authorizer ──────────────────────────────────────────────

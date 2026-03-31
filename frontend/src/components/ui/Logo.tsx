@@ -34,9 +34,9 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
             strokeWidth="3.2"
             strokeLinecap="round"
           />
-          {/* Top crossbar → forward arrow */}
+          {/* Top crossbar — extends left for T, right with arrow for F */}
           <path
-            d="M10 7h10l4 4"
+            d="M4 7h16l4 4"
             stroke="white"
             strokeWidth="2.8"
             strokeLinecap="round"

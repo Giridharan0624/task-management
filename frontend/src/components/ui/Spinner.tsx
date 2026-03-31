@@ -47,7 +47,7 @@ export function Spinner({ size = 'md', className }: SpinnerProps) {
       {showIcon && (
         <svg viewBox="0 0 32 32" fill="none" className="w-[14px] h-[14px] relative z-10">
           <path d="M10 7v18" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
-          <path d="M10 7h10l4 4" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M4 7h16l4 4" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M10 16h8l3 3" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}
