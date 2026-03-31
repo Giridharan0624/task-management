@@ -24,23 +24,34 @@ def handler(event, context):
         attendance_repo = AttendanceDynamoRepository()
         user_repo = UserDynamoRepository()
 
-        # Try today's attendance first (IST), then yesterday's
-        # This handles late-night submissions (e.g. submitting at 1 AM for previous day's work)
         ist_today = _get_ist_today()
         ist_yesterday = (datetime.now(IST) - timedelta(days=1)).strftime("%Y-%m-%d")
 
-        attendance = attendance_repo.find_by_user_and_date(auth.user_id, ist_today)
-        target_date = ist_today
+        # Priority logic:
+        # 1. If yesterday has attendance AND no task update submitted → use yesterday (late-night work)
+        # 2. Otherwise use today's attendance
+        attendance = None
+        target_date = None
 
-        if not attendance or not attendance.sessions:
-            # Check yesterday's attendance (late submission)
-            attendance = attendance_repo.find_by_user_and_date(auth.user_id, ist_yesterday)
+        # Check yesterday first — handles overnight work (started 10 PM, now 2 AM)
+        yesterday_attendance = attendance_repo.find_by_user_and_date(auth.user_id, ist_yesterday)
+        yesterday_update = update_repo.find_by_user_and_date(auth.user_id, ist_yesterday)
+
+        if yesterday_attendance and yesterday_attendance.sessions and not yesterday_update:
+            # Yesterday has unsubmitted work — prioritize it
+            attendance = yesterday_attendance
             target_date = ist_yesterday
+        else:
+            # Check today
+            today_attendance = attendance_repo.find_by_user_and_date(auth.user_id, ist_today)
+            if today_attendance and today_attendance.sessions:
+                attendance = today_attendance
+                target_date = ist_today
 
         if not attendance or not attendance.sessions:
             raise ValidationError("No attendance record found. Start the timer and work before submitting.")
 
-        # Check if already submitted for this attendance date
+        # Check if already submitted for this date
         existing = update_repo.find_by_user_and_date(auth.user_id, target_date)
         if existing:
             raise ValidationError(f"You have already submitted a task update for {target_date}")
