@@ -48,10 +48,6 @@ const PRIORITY_INDICATOR: Record<string, { color: string; label: string }> = {
 type FilterStatus = 'ALL' | TaskStatus
 type SortOption = 'default' | 'priority' | 'deadline' | 'title' | 'created'
 
-const SORT_LABELS: Record<SortOption, string> = {
-  default: 'Default', priority: 'Priority', deadline: 'Deadline', title: 'Title', created: 'Created',
-}
-
 const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 
 export function TaskKanban({ projectId, tasks, permissions, members = [] }: TaskKanbanProps) {
@@ -141,12 +137,6 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
 
   const filteredStages = filter === 'ALL' ? STAGES : STAGES.filter(s => s === filter)
 
-  // Quick status change handler
-  const handleQuickStatus = (taskId: string, newStatus: TaskStatus, e: React.MouseEvent) => {
-    e.stopPropagation()
-    updateTask.mutate({ taskId, data: { status: newStatus } })
-  }
-
   const clearAll = () => {
     setPriorityFilter('ALL'); setAssigneeFilter('ALL'); setShowOverdueOnly(false); setSearch(''); setFilter('ALL'); setSort('default')
   }
@@ -235,7 +225,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
             const count = statusCounts[stage]; const isActive = filter === stage; const hasItems = count > 0
             return (
               <button key={stage} onClick={() => setFilter(isActive ? 'ALL' : stage)}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all flex-shrink-0 border ${isActive ? `${STAGE_BG[stage]} shadow-sm` : hasItems ? 'bg-white border-gray-100 text-gray-600 hover:border-gray-200' : 'bg-white border-gray-50 text-gray-300'}`}>
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all flex-shrink-0 border ${isActive ? `${STAGE_BG[stage]} shadow-sm` : hasItems ? 'bg-white border-gray-200 text-gray-600 hover:border-gray-300' : 'bg-white border-gray-200 text-gray-400'}`}>
                 <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: STAGE_COLOR[stage], opacity: hasItems || isActive ? 1 : 0.3 }} />
                 <span className="hidden sm:inline">{TASK_STATUS_LABEL[stage]}</span>
                 <span className="sm:hidden">{TASK_STATUS_LABEL[stage].slice(0, 3)}</span>
