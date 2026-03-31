@@ -207,7 +207,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:ml-[260px] min-h-screen min-w-0 w-full">
         {/* Mobile top bar */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-20 bg-white/80 dark:bg-[#1a1c25]/90 backdrop-blur-lg border-b border-gray-100 dark:border-[#2a2d3a] px-4 py-3 flex items-center justify-between">
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
