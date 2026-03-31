@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { Task, TaskPriority } from '@/types/task'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 import { Select } from '@/components/ui/Select'
 import { UserMultiSelect } from '@/components/ui/UserSelect'
 
@@ -170,7 +171,10 @@ function CreateDirectTaskModal({
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
+            <div className="grid grid-cols-2 gap-2">
+              <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
+              <TimePicker value={deadlineTime} onChange={setDeadlineTime} placeholder="Time" />
+            </div>
           </div>
         </div>
 

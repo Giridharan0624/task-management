@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 import { Select } from '@/components/ui/Select'
 import { UserMultiSelect } from '@/components/ui/UserSelect'
 import { TaskDetailPanel } from '@/components/task/TaskDetailPanel'
@@ -398,6 +399,7 @@ function AssignModal({
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM')
   const [deadlineDate, setDeadlineDate] = useState('')
+  const [deadlineTime, setDeadlineTime] = useState('')
   const [selected, setSelected] = useState<string[]>([])
 
   const toggle = (uid: string) => setSelected((prev) => prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid])
@@ -405,7 +407,8 @@ function AssignModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !deadlineDate || selected.length === 0) return
-    onCreate({ title, description: description || undefined, priority, deadline: deadlineDate, assignedTo: selected })
+    const deadline = deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate
+    onCreate({ title, description: description || undefined, priority, deadline, assignedTo: selected })
   }
 
   return (
@@ -432,7 +435,10 @@ function AssignModal({
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
+            <div className="grid grid-cols-2 gap-2">
+              <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
+              <TimePicker value={deadlineTime} onChange={setDeadlineTime} placeholder="Time" />
+            </div>
           </div>
         </div>
         <div>

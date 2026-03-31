@@ -90,26 +90,18 @@ export default function TaskUpdatesPage() {
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Task Updates</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{dateLabel}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-lg font-bold text-indigo-600">{dateLabel}</span>
+            {selectedDate === getToday() && (
+              <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200 uppercase tracking-wider">Today</span>
+            )}
+            <span className="text-sm text-gray-400">&middot; {updates?.length ?? 0} updates</span>
+          </div>
         </div>
         <DatePicker value={selectedDate} onChange={setSelectedDate} max={getToday()} className="w-48" />
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
-          <p className="text-2xl font-bold text-indigo-700">{updates?.length ?? 0}</p>
-          <p className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">Updates Received</p>
-        </div>
-        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-          <p className="text-2xl font-bold text-gray-700">
-            {selectedDate === getToday() ? 'Today' : dateLabel.split(',')[0]}
-          </p>
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Date</p>
-        </div>
       </div>
 
       {/* Updates */}

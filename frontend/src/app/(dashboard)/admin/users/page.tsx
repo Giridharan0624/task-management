@@ -541,6 +541,30 @@ export default function UsersPage() {
                 <p className="text-xs text-gray-400 mb-0.5">Location</p>
                 <p className="text-sm font-medium text-gray-900">{viewUser.location || '-'}</p>
               </div>
+              {viewUser.dateOfBirth && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-0.5">Date of Birth</p>
+                  <p className="text-sm font-medium text-gray-900">{new Date(viewUser.dateOfBirth + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+              )}
+              {viewUser.collegeName && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-0.5">College</p>
+                  <p className="text-sm font-medium text-gray-900">{viewUser.collegeName}</p>
+                </div>
+              )}
+              {viewUser.areaOfInterest && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-0.5">Area of Interest</p>
+                  <p className="text-sm font-medium text-gray-900">{viewUser.areaOfInterest}</p>
+                </div>
+              )}
+              {viewUser.hobby && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-0.5">Hobby</p>
+                  <p className="text-sm font-medium text-gray-900">{viewUser.hobby}</p>
+                </div>
+              )}
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-xs text-gray-400 mb-0.5">Joined</p>
                 <p className="text-sm font-medium text-gray-900">
