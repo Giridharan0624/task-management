@@ -9,6 +9,7 @@ import { LiveTimer } from './LiveTimer'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Select } from '@/components/ui/Select'
+import { formatDuration } from '@/lib/utils/formatDuration'
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
@@ -157,7 +158,7 @@ export function AttendanceButton() {
 
         {sessions.length > 1 && (
           <div className="border-t border-emerald-200 pt-3 mt-3">
-            <p className="text-xs text-emerald-600">{sessions.length} sessions today &middot; {totalHours.toFixed(1)}h logged</p>
+            <p className="text-xs text-emerald-600">{sessions.length} sessions today &middot; {formatDuration(totalHours)} logged</p>
           </div>
         )}
 
@@ -176,11 +177,11 @@ export function AttendanceButton() {
         <div>
           <p className="text-sm font-semibold text-gray-900">Time Tracker</p>
           <p className="text-xs text-gray-400">
-            {sessions.length} session{sessions.length !== 1 ? 's' : ''} today &middot; {totalHours.toFixed(1)}h total
+            {sessions.length} session{sessions.length !== 1 ? 's' : ''} today &middot; {formatDuration(totalHours)} total
           </p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-indigo-700 tracking-tight">{totalHours.toFixed(1)}h</p>
+          <p className="text-2xl font-bold text-indigo-700 tracking-tight">{formatDuration(totalHours)}</p>
         </div>
       </div>
 
@@ -191,7 +192,7 @@ export function AttendanceButton() {
             {': '}
             {formatTime(s.signInAt)}
             {s.signOutAt ? ` — ${formatTime(s.signOutAt)}` : ' — now'}
-            {s.hours != null && ` (${s.hours.toFixed(1)}h)`}
+            {s.hours != null && ` (${formatDuration(s.hours)})`}
           </div>
         ))}
       </div>

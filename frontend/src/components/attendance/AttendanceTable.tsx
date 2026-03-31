@@ -7,6 +7,7 @@ import { LiveTimer } from './LiveTimer'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { formatDuration } from '@/lib/utils/formatDuration'
 
 function getToday() {
   return new Date().toISOString().slice(0, 10)
@@ -148,11 +149,11 @@ export function AttendanceTable() {
                   <td className="px-5 py-3 whitespace-nowrap text-sm font-semibold">
                     {record.status === 'SIGNED_IN' && record.currentSignInAt ? (
                       <div className="flex items-center gap-1">
-                        <span className="text-gray-500">{record.totalHours.toFixed(1)}h +</span>
+                        <span className="text-gray-500">{formatDuration(record.totalHours)} +</span>
                         <LiveTimer startTime={record.currentSignInAt} className="text-emerald-700 font-mono" />
                       </div>
                     ) : (
-                      <span className="text-gray-900">{record.totalHours.toFixed(1)}h</span>
+                      <span className="text-gray-900">{formatDuration(record.totalHours)}</span>
                     )}
                   </td>
                 </tr>

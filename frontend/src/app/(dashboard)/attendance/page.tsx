@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import type { Attendance } from '@/types/attendance'
+import { formatDuration } from '@/lib/utils/formatDuration'
 
 function getMonthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
@@ -30,7 +31,7 @@ function generateCSV(records: Attendance[]): string {
         r.userName, r.userEmail, r.systemRole, r.date, String(i + 1),
         s.taskTitle || 'General', s.projectName || '-',
         formatTime(s.signInAt), s.signOutAt ? formatTime(s.signOutAt) : 'Active',
-        s.hours != null ? s.hours.toFixed(2) : '-',
+        s.hours != null ? formatDuration(s.hours) : '-',
       ])
     }
   }
@@ -152,9 +153,9 @@ export default function AttendancePage() {
                         </td>
                         <td className="px-5 py-3.5 text-sm text-gray-600">{stats.role}</td>
                         <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{stats.days}</td>
-                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{Math.floor(stats.totalHours)}h {Math.round((stats.totalHours % 1) * 60)}m</td>
+                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{formatDuration(stats.totalHours)}</td>
                         <td className="px-5 py-3.5 text-sm text-gray-600">
-                          {(() => { const avg = stats.days > 0 ? stats.totalHours / stats.days : 0; return `${Math.floor(avg)}h ${Math.round((avg % 1) * 60)}m` })()}
+                          {(() => { const avg = stats.days > 0 ? stats.totalHours / stats.days : 0; return formatDuration(avg) })()}
                         </td>
                       </tr>
                     ))}
@@ -186,7 +187,7 @@ export default function AttendancePage() {
                         <td className="px-5 py-3.5 text-sm text-gray-600">{stats.projectName}</td>
                         <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{stats.taskTitle}</td>
                         <td className="px-5 py-3.5 text-sm text-gray-600">{stats.sessions}</td>
-                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{Math.floor(stats.totalHours)}h {Math.round((stats.totalHours % 1) * 60)}m</td>
+                        <td className="px-5 py-3.5 text-sm font-bold text-indigo-600">{formatDuration(stats.totalHours)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -229,7 +230,7 @@ export default function AttendancePage() {
                             ))}
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{Math.floor(r.totalHours)}h {Math.round((r.totalHours % 1) * 60)}m</td>
+                        <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{formatDuration(r.totalHours)}</td>
                       </tr>
                     ))}
                   </tbody>

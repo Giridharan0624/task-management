@@ -234,7 +234,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
               <div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{task.title}</h3>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {permissions.canUpdateStatus && isAssigned && !permissions.canUpdateTask ? (
+                  {permissions.canUpdateStatus ? (
                     <Select
                       value={task.status}
                       onChange={(v) => handleStatusChange(v as TaskStatus)}

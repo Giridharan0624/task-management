@@ -5,6 +5,7 @@ import { useMyTaskUpdate, useSubmitTaskUpdate } from '@/lib/hooks/useTaskUpdates
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { formatDuration } from '@/lib/utils/formatDuration'
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
@@ -126,14 +127,10 @@ export function TaskUpdateCard() {
   }
 
   const taskList = Object.entries(taskHours).map(([name, hours]) => {
-    const h = Math.floor(hours)
-    const m = Math.round((hours - h) * 60)
-    return { name, time: m > 0 ? `${h}h ${m}m` : `${h}h` }
+    return { name, time: formatDuration(hours) }
   })
 
-  const totalH = Math.floor(attendance.totalHours)
-  const totalM = Math.round((attendance.totalHours - totalH) * 60)
-  const totalTime = totalM > 0 ? `${totalH}h ${totalM}m` : `${totalH}h`
+  const totalTime = formatDuration(attendance.totalHours)
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
