@@ -176,7 +176,13 @@ function CreateModal({
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Date</label>
-              <DatePicker value={singleDate} onChange={setSingleDate} min={(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10) })()} />
+              <DatePicker value={singleDate} onChange={setSingleDate} min={(() => {
+                const now = new Date()
+                const istHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
+                // Before 5 PM IST → can request for today; After 5 PM → tomorrow onwards
+                if (istHour < 17) return now.toISOString().slice(0, 10)
+                const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10)
+              })()} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -195,11 +201,21 @@ function CreateModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
-              <DatePicker value={startDate} onChange={setStartDate} min={(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10) })()} />
+              <DatePicker value={startDate} onChange={setStartDate} min={(() => {
+                const now = new Date()
+                const istHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
+                if (istHour < 17) return now.toISOString().slice(0, 10)
+                const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10)
+              })()} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">End Date</label>
-              <DatePicker value={endDate} onChange={setEndDate} min={startDate || (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10) })()} />
+              <DatePicker value={endDate} onChange={setEndDate} min={startDate || (() => {
+                const now = new Date()
+                const istHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
+                if (istHour < 17) return now.toISOString().slice(0, 10)
+                const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10)
+              })()} />
             </div>
           </div>
         )}

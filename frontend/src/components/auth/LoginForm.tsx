@@ -50,9 +50,8 @@ export function LoginForm() {
     setServerError(null)
     try {
       await signIn(values.email, values.password)
-      if (!needsPasswordChange) {
-        router.replace('/dashboard')
-      }
+      // If signIn sets needsPasswordChange, component re-renders to Phase 2
+      // If signIn succeeds normally, user state is set → login page's useEffect redirects to /dashboard
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Sign in failed. Please try again.'
       setServerError(msg)
@@ -102,8 +101,8 @@ export function LoginForm() {
       const msg = err instanceof Error ? err.message : 'Failed to send verification code'
       if (msg.includes('UserNotFoundException') || msg.includes('not found')) {
         setForgotError('No account found with this email')
-      } else if (msg.includes('InvalidParameterException')) {
-        setForgotError('This account has not completed first-time setup. Please use your one-time password first.')
+      } else if (msg.includes('InvalidParameterException') || msg.includes('cannot be reset') || msg.includes('current state')) {
+        setForgotError('You haven\'t set your password yet. Please check your email for the one-time password and use it to log in first.')
       } else {
         setForgotError(msg)
       }
