@@ -16,6 +16,7 @@ import { LiveTimer } from '@/components/attendance/LiveTimer'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { useLiveHours } from '@/lib/hooks/useLiveHours'
 import { CommandPalette } from '@/components/ui/CommandPalette'
+import { Walkthrough } from '@/components/ui/Walkthrough'
 import { NotificationCenter } from '@/components/ui/NotificationCenter'
 
 const ownerNav = [
@@ -286,6 +287,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       <CommandPalette />
+      <Walkthrough />
     </div>
   )
 }
