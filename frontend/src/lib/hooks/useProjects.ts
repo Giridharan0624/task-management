@@ -20,6 +20,8 @@ export function useProjects() {
   return useQuery({
     queryKey: projectKeys.all,
     queryFn: getProjects,
+    staleTime: 30000,
+    refetchInterval: 30000,
   })
 }
 
@@ -28,6 +30,8 @@ export function useProject(projectId: string) {
     queryKey: projectKeys.detail(projectId),
     queryFn: () => getProject(projectId),
     enabled: !!projectId,
+    staleTime: 30000,
+    refetchInterval: 30000,
   })
 }
 
@@ -57,6 +61,8 @@ export function useProjectStatus(projectId: string) {
     queryKey: projectKeys.status(projectId),
     queryFn: () => getProjectStatus(projectId),
     enabled: !!projectId,
+    staleTime: 30000,
+    refetchInterval: 30000,
   })
 }
 

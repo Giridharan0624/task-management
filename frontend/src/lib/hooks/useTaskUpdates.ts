@@ -11,6 +11,8 @@ export function useTaskUpdates(date?: string) {
   return useQuery({
     queryKey: date ? keys.byDate(date) : keys.all,
     queryFn: () => getTaskUpdates(date),
+    staleTime: 30000,
+    refetchInterval: 30000,
   })
 }
 
@@ -18,6 +20,8 @@ export function useMyTaskUpdate() {
   return useQuery({
     queryKey: keys.my,
     queryFn: getMyTaskUpdate,
+    staleTime: 30000,
+    refetchInterval: 30000,
   })
 }
 

@@ -34,7 +34,8 @@ export function useMyAttendance() {
       }
       return data
     },
-    refetchInterval: 60000,
+    staleTime: 15000,
+    refetchInterval: 15000,
   })
 }
 
@@ -42,7 +43,8 @@ export function useTodayAttendance() {
   return useQuery({
     queryKey: attendanceKeys.today,
     queryFn: getTodayAttendance,
-    refetchInterval: 60000,
+    staleTime: 10000,
+    refetchInterval: 10000,
   })
 }
 
@@ -51,7 +53,8 @@ export function useAttendanceReport(startDate: string, endDate: string) {
     queryKey: attendanceKeys.report(startDate, endDate),
     queryFn: () => getAttendanceReport(startDate, endDate),
     enabled: !!startDate && !!endDate,
-    refetchInterval: 60000,
+    staleTime: 30000,
+    refetchInterval: 30000,
   })
 }
 

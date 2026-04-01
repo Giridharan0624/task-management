@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getUsers, getAdmins, updateUserRole, updateUserDepartment, getUserProgress, createUser, deleteUser, getMyTasks } from '@/lib/api/userApi'
+import type { User } from '@/types/user'
 
 const userKeys = {
   all: ['users'] as const,
@@ -14,6 +15,8 @@ export function useUsers() {
     queryKey: userKeys.all,
     queryFn: getUsers,
     retry: 1,
+    staleTime: 30000,
+    refetchInterval: 30000,
   })
 }
 
@@ -39,9 +42,18 @@ export function useDeleteUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (userId: string) => deleteUser(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.all })
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey: userKeys.all })
+      const previous = queryClient.getQueryData<User[]>(userKeys.all)
+      queryClient.setQueryData<User[]>(userKeys.all, (old) =>
+        old?.filter((u) => u.userId !== userId)
+      )
+      return { previous }
     },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(userKeys.all, context.previous)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
   })
 }
 
@@ -50,9 +62,18 @@ export function useUpdateUserRole() {
   return useMutation({
     mutationFn: ({ userId, systemRole }: { userId: string; systemRole: string }) =>
       updateUserRole(userId, systemRole),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.all })
+    onMutate: async ({ userId, systemRole }) => {
+      await queryClient.cancelQueries({ queryKey: userKeys.all })
+      const previous = queryClient.getQueryData<User[]>(userKeys.all)
+      queryClient.setQueryData<User[]>(userKeys.all, (old) =>
+        old?.map((u) => (u.userId === userId ? { ...u, systemRole } as User : u))
+      )
+      return { previous }
     },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(userKeys.all, context.previous)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
   })
 }
 
@@ -61,9 +82,18 @@ export function useUpdateUserDepartment() {
   return useMutation({
     mutationFn: ({ userId, department }: { userId: string; department: string }) =>
       updateUserDepartment(userId, department),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.all })
+    onMutate: async ({ userId, department }) => {
+      await queryClient.cancelQueries({ queryKey: userKeys.all })
+      const previous = queryClient.getQueryData<User[]>(userKeys.all)
+      queryClient.setQueryData<User[]>(userKeys.all, (old) =>
+        old?.map((u) => (u.userId === userId ? { ...u, department } : u))
+      )
+      return { previous }
     },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(userKeys.all, context.previous)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: userKeys.all }),
   })
 }
 
@@ -79,5 +109,7 @@ export function useMyTasks() {
   return useQuery({
     queryKey: userKeys.myTasks,
     queryFn: getMyTasks,
+    staleTime: 10000,
+    refetchInterval: 10000,
   })
 }
