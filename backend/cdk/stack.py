@@ -217,10 +217,6 @@ class TaskManagementStack(Stack):
         add_api_lambda("DeleteTask", "handlers.task.delete_task.handler", "DELETE", task)
         add_api_lambda("AssignTask", "handlers.task.assign_task.handler", "PUT", task_assign)
 
-        # ─── Direct Task handlers (no project) ───────────────────────────────
-        direct_tasks = api.root.add_resource("direct-tasks")
-        add_api_lambda("CreateDirectTask", "handlers.task.create_direct_task.handler", "POST", direct_tasks)
-        add_api_lambda("ListDirectTasks", "handlers.task.list_direct_tasks.handler", "GET", direct_tasks)
 
         # ─── Comment handlers ────────────────────────────────────────────────
         add_api_lambda("CreateComment", "handlers.comment.create_comment.handler", "POST", comments)

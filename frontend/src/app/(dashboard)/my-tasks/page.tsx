@@ -8,15 +8,12 @@ import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
-import { TaskDetailPanel } from '@/components/task/TaskDetailPanel'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import Link from 'next/link'
 import type { MyTask } from '@/lib/api/userApi'
-import type { Task, TaskStatus, TaskPriority } from '@/types/task'
+import type { TaskStatus, TaskPriority } from '@/types/task'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_LABELS, getStatusProgress, getStatusOptions } from '@/types/task'
 import type { TaskDomain } from '@/types/task'
-import type { Permissions } from '@/lib/hooks/usePermission'
-import { useUpdateTask } from '@/lib/hooks/useTasks'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 
 type FilterStatus = 'ALL' | TaskStatus
@@ -45,7 +42,6 @@ export default function TasksPage() {
   const [sort, setSort] = useState<SortOption>('default')
   const [activeTab, setActiveTab] = useState<TabType>('my')
   const [search, setSearch] = useState('')
-  const [selectedDirectTask, setSelectedDirectTask] = useState<Task | null>(null)
 
   const isTopTier = TOP_TIER.includes(user?.systemRole ?? '')
   const isAdmin = user?.systemRole === 'ADMIN'
@@ -208,37 +204,20 @@ export default function TasksPage() {
             <tbody className="divide-y divide-gray-50">
               {filteredTasks.map((task) => {
                 const isOverdue = checkOverdue(task.deadline, task.status)
-                const isDirect = task.projectId === 'DIRECT'
                 return (
                   <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => {
-                    if (isDirect) {
-                      setSelectedDirectTask({
-                        taskId: task.taskId, projectId: 'DIRECT', title: task.title,
-                        description: task.description, status: task.status, priority: task.priority,
-                        domain: (task.domain as import('@/types/task').TaskDomain) || 'DEVELOPMENT',
-                        assignedTo: task.assignedTo, assignedBy: task.assignedBy, createdBy: task.createdBy,
-                        deadline: task.deadline, createdAt: task.createdAt, updatedAt: task.updatedAt,
-                      } as Task)
-                    }
+                    router.push(`/projects/${task.projectId}`)
                   }}>
                     <td className="px-5 py-3.5">
-                      {isDirect ? (
-                        <span className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
-                          {task.title}
-                        </span>
-                      ) : (
-                        <Link href={`/projects/${task.projectId}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
-                          {task.title}
-                        </Link>
-                      )}
+                      <Link href={`/projects/${task.projectId}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                        {task.title}
+                      </Link>
                       {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1.5">
-                        <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium ${
-                          isDirect ? 'bg-purple-50 text-purple-700' : 'bg-gray-50 text-gray-600'
-                        }`}>
-                          {isDirect ? 'Direct' : task.projectName}
+                        <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium bg-gray-50 text-gray-600">
+                          {task.projectName}
                         </span>
                         {task.domain && (
                           <span className="text-[9px] font-semibold text-gray-400">{DOMAIN_LABELS[task.domain as TaskDomain] || task.domain}</span>
@@ -297,20 +276,9 @@ export default function TasksPage() {
           <div className="sm:hidden divide-y divide-gray-50">
             {filteredTasks.map((task) => {
               const isOverdue = checkOverdue(task.deadline, task.status)
-              const isDirect = task.projectId === 'DIRECT'
               return (
-                <div key={task.taskId} onClick={() => {
-                  if (isDirect) {
-                    setSelectedDirectTask({
-                      taskId: task.taskId, projectId: 'DIRECT', title: task.title,
-                      description: task.description, status: task.status, priority: task.priority,
-                      assignedTo: task.assignedTo, assignedBy: task.assignedBy, createdBy: task.createdBy,
-                      deadline: task.deadline, createdAt: task.createdAt, updatedAt: task.updatedAt,
-                    } as Task)
-                  } else {
-                    router.push(`/projects/${task.projectId}`)
-                  }
-                }} className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                <div key={task.taskId} onClick={() => router.push(`/projects/${task.projectId}`)}
+                  className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
                     <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
@@ -328,8 +296,8 @@ export default function TasksPage() {
                     )
                   })()}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDirect ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-500'}`}>
-                      {isDirect ? 'Direct' : task.projectName}
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                      {task.projectName}
                     </span>
                     <span className={`text-[10px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
                       {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
@@ -340,24 +308,6 @@ export default function TasksPage() {
             })}
           </div>
         </div>
-      )}
-
-      {/* Direct Task Detail Panel */}
-      {selectedDirectTask && (
-        <TaskDetailPanel
-          task={selectedDirectTask}
-          projectId="DIRECT"
-          permissions={{
-            canCreateTask: isTopTier || isAdmin,
-            canUpdateTask: isTopTier || isAdmin,
-            canUpdateStatus: true,
-            canDeleteTask: isTopTier || isAdmin,
-            canAssignTask: isTopTier || isAdmin,
-            canManageMembers: false,
-            canDeleteProject: false,
-          }}
-          onClose={() => setSelectedDirectTask(null)}
-        />
       )}
 
     </div>

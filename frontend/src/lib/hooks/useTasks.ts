@@ -5,22 +5,17 @@ import {
   updateTask,
   deleteTask,
   assignTask,
-  getDirectTasks,
-  createDirectTask,
   type CreateTaskData,
   type UpdateTaskData,
-  type CreateDirectTaskData,
 } from '@/lib/api/taskApi'
 
 export const taskKeys = {
   all: (projectId: string) => ['tasks', projectId] as const,
-  direct: ['tasks', 'direct'] as const,
 }
 
 /** Invalidate all task-related queries so every page stays in sync */
 function invalidateAllTasks(queryClient: ReturnType<typeof useQueryClient>, projectId?: string) {
   if (projectId) queryClient.invalidateQueries({ queryKey: taskKeys.all(projectId) })
-  queryClient.invalidateQueries({ queryKey: taskKeys.direct })
   queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
   queryClient.invalidateQueries({ queryKey: ['projects'] })
 }
@@ -64,21 +59,5 @@ export function useAssignTask(projectId: string) {
     mutationFn: ({ taskId, assignedTo }: { taskId: string; assignedTo: string[] }) =>
       assignTask(projectId, taskId, assignedTo),
     onSuccess: () => invalidateAllTasks(queryClient, projectId),
-  })
-}
-
-// Direct tasks
-export function useDirectTasks() {
-  return useQuery({
-    queryKey: taskKeys.direct,
-    queryFn: getDirectTasks,
-  })
-}
-
-export function useCreateDirectTask() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (data: CreateDirectTaskData) => createDirectTask(data),
-    onSuccess: () => invalidateAllTasks(queryClient),
   })
 }

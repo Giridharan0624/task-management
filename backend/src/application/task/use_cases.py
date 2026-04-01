@@ -337,20 +337,6 @@ class GetMyAssignedTasksUseCase:
     def execute(self, caller_user_id: str, caller_system_role: str = None) -> list[dict]:
         my_tasks = []
 
-        # Include direct tasks (no project)
-        direct_tasks = self._task_repo.find_by_project("DIRECT")
-        if caller_system_role in PRIVILEGED_ROLES:
-            for task in direct_tasks:
-                task_dict = task.to_dict()
-                task_dict["project_name"] = "Direct Task"
-                my_tasks.append(task_dict)
-        else:
-            for task in direct_tasks:
-                if caller_user_id in task.assigned_to:
-                    task_dict = task.to_dict()
-                    task_dict["project_name"] = "Direct Task"
-                    my_tasks.append(task_dict)
-
         # Project tasks
         if caller_system_role in PRIVILEGED_ROLES:
             projects = self._project_repo.find_all()

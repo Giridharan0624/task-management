@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMyAttendance, useSignIn, useSignOut } from '@/lib/hooks/useAttendance'
 import { useProjects } from '@/lib/hooks/useProjects'
-import { useTasks, useDirectTasks } from '@/lib/hooks/useTasks'
+import { useTasks } from '@/lib/hooks/useTasks'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { LiveTimer } from './LiveTimer'
 import { Button } from '@/components/ui/Button'
@@ -20,27 +20,24 @@ function TaskSelector({ onStart, loading, label }: {
 }) {
   const { user } = useAuth()
   const { data: projects } = useProjects()
-  const { data: directTasks } = useDirectTasks()
   const [source, setSource] = useState('')
   const [taskId, setTaskId] = useState('')
   const [desc, setDesc] = useState('')
-  const { data: projectTasks } = useTasks(source === 'DIRECT' ? '' : source)
+  const { data: projectTasks } = useTasks(source === 'MEETING' ? '' : source)
 
-  const tasks = source === 'DIRECT'
-    ? (directTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
-    : (projectTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
+  const tasks = (projectTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
 
   const isMeeting = source === 'MEETING'
   const canStart = isMeeting || (taskId && source)
 
   const go = () => {
     if (isMeeting) {
-      onStart({ taskId: 'meeting', projectId: 'DIRECT', taskTitle: 'Meeting', projectName: 'Meeting', description: desc.trim() || undefined })
+      onStart({ taskId: 'meeting', projectId: 'meeting', taskTitle: 'Meeting', projectName: 'Meeting', description: desc.trim() || undefined })
     } else {
       const t = tasks.find(x => x.taskId === taskId)
       const p = (projects ?? []).find(x => x.projectId === source)
-      if (!t) return
-      onStart({ taskId: t.taskId, projectId: source === 'DIRECT' ? 'DIRECT' : (p?.projectId ?? ''), taskTitle: t.title, projectName: source === 'DIRECT' ? 'Direct Task' : (p?.name ?? ''), description: desc.trim() || undefined })
+      if (!t || !p) return
+      onStart({ taskId: t.taskId, projectId: p.projectId, taskTitle: t.title, projectName: p.name, description: desc.trim() || undefined })
     }
     setSource(''); setTaskId(''); setDesc('')
   }
@@ -52,7 +49,7 @@ function TaskSelector({ onStart, loading, label }: {
         onKeyDown={e => { if (e.key === 'Enter' && canStart) go() }} />
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select value={source} onChange={v => { setSource(v); setTaskId('') }}
-          options={[{ value: 'MEETING', label: 'Meeting' }, { value: 'DIRECT', label: 'Direct Tasks' }, ...(projects ?? []).map(p => ({ value: p.projectId, label: p.name }))]}
+          options={[{ value: 'MEETING', label: 'Meeting' }, ...(projects ?? []).map(p => ({ value: p.projectId, label: p.name }))]}
           placeholder="Select Source" className="sm:flex-1" />
         {!isMeeting && <Select value={taskId} onChange={setTaskId} options={tasks.map(t => ({ value: t.taskId, label: t.title }))} placeholder="Select Task" disabled={!source} className="sm:flex-1" />}
         <Button variant="primary" size="sm" onClick={go} disabled={!canStart || loading} loading={loading} className="whitespace-nowrap">{label}</Button>
