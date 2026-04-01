@@ -25,6 +25,22 @@ from domain.user.value_objects import PRIVILEGED_ROLES
 from domain.project.value_objects import ProjectRole
 from domain.task.value_objects import STATUS_PROGRESS
 
+
+def _parse_deadline(deadline_str: str) -> datetime | None:
+    """Parse deadline string. Date-only values are treated as end of day (23:59:59)."""
+    if not deadline_str:
+        return None
+    try:
+        dl = datetime.fromisoformat(deadline_str.replace("Z", "+00:00"))
+        # If no time component (just a date like "2026-04-01"), set to end of day
+        if "T" not in deadline_str:
+            dl = dl.replace(hour=23, minute=59, second=59)
+        if dl.tzinfo is None:
+            dl = dl.replace(tzinfo=timezone.utc)
+        return dl
+    except Exception:
+        return None
+
 # Priority weights (HIGH tasks count more toward progress)
 PRIORITY_WEIGHT = {
     "HIGH": 3,
@@ -114,11 +130,7 @@ def handler(event, context):
             if t.status.value == "DONE":
                 on_track_count += 1
                 continue
-            try:
-                dl = datetime.fromisoformat(t.deadline.replace("Z", "+00:00")) if t.deadline else None
-                deadline = dl.replace(tzinfo=timezone.utc) if dl and dl.tzinfo is None else dl
-            except Exception:
-                deadline = None
+            deadline = _parse_deadline(t.deadline) if t.deadline else None
             if deadline:
                 if now > deadline:
                     overdue_count += 1
@@ -150,11 +162,7 @@ def handler(event, context):
             status_pct = STATUS_PROGRESS.get(t.status.value, 0)
             time_pct = round((tracked / est) * 100, 1) if est > 0 else 0
 
-            try:
-                dl = datetime.fromisoformat(t.deadline.replace("Z", "+00:00")) if t.deadline else None
-                deadline = dl.replace(tzinfo=timezone.utc) if dl and dl.tzinfo is None else dl
-            except Exception:
-                deadline = None
+            deadline = _parse_deadline(t.deadline) if t.deadline else None
             is_overdue = bool(deadline and now > deadline and t.status.value != "DONE")
 
             task_progress.append({

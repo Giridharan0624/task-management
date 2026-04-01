@@ -90,10 +90,10 @@ export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable
           <img
             src={currentUrl}
             alt={name}
-            className={`${sizeClasses[size]} rounded-2xl object-cover shadow-card ring-2 ring-white dark:ring-[#1a1c25]`}
+            className={`${sizeClasses[size]} rounded-2xl object-cover shadow-sm ring-2 ring-white dark:ring-[#1a1c25]`}
           />
         ) : (
-          <div className={`${sizeClasses[size]} rounded-2xl bg-gradient-to-br ${getGradient(name)} flex items-center justify-center shadow-card ring-2 ring-white dark:ring-[#1a1c25]`}>
+          <div className={`${sizeClasses[size]} rounded-2xl bg-gradient-to-br ${getGradient(name)} flex items-center justify-center shadow-sm ring-2 ring-white dark:ring-[#1a1c25]`}>
             <span className="text-white font-bold drop-shadow-sm">{initial}</span>
           </div>
         )}

@@ -10,6 +10,7 @@ import { CreateTaskModal } from './CreateTaskModal'
 import { useAdmins } from '@/lib/hooks/useUsers'
 import { useUpdateTask } from '@/lib/hooks/useTasks'
 import { FilterSelect } from '@/components/ui/FilterSelect'
+import { isOverdue as checkOverdue, parseDeadline } from '@/lib/utils/deadline'
 
 interface TaskKanbanProps {
   projectId: string
@@ -85,7 +86,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
     if (assigneeFilter !== 'ALL') result = result.filter(t => (t.assignedTo ?? []).includes(assigneeFilter))
     if (showOverdueOnly) {
       const now = new Date()
-      result = result.filter(t => t.status !== 'DONE' && t.deadline && new Date(t.deadline) < now)
+      result = result.filter(t => checkOverdue(t.deadline, t.status))
     }
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -263,7 +264,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
                       <p className="text-xs text-gray-300">No tasks in this stage</p>
                     </div>
                   ) : stageTasks.map((task, idx) => {
-                    const isOverdue = task.deadline && task.status !== 'DONE' && new Date(task.deadline) < new Date()
+                    const isOverdue = checkOverdue(task.deadline, task.status)
                     const pri = PRIORITY_INDICATOR[task.priority]
                     const stageIdx = STAGES.indexOf(task.status)
                     const progressPct = Math.round(((stageIdx + 1) / STAGES.length) * 100)

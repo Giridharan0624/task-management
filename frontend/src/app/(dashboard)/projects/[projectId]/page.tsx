@@ -18,6 +18,8 @@ import type { ProjectRole } from '@/types/user'
 import { TASK_STATUS_PROGRESS, TASK_STATUS_LABEL } from '@/types/task'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { ProjectReport } from '@/components/reports/ProjectReport'
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
+import { parseDeadline, isOverdue as checkOverdue } from '@/lib/utils/deadline'
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -82,7 +84,7 @@ export default function ProjectDetailPage() {
   const now = new Date()
   const upcomingDeadlines = (tasks ?? [])
     .filter(t => t.status !== 'DONE' && t.deadline)
-    .map(t => ({ ...t, deadlineDate: new Date(t.deadline) }))
+    .map(t => ({ ...t, deadlineDate: parseDeadline(t.deadline) }))
     .filter(t => {
       const diff = (t.deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       return diff <= 7 // Due within 7 days (includes overdue)
@@ -100,6 +102,10 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-6xl">
+      <Breadcrumbs items={[
+        { label: 'Projects', href: '/projects' },
+        { label: project.name },
+      ]} />
       {/* Header Card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -290,6 +296,7 @@ export default function ProjectDetailPage() {
         <MemberList
           projectId={projectId}
           members={project.members ?? []}
+          tasks={tasks ?? []}
           canManageMembers={permissions.canManageMembers}
           callerProjectRole={projectRole}
           callerSystemRole={user?.systemRole}

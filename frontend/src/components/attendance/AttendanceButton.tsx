@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Select } from '@/components/ui/Select'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { useLiveHours } from '@/lib/hooks/useLiveHours'
 
 const DAILY_TARGET_HOURS = 8
 
@@ -134,6 +135,7 @@ function DailySummary({ sessions }: { sessions: { taskTitle: string | null; proj
 
 export function AttendanceButton() {
   const { data: attendance, isLoading } = useMyAttendance()
+  const { totalHours: liveTotal } = useLiveHours()
   const signIn = useSignIn()
   const signOut = useSignOut()
 
@@ -160,7 +162,7 @@ export function AttendanceButton() {
     )
   }
 
-  const { sessions, totalHours, status, currentSignInAt, currentTask } = attendance
+  const { sessions, status, currentSignInAt, currentTask } = attendance
 
   if (status === 'SIGNED_IN') {
     const activeDesc = sessions.find(s => !s.signOutAt)?.description
@@ -182,7 +184,7 @@ export function AttendanceButton() {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-            <span className="text-[10px] text-emerald-600 tabular-nums hidden sm:inline">{formatDuration(totalHours)} today</span>
+            <span className="text-[10px] text-emerald-600 tabular-nums hidden sm:inline">{formatDuration(liveTotal)} today</span>
             {currentSignInAt && (
               <LiveTimer startTime={currentSignInAt} className="text-xl font-bold text-emerald-700 font-mono tracking-tight" />
             )}
@@ -212,7 +214,7 @@ export function AttendanceButton() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <p className="text-[13px] font-semibold text-gray-900">Time Tracker</p>
-          <span className="text-[10px] bg-gray-100 text-gray-500 font-semibold px-1.5 py-0.5 rounded-md tabular-nums">{formatDuration(totalHours)}</span>
+          <span className="text-[10px] bg-gray-100 text-gray-500 font-semibold px-1.5 py-0.5 rounded-md tabular-nums">{formatDuration(liveTotal)}</span>
         </div>
         {/* Quick restart */}
         {lastSession && lastSession.taskTitle && (

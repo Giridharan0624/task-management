@@ -37,15 +37,15 @@ export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
           style={{ animationDuration: '1s' }}
         />
 
-        {/* TF logo mark — only for lg */}
+        {/* TF logo mark — only for lg, centered in the circle */}
         {size === 'lg' && (
-          <g transform="translate(14, 14) scale(0.83)">
+          <g>
             {/* T — vertical stem */}
-            <path d="M10 7v18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-indigo-600 dark:text-indigo-400" />
-            {/* T — top crossbar extending left */}
-            <path d="M4 7h16l4 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600 dark:text-indigo-400" />
+            <path d="M22 16v16" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-indigo-600 dark:text-indigo-400" />
+            {/* T — top crossbar */}
+            <path d="M16 16h12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-indigo-600 dark:text-indigo-400" />
             {/* F — middle bar */}
-            <path d="M10 16h8l3 3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-500 dark:text-violet-400" />
+            <path d="M22 24h8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-violet-500 dark:text-violet-400" />
           </g>
         )}
       </svg>

@@ -67,28 +67,55 @@
   .dark .text-gray-400 { color: #747c98 !important; }
   .dark .text-gray-300 { color: #5a6280 !important; }
 
+  /* Colored text — brighter in dark mode */
+  .dark .text-purple-700 { color: #c084fc !important; }
+  .dark .text-purple-800 { color: #d8b4fe !important; }
+  .dark .text-indigo-700 { color: #a5b4fc !important; }
+  .dark .text-indigo-800 { color: #c7d2fe !important; }
+  .dark .text-violet-700 { color: #c4b5fd !important; }
+  .dark .text-violet-800 { color: #ddd6fe !important; }
+  .dark .text-fuchsia-800 { color: #f0abfc !important; }
+  .dark .text-orange-700 { color: #fb923c !important; }
+  .dark .text-orange-600 { color: #fb923c !important; }
+  .dark .text-teal-700 { color: #5eead4 !important; }
+  .dark .text-blue-700 { color: #93c5fd !important; }
+  .dark .text-blue-800 { color: #bfdbfe !important; }
+  .dark .text-red-700 { color: #fca5a5 !important; }
+  .dark .text-red-800 { color: #fecaca !important; }
+  .dark .text-amber-700 { color: #fcd34d !important; }
+  .dark .text-emerald-700 { color: #6ee7b7 !important; }
+  .dark .text-pink-700 { color: #f9a8d4 !important; }
+
+  /* Dark buttons — invert bg-gray-900 to light in dark mode */
+  .dark .bg-gray-900 { background-color: #e4e4ec !important; color: #0f1117 !important; }
+  .dark .bg-gray-900 * { color: #0f1117 !important; }
+  .dark .hover\:bg-gray-800:hover { background-color: #d0d1db !important; }
+  .dark .active\:bg-gray-950:active { background-color: #c0c1cc !important; }
+
   /* Colored backgrounds — desaturated for dark mode */
   .dark .bg-indigo-50 { background-color: rgba(99,102,241,0.1) !important; }
-  .dark .bg-indigo-100 { background-color: rgba(99,102,241,0.15) !important; }
+  .dark .bg-indigo-100 { background-color: rgba(99,102,241,0.18) !important; }
   .dark .bg-violet-50 { background-color: rgba(139,92,246,0.1) !important; }
-  .dark .bg-purple-50, .dark .bg-purple-100 { background-color: rgba(168,85,247,0.1) !important; }
+  .dark .bg-purple-50 { background-color: rgba(168,85,247,0.1) !important; }
+  .dark .bg-purple-100 { background-color: rgba(168,85,247,0.18) !important; }
   .dark .bg-fuchsia-50, .dark .bg-fuchsia-100 { background-color: rgba(217,70,239,0.1) !important; }
-  .dark .bg-blue-50, .dark .bg-blue-100 { background-color: rgba(59,130,246,0.1) !important; }
+  .dark .bg-blue-50 { background-color: rgba(59,130,246,0.1) !important; }
+  .dark .bg-blue-100 { background-color: rgba(59,130,246,0.18) !important; }
   .dark .bg-cyan-50 { background-color: rgba(6,182,212,0.1) !important; }
   .dark .bg-teal-50 { background-color: rgba(20,184,166,0.1) !important; }
   .dark .bg-emerald-50, .dark .bg-emerald-50\/50 { background-color: rgba(16,185,129,0.1) !important; }
-  .dark .bg-emerald-100 { background-color: rgba(16,185,129,0.15) !important; }
+  .dark .bg-emerald-100 { background-color: rgba(16,185,129,0.18) !important; }
   .dark .bg-green-50, .dark .bg-green-100 { background-color: rgba(34,197,94,0.1) !important; }
   .dark .bg-amber-50, .dark .bg-amber-100 { background-color: rgba(245,158,11,0.1) !important; }
   .dark .bg-orange-50 { background-color: rgba(249,115,22,0.1) !important; }
   .dark .bg-red-50, .dark .bg-red-50\/50, .dark .bg-red-50\/40, .dark .bg-red-50\/30 { background-color: rgba(239,68,68,0.1) !important; }
-  .dark .bg-red-100 { background-color: rgba(239,68,68,0.15) !important; }
+  .dark .bg-red-100 { background-color: rgba(239,68,68,0.18) !important; }
   .dark .bg-rose-50, .dark .bg-rose-100 { background-color: rgba(244,63,94,0.1) !important; }
   .dark .bg-pink-50, .dark .bg-pink-100 { background-color: rgba(236,72,153,0.1) !important; }
   .dark .bg-slate-50 { background-color: rgba(100,116,139,0.1) !important; }
-  .dark .bg-violet-100 { background-color: rgba(139,92,246,0.15) !important; }
-  .dark .bg-orange-100 { background-color: rgba(249,115,22,0.15) !important; }
-  .dark .bg-teal-100 { background-color: rgba(20,184,166,0.15) !important; }
+  .dark .bg-violet-100 { background-color: rgba(139,92,246,0.18) !important; }
+  .dark .bg-orange-100 { background-color: rgba(249,115,22,0.18) !important; }
+  .dark .bg-teal-100 { background-color: rgba(20,184,166,0.18) !important; }
 
   /* Colored borders — subtler in dark */
   .dark .border-indigo-100, .dark .border-indigo-200 { border-color: rgba(99,102,241,0.2) !important; }
@@ -257,6 +284,26 @@
 }
 
 @layer components {
+  /* Animated progress bar fill */
+  .progress-animate > div {
+    animation: progress-fill 0.8s ease-out forwards;
+  }
+  @keyframes progress-fill {
+    from { width: 0; }
+  }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-surface-hover) 0%, var(--color-surface) 50%, var(--color-surface-hover) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 8px;
+  }
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
   /* Animated gradient mesh background for login */
   .gradient-mesh {
     background: linear-gradient(

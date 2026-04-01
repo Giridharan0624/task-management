@@ -56,7 +56,7 @@ function RequestCard({
   isActing: boolean
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-card hover:shadow-card-hover transition-all duration-200 hover-lift">
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-all duration-200 hover-lift">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div>
@@ -372,7 +372,7 @@ export default function DayOffsPage() {
               <p className="text-sm text-gray-400">No requests found.</p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>

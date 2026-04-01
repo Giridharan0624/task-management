@@ -73,7 +73,7 @@ export default function DirectTasksPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden divide-y divide-gray-50">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
           {allTasks.map((task: Task) => (
             <div key={task.taskId} className="px-5 py-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between gap-4">

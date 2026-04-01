@@ -10,6 +10,7 @@ import { useAdmins, useUsers } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
 import { TASK_STATUS_OPTIONS, TASK_STATUS_LABEL, TASK_STATUS_PROGRESS } from '@/types/task'
+import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -167,7 +168,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   const assignedSet = new Set(task.assignedTo ?? [])
   const availableMembers = members.filter((m) => !assignedSet.has(m.userId))
 
-  const isOverdue = task.deadline && task.status !== 'DONE' && new Date(task.deadline) < new Date()
+  const isOverdue = checkOverdue(task.deadline, task.status)
 
   const panel = (
     <div className="fixed inset-0 z-[9998] overflow-y-auto" onClick={onClose}>

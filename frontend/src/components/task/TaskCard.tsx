@@ -1,6 +1,7 @@
 'use client'
 
 import type { Task, TaskStatus } from '@/types/task'
+import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { TASK_STATUS_LABEL } from '@/types/task'
 
 interface TaskCardProps {
@@ -31,8 +32,7 @@ export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
       })
     : null
 
-  const isOverdue =
-    task.deadline && task.status !== 'DONE' && new Date(task.deadline) < new Date()
+  const isOverdue = checkOverdue(task.deadline, task.status)
 
   return (
     <button

@@ -9,6 +9,10 @@ import { AvatarUpload } from '@/components/ui/AvatarUpload'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { useTheme } from '@/lib/theme/ThemeProvider'
+import { useMyTasks } from '@/lib/hooks/useUsers'
+import { useLiveHours } from '@/lib/hooks/useLiveHours'
+import { useProjects } from '@/lib/hooks/useProjects'
+import { formatDuration } from '@/lib/utils/formatDuration'
 import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -82,6 +86,26 @@ export default function ProfilePage() {
     })
   }, [])
 
+  // Stats data
+  const { data: myTasks } = useMyTasks()
+  const { totalHours: liveTodayHours } = useLiveHours()
+  const { data: projects } = useProjects()
+
+  const tasksDone = (myTasks ?? []).filter(t => t.status === 'DONE').length
+  const totalTasks = (myTasks ?? []).length
+  const todayHours = liveTodayHours
+  const projectCount = (projects ?? []).length
+
+  // Profile completeness
+  const completenessFields = [
+    profile?.name, profile?.bio, profile?.phone, profile?.designation,
+    profile?.location, profile?.dateOfBirth, profile?.collegeName,
+    profile?.areaOfInterest, profile?.hobby, profile?.avatarUrl,
+    profile?.skills && profile.skills.length > 0 ? 'yes' : null,
+  ]
+  const filledCount = completenessFields.filter(Boolean).length
+  const completeness = Math.round((filledCount / completenessFields.length) * 100)
+
   const handleSave = async () => {
     setSaving(true)
     setSuccess(false)
@@ -150,8 +174,47 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Quick Stats + Profile Completeness */}
+      {!isOwner && !editing && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-xl font-bold text-emerald-700 tabular-nums">{tasksDone}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Tasks Done</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-xl font-bold text-blue-700 tabular-nums">{totalTasks - tasksDone}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Active</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-xl font-bold text-indigo-700 tabular-nums">{projectCount}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Projects</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <p className="text-xl font-bold text-cyan-700 tabular-nums">{formatDuration(todayHours)}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Today</p>
+          </div>
+          {/* Profile completeness */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex items-center gap-3">
+            <div className="relative flex-shrink-0" style={{ width: 40, height: 40 }}>
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                <circle cx="18" cy="18" r="14" fill="none" stroke={completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b'}
+                  strokeWidth="3" strokeDasharray={`${completeness} ${100 - completeness}`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[8px] font-bold tabular-nums" style={{ color: completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b' }}>{completeness}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Profile</p>
+              <p className="text-[10px] text-gray-400">{filledCount}/{completenessFields.length} fields</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
         {/* Identity section */}
         <Section title="Identity">
@@ -185,6 +248,12 @@ export default function ProfilePage() {
                 {!isOwner && profile?.employeeId && (
                   <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-mono font-bold text-gray-500 ring-1 ring-inset ring-gray-200">
                     {profile.employeeId}
+                  </span>
+                )}
+                {dp.createdAt && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    Joined {new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 )}
               </div>
@@ -273,11 +342,23 @@ export default function ProfilePage() {
               </div>
             ) : profile?.skills && profile.skills.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {profile.skills.map((skill) => (
-                  <span key={skill} className="inline-flex items-center rounded-md bg-gray-50 border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-700">
-                    {skill}
-                  </span>
-                ))}
+                {profile.skills.map((skill, i) => {
+                  const colors = [
+                    'bg-indigo-50 text-indigo-700 border-indigo-200',
+                    'bg-emerald-50 text-emerald-700 border-emerald-200',
+                    'bg-violet-50 text-violet-700 border-violet-200',
+                    'bg-amber-50 text-amber-700 border-amber-200',
+                    'bg-blue-50 text-blue-700 border-blue-200',
+                    'bg-teal-50 text-teal-700 border-teal-200',
+                    'bg-pink-50 text-pink-700 border-pink-200',
+                    'bg-orange-50 text-orange-700 border-orange-200',
+                  ]
+                  return (
+                    <span key={skill} className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${colors[i % colors.length]}`}>
+                      {skill}
+                    </span>
+                  )
+                })}
               </div>
             ) : (
               <p className="text-sm text-gray-300">No skills added.</p>
@@ -312,7 +393,7 @@ export default function ProfilePage() {
 
       {/* Bio Data form — only shown once (before first submission), hidden for OWNER */}
       {!isOwner && !bioDataSubmitted && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Bio Data</h3>
           </div>
@@ -460,7 +541,7 @@ function ThemeSection() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Appearance</h3>
       </div>
@@ -626,7 +707,7 @@ function ChangePasswordSection() {
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Security</h3>
         </div>

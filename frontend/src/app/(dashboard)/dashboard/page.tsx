@@ -10,6 +10,10 @@ import { AttendanceButton } from '@/components/attendance/AttendanceButton'
 import { AttendanceTable } from '@/components/attendance/AttendanceTable'
 import { TaskUpdateCard } from '@/components/taskupdate/TaskUpdateCard'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABEL } from '@/types/task'
+import { useAttendanceReport } from '@/lib/hooks/useAttendance'
+import { Sparkline } from '@/components/ui/Sparkline'
+import { isOverdue as checkOverdue, parseDeadline } from '@/lib/utils/deadline'
+import { useMemo } from 'react'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800 ring-1 ring-inset ring-purple-200',
@@ -28,19 +32,20 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 /* ─── Small Components ─── */
 
-function StatCard({ icon, label, value, color, gradient, href }: {
-  icon: React.ReactNode; label: string; value: number | string; color: string; gradient: string; href?: string
+function StatCard({ icon, label, value, color, gradient, href, sparkData, sparkColor }: {
+  icon: React.ReactNode; label: string; value: number | string; color: string; gradient: string; href?: string; sparkData?: number[]; sparkColor?: string
 }) {
   const content = (
     <>
       <div className="flex items-center justify-between mb-3">
         <div className={`h-9 w-9 rounded-xl ${gradient} flex items-center justify-center shadow-sm`}>{icon}</div>
+        {sparkData && sparkData.length >= 2 && <Sparkline data={sparkData} color={sparkColor || '#6366f1'} height={28} width={56} />}
       </div>
       <p className={`text-2xl font-bold ${color} tracking-tight tabular-nums`}>{value}</p>
       <p className="text-[10px] font-semibold text-gray-400 mt-1 uppercase tracking-widest">{label}</p>
     </>
   )
-  const cls = "bg-white rounded-2xl border border-gray-100 p-4 shadow-sm"
+  const cls = "bg-white rounded-xl border border-gray-100 p-4 shadow-sm"
   if (href) return <Link href={href} className={`${cls} hover:shadow-md hover:border-gray-200 transition-all block`}>{content}</Link>
   return <div className={cls}>{content}</div>
 }
@@ -102,7 +107,7 @@ function OverdueAlert({ tasks }: { tasks: { taskId: string; projectId: string; t
       </div>
       <div className="space-y-1.5">
         {tasks.slice(0, 3).map(t => {
-          const days = Math.ceil((new Date().getTime() - new Date(t.deadline).getTime()) / (1000 * 60 * 60 * 24))
+          const days = Math.ceil((new Date().getTime() - parseDeadline(t.deadline).getTime()) / (1000 * 60 * 60 * 24))
           return (
             <Link key={t.taskId} href={`/projects/${t.projectId}`} className="flex items-center justify-between py-1 group">
               <span className="text-[12px] font-medium text-red-800 truncate group-hover:underline">{t.title}</span>
@@ -130,7 +135,7 @@ function UpcomingDeadlines({ tasks }: { tasks: { taskId: string; projectId: stri
       </div>
       <div className="divide-y divide-gray-50">
         {tasks.map(t => {
-          const diff = Math.ceil((new Date(t.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+          const diff = Math.ceil((parseDeadline(t.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
           const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `${diff} days`
           return (
             <Link key={t.taskId} href={`/projects/${t.projectId}`} className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50/50 transition-colors group">
@@ -195,20 +200,44 @@ const Icons = {
   viewTasks: <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
 }
 
+/* ─── 7-day sparkline helper ─── */
+function use7DayHours() {
+  const now = new Date()
+  const start = new Date(now); start.setDate(start.getDate() - 6)
+  const startStr = start.toISOString().slice(0, 10)
+  const endStr = now.toISOString().slice(0, 10)
+  const { data } = useAttendanceReport(startStr, endStr)
+
+  return useMemo(() => {
+    const dayMap = new Map<string, number>()
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(d.getDate() + i)
+      dayMap.set(d.toISOString().slice(0, 10), 0)
+    }
+    for (const r of data ?? []) {
+      const hrs = r.sessions.reduce((s: number, se: { hours: number | null }) => s + (se.hours ?? 0), 0)
+      dayMap.set(r.date, (dayMap.get(r.date) ?? 0) + hrs)
+    }
+    return Array.from(dayMap.values())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+}
+
 /* ─── Owner Dashboard ─── */
 function OwnerDashboard() {
   const { data: users, isLoading: usersLoading } = useUsers()
   const { data: projects, isLoading: projectsLoading } = useProjects()
   const { data: myTasks } = useMyTasks()
+  const sparkData = use7DayHours()
 
   const adminCount = (users ?? []).filter(u => ['ADMIN', 'CEO', 'MD'].includes(u.systemRole)).length
   const memberCount = (users ?? []).filter(u => u.systemRole === 'MEMBER').length
 
   const now = new Date()
-  const overdueTasks = (myTasks ?? []).filter(t => t.status !== 'DONE' && t.deadline && new Date(t.deadline) < now)
+  const overdueTasks = (myTasks ?? []).filter(t => checkOverdue(t.deadline, t.status))
   const upcomingTasks = (myTasks ?? []).filter(t => {
     if (t.status === 'DONE' || !t.deadline) return false
-    const diff = (new Date(t.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    const diff = (parseDeadline(t.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return diff >= 0 && diff <= 3
   }).sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
 
@@ -221,8 +250,8 @@ function OwnerDashboard() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={Icons.users} label="Admins" value={adminCount} color="text-violet-700" gradient="bg-gradient-to-br from-violet-500 to-purple-600" href="/admin/users" />
         <StatCard icon={Icons.members} label="Members" value={memberCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/admin/users" />
-        <StatCard icon={Icons.projects} label="Projects" value={projects?.length ?? 0} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-blue-600" href="/projects" />
-        <StatCard icon={Icons.tasks} label="All Tasks" value={(myTasks ?? []).length} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
+        <StatCard icon={Icons.projects} label="Projects" value={projects?.length ?? 0} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-blue-600" href="/projects" sparkData={sparkData} sparkColor="#6366f1" />
+        <StatCard icon={Icons.tasks} label="All Tasks" value={(myTasks ?? []).length} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" sparkData={sparkData} sparkColor="#10b981" />
       </div>
 
       <UpcomingDeadlines tasks={upcomingTasks} />
@@ -246,6 +275,7 @@ function AdminDashboard() {
   const { data: myTasks, isLoading: myTasksLoading } = useMyTasks()
   const { data: users, isLoading: usersLoading } = useUsers()
   const { data: projects } = useProjects()
+  const sparkData = use7DayHours()
 
   const allTasks = myTasks ?? []
   const todoCount = allTasks.filter(t => t.status === 'TODO').length
@@ -254,10 +284,10 @@ function AdminDashboard() {
   const memberCount = (users ?? []).filter(u => u.systemRole === 'MEMBER').length
 
   const now = new Date()
-  const overdueTasks = allTasks.filter(t => t.status !== 'DONE' && t.deadline && new Date(t.deadline) < now)
+  const overdueTasks = allTasks.filter(t => checkOverdue(t.deadline, t.status))
   const upcomingTasks = allTasks.filter(t => {
     if (t.status === 'DONE' || !t.deadline) return false
-    const diff = (new Date(t.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    const diff = (parseDeadline(t.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return diff >= 0 && diff <= 3
   }).sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
 
@@ -273,7 +303,7 @@ function AdminDashboard() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={Icons.todo} label="To Do" value={todoCount} color="text-amber-700" gradient="bg-gradient-to-br from-amber-400 to-orange-500" href="/my-tasks" />
         <StatCard icon={Icons.progress} label="Active" value={activeCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/my-tasks" />
-        <StatCard icon={Icons.done} label="Done" value={doneCount} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
+        <StatCard icon={Icons.done} label="Done" value={doneCount} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" sparkData={sparkData} sparkColor="#10b981" />
         <StatCard icon={Icons.members} label="Members" value={memberCount} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-purple-600" href="/admin/users" />
       </div>
 
@@ -315,6 +345,7 @@ function AdminDashboard() {
 /* ─── Member Dashboard ─── */
 function MemberDashboard() {
   const { data: myTasks, isLoading } = useMyTasks()
+  const sparkData = use7DayHours()
 
   const allTasks = myTasks ?? []
   const todoCount = allTasks.filter(t => t.status === 'TODO').length
@@ -322,10 +353,10 @@ function MemberDashboard() {
   const activeCount = allTasks.length - todoCount - doneCount
 
   const now = new Date()
-  const overdueTasks = allTasks.filter(t => t.status !== 'DONE' && t.deadline && new Date(t.deadline) < now)
+  const overdueTasks = allTasks.filter(t => checkOverdue(t.deadline, t.status))
   const upcomingTasks = allTasks.filter(t => {
     if (t.status === 'DONE' || !t.deadline) return false
-    const diff = (new Date(t.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    const diff = (parseDeadline(t.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return diff >= 0 && diff <= 3
   }).sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
 
@@ -339,10 +370,10 @@ function MemberDashboard() {
       <OverdueAlert tasks={overdueTasks} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={Icons.tasks} label="Total" value={allTasks.length} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-purple-600" href="/my-tasks" />
+        <StatCard icon={Icons.tasks} label="Total" value={allTasks.length} color="text-indigo-700" gradient="bg-gradient-to-br from-indigo-500 to-purple-600" href="/my-tasks" sparkData={sparkData} sparkColor="#6366f1" />
         <StatCard icon={Icons.todo} label="To Do" value={todoCount} color="text-amber-700" gradient="bg-gradient-to-br from-amber-400 to-orange-500" href="/my-tasks" />
         <StatCard icon={Icons.progress} label="Active" value={activeCount} color="text-blue-700" gradient="bg-gradient-to-br from-blue-500 to-cyan-600" href="/my-tasks" />
-        <StatCard icon={Icons.done} label="Done" value={doneCount} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" />
+        <StatCard icon={Icons.done} label="Done" value={doneCount} color="text-emerald-700" gradient="bg-gradient-to-br from-emerald-500 to-teal-600" href="/my-tasks" sparkData={sparkData} sparkColor="#10b981" />
       </div>
 
       <UpcomingDeadlines tasks={upcomingTasks} />

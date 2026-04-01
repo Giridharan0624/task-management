@@ -22,6 +22,7 @@ import type { Task, TaskStatus, TaskPriority } from '@/types/task'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_OPTIONS, TASK_STATUS_PROGRESS } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { useUpdateTask } from '@/lib/hooks/useTasks'
+import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 
 type FilterStatus = 'ALL' | TaskStatus
 type TabType = 'my' | 'all'
@@ -86,7 +87,7 @@ export default function TasksPage() {
   const todoCount = visibleTasks.filter(t => t.status === 'TODO').length
   const activeCount = visibleTasks.filter(t => t.status !== 'TODO' && t.status !== 'DONE').length
   const doneCount = visibleTasks.filter(t => t.status === 'DONE').length
-  const overdueCount = visibleTasks.filter(t => t.status !== 'DONE' && t.deadline && new Date(t.deadline) < new Date()).length
+  const overdueCount = visibleTasks.filter(t => checkOverdue(t.deadline, t.status)).length
 
   let filteredTasks = filter === 'ALL' ? visibleTasks : visibleTasks.filter(t => t.status === filter)
   if (priorityFilter !== 'ALL') filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter)
@@ -196,7 +197,7 @@ export default function TasksPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {/* Desktop table */}
           <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
@@ -216,7 +217,7 @@ export default function TasksPage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filteredTasks.map((task) => {
-                const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'DONE'
+                const isOverdue = checkOverdue(task.deadline, task.status)
                 const isDirect = task.projectId === 'DIRECT'
                 return (
                   <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => {
@@ -299,7 +300,7 @@ export default function TasksPage() {
           {/* Mobile card view */}
           <div className="sm:hidden divide-y divide-gray-50">
             {filteredTasks.map((task) => {
-              const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'DONE'
+              const isOverdue = checkOverdue(task.deadline, task.status)
               const isDirect = task.projectId === 'DIRECT'
               return (
                 <div key={task.taskId} onClick={() => {

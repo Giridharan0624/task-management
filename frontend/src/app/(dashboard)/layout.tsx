@@ -14,6 +14,9 @@ import { useTimerTitle } from '@/lib/hooks/useTimerTitle'
 import { useMyAttendance } from '@/lib/hooks/useAttendance'
 import { LiveTimer } from '@/components/attendance/LiveTimer'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { useLiveHours } from '@/lib/hooks/useLiveHours'
+import { CommandPalette } from '@/components/ui/CommandPalette'
+import { NotificationCenter } from '@/components/ui/NotificationCenter'
 
 const ownerNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -84,12 +87,10 @@ function NavIcon({ type }: { type: string }) {
 
 function SidebarTimer() {
   const { user } = useAuth()
-  const { data: attendance } = useMyAttendance()
-  // Owner/CEO/MD don't use the timer
+  const { totalHours, isActive, attendance } = useLiveHours()
   const topTier = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD'
   if (topTier || !attendance) return null
 
-  const isActive = attendance.status === 'SIGNED_IN'
   const task = attendance.currentTask
 
   if (isActive && attendance.currentSignInAt) {
@@ -104,18 +105,18 @@ function SidebarTimer() {
         </div>
         <div className="flex items-center justify-between">
           <LiveTimer startTime={attendance.currentSignInAt} className="text-[14px] font-bold text-emerald-700 font-mono tabular-nums" />
-          <span className="text-[9px] text-emerald-600 font-medium">{formatDuration(attendance.totalHours)} total</span>
+          <span className="text-[9px] text-emerald-600 font-medium">{formatDuration(totalHours)} total</span>
         </div>
       </Link>
     )
   }
 
-  if (attendance.totalHours > 0) {
+  if (totalHours > 0) {
     return (
       <div className="mx-3 mb-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Today</span>
-          <span className="text-[12px] font-bold text-gray-700 tabular-nums">{formatDuration(attendance.totalHours)}</span>
+          <span className="text-[12px] font-bold text-gray-700 tabular-nums">{formatDuration(totalHours)}</span>
         </div>
       </div>
     )
@@ -181,9 +182,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Logo */}
       <div className="px-5 py-5 flex items-center justify-between border-b border-gray-100">
         <Logo size="md" />
-        <button onClick={closeSidebar} className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
+        <div className="flex items-center gap-1">
+          <div className="hidden lg:block"><NotificationCenter /></div>
+          <button onClick={closeSidebar} className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -253,7 +257,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="fixed inset-0 z-30 lg:hidden" onClick={closeSidebar} />
       )}
 
-      {/* Sidebar — light, refined */}
+      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } safe-bottom`}>
@@ -268,15 +272,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
           <Logo size="sm" />
-          <Link href="/profile">
-            <Avatar url={avatarUrl} name={profileName || user.name || user.email} size="sm" />
-          </Link>
+          <div className="flex items-center gap-1">
+            <NotificationCenter />
+            <Link href="/profile">
+              <Avatar url={avatarUrl} name={profileName || user.name || user.email} size="sm" />
+            </Link>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 w-full min-w-0">
           {children}
         </main>
       </div>
+
+      <CommandPalette />
     </div>
   )
 }

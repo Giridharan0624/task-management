@@ -278,7 +278,7 @@ export default function UsersPage() {
       )}
 
       {/* User Table */}
-      <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden overflow-x-auto">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50/80">
             <tr>
