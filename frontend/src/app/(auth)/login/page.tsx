@@ -32,14 +32,14 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen bg-white dark:bg-[#0f1117]">
       {/* Left — branding panel */}
-      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden items-center justify-center p-16 bg-gradient-to-br from-gray-50 via-white to-indigo-50/50 dark:from-[#0f1117] dark:via-[#141625] dark:to-[#1a1040]">
+      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden items-center justify-center p-16 bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-[#0f1117] dark:via-[#141625] dark:to-[#1a1040] border-r border-gray-200 dark:border-[#2a2d3a]">
         {/* Floating shapes */}
-        <div className="absolute top-[10%] left-[15%] w-72 h-72 rounded-full bg-indigo-100/40 dark:bg-indigo-500/10 blur-3xl animate-float" />
-        <div className="absolute bottom-[15%] right-[10%] w-64 h-64 rounded-full bg-violet-100/30 dark:bg-violet-500/10 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-[45%] left-[55%] w-48 h-48 rounded-full bg-cyan-100/20 dark:bg-cyan-500/8 blur-3xl animate-float" style={{ animationDelay: '4s' }} />
+        <div className="absolute top-[10%] left-[15%] w-72 h-72 rounded-full bg-indigo-200/40 dark:bg-indigo-500/10 blur-3xl animate-float" />
+        <div className="absolute bottom-[15%] right-[10%] w-64 h-64 rounded-full bg-violet-200/40 dark:bg-violet-500/10 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-[45%] left-[55%] w-48 h-48 rounded-full bg-cyan-100/30 dark:bg-cyan-500/8 blur-3xl animate-float" style={{ animationDelay: '4s' }} />
 
         {/* Dot grid */}
-        <div className="absolute inset-0 opacity-[0.08] dark:opacity-[0.04]" style={{
+        <div className="absolute inset-0 opacity-[0.06] dark:opacity-[0.04]" style={{
           backgroundImage: `radial-gradient(circle, #6366f1 1px, transparent 1px)`,
           backgroundSize: '32px 32px',
         }} />
@@ -58,18 +58,23 @@ export default function LoginPage() {
             Track projects, assign tasks, monitor time, and keep your entire team in sync — all in one place.
           </p>
 
-          {/* Feature pills */}
-          <div className="flex flex-wrap gap-2 animate-fade-in-delay-2" style={{ opacity: 0 }}>
+          {/* Feature cards */}
+          <div className="grid grid-cols-2 gap-3 animate-fade-in-delay-2" style={{ opacity: 0 }}>
             {[
-              { name: 'Task Pipeline', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg> },
-              { name: 'Time Tracking', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
-              { name: 'Reports & Analytics', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
-              { name: 'Role-Based Access', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> },
+              { name: 'Task Pipeline', desc: 'Domain-specific workflows', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg> },
+              { name: 'Time Tracking', desc: 'Live session timer', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+              { name: 'Reports & Analytics', desc: 'Attendance & progress', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
+              { name: 'Role-Based Access', desc: '5-tier permission system', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> },
             ].map((feature) => (
-              <span key={feature.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/80 dark:bg-white/[0.08] text-gray-600 dark:text-white/70 border border-gray-200/60 dark:border-white/[0.1] shadow-sm">
-                <span className="text-indigo-500 dark:text-indigo-400">{feature.icon}</span>
-                {feature.name}
-              </span>
+              <div key={feature.name} className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-white dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.1] shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all duration-200">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 flex-shrink-0">
+                  <span className="text-indigo-600 dark:text-indigo-400">{feature.icon}</span>
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-gray-800 dark:text-white/90">{feature.name}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-white/40">{feature.desc}</p>
+                </div>
+              </div>
             ))}
           </div>
 

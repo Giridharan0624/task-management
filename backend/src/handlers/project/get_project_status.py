@@ -174,7 +174,7 @@ def handler(event, context):
                 "task_id": t.task_id,
                 "title": t.title,
                 "status": str(t.status),
-                "priority": str(t.priority),
+                "priority": t.priority.value if hasattr(t.priority, 'value') else str(t.priority),
                 "estimated_hours": est,
                 "tracked_hours": round(tracked, 2),
                 "status_progress": status_pct,

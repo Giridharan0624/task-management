@@ -7,6 +7,7 @@ from handlers.shared.auth_context import extract_auth_context
 from handlers.shared.response import build_error, build_success
 from handlers.shared.validate_body import validate_body
 from infrastructure.dynamodb.project_repository import ProjectDynamoRepository
+from infrastructure.dynamodb.task_repository import TaskDynamoRepository
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
 
 
@@ -14,6 +15,7 @@ class UpdateProjectRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     estimated_hours: Optional[float] = None
+    domain: Optional[str] = None
 
 
 def handler(event, context):
@@ -23,7 +25,8 @@ def handler(event, context):
         project_id = event["pathParameters"]["projectId"]
         project_repo = ProjectDynamoRepository()
         user_repo = UserDynamoRepository()
-        use_case = UpdateProjectUseCase(project_repo, user_repo)
+        task_repo = TaskDynamoRepository()
+        use_case = UpdateProjectUseCase(project_repo, user_repo, task_repo)
         dto = {**body.model_dump(exclude_none=True), "project_id": project_id}
         result = use_case.execute(dto, auth.user_id, auth.system_role)
         return build_success(200, result)

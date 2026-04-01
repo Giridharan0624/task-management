@@ -10,7 +10,8 @@ import { AttendanceButton } from '@/components/attendance/AttendanceButton'
 import { AttendanceTable } from '@/components/attendance/AttendanceTable'
 import { TaskUpdateCard } from '@/components/taskupdate/TaskUpdateCard'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABEL } from '@/types/task'
-import { useAttendanceReport } from '@/lib/hooks/useAttendance'
+import { useAttendanceReport, useTodayAttendance } from '@/lib/hooks/useAttendance'
+import { useTaskUpdates } from '@/lib/hooks/useTaskUpdates'
 import { Sparkline } from '@/components/ui/Sparkline'
 import { isOverdue as checkOverdue, parseDeadline } from '@/lib/utils/deadline'
 import { useMemo } from 'react'
@@ -107,7 +108,9 @@ function OverdueAlert({ tasks }: { tasks: { taskId: string; projectId: string; t
       </div>
       <div className="space-y-1.5">
         {tasks.slice(0, 3).map(t => {
-          const days = Math.ceil((new Date().getTime() - parseDeadline(t.deadline).getTime()) / (1000 * 60 * 60 * 24))
+          const now = new Date()
+          const dl = parseDeadline(t.deadline)
+          const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - new Date(dl.getFullYear(), dl.getMonth(), dl.getDate()).getTime()) / (1000 * 60 * 60 * 24))
           return (
             <Link key={t.taskId} href={`/projects/${t.projectId}`} className="flex items-center justify-between py-1 group">
               <span className="text-[12px] font-medium text-red-800 truncate group-hover:underline">{t.title}</span>
@@ -117,6 +120,47 @@ function OverdueAlert({ tasks }: { tasks: { taskId: string; projectId: string; t
         })}
         {tasks.length > 3 && (
           <Link href="/my-tasks" className="text-[11px] font-semibold text-red-600 hover:text-red-800">+{tasks.length - 3} more</Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Pending Task Updates Alert ─── */
+function PendingUpdatesAlert() {
+  const { data: todayAttendance } = useTodayAttendance()
+  const today = new Date().toISOString().slice(0, 10)
+  const { data: todayUpdates } = useTaskUpdates(today)
+
+  const pendingUsers = useMemo(() => {
+    if (!todayAttendance) return []
+    const submittedUserIds = new Set((todayUpdates ?? []).map(u => u.userId))
+    return todayAttendance.filter(a =>
+      a.sessions && a.sessions.length > 0 && !submittedUserIds.has(a.userId)
+    )
+  }, [todayAttendance, todayUpdates])
+
+  if (pendingUsers.length === 0) return null
+
+  return (
+    <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        <span className="text-[13px] font-bold text-amber-700">{pendingUsers.length} Pending Task Update{pendingUsers.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="space-y-1.5">
+        {pendingUsers.slice(0, 5).map(u => (
+          <Link key={u.userId} href="/task-updates" className="flex items-center justify-between py-1 group">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+              <span className="text-[12px] font-medium text-amber-800 truncate group-hover:underline">{u.userName}</span>
+              <Badge className={ROLE_COLORS[u.systemRole] || ROLE_COLORS.MEMBER}>{u.systemRole}</Badge>
+            </div>
+            <span className="text-[10px] text-amber-500 font-semibold flex-shrink-0 ml-2">Not submitted</span>
+          </Link>
+        ))}
+        {pendingUsers.length > 5 && (
+          <Link href="/task-updates" className="text-[11px] font-semibold text-amber-600 hover:text-amber-800">+{pendingUsers.length - 5} more</Link>
         )}
       </div>
     </div>
@@ -135,7 +179,9 @@ function UpcomingDeadlines({ tasks }: { tasks: { taskId: string; projectId: stri
       </div>
       <div className="divide-y divide-gray-50">
         {tasks.map(t => {
-          const diff = Math.ceil((parseDeadline(t.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+          const _now = new Date()
+          const _dl = parseDeadline(t.deadline)
+          const diff = Math.round((new Date(_dl.getFullYear(), _dl.getMonth(), _dl.getDate()).getTime() - new Date(_now.getFullYear(), _now.getMonth(), _now.getDate()).getTime()) / (1000 * 60 * 60 * 24))
           const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `${diff} days`
           return (
             <Link key={t.taskId} href={`/projects/${t.projectId}`} className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50/50 transition-colors group">
@@ -246,6 +292,7 @@ function OwnerDashboard() {
   return (
     <>
       <OverdueAlert tasks={overdueTasks} />
+      <PendingUpdatesAlert />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={Icons.users} label="Admins" value={adminCount} color="text-violet-700" gradient="bg-gradient-to-br from-violet-500 to-purple-600" href="/admin/users" />
@@ -299,6 +346,7 @@ function AdminDashboard() {
       <AttendanceButton />
 
       <OverdueAlert tasks={overdueTasks} />
+      <PendingUpdatesAlert />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={Icons.todo} label="To Do" value={todoCount} color="text-amber-700" gradient="bg-gradient-to-br from-amber-400 to-orange-500" href="/my-tasks" />

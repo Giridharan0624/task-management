@@ -209,21 +209,16 @@ class CreateUserUseCase:
         owner = next((u for u in all_users_for_prefix if u.system_role == SystemRole.OWNER), None)
         company_prefix = (owner.company_prefix if owner and owner.company_prefix else "NS").upper()
 
-        # Generate new-format employee ID: PREFIX-DEPT-YYHASH
-        dept_codes = {
-            "Development": "DEV", "Designing": "DES",
-            "Management": "MGT", "Research": "RSH",
-        }
-        dept_code = dept_codes.get(dto.get("department", ""), "GEN")
+        # Generate employee ID: PREFIX-YYHASH (e.g., NS-26AK76)
         year = datetime.now(timezone.utc).strftime("%y")
         hash_hex = hashlib.sha256(email.lower().encode()).hexdigest().upper()
         hash_chars = ''.join(c for c in hash_hex if c.isalnum())[:4]
-        employee_id = f"{company_prefix}-{dept_code}-{year}{hash_chars}"
+        employee_id = f"{company_prefix}-{year}{hash_chars}"
 
         # Collision handling — append extra hash chars if needed
         if self._user_repo.find_by_employee_id(employee_id):
             for extra in range(4, 8):
-                candidate = f"{company_prefix}-{dept_code}-{year}{''.join(c for c in hash_hex if c.isalnum())[:extra + 1]}"
+                candidate = f"{company_prefix}-{year}{''.join(c for c in hash_hex if c.isalnum())[:extra + 1]}"
                 if not self._user_repo.find_by_employee_id(candidate):
                     employee_id = candidate
                     break
@@ -251,7 +246,9 @@ class CreateUserUseCase:
         )
         # Set department and date of joining at creation time
         overrides: dict = {}
-        if dto.get("department"):
+        if role_enum in (SystemRole.CEO, SystemRole.MD):
+            overrides["department"] = "Management"
+        elif dto.get("department"):
             overrides["department"] = dto["department"]
         if dto.get("date_of_joining"):
             overrides["created_at"] = dto["date_of_joining"]

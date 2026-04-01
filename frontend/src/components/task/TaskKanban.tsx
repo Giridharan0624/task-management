@@ -109,11 +109,20 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
     })
   }
 
-  // Group
+  // Group — tasks whose status doesn't exist in the current domain pipeline
+  // are placed in the closest matching stage or shown separately
   const grouped = useMemo(() => {
     const map = new Map<string, Task[]>()
     for (const s of STAGES) map.set(s, [])
-    for (const t of filteredTasks) map.get(t.status)?.push(t)
+    for (const t of filteredTasks) {
+      if (map.has(t.status)) {
+        map.get(t.status)!.push(t)
+      } else {
+        // Status doesn't exist in current domain — find closest match or put in first stage
+        const closestStage = t.status === 'DONE' ? 'DONE' : STAGES[0]
+        map.get(closestStage)?.push(t)
+      }
+    }
     // Apply sort within each group
     for (const s of STAGES) map.set(s, sortTasks(map.get(s) ?? []))
     return map
@@ -123,7 +132,15 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const s of STAGES) counts[s] = 0
-    for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1
+    for (const t of tasks) {
+      if (STAGES.includes(t.status)) {
+        counts[t.status] = (counts[t.status] ?? 0) + 1
+      } else {
+        // Orphaned status — count under first stage (or DONE)
+        const fallback = t.status === 'DONE' ? 'DONE' : STAGES[0]
+        counts[fallback] = (counts[fallback] ?? 0) + 1
+      }
+    }
     return counts
   }, [tasks])
 

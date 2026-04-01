@@ -15,7 +15,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { ProjectRole } from '@/types/user'
-import { TASK_STATUS_PROGRESS, TASK_STATUS_LABEL, DOMAIN_LABELS, getStatusProgress } from '@/types/task'
+import { TASK_STATUS_PROGRESS, TASK_STATUS_LABEL, DOMAIN_LABELS, DOMAIN_OPTIONS, getStatusProgress } from '@/types/task'
 import type { TaskDomain } from '@/types/task'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { ProjectReport } from '@/components/reports/ProjectReport'
@@ -37,6 +37,7 @@ export default function ProjectDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const [editDomain, setEditDomain] = useState('')
   const [activeTab, setActiveTab] = useState<'tasks' | 'members' | 'progress' | 'reports'>('tasks')
   const { data: projectStatus } = useProjectStatus(projectId)
 
@@ -55,11 +56,12 @@ export default function ProjectDetailPage() {
   const openEditModal = () => {
     setEditName(project?.name ?? '')
     setEditDesc(project?.description ?? '')
+    setEditDomain(project?.domain ?? 'DEVELOPMENT')
     setShowEditModal(true)
   }
 
   const handleUpdateProject = async () => {
-    await updateProject.mutateAsync({ name: editName, description: editDesc })
+    await updateProject.mutateAsync({ name: editName, description: editDesc, domain: editDomain })
     setShowEditModal(false)
   }
 
@@ -214,7 +216,10 @@ export default function ProjectDetailPage() {
           <div className="divide-y divide-gray-50">
             {upcomingDeadlines.map(t => {
               const isOverdue = t.deadlineDate < now
-              const diffDays = Math.ceil((t.deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+              // Compare by calendar date to avoid time-of-day skew
+              const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+              const deadlineDay = new Date(t.deadlineDate.getFullYear(), t.deadlineDate.getMonth(), t.deadlineDate.getDate())
+              const diffDays = Math.round((deadlineDay.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24))
               const urgencyLabel = isOverdue
                 ? `${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} overdue`
                 : diffDays === 0 ? 'Due today'
@@ -330,36 +335,34 @@ export default function ProjectDetailPage() {
         <div className="space-y-5">
 
           {/* ── Top row: Score ring + Health + Stats ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-            {/* Score + Health card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-5">
-              {/* Circular score */}
-              <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
-                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                  <circle cx="18" cy="18" r="15.5" fill="none" stroke={projectStatus.overallScore >= 100 ? '#10b981' : '#6366f1'} strokeWidth="3" strokeDasharray={`${projectStatus.overallScore} ${100 - projectStatus.overallScore}`} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-lg font-bold text-gray-900 tabular-nums">{projectStatus.overallScore}%</span>
+            {/* Score + Progress card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-5 mb-5">
+                {/* Circular score */}
+                <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                    <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="15.5" fill="none" stroke={projectStatus.overallScore >= 100 ? '#10b981' : '#6366f1'} strokeWidth="3" strokeDasharray={`${projectStatus.overallScore} ${100 - projectStatus.overallScore}`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-lg font-bold text-gray-900 tabular-nums">{projectStatus.overallScore}%</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-gray-800 mb-1">Overall Score</p>
+                  <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold border ${hc.bg} ${hc.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${hc.dot}`} />
+                    {projectStatus.health.replace('_', ' ')}
+                  </span>
+                  {projectStatus.overdueCount > 0 && (
+                    <p className="text-[11px] text-red-500 font-medium mt-1.5">{projectStatus.overdueCount} overdue task{projectStatus.overdueCount > 1 ? 's' : ''}</p>
+                  )}
                 </div>
               </div>
-              <div>
-                <p className="text-[13px] font-bold text-gray-800 mb-1">Overall Score</p>
-                <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold border ${hc.bg} ${hc.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${hc.dot}`} />
-                  {projectStatus.health.replace('_', ' ')}
-                </span>
-                {projectStatus.overdueCount > 0 && (
-                  <p className="text-[11px] text-red-500 font-medium mt-1.5">{projectStatus.overdueCount} overdue task{projectStatus.overdueCount > 1 ? 's' : ''}</p>
-                )}
-              </div>
-            </div>
 
-            {/* Progress bars card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Progress</p>
-              <div className="space-y-3">
+              <div className="space-y-3 pt-4 border-t border-gray-100">
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
                     <span className="font-medium text-gray-600">Completion</span>
@@ -368,15 +371,6 @@ export default function ProjectDetailPage() {
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full transition-all ${projectStatus.completionPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                       style={{ width: `${Math.min(projectStatus.completionPercent, 100)}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span className="font-medium text-gray-600">Weighted</span>
-                    <span className="font-bold text-gray-700 tabular-nums">{projectStatus.weightedProgress}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.min(projectStatus.weightedProgress, 100)}%` }} />
                   </div>
                 </div>
                 {projectStatus.totalEstimatedHours > 0 && (
@@ -391,28 +385,34 @@ export default function ProjectDetailPage() {
                     </div>
                   </div>
                 )}
+                {projectStatus.totalTrackedHours > 0 && (
+                  <div className="flex items-center justify-between text-[11px] pt-1">
+                    <span className="text-gray-400">Time Tracked</span>
+                    <span className="font-semibold text-gray-600 tabular-nums">{formatDuration(projectStatus.totalTrackedHours)}{projectStatus.totalEstimatedHours > 0 ? ` / ${formatDuration(projectStatus.totalEstimatedHours)}` : ''}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Counts card */}
+            {/* Task Counts card */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Task Counts</p>
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2.5">
-                  <p className="text-xl font-bold text-amber-600 tabular-nums">{todoCount}</p>
-                  <p className="text-[10px] text-amber-600/70 font-semibold">To Do</p>
+                <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3.5">
+                  <p className="text-2xl font-bold text-amber-600 tabular-nums">{todoCount}</p>
+                  <p className="text-[10px] text-amber-600/70 font-semibold mt-0.5">To Do</p>
                 </div>
-                <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5">
-                  <p className="text-xl font-bold text-blue-600 tabular-nums">{activeCount}</p>
-                  <p className="text-[10px] text-blue-600/70 font-semibold">Active</p>
+                <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3.5">
+                  <p className="text-2xl font-bold text-blue-600 tabular-nums">{activeCount}</p>
+                  <p className="text-[10px] text-blue-600/70 font-semibold mt-0.5">Active</p>
                 </div>
-                <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2.5">
-                  <p className="text-xl font-bold text-emerald-600 tabular-nums">{doneCount}</p>
-                  <p className="text-[10px] text-emerald-600/70 font-semibold">Done</p>
+                <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3.5">
+                  <p className="text-2xl font-bold text-emerald-600 tabular-nums">{doneCount}</p>
+                  <p className="text-[10px] text-emerald-600/70 font-semibold mt-0.5">Done</p>
                 </div>
-                <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5">
-                  <p className="text-xl font-bold text-red-600 tabular-nums">{projectStatus.overdueCount}</p>
-                  <p className="text-[10px] text-red-600/70 font-semibold">Overdue</p>
+                <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3.5">
+                  <p className="text-2xl font-bold text-red-600 tabular-nums">{projectStatus.overdueCount}</p>
+                  <p className="text-[10px] text-red-600/70 font-semibold mt-0.5">Overdue</p>
                 </div>
               </div>
             </div>
@@ -549,6 +549,27 @@ export default function ProjectDetailPage() {
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Domain</label>
+              <div className="grid grid-cols-2 gap-2">
+                {DOMAIN_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setEditDomain(opt.value)}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all duration-200 ${
+                      editDomain === opt.value
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5">Changing the domain updates the task pipeline stages for this project.</p>
             </div>
 
             {/* Metadata */}

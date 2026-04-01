@@ -37,5 +37,5 @@ export interface StartTimerData {
   projectId: string
   taskTitle: string
   projectName: string
-  description?: string
+  description: string
 }

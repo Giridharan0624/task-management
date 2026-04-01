@@ -15,7 +15,7 @@ import type { AttendanceSession } from '@/types/attendance'
 
 /* ═══ Task Selector ═══ */
 function TaskSelector({ onStart, loading, label }: {
-  onStart: (d: { taskId: string; projectId: string; taskTitle: string; projectName: string; description?: string }) => void
+  onStart: (d: { taskId: string; projectId: string; taskTitle: string; projectName: string; description: string }) => void
   loading: boolean; label: string
 }) {
   const { user } = useAuth()
@@ -28,24 +28,28 @@ function TaskSelector({ onStart, loading, label }: {
   const tasks = (projectTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
 
   const isMeeting = source === 'MEETING'
-  const canStart = isMeeting || (taskId && source)
+  const hasDesc = desc.trim().length > 0
+  const canStart = hasDesc && (isMeeting || (taskId && source))
 
   const go = () => {
+    if (!hasDesc) return
     if (isMeeting) {
-      onStart({ taskId: 'meeting', projectId: 'meeting', taskTitle: 'Meeting', projectName: 'Meeting', description: desc.trim() || undefined })
+      onStart({ taskId: 'meeting', projectId: 'meeting', taskTitle: 'Meeting', projectName: 'Meeting', description: desc.trim() })
     } else {
       const t = tasks.find(x => x.taskId === taskId)
       const p = (projects ?? []).find(x => x.projectId === source)
       if (!t || !p) return
-      onStart({ taskId: t.taskId, projectId: p.projectId, taskTitle: t.title, projectName: p.name, description: desc.trim() || undefined })
+      onStart({ taskId: t.taskId, projectId: p.projectId, taskTitle: t.title, projectName: p.name, description: desc.trim() })
     }
     setSource(''); setTaskId(''); setDesc('')
   }
 
   return (
     <div className="space-y-2">
-      <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="What are you working on?"
-        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-[13px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white focus:border-indigo-400 transition-all"
+      <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="What are you working on? (required)"
+        className={`w-full rounded-lg border bg-gray-50 px-3.5 py-2 text-[13px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+          !hasDesc && desc !== '' ? 'border-red-300 focus:ring-red-500/30 focus:border-red-400' : 'border-gray-200 focus:ring-indigo-500/30 focus:border-indigo-400'
+        }`}
         onKeyDown={e => { if (e.key === 'Enter' && canStart) go() }} />
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select value={source} onChange={v => { setSource(v); setTaskId('') }}
@@ -112,7 +116,7 @@ function TaskRow({ task, onResume, loading }: {
         </button>
 
         {/* Task info */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 w-[140px] flex-shrink-0">
           <p className="text-[13px] font-medium text-gray-800 truncate">{task.taskTitle}</p>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-gray-400 truncate">{task.projectName}</span>
@@ -122,8 +126,8 @@ function TaskRow({ task, onResume, loading }: {
           </div>
         </div>
 
-        {/* Session times — shown inline */}
-        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+        {/* Session times — spread across available space */}
+        <div className="flex-1 flex flex-wrap gap-x-3 gap-y-0.5">
           {task.sessions.map((s, i) => (
             <span key={i} className="text-[10px] text-gray-400 tabular-nums font-mono">
               {s.signInAt}{s.signOutAt ? ` – ${s.signOutAt}` : ''}
@@ -180,7 +184,7 @@ export function AttendanceButton() {
       projectId: task.projectId || 'DIRECT',
       taskTitle: task.taskTitle,
       projectName: task.projectName || 'Direct Task',
-      description: task.description || undefined,
+      description: task.description || task.taskTitle,
     })
   }
 

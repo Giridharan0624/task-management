@@ -124,7 +124,7 @@ export default function UsersPage() {
     return 0
   })
 
-  const onlineCount = displayedUsers.filter(u => onlineUserIds.has(u.userId)).length
+  const onlineCount = (users ?? []).filter(u => onlineUserIds.has(u.userId)).length
 
   // CSV export
   const exportUsersCSV = () => {
@@ -144,7 +144,8 @@ export default function UsersPage() {
 
   const handleCreateUser = async () => {
     setError('')
-    if (!newEmail || !newName || !newDepartment) {
+    const isCeoMd = newRole === 'CEO' || newRole === 'MD'
+    if (!newEmail || !newName || (!isCeoMd && !newDepartment)) {
       setError('All fields are required')
       return
     }
@@ -417,20 +418,22 @@ export default function UsersPage() {
               options={creatableRoles.map((r) => ({ value: r, label: r }))}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-            <Select
-              value={newDepartment}
-              onChange={setNewDepartment}
-              placeholder="Select Department"
-              options={[
-                { value: 'Development', label: 'Development' },
-                { value: 'Designing', label: 'Designing' },
-                { value: 'Management', label: 'Management' },
-                { value: 'Research', label: 'Research' },
-              ]}
-            />
-          </div>
+          {newRole !== 'CEO' && newRole !== 'MD' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <Select
+                value={newDepartment}
+                onChange={setNewDepartment}
+                placeholder="Select Department"
+                options={[
+                  { value: 'Development', label: 'Development' },
+                  { value: 'Designing', label: 'Designing' },
+                  { value: 'Management', label: 'Management' },
+                  { value: 'Research', label: 'Research' },
+                ]}
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining</label>
             <DatePicker

@@ -8,7 +8,8 @@ from domain.project.repository import IProjectRepository
 from domain.project.value_objects import ProjectRole
 from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
-from domain.task.value_objects import STATUS_PROGRESS
+from domain.task.repository import ITaskRepository
+from domain.task.value_objects import STATUS_PROGRESS, DOMAIN_STATUSES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
 
@@ -145,9 +146,10 @@ class ListProjectsForUserUseCase:
 
 
 class UpdateProjectUseCase:
-    def __init__(self, project_repo: IProjectRepository, user_repo: IUserRepository):
+    def __init__(self, project_repo: IProjectRepository, user_repo: IUserRepository, task_repo: ITaskRepository = None):
         self._project_repo = project_repo
         self._user_repo = user_repo
+        self._task_repo = task_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         project_id = dto["project_id"]
@@ -159,16 +161,31 @@ class UpdateProjectUseCase:
             raise AuthorizationError("Only project admins can update project details")
 
         now = datetime.now(timezone.utc).isoformat()
-        est_hours = dto.get("estimated_hours", project.estimated_hours)
-        updated = Project(
-            project_id=project.project_id,
-            name=dto.get("name", project.name),
-            description=dto.get("description", project.description),
-            estimated_hours=est_hours,
-            created_by=project.created_by,
-            created_at=project.created_at,
-            updated_at=now,
-        )
+        overrides: dict = {"updated_at": now}
+        if "name" in dto:
+            overrides["name"] = dto["name"]
+        if "description" in dto:
+            overrides["description"] = dto["description"]
+        if "estimated_hours" in dto:
+            overrides["estimated_hours"] = dto["estimated_hours"]
+
+        # If domain changed, migrate orphaned task statuses
+        new_domain = dto.get("domain")
+        if new_domain and new_domain != project.domain and self._task_repo:
+            overrides["domain"] = new_domain
+            new_statuses = DOMAIN_STATUSES.get(new_domain, DOMAIN_STATUSES["DEVELOPMENT"])
+            tasks = self._task_repo.find_by_project(project_id)
+            for task in tasks:
+                if str(task.status) not in new_statuses and str(task.status) != "DONE":
+                    # Reset to TODO if current status doesn't exist in the new domain
+                    updated_task = task.model_copy(update={"status": "TODO", "updated_at": now})
+                    self._task_repo.update(updated_task)
+                elif str(task.status) == "DONE":
+                    pass  # DONE exists in all domains, keep as-is
+        elif new_domain:
+            overrides["domain"] = new_domain
+
+        updated = project.model_copy(update=overrides)
         self._project_repo.save(updated)
         return updated.to_dict()
 

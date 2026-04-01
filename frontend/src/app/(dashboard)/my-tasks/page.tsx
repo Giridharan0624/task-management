@@ -175,140 +175,178 @@ export default function TasksPage() {
         )}
       </div>
 
-      {/* Task Table */}
+      {/* Task Table — grouped by project */}
       {filteredTasks.length === 0 ? (
         <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-16 text-center">
           <p className="text-gray-400 text-sm">
             {filter === 'ALL' ? 'No tasks found.' : `No ${filter.replace('_', ' ').toLowerCase()} tasks.`}
           </p>
         </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* Desktop table */}
-          <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/80">
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Task</th>
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Source</th>
-                {!isMember && (
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Assigned To</th>
-                )}
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Assigned By</th>
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Deadline</th>
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</th>
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Progress</th>
-                <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Priority</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredTasks.map((task) => {
-                const isOverdue = checkOverdue(task.deadline, task.status)
-                return (
-                  <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => {
-                    router.push(`/projects/${task.projectId}`)
-                  }}>
-                    <td className="px-5 py-3.5">
-                      <Link href={`/projects/${task.projectId}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
-                        {task.title}
-                      </Link>
-                      {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium bg-gray-50 text-gray-600">
-                          {task.projectName}
-                        </span>
-                        {task.domain && (
-                          <span className="text-[9px] font-semibold text-gray-400">{DOMAIN_LABELS[task.domain as TaskDomain] || task.domain}</span>
-                        )}
-                      </div>
-                    </td>
-                    {!isMember && (
-                      <td className="px-5 py-3.5">
-                        <div className="flex flex-wrap gap-1">
-                          {(task.assignedTo ?? []).map((uid: string) => (
-                            <span key={uid} className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
-                              {resolveName(uid)}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    )}
-                    <td className="px-5 py-3.5 whitespace-nowrap text-sm text-gray-500">
-                      {task.assignedByName || (task.assignedBy ? resolveName(task.assignedBy) : '—')}
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
-                        {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
-                        {isOverdue && ' !'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-gray-50 text-gray-600'}`}>
-                        {TASK_STATUS_LABEL[task.status] ?? task.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {(() => {
-                        const pct = getStatusProgress(task.status, (task.domain as TaskDomain) || 'DEVELOPMENT')
-                        const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
-                        return (
-                          <div className="flex items-center gap-2 min-w-[100px]">
-                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                            </div>
-                            <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
-                          </div>
-                        )
-                      })()}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          </div>
-          {/* Mobile card view */}
-          <div className="sm:hidden divide-y divide-gray-50">
-            {filteredTasks.map((task) => {
-              const isOverdue = checkOverdue(task.deadline, task.status)
+      ) : (() => {
+        // Group tasks by project
+        const grouped = new Map<string, { projectId: string; projectName: string; domain?: string; tasks: typeof filteredTasks }>()
+        for (const task of filteredTasks) {
+          const key = task.projectId
+          if (!grouped.has(key)) {
+            grouped.set(key, { projectId: task.projectId, projectName: task.projectName || (task.projectId === 'DIRECT' ? 'Direct Tasks' : 'Unknown'), domain: task.domain, tasks: [] })
+          }
+          grouped.get(key)!.tasks.push(task)
+        }
+        const groups = Array.from(grouped.values())
+
+        return (
+          <div className="space-y-4">
+            {groups.map((group) => {
+              const groupDone = group.tasks.filter(t => t.status === 'DONE').length
+              const groupPct = group.tasks.length > 0 ? Math.round((groupDone / group.tasks.length) * 100) : 0
+
               return (
-                <div key={task.taskId} onClick={() => router.push(`/projects/${task.projectId}`)}
-                  className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
-                    <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
-                  </div>
-                  {(() => {
-                    const pct = getStatusProgress(task.status, (task.domain as TaskDomain) || 'DEVELOPMENT')
-                    const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
-                    return (
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
-                        </div>
-                        <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
+                <div key={group.projectId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  {/* Project group header */}
+                  <Link href={group.projectId === 'DIRECT' ? '/my-tasks' : `/projects/${group.projectId}`}
+                    className="flex items-center justify-between px-5 py-3 bg-gray-50/80 border-b border-gray-100 hover:bg-gray-100/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg>
                       </div>
-                    )
-                  })()}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                      {task.projectName}
-                    </span>
-                    <span className={`text-[10px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
-                      {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
-                    </span>
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900">{group.projectName}</h3>
+                        <p className="text-[10px] text-gray-400 font-medium">
+                          {group.tasks.length} task{group.tasks.length !== 1 ? 's' : ''}
+                          {group.domain && ` · ${DOMAIN_LABELS[group.domain as TaskDomain] || group.domain}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 min-w-[80px]">
+                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${groupPct}%`, backgroundColor: groupPct >= 100 ? '#10b981' : groupPct >= 50 ? '#6366f1' : '#3b82f6' }} />
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-500 tabular-nums">{groupPct}%</span>
+                      </div>
+                    </div>
+                  </Link>
+
+                  {/* Desktop table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Task</th>
+                          {!isMember && (
+                            <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned To</th>
+                          )}
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned By</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Deadline</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Progress</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Priority</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {group.tasks.map((task) => {
+                          const isOverdue = checkOverdue(task.deadline, task.status)
+                          return (
+                            <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => {
+                              router.push(`/projects/${task.projectId}`)
+                            }}>
+                              <td className="px-5 py-3">
+                                <Link href={`/projects/${task.projectId}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                                  {task.title}
+                                </Link>
+                                {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
+                              </td>
+                              {!isMember && (
+                                <td className="px-5 py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {(task.assignedTo ?? []).map((uid: string) => (
+                                      <span key={uid} className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                                        {resolveName(uid)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                              )}
+                              <td className="px-5 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {task.assignedByName || (task.assignedBy ? resolveName(task.assignedBy) : '—')}
+                              </td>
+                              <td className="px-5 py-3 whitespace-nowrap">
+                                <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                                  {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                                  {isOverdue && ' !'}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-gray-50 text-gray-600'}`}>
+                                  {TASK_STATUS_LABEL[task.status] ?? task.status}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                {(() => {
+                                  const pct = getStatusProgress(task.status, (task.domain as TaskDomain) || 'DEVELOPMENT')
+                                  const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
+                                  return (
+                                    <div className="flex items-center gap-2 min-w-[100px]">
+                                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                      </div>
+                                      <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
+                                    </div>
+                                  )
+                                })()}
+                              </td>
+                              <td className="px-5 py-3">
+                                <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile card view */}
+                  <div className="sm:hidden divide-y divide-gray-50">
+                    {group.tasks.map((task) => {
+                      const isOverdue = checkOverdue(task.deadline, task.status)
+                      return (
+                        <div key={task.taskId} onClick={() => router.push(`/projects/${task.projectId}`)}
+                          className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
+                            <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
+                          </div>
+                          {(() => {
+                            const pct = getStatusProgress(task.status, (task.domain as TaskDomain) || 'DEVELOPMENT')
+                            const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
+                            return (
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                </div>
+                                <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
+                              </div>
+                            )
+                          })()}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                              {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                            </span>
+                            <span className={`inline-flex items-center rounded-lg px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-gray-50 text-gray-600'}`}>
+                              {TASK_STATUS_LABEL[task.status] ?? task.status}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
             })}
           </div>
-        </div>
-      )}
+        )
+      })()}
 
     </div>
   )
