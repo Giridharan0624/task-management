@@ -37,10 +37,10 @@ function TaskSelector({
   const [description, setDescription] = useState('')
   const { data: projectTasks } = useTasks(source === 'DIRECT' ? '' : source)
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
+  // Timer only shows tasks assigned to the user — admins track their own work
   const availableTasks = source === 'DIRECT'
-    ? (directTasks ?? []).filter(t => isPrivileged || t.assignedTo.includes(user?.userId ?? ''))
-    : (projectTasks ?? []).filter(t => isPrivileged || t.assignedTo.includes(user?.userId ?? ''))
+    ? (directTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
+    : (projectTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
 
   const selectedTask = availableTasks.find(t => t.taskId === taskId)
   const selectedProject = (projects ?? []).find(p => p.projectId === source)
