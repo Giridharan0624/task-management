@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
@@ -18,6 +18,7 @@ import { useLiveHours } from '@/lib/hooks/useLiveHours'
 import { CommandPalette } from '@/components/ui/CommandPalette'
 import { Walkthrough } from '@/components/ui/Walkthrough'
 import { NotificationCenter } from '@/components/ui/NotificationCenter'
+import type { User } from '@/types/user'
 
 const ownerNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
@@ -127,7 +128,7 @@ function SidebarTimer() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, signOut } = useAuth()
+  const { user, isLoading, signOut, updateUser } = useAuth()
   const router = useRouter()
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>()
   const [profileName, setProfileName] = useState<string | undefined>()
@@ -144,11 +145,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: myTasks } = useMyTasks()
   useTimerTitle()
 
+  // Poll profile every 15s — sync role changes, avatar, and name
+  const lastRoleRef = useRef(user?.systemRole)
+  const syncProfile = useCallback(() => {
+    if (!user) return
+    getProfile()
+      .then((p: User) => {
+        setAvatarUrl(p?.avatarUrl)
+        setProfileName(p?.name)
+        // If role changed in the backend, update auth context — triggers full re-render
+        if (p?.systemRole && p.systemRole !== lastRoleRef.current) {
+          lastRoleRef.current = p.systemRole
+          updateUser({ systemRole: p.systemRole })
+        }
+      })
+      .catch(() => {})
+  }, [user, updateUser])
+
   useEffect(() => {
-    if (user) {
-      getProfile().then((p) => { setAvatarUrl(p?.avatarUrl); setProfileName(p?.name) }).catch(() => {})
-    }
-  }, [user])
+    syncProfile()
+    const interval = setInterval(syncProfile, 15000)
+    return () => clearInterval(interval)
+  }, [syncProfile])
 
   if (isLoading) {
     return (

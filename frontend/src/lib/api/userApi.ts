@@ -52,7 +52,7 @@ export function getUserProgress(userId: string): Promise<UserProgress> {
   return apiClient.get<UserProgress>(`/users/${userId}/progress`)
 }
 
-export function createUser(data: { email: string; name: string; systemRole: string; department: string }): Promise<User> {
+export function createUser(data: { email: string; name: string; systemRole: string; department: string; dateOfJoining?: string }): Promise<User> {
   return apiClient.post<User>('/users', data)
 }
 

@@ -12,6 +12,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import type { User } from '@/types/user'
@@ -67,6 +68,7 @@ export default function UsersPage() {
   const [newName, setNewName] = useState('')
   const [newRole, setNewRole] = useState('MEMBER')
   const [newDepartment, setNewDepartment] = useState('')
+  const [newDateOfJoining, setNewDateOfJoining] = useState('')
 
   if (!systemPerms.canManageUsers) {
     return (
@@ -152,12 +154,14 @@ export default function UsersPage() {
         name: newName,
         systemRole: newRole,
         department: newDepartment,
+        dateOfJoining: newDateOfJoining,
       })
       setShowAddUser(false)
       setNewEmail('')
       setNewName('')
       setNewRole('MEMBER')
       setNewDepartment('')
+      setNewDateOfJoining('')
     } catch (err: any) {
       setError(err.message || 'Failed to create user')
     }
@@ -425,6 +429,15 @@ export default function UsersPage() {
                 { value: 'Management', label: 'Management' },
                 { value: 'Research', label: 'Research' },
               ]}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining</label>
+            <DatePicker
+              value={newDateOfJoining}
+              onChange={setNewDateOfJoining}
+              max={new Date().toISOString().slice(0, 10)}
+              placeholder="Select joining date"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">

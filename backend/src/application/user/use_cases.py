@@ -70,14 +70,10 @@ class UpdateUserRoleUseCase:
         if new_role not in valid_targets:
             raise ValidationError(f"Invalid target role: {new_role_value}")
 
-        updated_user = User(
-            user_id=target_user.user_id,
-            email=target_user.email,
-            name=target_user.name,
-            system_role=new_role,
-            created_at=target_user.created_at,
-            updated_at=datetime.now(timezone.utc).isoformat(),
-        )
+        updated_user = target_user.model_copy(update={
+            "system_role": new_role,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
         self._user_repo.update(updated_user)
 
         # Sync role to Cognito
@@ -253,11 +249,14 @@ class CreateUserUseCase:
             created_by=caller_user_id,
             employee_id=employee_id,
         )
-        # Set department at creation time
+        # Set department and date of joining at creation time
+        overrides: dict = {}
         if dto.get("department"):
-            user = User(
-                **{**user.model_dump(), "department": dto["department"]}
-            )
+            overrides["department"] = dto["department"]
+        if dto.get("date_of_joining"):
+            overrides["created_at"] = dto["date_of_joining"]
+        if overrides:
+            user = User(**{**user.model_dump(), **overrides})
         self._user_repo.save(user)
 
         # Send welcome email with OTP (non-critical — don't fail user creation)

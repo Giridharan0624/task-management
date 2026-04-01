@@ -30,7 +30,7 @@ export function useAdmins() {
 export function useCreateUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { email: string; name: string; systemRole: string; department: string }) =>
+    mutationFn: (data: { email: string; name: string; systemRole: string; department: string; dateOfJoining?: string }) =>
       createUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all })
