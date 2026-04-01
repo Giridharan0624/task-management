@@ -58,6 +58,7 @@ export interface CreateDirectTaskData {
   title: string
   description?: string
   priority?: TaskPriority
+  domain?: string
   deadline: string
   assignedTo: string[]
   estimatedHours?: number

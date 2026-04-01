@@ -13,6 +13,7 @@ class Project(BaseModel):
     name: str
     description: Optional[str] = None
     estimated_hours: Optional[float] = None
+    domain: str = "DEVELOPMENT"
     created_by: str
     created_at: str
     updated_at: str
@@ -25,6 +26,7 @@ class Project(BaseModel):
         created_by: str,
         description: Optional[str] = None,
         estimated_hours: Optional[float] = None,
+        domain: str = "DEVELOPMENT",
     ) -> "Project":
         now = datetime.now(timezone.utc).isoformat()
         return cls(
@@ -32,6 +34,7 @@ class Project(BaseModel):
             name=name,
             description=description,
             estimated_hours=estimated_hours,
+            domain=domain,
             created_by=created_by,
             created_at=now,
             updated_at=now,
@@ -43,6 +46,7 @@ class Project(BaseModel):
             "name": self.name,
             "description": self.description,
             "estimated_hours": self.estimated_hours,
+            "domain": self.domain,
             "created_by": self.created_by,
             "created_at": self.created_at,
             "updated_at": self.updated_at,

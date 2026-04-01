@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { Task, TaskStatus, TaskPriority } from '@/types/task'
-import { TASK_STATUS_LABEL, TASK_STATUS_OPTIONS } from '@/types/task'
+import type { Task, TaskPriority, TaskDomain } from '@/types/task'
+import { TASK_STATUS_LABEL, TASK_STATUS_COLORS, DOMAIN_STATUSES, getStatusOptions, getStatusProgress } from '@/types/task'
 import type { ProjectMember } from '@/types/user'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { TaskDetailPanel } from './TaskDetailPanel'
@@ -17,28 +17,19 @@ interface TaskKanbanProps {
   tasks: Task[]
   permissions: Permissions
   members?: ProjectMember[]
+  domain?: TaskDomain
 }
 
-const STAGES: TaskStatus[] = [
-  'TODO', 'IN_PROGRESS', 'DEVELOPED', 'TESTING',
-  'TESTED', 'DEBUGGING', 'FINAL_TESTING', 'DONE',
-]
-
-const STAGE_COLOR: Record<TaskStatus, string> = {
-  TODO: '#f59e0b', IN_PROGRESS: '#3b82f6', DEVELOPED: '#8b5cf6', TESTING: '#f97316',
-  TESTED: '#14b8a6', DEBUGGING: '#ef4444', FINAL_TESTING: '#ec4899', DONE: '#10b981',
+const STAGE_COLORS: Record<string, string> = {
+  TODO: '#f59e0b', IN_PROGRESS: '#3b82f6', DEVELOPED: '#8b5cf6', CODE_REVIEW: '#a855f7',
+  TESTING: '#f97316', TESTED: '#14b8a6', DEBUGGING: '#ef4444', FINAL_TESTING: '#ec4899',
+  WIREFRAME: '#64748b', DESIGN: '#6366f1', REVIEW: '#06b6d4', REVISION: '#f43f5e', APPROVED: '#10b981',
+  PLANNING: '#6366f1', EXECUTION: '#3b82f6',
+  RESEARCH: '#8b5cf6', ANALYSIS: '#14b8a6', DOCUMENTATION: '#f97316',
+  DONE: '#10b981',
 }
 
-const STAGE_BG: Record<TaskStatus, string> = {
-  TODO: 'bg-amber-50 text-amber-700 border-amber-200',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700 border-blue-200',
-  DEVELOPED: 'bg-violet-50 text-violet-700 border-violet-200',
-  TESTING: 'bg-orange-50 text-orange-700 border-orange-200',
-  TESTED: 'bg-teal-50 text-teal-700 border-teal-200',
-  DEBUGGING: 'bg-red-50 text-red-700 border-red-200',
-  FINAL_TESTING: 'bg-pink-50 text-pink-700 border-pink-200',
-  DONE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-}
+const STAGE_BG: Record<string, string> = TASK_STATUS_COLORS
 
 const PRIORITY_INDICATOR: Record<string, { color: string; label: string }> = {
   HIGH: { color: 'bg-red-500', label: 'High' },
@@ -46,12 +37,14 @@ const PRIORITY_INDICATOR: Record<string, { color: string; label: string }> = {
   LOW: { color: 'bg-gray-300', label: 'Low' },
 }
 
-type FilterStatus = 'ALL' | TaskStatus
+type FilterStatus = 'ALL' | string
 type SortOption = 'default' | 'priority' | 'deadline' | 'title' | 'created'
 
 const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 
-export function TaskKanban({ projectId, tasks, permissions, members = [] }: TaskKanbanProps) {
+export function TaskKanban({ projectId, tasks, permissions, members = [], domain = 'DEVELOPMENT' }: TaskKanbanProps) {
+  const STAGES = DOMAIN_STATUSES[domain]
+  const statusOptions = getStatusOptions(domain)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const selectedTask = selectedTaskId ? tasks.find(t => t.taskId === selectedTaskId) ?? null : null
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -59,7 +52,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
   const [priorityFilter, setPriorityFilter] = useState<'ALL' | TaskPriority>('ALL')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
-  const [collapsed, setCollapsed] = useState<Set<TaskStatus>>(new Set())
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortOption>('default')
 
@@ -116,7 +109,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
 
   // Group
   const grouped = useMemo(() => {
-    const map = new Map<TaskStatus, Task[]>()
+    const map = new Map<string, Task[]>()
     for (const s of STAGES) map.set(s, [])
     for (const t of filteredTasks) map.get(t.status)?.push(t)
     // Apply sort within each group
@@ -132,7 +125,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
     return counts
   }, [tasks])
 
-  const toggleCollapse = (status: TaskStatus) => {
+  const toggleCollapse = (status: string) => {
     setCollapsed(prev => { const n = new Set(prev); n.has(status) ? n.delete(status) : n.add(status); return n })
   }
 
@@ -227,7 +220,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
             return (
               <button key={stage} onClick={() => setFilter(isActive ? 'ALL' : stage)}
                 className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all flex-shrink-0 border ${isActive ? `${STAGE_BG[stage]} shadow-sm` : hasItems ? 'bg-white border-gray-200 text-gray-600 hover:border-gray-300' : 'bg-white border-gray-200 text-gray-400'}`}>
-                <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: STAGE_COLOR[stage], opacity: hasItems || isActive ? 1 : 0.3 }} />
+                <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: STAGE_COLORS[stage], opacity: hasItems || isActive ? 1 : 0.3 }} />
                 <span className="hidden sm:inline">{TASK_STATUS_LABEL[stage]}</span>
                 <span className="sm:hidden">{TASK_STATUS_LABEL[stage].slice(0, 3)}</span>
                 {hasItems && <span className={`tabular-nums ${isActive ? '' : 'text-gray-400'}`}>{count}</span>}
@@ -251,7 +244,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
                 <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0 ${isCollapsed ? '' : 'rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STAGE_COLOR[stage] }} />
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STAGE_COLORS[stage] }} />
                 <span className="text-[13px] font-semibold text-gray-700">{TASK_STATUS_LABEL[stage]}</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${STAGE_BG[stage]}`}>{stageTasks.length}</span>
                 <span className="ml-auto text-[10px] text-gray-300 tabular-nums">Stage {STAGES.indexOf(stage) + 1}/{STAGES.length}</span>
@@ -267,7 +260,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
                     const isOverdue = checkOverdue(task.deadline, task.status)
                     const pri = PRIORITY_INDICATOR[task.priority]
                     const stageIdx = STAGES.indexOf(task.status)
-                    const progressPct = Math.round(((stageIdx + 1) / STAGES.length) * 100)
+                    const progressPct = getStatusProgress(task.status, domain)
 
                     return (
                       <div key={task.taskId}
@@ -289,7 +282,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
                             <div className="flex items-center gap-[3px] flex-shrink-0" title={`${TASK_STATUS_LABEL[task.status]} — ${progressPct}%`}>
                               {STAGES.map((s, si) => (
                                 <div key={s} className="w-[6px] h-[6px] rounded-full"
-                                  style={{ backgroundColor: si <= stageIdx ? STAGE_COLOR[task.status] : '#e5e7eb' }} />
+                                  style={{ backgroundColor: si <= stageIdx ? STAGE_COLORS[task.status] : '#e5e7eb' }} />
                               ))}
                             </div>
                             <span className="text-[10px] text-gray-400 tabular-nums">{progressPct}%</span>
@@ -307,8 +300,8 @@ export function TaskKanban({ projectId, tasks, permissions, members = [] }: Task
                         {/* Quick status change */}
                         {permissions.canUpdateStatus && (
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                            <FilterSelect value={task.status} onChange={v => updateTask.mutate({ taskId: task.taskId, data: { status: v as TaskStatus } })}
-                              options={TASK_STATUS_OPTIONS} className="max-w-[120px]" />
+                            <FilterSelect value={task.status} onChange={v => updateTask.mutate({ taskId: task.taskId, data: { status: v as string } })}
+                              options={statusOptions} className="max-w-[120px]" />
                           </div>
                         )}
 

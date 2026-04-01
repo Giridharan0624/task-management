@@ -6,7 +6,6 @@ from typing import Optional
 from domain.attendance.entities import Attendance
 from domain.attendance.repository import IAttendanceRepository
 from domain.task.repository import ITaskRepository
-from domain.task.value_objects import TaskStatus
 from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
@@ -27,11 +26,11 @@ class SignInUseCase:
         if not self._task_repo or not task_id:
             return
         task = self._task_repo.find_by_id(task_id)
-        if task and task.status == TaskStatus.TODO:
+        if task and str(task.status) == "TODO":
             from datetime import datetime, timezone
             from domain.task.entities import Task
             updated = Task(
-                **{**task.model_dump(), "status": TaskStatus.IN_PROGRESS, "updated_at": datetime.now(timezone.utc).isoformat()}
+                **{**task.model_dump(), "status": "IN_PROGRESS", "updated_at": datetime.now(timezone.utc).isoformat()}
             )
             self._task_repo.update(updated)
 

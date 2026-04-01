@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { UserSelect } from '@/components/ui/UserSelect'
+import { Select } from '@/components/ui/Select'
+import { DOMAIN_OPTIONS } from '@/types/task'
+import type { TaskDomain } from '@/types/task'
 
 interface CreateProjectModalProps {
   isOpen: boolean
@@ -25,6 +28,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   const { data: allUsers } = useUsers()
   const [teamLeadId, setTeamLeadId] = useState('')
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [domain, setDomain] = useState<TaskDomain>('DEVELOPMENT')
 
   const {
     register,
@@ -48,10 +52,12 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
       description: values.description || undefined,
       teamLeadId: teamLeadId || undefined,
       memberIds: selectedMembers.length > 0 ? selectedMembers : undefined,
+      domain,
     })
     reset()
     setTeamLeadId('')
     setSelectedMembers([])
+    setDomain('DEVELOPMENT')
     onClose()
   }
 
@@ -59,6 +65,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     reset()
     setTeamLeadId('')
     setSelectedMembers([])
+    setDomain('DEVELOPMENT')
     onClose()
   }
 
@@ -82,6 +89,14 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
             {...register('description')}
           />
+        </div>
+
+        {/* Domain Selection */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Domain</label>
+          <Select value={domain} onChange={v => setDomain(v as TaskDomain)}
+            options={DOMAIN_OPTIONS.map(d => ({ value: d.value, label: d.label }))} />
+          <p className="text-[10px] text-gray-400">Determines the task pipeline steps for this project</p>
         </div>
 
         {/* Team Lead Selection */}

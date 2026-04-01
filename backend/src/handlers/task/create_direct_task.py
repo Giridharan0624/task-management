@@ -11,7 +11,7 @@ from handlers.shared.validate_body import validate_body
 from infrastructure.dynamodb.task_repository import TaskDynamoRepository
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
 from domain.task.entities import Task
-from domain.task.value_objects import TaskStatus, TaskPriority
+from domain.task.value_objects import TaskPriority
 from domain.user.value_objects import PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
@@ -20,6 +20,7 @@ class CreateDirectTaskRequest(BaseModel):
     title: str
     description: Optional[str] = None
     priority: Optional[str] = None
+    domain: Optional[str] = "DEVELOPMENT"
     deadline: str
     assigned_to: list[str]
     estimated_hours: Optional[float] = None
@@ -60,7 +61,8 @@ def handler(event, context):
             title=body.title,
             created_by=auth.user_id,
             description=body.description,
-            status=TaskStatus.TODO,
+            status="TODO",
+            domain=body.domain or "DEVELOPMENT",
             priority=priority,
             assigned_to=body.assigned_to,
             assigned_by=auth.user_id,

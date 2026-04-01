@@ -9,7 +9,8 @@ import { useProject } from '@/lib/hooks/useProjects'
 import { useAdmins, useUsers } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
-import { TASK_STATUS_OPTIONS, TASK_STATUS_LABEL, TASK_STATUS_PROGRESS } from '@/types/task'
+import { TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_STATUSES, getStatusOptions, getStatusProgress } from '@/types/task'
+import type { TaskDomain } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import type { Permissions } from '@/lib/hooks/usePermission'
@@ -307,7 +308,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                       value={task.status}
                       onChange={(v) => handleStatusChange(v as TaskStatus)}
                       disabled={statusUpdating}
-                      options={TASK_STATUS_OPTIONS}
+                      options={getStatusOptions((task.domain as TaskDomain) || 'DEVELOPMENT')}
                       className="w-40"
                     />
                   ) : (

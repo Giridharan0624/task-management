@@ -1,11 +1,10 @@
 from domain.task.entities import Task
-from domain.task.value_objects import TaskStatus, TaskPriority
+from domain.task.value_objects import TaskPriority
 
 
 class TaskMapper:
     @staticmethod
     def to_domain(item: dict) -> Task:
-        # Handle assigned_to: read as list, support legacy single string
         raw_assigned = item.get("assigned_to")
         if raw_assigned is None:
             assigned_to = None
@@ -19,8 +18,9 @@ class TaskMapper:
             project_id=item["project_id"],
             title=item["title"],
             description=item.get("description"),
-            status=TaskStatus(item.get("status", TaskStatus.TODO.value)),
+            status=item.get("status", "TODO"),
             priority=TaskPriority(item.get("priority", TaskPriority.MEDIUM.value)),
+            domain=item.get("domain", "DEVELOPMENT"),
             assigned_to=assigned_to,
             assigned_by=item.get("assigned_by"),
             created_by=item["created_by"],
@@ -32,6 +32,7 @@ class TaskMapper:
 
     @staticmethod
     def to_dynamo(task: Task) -> dict:
+        status_val = task.status if isinstance(task.status, str) else task.status.value if hasattr(task.status, 'value') else str(task.status)
         item: dict = {
             "PK": f"PROJECT#{task.project_id}",
             "SK": f"TASK#{task.task_id}",
@@ -40,8 +41,9 @@ class TaskMapper:
             "task_id": task.task_id,
             "project_id": task.project_id,
             "title": task.title,
-            "status": task.status.value,
+            "status": status_val,
             "priority": task.priority.value,
+            "domain": task.domain,
             "created_by": task.created_by,
             "created_at": task.created_at,
             "updated_at": task.updated_at,

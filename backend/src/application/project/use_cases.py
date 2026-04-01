@@ -57,6 +57,7 @@ class CreateProjectUseCase:
             name=dto["name"],
             created_by=caller_user_id,
             description=dto.get("description"),
+            domain=dto.get("domain", "DEVELOPMENT"),
         )
         self._project_repo.save(project)
 

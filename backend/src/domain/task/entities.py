@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from domain.task.value_objects import TaskStatus, TaskPriority
+from domain.task.value_objects import TaskPriority
 
 
 class Task(BaseModel):
@@ -13,8 +13,9 @@ class Task(BaseModel):
     project_id: str = "DIRECT"
     title: str
     description: Optional[str] = None
-    status: TaskStatus = TaskStatus.TODO
+    status: str = "TODO"
     priority: TaskPriority = TaskPriority.MEDIUM
+    domain: str = "DEVELOPMENT"
     assigned_to: list[str] = []
     assigned_by: Optional[str] = None
     created_by: str
@@ -32,8 +33,9 @@ class Task(BaseModel):
         deadline: str,
         project_id: str = "DIRECT",
         description: Optional[str] = None,
-        status: TaskStatus = TaskStatus.TODO,
+        status: str = "TODO",
         priority: TaskPriority = TaskPriority.MEDIUM,
+        domain: str = "DEVELOPMENT",
         assigned_to: list[str] | None = None,
         assigned_by: Optional[str] = None,
         estimated_hours: Optional[float] = None,
@@ -46,6 +48,7 @@ class Task(BaseModel):
             description=description,
             status=status,
             priority=priority,
+            domain=domain,
             assigned_to=assigned_to or [],
             assigned_by=assigned_by,
             created_by=created_by,
@@ -61,8 +64,9 @@ class Task(BaseModel):
             "project_id": self.project_id,
             "title": self.title,
             "description": self.description,
-            "status": self.status.value,
+            "status": self.status if isinstance(self.status, str) else self.status.value if hasattr(self.status, 'value') else str(self.status),
             "priority": self.priority.value,
+            "domain": self.domain,
             "assigned_to": self.assigned_to,
             "assigned_by": self.assigned_by,
             "created_by": self.created_by,

@@ -291,6 +291,7 @@ export default function ProjectDetailPage() {
             tasks={tasks ?? []}
             permissions={permissions}
             members={project.members ?? []}
+            domain={(project.domain as import('@/types/task').TaskDomain) || 'DEVELOPMENT'}
           />
         )
       )}

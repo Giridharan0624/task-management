@@ -23,7 +23,7 @@ from infrastructure.dynamodb.attendance_repository import AttendanceDynamoReposi
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
 from domain.user.value_objects import PRIVILEGED_ROLES
 from domain.project.value_objects import ProjectRole
-from domain.task.value_objects import STATUS_PROGRESS
+from domain.task.value_objects import STATUS_PROGRESS, DOMAIN_PROGRESS
 
 
 def _parse_deadline(deadline_str: str) -> datetime | None:
@@ -72,19 +72,24 @@ def handler(event, context):
         tasks = task_repo.find_by_project(project_id)
         members = project_repo.find_members(project_id)
         now = datetime.now(timezone.utc)
+        proj_domain = project.domain or "DEVELOPMENT"
+        domain_scores = DOMAIN_PROGRESS.get(proj_domain, STATUS_PROGRESS)
+
+        def get_score(status: str) -> int:
+            return domain_scores.get(status, STATUS_PROGRESS.get(status, 0))
 
         total_tasks = len(tasks)
 
         # Count tasks per status dynamically
         status_counts: dict[str, int] = {}
         for t in tasks:
-            sv = t.status.value
+            sv = str(t.status)
             status_counts[sv] = status_counts.get(sv, 0) + 1
         done_count = status_counts.get("DONE", 0)
 
         # ── Method 1: Task Completion (score-based) ──
         if total_tasks > 0:
-            completion_pct = round(sum(STATUS_PROGRESS.get(t.status.value, 0) for t in tasks) / total_tasks, 1)
+            completion_pct = round(sum(get_score(str(t.status)) for t in tasks) / total_tasks, 1)
         else:
             completion_pct = 0
 
@@ -94,8 +99,8 @@ def handler(event, context):
         total_weighted_progress = 0.0
         total_weight = 0.0
         for t in tasks:
-            weight = t.estimated_hours if t.estimated_hours and t.estimated_hours > 0 else PRIORITY_WEIGHT.get(t.priority.value, 1)
-            progress = STATUS_PROGRESS.get(t.status.value, 0)
+            weight = t.estimated_hours if t.estimated_hours and t.estimated_hours > 0 else PRIORITY_WEIGHT.get(str(t.priority), 1)
+            progress = get_score(str(t.status))
             total_weighted_progress += weight * progress
             total_weight += weight
         weighted_pct = round(total_weighted_progress / total_weight, 1) if total_weight > 0 else 0
@@ -127,7 +132,7 @@ def handler(event, context):
         at_risk_count = 0
         on_track_count = 0
         for t in tasks:
-            if t.status.value == "DONE":
+            if str(t.status) == "DONE":
                 on_track_count += 1
                 continue
             deadline = _parse_deadline(t.deadline) if t.deadline else None
@@ -159,17 +164,17 @@ def handler(event, context):
         for t in tasks:
             est = t.estimated_hours or 0
             tracked = tracked_by_task.get(t.task_id, 0)
-            status_pct = STATUS_PROGRESS.get(t.status.value, 0)
+            status_pct = get_score(str(t.status))
             time_pct = round((tracked / est) * 100, 1) if est > 0 else 0
 
             deadline = _parse_deadline(t.deadline) if t.deadline else None
-            is_overdue = bool(deadline and now > deadline and t.status.value != "DONE")
+            is_overdue = bool(deadline and now > deadline and str(t.status) != "DONE")
 
             task_progress.append({
                 "task_id": t.task_id,
                 "title": t.title,
-                "status": t.status.value,
-                "priority": t.priority.value,
+                "status": str(t.status),
+                "priority": str(t.priority),
                 "estimated_hours": est,
                 "tracked_hours": round(tracked, 2),
                 "status_progress": status_pct,
@@ -186,8 +191,8 @@ def handler(event, context):
             tracked = tracked_by_user.get(m.user_id, 0)
             # Count tasks assigned to this member
             assigned_tasks = [t for t in tasks if m.user_id in t.assigned_to]
-            done_tasks = sum(1 for t in assigned_tasks if t.status.value == "DONE")
-            member_pct = round(sum(STATUS_PROGRESS.get(t.status.value, 0) for t in assigned_tasks) / len(assigned_tasks)) if assigned_tasks else 0
+            done_tasks = sum(1 for t in assigned_tasks if str(t.status) == "DONE")
+            member_pct = round(sum(get_score(str(t.status)) for t in assigned_tasks) / len(assigned_tasks)) if assigned_tasks else 0
 
             member_progress.append({
                 "user_id": m.user_id,

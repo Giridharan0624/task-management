@@ -384,12 +384,13 @@ function AssignModal({
 }: {
   users: { userId: string; name: string; email: string }[]
   isPending: boolean
-  onCreate: (data: { title: string; description?: string; priority: TaskPriority; deadline: string; assignedTo: string[] }) => void
+  onCreate: (data: { title: string; description?: string; priority: TaskPriority; deadline: string; assignedTo: string[]; domain?: string }) => void
   onClose: () => void
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM')
+  const [domain, setDomain] = useState<import('@/types/task').TaskDomain>('DEVELOPMENT')
   const [deadlineDate, setDeadlineDate] = useState('')
   const [deadlineTime, setDeadlineTime] = useState('')
   const [selected, setSelected] = useState<string[]>([])
@@ -400,7 +401,7 @@ function AssignModal({
     e.preventDefault()
     if (!title || !deadlineDate || selected.length === 0) return
     const deadline = deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate
-    onCreate({ title, description: description || undefined, priority, deadline, assignedTo: selected })
+    onCreate({ title, description: description || undefined, priority, deadline, assignedTo: selected, domain })
   }
 
   return (
@@ -416,7 +417,12 @@ function AssignModal({
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Details..."
             className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 outline-none resize-none transition-all" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">Domain</label>
+            <Select value={domain} onChange={(v) => setDomain(v as import('@/types/task').TaskDomain)}
+              options={[{ value: 'DEVELOPMENT', label: 'Development' }, { value: 'DESIGNING', label: 'Designing' }, { value: 'MANAGEMENT', label: 'Management' }, { value: 'RESEARCH', label: 'Research' }]} />
+          </div>
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1">Priority</label>
             <Select

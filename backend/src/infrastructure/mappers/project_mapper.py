@@ -10,6 +10,7 @@ class ProjectMapper:
             name=item["name"],
             description=item.get("description"),
             estimated_hours=float(item["estimated_hours"]) if item.get("estimated_hours") is not None else None,
+            domain=item.get("domain", "DEVELOPMENT"),
             created_by=item["created_by"],
             created_at=item["created_at"],
             updated_at=item["updated_at"],
@@ -26,6 +27,7 @@ class ProjectMapper:
             "created_at": project.created_at,
             "updated_at": project.updated_at,
         }
+        item["domain"] = project.domain
         if project.description is not None:
             item["description"] = project.description
         if project.estimated_hours is not None:

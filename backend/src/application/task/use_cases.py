@@ -8,7 +8,7 @@ from domain.project.repository import IProjectRepository
 from domain.project.value_objects import ProjectRole
 from domain.task.entities import Task
 from domain.task.repository import ITaskRepository
-from domain.task.value_objects import TaskPriority, TaskStatus
+from domain.task.value_objects import TaskPriority, DOMAIN_STATUSES, DOMAIN_PROGRESS
 from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
@@ -41,12 +41,15 @@ class CreateTaskUseCase:
         if not _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
             raise AuthorizationError("Only owners, admins, and team leads can create tasks")
 
-        status = TaskStatus.TODO
+        # Domain comes from the project
+        domain = project.domain or "DEVELOPMENT"
+        valid_statuses = DOMAIN_STATUSES.get(domain, DOMAIN_STATUSES["DEVELOPMENT"])
+
+        status = "TODO"
         if dto.get("status"):
-            try:
-                status = TaskStatus(dto["status"])
-            except ValueError:
-                raise ValidationError(f"Invalid status: {dto['status']}")
+            if dto["status"] not in valid_statuses:
+                raise ValidationError(f"Invalid status '{dto['status']}' for domain {domain}")
+            status = dto["status"]
 
         priority = TaskPriority.MEDIUM
         if dto.get("priority"):
@@ -72,6 +75,7 @@ class CreateTaskUseCase:
             description=dto.get("description"),
             status=status,
             priority=priority,
+            domain=domain,
             assigned_to=assigned_to,
             assigned_by=caller_user_id if assigned_to else None,
             deadline=deadline,
@@ -192,12 +196,15 @@ class UpdateTaskUseCase:
                     raise NotFoundError(f"User {assignee_id} is not a member of project {project_id}")
             assigned_by = caller_user_id
 
+        # Validate status against task's domain
+        task_domain = task.domain or "DEVELOPMENT"
+        valid_statuses = DOMAIN_STATUSES.get(task_domain, DOMAIN_STATUSES["DEVELOPMENT"])
+
         status = task.status
         if dto.get("status"):
-            try:
-                status = TaskStatus(dto["status"])
-            except ValueError:
-                raise ValidationError(f"Invalid status: {dto['status']}")
+            if dto["status"] not in valid_statuses:
+                raise ValidationError(f"Invalid status '{dto['status']}' for domain {task_domain}")
+            status = dto["status"]
 
         priority = task.priority
         if dto.get("priority"):
@@ -216,6 +223,7 @@ class UpdateTaskUseCase:
             description=description,
             status=status,
             priority=priority,
+            domain=task_domain,
             assigned_to=assigned_to,
             assigned_by=assigned_by,
             created_by=task.created_by,
@@ -297,6 +305,7 @@ class AssignTaskUseCase:
             description=task.description,
             status=task.status,
             priority=task.priority,
+            domain=task.domain,
             assigned_to=assignee_ids,
             assigned_by=caller_user_id,
             created_by=task.created_by,

@@ -7,6 +7,7 @@ export interface CreateProjectData {
   description?: string
   teamLeadId?: string
   memberIds?: string[]
+  domain?: string
 }
 
 export interface AddMemberData {
