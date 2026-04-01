@@ -1,6 +1,7 @@
 export interface TaskSummaryItem {
   taskName: string
   timeRecorded: string
+  description?: string
 }
 
 export interface TaskUpdate {

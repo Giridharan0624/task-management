@@ -9,12 +9,15 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { TaskUpdate } from '@/types/taskupdate'
 
-function getToday() { return new Date().toISOString().slice(0, 10) }
+function getToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function shiftDate(date: string, days: number) {
   const d = new Date(date + 'T12:00:00')
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function parseTime(t: string): number {
@@ -69,14 +72,17 @@ function UpdateCard({ update, avatarUrl }: { update: TaskUpdate; avatarUrl?: str
             const taskHrs = parseTime(t.timeRecorded)
             const pct = totalHrs > 0 ? (taskHrs / totalHrs) * 100 : 0
             return (
-              <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                <span className="text-[12px] text-gray-700 flex-1">{t.taskName}</span>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-indigo-500" style={{ width: `${pct}%` }} />
+              <div key={i} className="bg-gray-50 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] text-gray-700 flex-1">{t.taskName}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-indigo-500" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[11px] font-semibold text-indigo-600 tabular-nums w-14 text-right">{t.timeRecorded}</span>
                   </div>
-                  <span className="text-[11px] font-semibold text-indigo-600 tabular-nums w-14 text-right">{t.timeRecorded}</span>
                 </div>
+                {t.description && <p className="text-[10px] text-gray-400 mt-0.5 italic">{t.description}</p>}
               </div>
             )
           })}
@@ -163,10 +169,9 @@ export default function TaskUpdatesPage() {
         </button>
         <div className="flex items-center gap-3">
           <p className="text-[13px] font-semibold text-gray-800">{dateLabel}</p>
-          {isToday && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">Today</span>}
           {!isToday && (
             <button onClick={goToday} className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-              Today
+              Go to today
             </button>
           )}
           <DatePicker value={selectedDate} onChange={setSelectedDate} max={today} className="w-36" />

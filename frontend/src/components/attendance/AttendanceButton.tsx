@@ -42,10 +42,22 @@ function TaskSelector({
     ? (directTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
     : (projectTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
 
-  const selectedTask = availableTasks.find(t => t.taskId === taskId)
+  const isMeeting = source === 'MEETING'
+  const selectedTask = isMeeting ? null : availableTasks.find(t => t.taskId === taskId)
   const selectedProject = (projects ?? []).find(p => p.projectId === source)
 
   const handleStart = () => {
+    if (isMeeting) {
+      onStart({
+        taskId: 'meeting',
+        projectId: 'DIRECT',
+        taskTitle: 'Meeting',
+        projectName: 'Meeting',
+        description: description.trim() || undefined,
+      })
+      setSource(''); setTaskId(''); setDescription('')
+      return
+    }
     if (!selectedTask) return
     onStart({
       taskId: selectedTask.taskId,
@@ -57,6 +69,8 @@ function TaskSelector({
     setSource(''); setTaskId(''); setDescription('')
   }
 
+  const canStart = isMeeting || (taskId && source)
+
   return (
     <div className="space-y-2">
       <input
@@ -65,17 +79,23 @@ function TaskSelector({
         onChange={e => setDescription(e.target.value)}
         placeholder="What are you working on?"
         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-[13px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white focus:border-indigo-400 transition-all"
-        onKeyDown={e => { if (e.key === 'Enter' && taskId && source) handleStart() }}
+        onKeyDown={e => { if (e.key === 'Enter' && canStart) handleStart() }}
       />
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select value={source} onChange={v => { setSource(v); setTaskId('') }}
-          options={[{ value: 'DIRECT', label: 'Direct Tasks' }, ...(projects ?? []).map(p => ({ value: p.projectId, label: p.name }))]}
+          options={[
+            { value: 'MEETING', label: 'Meeting' },
+            { value: 'DIRECT', label: 'Direct Tasks' },
+            ...(projects ?? []).map(p => ({ value: p.projectId, label: p.name })),
+          ]}
           placeholder="Select Source" className="sm:flex-1" />
-        <Select value={taskId} onChange={setTaskId}
-          options={availableTasks.map(t => ({ value: t.taskId, label: t.title }))}
-          placeholder="Select Task" disabled={!source} className="sm:flex-1" />
+        {!isMeeting && (
+          <Select value={taskId} onChange={setTaskId}
+            options={availableTasks.map(t => ({ value: t.taskId, label: t.title }))}
+            placeholder="Select Task" disabled={!source} className="sm:flex-1" />
+        )}
         <Button variant="primary" size="sm" onClick={handleStart}
-          disabled={!taskId || !source || loading} loading={loading} className="whitespace-nowrap">
+          disabled={!canStart || loading} loading={loading} className="whitespace-nowrap">
           {buttonLabel}
         </Button>
       </div>

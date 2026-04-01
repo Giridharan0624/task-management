@@ -62,22 +62,31 @@ def handler(event, context):
         employee_id = user.employee_id if user else None
 
         # Build task summary from sessions
-        task_hours: dict[str, float] = {}
+        task_data: dict[str, dict] = {}  # key -> {hours, descriptions}
         for session in attendance.sessions:
             task_name = session.task_title or "General"
             hrs = session.hours or 0
-            # If session is still running, calculate live hours
             if not session.sign_out_at and session.sign_in_at:
                 start = datetime.fromisoformat(session.sign_in_at.replace("Z", "+00:00"))
                 hrs = (datetime.now(timezone.utc) - start).total_seconds() / 3600
-            task_hours[task_name] = task_hours.get(task_name, 0) + hrs
+            if task_name not in task_data:
+                task_data[task_name] = {"hours": 0, "descriptions": []}
+            task_data[task_name]["hours"] += hrs
+            if session.description and session.description not in task_data[task_name]["descriptions"]:
+                task_data[task_name]["descriptions"].append(session.description)
 
         task_summary = []
-        for task_name, hours in task_hours.items():
+        for task_name, data in task_data.items():
+            hours = data["hours"]
             h = int(hours)
             m = int((hours - h) * 60)
             time_str = f"{h}h {m}m" if m > 0 else f"{h}h"
-            task_summary.append({"task_name": task_name, "time_recorded": time_str})
+            entry: dict = {"task_name": task_name, "time_recorded": time_str}
+            if data["descriptions"]:
+                entry["description"] = "; ".join(data["descriptions"])
+            task_summary.append(entry)
+
+        task_hours = {name: d["hours"] for name, d in task_data.items()}
 
         # Sign in = first session start, Sign out = last session end (or now)
         sign_in = attendance.sessions[0].sign_in_at

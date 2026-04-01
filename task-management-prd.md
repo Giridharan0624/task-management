@@ -2,36 +2,42 @@
 
 ## Project Title
 
-**Serverless Task Management System**
+**TaskFlow — Serverless Task Management & Time Tracking System**
 
 ---
 
 ## 1. Overview
 
-A scalable, serverless task management system where an OWNER manages users, creates projects, assigns members, and tracks task progress. Admins and Members collaborate within projects using a kanban-style interface with deadline tracking and progress comments.
+A comprehensive, serverless task management and time tracking platform where organizations manage users, projects, and tasks across multiple domains (Development, Designing, Management, Research). Each domain has its own workflow pipeline. Built-in Clockify-style time tracking, attendance monitoring, reports, and day-off management.
 
-**Tech stack:**
+**Tech Stack:**
 
 * AWS Lambda (Python 3.12) — backend logic
 * AWS CDK (Python) — infrastructure as code
-* API Gateway (REST) — API layer
-* Cognito — authentication (JWT)
-* DynamoDB — single-table database
-* Next.js 14 (App Router) — frontend
-* Tailwind CSS — styling
-* React Query — server state management
+* API Gateway (REST) — API layer with CORS
+* Cognito — authentication (JWT + SRP)
+* DynamoDB — single-table database with GSI1 + GSI2
+* Secrets Manager — Gmail SMTP credentials
+* Next.js 16 (App Router) — frontend
+* Tailwind CSS — styling with dark mode support
+* TanStack React Query — server state management
+* Recharts — data visualization
+* Cloudinary — avatar image hosting
 
 ---
 
 ## 2. Objectives
 
 * Build a fully serverless application on AWS
-* Implement three-tier RBAC (OWNER > ADMIN > MEMBER) at system and project levels
-* Support multi-user collaboration with project-based task organization
-* Allow multi-assignee tasks with required deadlines
-* Enable progress tracking via task comments
+* Implement 5-tier system RBAC (OWNER > CEO > MD > ADMIN > MEMBER)
+* Implement 4-tier project RBAC (ADMIN > PROJECT_MANAGER > TEAM_LEAD > MEMBER)
+* Support domain-specific task pipelines (Development, Designing, Management, Research)
+* Clockify-style live time tracking with task switching
+* Comprehensive reporting (Summary, Detailed, Weekly views)
+* Attendance monitoring with team-wide visibility
+* Day-off request workflow with approval/rejection/cancellation
+* Dark mode with comprehensive theme system
 * Follow Domain-Driven Design (DDD) with clean architecture layers
-* Deploy using AWS CDK with Lambda Layers for dependency management
 
 ---
 
@@ -39,346 +45,374 @@ A scalable, serverless task management system where an OWNER manages users, crea
 
 | Role | Description |
 |---|---|
-| **OWNER** | System administrator — manages all users, projects, and tasks |
-| **ADMIN** | Project manager — creates projects, assigns tasks, manages project members |
-| **MEMBER** | Team member — works on assigned tasks, updates status, posts progress |
+| **OWNER** | System administrator — manages all users, projects, company settings |
+| **CEO** | Full system access, approves day-offs, manages admins and members |
+| **MD** | Full system access, approves day-offs, manages admins and members |
+| **ADMIN** | Project manager — creates projects, assigns tasks, manages members |
+| **MEMBER** | Team member — works on assigned tasks, tracks time, updates status |
 
 ---
 
 ## 4. Features
 
 ### 4.1 Authentication & Authorization
+* Login via email or Employee ID (auto-resolved to email)
+* AWS Cognito SRP authentication (password never sent to server)
+* JWT stored in localStorage with automatic expiry check (60s interval)
+* First-login password change flow (OTP → set new password)
+* Forgot password with verification code
+* 5-tier system RBAC enforced at use case layer
+* 4-tier project RBAC (ADMIN, PROJECT_MANAGER, TEAM_LEAD, MEMBER)
 
-* User login via AWS Cognito (email + password)
-* JWT-based authentication on all API calls
-* Three system roles: OWNER, ADMIN, MEMBER
-* No self-registration — all user accounts are created by OWNER or ADMIN
-* Cognito self-signup is disabled at the User Pool level
-* Cognito `custom:systemRole` attribute synced with DynamoDB
-
-### 4.2 User Management (OWNER / ADMIN)
-
-* OWNER can create ADMINs and MEMBERs
-* ADMIN can create MEMBERs only
-* OWNER can change user roles (promote/demote)
-* OWNER can delete any non-OWNER user
-* ADMIN can delete MEMBERs only
-* View user task progress across all projects
+### 4.2 User Management
+* OWNER creates CEO, MD, ADMIN, MEMBER
+* CEO/MD creates ADMIN, MEMBER
+* ADMIN creates MEMBER only
+* Employee ID format: `{PREFIX}-{DEPT}-{YY}{HASH}` (e.g., NS-DEV-26A7K3)
+* Company prefix configurable by OWNER from profile
+* Department-based employee IDs (DEV, DES, MGT, RSH, GEN)
+* Welcome email with OTP via Gmail SMTP (Secrets Manager)
+* User profile with avatar (Cloudinary), bio, skills, personal info
+* Profile completeness indicator
+* Online status indicators (from attendance data)
 
 ### 4.3 Project Management
+* Projects have a name, description, domain, and estimated hours
+* **4 domains**: Development, Designing, Management, Research
+* Each domain determines the task pipeline steps
+* Project health indicators (ON_TRACK, AT_RISK, BEHIND, COMPLETED)
+* Project progress with weighted scoring
+* Upcoming deadlines widget
+* Project-level time reports
+* Breadcrumb navigation
 
-* OWNER and ADMINs can create projects
-* Projects have a name, description, and creator
-* Members are assigned to projects with a project-level role (ADMIN or MEMBER)
-* OWNER has full access to all projects without explicit membership
-* Project ADMINs can manage members and tasks within their project
-* Deleting a project cascades to all tasks and comments
+### 4.4 Task Management — Domain-Specific Pipelines
 
-### 4.4 Task Management
+| Domain | Pipeline Steps |
+|---|---|
+| **Development** | To Do → In Progress → Developed → Code Review → Testing → Debugging → Final Testing → Done |
+| **Designing** | To Do → In Progress → Wireframe → Design → Review → Revision → Approved → Done |
+| **Management** | To Do → In Progress → Planning → Execution → Review → Done |
+| **Research** | To Do → In Progress → Research → Analysis → Documentation → Review → Done |
 
-* OWNER and ADMINs create tasks inside projects
-* Each task has: title, description, status, priority, deadline (date + time), and one or more assignees
-* **Multi-assignee**: a task can be assigned to multiple project members
-* **Required deadline**: every task must have a deadline (ISO 8601 datetime)
-* Task statuses: TODO, IN\_PROGRESS, DONE
-* Task priorities: LOW, MEDIUM, HIGH
-* Members can only update the status of tasks assigned to them
-* OWNER/ADMIN can update all task fields
-* Deleting a task cascades to all its comments
-* Tracks `created_by` and `assigned_by` metadata
+* Tasks inherit domain from their project
+* Direct tasks (no project) can select their own domain
+* Multi-assignee support with required deadlines
+* Priority levels: LOW, MEDIUM, HIGH
+* Status-based progress scores (auto-calculated per domain)
+* Pipeline list view with collapsible status groups
+* Search, sort (priority/deadline/title/status), filter (priority/assignee/overdue)
+* Quick status change on task rows (hover dropdown)
+* Deadline overdue detection (date-only = end of day)
+* Task detail panel with progress track, assignee management, comments
 
-### 4.5 Progress Comments
+### 4.5 Time Tracking (Clockify-style)
+* Select source → select task → start timer
+* **Meeting** option — one-click meeting tracking (no task required)
+* "What are you working on?" description field
+* Live timer ticking in real-time (00:00:00 format)
+* Timer visible in sidebar on every page
+* Task switching auto-stops current timer, starts new
+* Daily target progress ring (8-hour goal)
+* Quick-restart last task button
+* Optimistic UI — timer starts instantly (no waiting for API)
+* Session description stored and shown in task updates
+* Timer descriptions included in reports
 
-* Assigned members can post progress updates (text messages) on their tasks
-* OWNER and ADMINs can also post comments on any task
-* Comments are displayed chronologically in the task detail panel
-* Each comment records: author, message, timestamp
+### 4.6 Attendance
+* Sign-in/sign-out with task and project tracking
+* Multiple sessions per day with cumulative hours
+* Team attendance table with live timers for active users
+* Monthly attendance reports with CSV export
+* Per-member summary (days present, total hours, avg/day, distribution)
+* Per-task breakdown
+* Expandable daily records with session details
+* Member filter and search
+* Day-off integration (shows who's on leave)
 
-### 4.6 Dashboard
+### 4.7 Day-Off Requests
+* Members request single-day or multi-day leave
+* Auto-routed to CEO/MD for approval
+* Approve/Reject by CEO/MD
+* **Cancel by member** (pending or approved requests)
+* Day-off banner showing who's on leave today
+* Filter by status: ALL, PENDING, APPROVED, REJECTED, CANCELLED
+* Custom confirmation dialog (no browser native popups)
 
-* Overview of projects the user belongs to
-* Task counts by status (TODO, IN\_PROGRESS, DONE)
-* Quick navigation to projects and tasks
+### 4.8 Reports — 3 Views
 
-### 4.7 My Tasks
+**Overall Reports (`/reports`):**
+* **Summary**: Stacked bar chart (hours by project per day), pie chart (distribution), member breakdown with expandable sessions, top tasks by time
+* **Detailed**: Full session log table with Date/Member/Project/Task/Start/End/Duration, CSV export
+* **Weekly**: Timesheet grid (rows=members, columns=Mon-Sun), column/row totals, today highlighted
 
-* Aggregated view of all tasks assigned to the current user across all projects
-* Shows project name, task title, status, priority, and deadline
+**Project Reports (per-project `Reports` tab):**
+* Stat cards: Tracked hours, Budget %, Members, Sessions
+* Hours by Task bar chart
+* Status Distribution donut chart
+* Estimated vs Actual hours comparison chart
+* Member Workload with stacked task breakdown bars
+* Collapsible session log with CSV export
 
-### 4.8 Profile Management
+**Shared features**: Period selector (Daily/Weekly/Monthly/All Time), date navigation, member filter, live auto-refresh (60s), `formatDuration` (Xh Ym Zs) everywhere
 
-* Users can view and update their own name
-* Profile changes reflect immediately across the UI (via AuthProvider state)
+### 4.9 Dashboard
+* **Timer** as hero element (Admin/Member) — first thing visible
+* Overdue tasks alert (red card)
+* 4 stat cards with sparkline mini-charts (7-day trend)
+* Upcoming deadlines (next 3 days)
+* Project progress mini-cards with completion bars
+* Team attendance table
+* Quick action cards
+* Task update submission widget
+* Date display in greeting
 
----
+### 4.10 Task Updates
+* Auto-generated from attendance sessions
+* Includes timer description ("What are you working on?")
+* Project-grouped task summaries with time bars
+* Sign-in/sign-out display
+* "Still working" warning (blocks submit if timer active)
+* Admin view: date navigation, search, stats, CSV export
+* Pending yesterday's update prompt
 
-## 5. Functional Requirements
+### 4.11 Profile
+* Avatar upload with image cropping (Cloudinary)
+* Quick stats: tasks done, active tasks, projects, today's hours
+* Profile completeness ring (11 fields tracked)
+* Joined date display
+* Skills as colorful tags (8 rotating colors)
+* Personal info form (DOB, college, interests, hobby)
+* Company prefix setting (OWNER only) — format preview
+* Theme toggle (light/dark)
+* Password change
 
-### FR1: Authentication
-* Users log in with email and password via Cognito
-* JWT ID token is stored in localStorage and sent with all API requests
-* Token expiry is handled by Cognito; invalid tokens return 401
-
-### FR2: Role-Based Access Control
-* System-level RBAC: OWNER > ADMIN > MEMBER
-* Project-level RBAC: Project ADMIN > Project MEMBER
-* OWNER bypasses project membership checks (full access)
-* RBAC enforced in both API Gateway (JWT validation) and application use cases (authorization logic)
-
-### FR3: Project Management
-* `POST /projects` — OWNER/ADMIN creates a project
-* `GET /projects` — returns projects the caller belongs to (OWNER sees all via membership query)
-* `GET /projects/{id}` — returns project metadata + member list
-* `DELETE /projects/{id}` — cascades to tasks, comments, and memberships
-
-### FR4: Member Management
-* `POST /projects/{id}/members` — add user to project with role
-* `DELETE /projects/{id}/members/{userId}` — remove member
-* `PUT /projects/{id}/members/{userId}/role` — change project role
-* Add member UI shows dropdown of available users (excludes already-added and OWNER)
-
-### FR5: Task Management
-* `POST /projects/{id}/tasks` — create task with title, deadline (required), assignees (list)
-* `PUT /projects/{id}/tasks/{taskId}` — update task fields
-* `PUT /projects/{id}/tasks/{taskId}/assign` — reassign task to new member list
-* `DELETE /projects/{id}/tasks/{taskId}` — delete task and cascade comments
-* Members can only update `status` field on tasks assigned to them
-
-### FR6: Progress Comments
-* `POST /projects/{id}/tasks/{taskId}/comments` — post progress message
-* `GET /projects/{id}/tasks/{taskId}/comments` — list comments chronologically
-* Only assigned members, OWNER, and ADMINs can post comments
-
-### FR7: User Management
-* `POST /users` — create user (Cognito + DynamoDB)
-* `DELETE /users/{userId}` — delete user (Cognito + DynamoDB + remove from all projects)
-* `PUT /users/role` — change system role
-* `GET /users/{userId}/progress` — view task progress across projects
-
----
-
-## 6. Non-Functional Requirements
-
-### 6.1 Scalability
-* Fully serverless — Lambda auto-scales with request volume
-* DynamoDB on-demand billing — no capacity planning needed
-* Single-table design minimizes DynamoDB calls per request
-
-### 6.2 Performance
-* Average API response time < 500ms
-* Lambda Layer shared across all functions — reduces cold start package size
-* DynamoDB single-table queries return data in one round-trip
-
-### 6.3 Security
-* Cognito JWT authentication on all API endpoints
-* RBAC enforced at use case layer (not just API Gateway)
-* No secrets in frontend code — Cognito handles auth flow
-* Password policy: 8+ chars, uppercase, lowercase, numbers
-* `created_by` and `assigned_by` audit fields on all entities
-
-### 6.4 Reliability
-* All AWS managed services (Lambda, DynamoDB, Cognito, API Gateway) — 99.9%+ SLA
-* DynamoDB `RemovalPolicy.DESTROY` for dev; change to `RETAIN` for production
-
-### 6.5 Maintainability
-* Domain-Driven Design with strict layer boundaries
-* No infrastructure imports in domain or application layers
-* `IIdentityService` port in domain layer — Cognito is just one implementation
-* Pydantic v2 for request validation at handler level
-* TypeScript types on frontend match API response shape via auto snake→camel conversion
-
----
-
-## 7. System Architecture
-
-### Backend
-```
-API Gateway (REST, Cognito Authorizer)
-    ↓
-AWS Lambda (Python 3.12, Lambda Layer for deps)
-    ↓
-DynamoDB (single-table, GSI1)
-Cognito (user identity)
-```
-
-### Infrastructure
-```
-AWS CDK (Python)
-    ├── DynamoDB Table + GSI1
-    ├── Cognito User Pool + Client
-    ├── API Gateway (REST)
-    ├── Lambda Layer (boto3, pydantic)
-    └── 24 Lambda Functions
-```
-
-### Frontend
-```
-Next.js 14 (App Router)
-    ├── Cognito auth (client-side)
-    ├── React Query (server state)
-    ├── Tailwind CSS (styling)
-    └── API client (auto snake→camel key transform)
-```
+### 4.12 UI/UX Features
+* **Command Palette** (Cmd+K / Ctrl+K) — search pages, projects, tasks
+* **Notification Center** — bell icon with overdue tasks, deadline alerts, timer warnings
+* **Toast notifications** — success/error/info feedback
+* **Custom confirmation dialogs** — no browser native popups
+* **FilterSelect** component — portal-based dropdown for all filters
+* **DatePicker + TimePicker** — custom date/time selection (no native pickers)
+* **Skeleton loaders** — shimmer loading placeholders
+* **Sparkline charts** — inline 7-day trend lines
+* **Breadcrumbs** — navigation trail on project pages
+* **Dark mode** — comprehensive CSS variable system with 100+ overrides
+* **Collapsible sidebar** with mini timer widget
+* **Progress bar animations** on mount
+* **Live-updating hours** everywhere timer is running
 
 ---
 
-## 8. Data Model
+## 5. System Roles & Permissions
+
+### System Roles (5-tier)
+
+| Permission | OWNER | CEO | MD | ADMIN | MEMBER |
+|---|---|---|---|---|---|
+| Create CEO/MD | Yes | No | No | No | No |
+| Create Admin | Yes | Yes | Yes | No | No |
+| Create Member | Yes | Yes | Yes | Yes | No |
+| Approve Day-offs | No | Yes | Yes | No | No |
+| Manage Projects | Yes | Yes | Yes | Yes | No |
+| View Reports | Yes | Yes | Yes | Yes | No |
+| View All Tasks | Yes | Yes | Yes | Yes | No |
+| Use Timer | No | No | No | Yes | Yes |
+| Submit Task Update | No | No | No | Yes | Yes |
+
+### Project Roles (4-tier)
+
+| Permission | ADMIN | PROJECT_MANAGER | TEAM_LEAD | MEMBER |
+|---|---|---|---|---|
+| Create Tasks | Yes | Yes | Yes | No |
+| Update Any Task | Yes | Yes | Yes | No |
+| Update Own Status | Yes | Yes | Yes | Yes |
+| Assign Tasks | Yes | Yes | Yes | No |
+| Manage Members | Yes | Yes | Yes | No |
+| View All Tasks | Yes | Yes | Yes | Own Only |
+| View Progress | Yes | Yes | Yes | No |
+| View Reports | Yes | Yes | Yes | No |
+
+---
+
+## 6. Data Model
 
 ### User
 | Field | Type | Notes |
 |---|---|---|
 | user_id | string | Cognito sub (UUID) |
+| employee_id | string? | Format: NS-DEV-26A7K3 |
 | email | string | Unique, immutable |
 | name | string | Editable |
-| system_role | enum | OWNER, ADMIN, MEMBER |
-| created_by | string? | User ID of creator |
-| created_at | datetime | ISO 8601 |
-| updated_at | datetime | ISO 8601 |
+| system_role | enum | OWNER, CEO, MD, ADMIN, MEMBER |
+| department | string? | Development, Designing, Management, Research |
+| company_prefix | string? | OWNER only — used for employee ID generation |
+| phone, designation, location, bio | string? | Profile fields |
+| avatar_url | string? | Cloudinary URL |
+| skills | list[string] | Skill tags |
+| date_of_birth, college_name, area_of_interest, hobby | string? | Personal info |
+| created_by | string? | Creator's user ID |
+| created_at, updated_at | datetime | ISO 8601 |
 
 ### Project
 | Field | Type | Notes |
 |---|---|---|
 | project_id | UUID | |
 | name | string | |
-| description | string? | Optional |
-| created_by | string | User ID |
-| created_at | datetime | ISO 8601 |
-| updated_at | datetime | ISO 8601 |
-
-### ProjectMember
-| Field | Type | Notes |
-|---|---|---|
-| project_id | UUID | |
-| user_id | UUID | |
-| project_role | enum | ADMIN, MEMBER |
-| joined_at | datetime | ISO 8601 |
+| description | string? | |
+| domain | enum | DEVELOPMENT, DESIGNING, MANAGEMENT, RESEARCH |
+| estimated_hours | float? | For time budget tracking |
+| created_by | string | |
+| created_at, updated_at | datetime | |
 
 ### Task
 | Field | Type | Notes |
 |---|---|---|
 | task_id | UUID | |
-| project_id | UUID | |
+| project_id | string | UUID or "DIRECT" |
 | title | string | |
-| description | string? | Optional |
-| status | enum | TODO, IN_PROGRESS, DONE |
+| description | string? | |
+| status | string | Domain-specific (e.g., TODO, CODE_REVIEW, WIREFRAME) |
 | priority | enum | LOW, MEDIUM, HIGH |
-| assigned_to | list[string] | One or more user IDs |
-| assigned_by | string? | Who last assigned |
-| created_by | string | User ID |
-| deadline | datetime | Required, ISO 8601 |
-| created_at | datetime | ISO 8601 |
-| updated_at | datetime | ISO 8601 |
+| domain | enum | DEVELOPMENT, DESIGNING, MANAGEMENT, RESEARCH |
+| assigned_to | list[string] | User IDs |
+| assigned_by | string? | |
+| created_by | string | |
+| deadline | datetime | Required |
+| estimated_hours | float? | |
+| created_at, updated_at | datetime | |
 
-### ProgressComment
+### Attendance (Session)
 | Field | Type | Notes |
 |---|---|---|
-| comment_id | UUID | |
-| task_id | UUID | |
-| project_id | UUID | |
-| author_id | string | User ID |
-| message | string | Progress update text |
-| created_at | datetime | ISO 8601 |
+| sign_in_at | datetime | |
+| sign_out_at | datetime? | null if active |
+| hours | float? | Calculated on sign-out |
+| task_id, project_id | string? | What was worked on |
+| task_title, project_name | string? | Denormalized for display |
+| description | string? | "What are you working on?" |
 
----
-
-## 9. DynamoDB Key Design
-
-Single table: **TaskManagementTable**
-
-| Item | PK | SK | GSI1PK | GSI1SK |
-|---|---|---|---|---|
-| User | `USER#{userId}` | `PROFILE` | `USER_EMAIL#{email}` | `PROFILE` |
-| Project | `PROJECT#{projectId}` | `METADATA` | — | — |
-| ProjectMember | `PROJECT#{projectId}` | `MEMBER#{userId}` | `USER#{userId}` | `PROJECT#{projectId}` |
-| Task | `PROJECT#{projectId}` | `TASK#{taskId}` | `TASK#{taskId}` | `PROJECT#{projectId}` |
-| Comment | `TASK#{taskId}` | `COMMENT#{ts}#{id}` | — | — |
-
----
-
-## 10. Security
-
-* Cognito JWT authentication on every API call
-* API Gateway Cognito authorizer rejects invalid/expired tokens (401)
-* Use case layer enforces RBAC (system role + project membership) → 403
-* Password policy enforced by Cognito (8+ chars, upper, lower, digits)
-* IAM roles scoped per Lambda function (DynamoDB CRUD, Cognito admin ops)
-* No secrets stored in frontend — all auth via Cognito SDK
-
----
-
-## 11. Testing Strategy
-
-* Unit testing for domain entities and use cases (pytest)
-* API testing via curl / Postman against deployed endpoints
-* Role-based access testing — verify each role's permissions
-* Frontend build verification (`next build` with TypeScript strict mode)
-
----
-
-## 12. Deployment
-
-| Component | Platform | Tool |
+### DayOffRequest
+| Field | Type | Notes |
 |---|---|---|
-| Infrastructure | AWS (ap-south-1) | AWS CDK (Python) |
-| Backend | AWS Lambda | CDK deploy |
-| Database | DynamoDB | CDK managed |
-| Auth | Cognito | CDK managed |
-| Frontend | localhost / Vercel | `npm run dev` / Vercel deploy |
-
-Deploy command: `cd backend/cdk && cdk deploy`
+| request_id | UUID | |
+| user_id | string | |
+| start_date, end_date | string | ISO dates |
+| reason | string | |
+| status | enum | PENDING, APPROVED, REJECTED, CANCELLED |
+| admin_id, admin_name | string? | Approver |
 
 ---
 
-## 13. Success Metrics
+## 7. DynamoDB Key Design
 
-| Metric | Target |
+Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery enabled)
+
+| Item | PK | SK | GSI1PK | GSI1SK | GSI2PK | GSI2SK |
+|---|---|---|---|---|---|---|
+| User | `USER#{userId}` | `PROFILE` | `USER_EMAIL#{email}` | `PROFILE` | `EMPLOYEE#{empId}` | `PROFILE` |
+| Project | `PROJECT#{projectId}` | `METADATA` | — | — | — | — |
+| ProjectMember | `PROJECT#{projectId}` | `MEMBER#{userId}` | — | — | — | — |
+| Task | `PROJECT#{projectId}` | `TASK#{taskId}` | `TASK#{taskId}` | `PROJECT#{projectId}` | — | — |
+| Comment | `TASK#{taskId}` | `COMMENT#{ts}#{id}` | — | — | — | — |
+| Attendance | `USER#{userId}` | `ATTENDANCE#{date}` | — | — | — | — |
+| DayOff | `USER#{userId}` | `DAYOFF#{ts}#{id}` | — | — | — | — |
+
+---
+
+## 8. Security
+
+* AWS Cognito JWT authentication on all endpoints
+* Secrets Manager for Gmail SMTP credentials (not hardcoded)
+* CORS restricted to frontend domain + localhost
+* RBAC enforced at both API Gateway and use case layer
+* Password policy: 8+ chars, uppercase, lowercase, digits
+* DynamoDB Point-in-Time Recovery enabled
+* No native browser dialogs — custom themed confirmations
+* No `console.log` in production code
+
+---
+
+## 9. Infrastructure
+
+| Component | Service | Config |
+|---|---|---|
+| Compute | AWS Lambda (Python 3.12) | 10s timeout, shared layer |
+| Database | DynamoDB | On-demand, PITR enabled |
+| Auth | Cognito User Pool | Email sign-in, custom attributes |
+| API | API Gateway REST | Cognito authorizer, CORS |
+| Secrets | Secrets Manager | Gmail credentials |
+| Frontend | Vercel + localhost | Next.js 16 |
+| Images | Cloudinary | Unsigned avatar uploads |
+| Email | Gmail SMTP | Welcome emails with OTP |
+| Region | ap-south-1 (Mumbai) | |
+
+**Lambda Functions:** 35+ (one per endpoint)
+**Deploy:** `cd backend/cdk && cdk deploy`
+
+---
+
+## 10. Custom UI Components
+
+| Component | Replaces |
 |---|---|
-| API response time | < 500ms average |
-| Successful auth rate | > 99% |
-| Task CRUD operations | All RBAC-compliant |
-| Frontend build | Zero TypeScript errors |
-| Cold start time | < 2s with Lambda Layer |
+| `Select` | Native `<select>` (form fields) |
+| `FilterSelect` | Native `<select>` (toolbar filters) |
+| `DatePicker` | Native `<input type="date">` |
+| `TimePicker` | Native `<input type="time">` |
+| `DateTimePicker` | Native `<input type="datetime-local">` |
+| `ConfirmDialog` | Native `confirm()` |
+| `Toast` | Native `alert()` |
+| `CommandPalette` | No native equivalent |
+| `NotificationCenter` | No native equivalent |
+| `Sparkline` | No native equivalent |
+| `Skeleton` | Spinner-only loading |
+| `EmptyState` | Plain text empty states |
+| `Breadcrumbs` | No native equivalent |
+| `LiveTimer` | Static time display |
 
 ---
 
-## 14. Implemented Features (Current State)
+## 11. Implemented Features Checklist
 
-- [x] User authentication (Cognito login)
-- [x] Three-tier RBAC (OWNER > ADMIN > MEMBER)
-- [x] User management (create, delete, role change, progress view)
-- [x] Project CRUD with member management
-- [x] Task CRUD with kanban board UI
-- [x] Multi-assignee tasks
-- [x] Required deadlines (date + time)
-- [x] Progress comments on tasks
-- [x] Dashboard with project/task overview
-- [x] My Tasks page (cross-project view)
-- [x] Profile management
-- [x] AWS CDK deployment with Lambda Layers
-- [x] DDD architecture with clean layer boundaries
-- [x] snake_case → camelCase API response transformation
+- [x] 5-tier system RBAC (OWNER > CEO > MD > ADMIN > MEMBER)
+- [x] 4-tier project RBAC (ADMIN > PM > TEAM_LEAD > MEMBER)
+- [x] Domain-specific task pipelines (Development, Designing, Management, Research)
+- [x] Clockify-style live time tracking with descriptions
+- [x] Meeting tracking (no task required)
+- [x] Reports: Summary, Detailed, Weekly views
+- [x] Project-level reports with charts
+- [x] Attendance monitoring with CSV export
+- [x] Day-off workflow (request/approve/reject/cancel)
+- [x] Task updates with timer descriptions
+- [x] Dark mode with comprehensive theme system
+- [x] Command palette (Cmd+K)
+- [x] Notification center
+- [x] Toast notifications
+- [x] Custom confirmation dialogs
+- [x] Employee ID: PREFIX-DEPT-YYHASH format
+- [x] Profile completeness tracking
+- [x] Sparkline charts in dashboard
+- [x] Skeleton loaders
+- [x] Breadcrumbs
+- [x] All native elements replaced with custom components
+- [x] Deadline overdue = end of day for date-only deadlines
+- [x] AWS Secrets Manager for credentials
+- [x] DynamoDB Point-in-Time Recovery
+- [x] CORS restricted to allowed origins
+- [x] 15+ backend unit tests
 
 ---
 
-## 15. Future Enhancements
+## 12. Future Enhancements
 
-* Real-time updates via API Gateway WebSockets
-* Email notifications via AWS SES/SNS
-* File attachments via S3 presigned URLs
-* Drag-and-drop kanban reordering
-* Task filtering and search
-* Analytics dashboard with charts
-* Pagination for large project/task lists
-* Audit log for all user actions
-
----
-
-## 16. Risks & Mitigations
-
-| Risk | Mitigation |
-|---|---|
-| DynamoDB hot partition | Single-table design distributes keys across partitions |
-| RBAC bypass | Enforced at both API Gateway and use case layer |
-| Cognito token expiry | Frontend handles 401 by redirecting to login |
-| Lambda cold starts | Lambda Layer reduces package size; Python 3.12 has fast init |
-| Data loss on stack delete | `RemovalPolicy.DESTROY` for dev; switch to `RETAIN` for production |
+* Real-time updates via WebSockets
+* File attachments on tasks (S3)
+* Drag-and-drop task reordering
+* Activity feed / audit log
+* Project notes / wiki
+* Milestones / phases
+* Mobile-optimized bottom navigation
+* Onboarding tour for new users
+* Pagination for large datasets
+* Email notifications for task assignments

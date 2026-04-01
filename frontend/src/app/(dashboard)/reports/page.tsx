@@ -494,7 +494,7 @@ export default function ReportsPage() {
                   <tr className="border-b border-gray-100 bg-gray-50/70">
                     <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-40">Member</th>
                     {weekData.dates.map(d => {
-                      const isToday = d === new Date().toISOString().slice(0, 10)
+                      const isToday = d === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
                       return <th key={d} className={`text-center px-3 py-3 text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-400'}`}>
                         {new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}<br/>
                         <span className="text-[9px] font-semibold">{new Date(d + 'T00:00:00').getDate()}</span>
@@ -513,7 +513,7 @@ export default function ReportsPage() {
                         <td className="px-5 py-3 font-medium text-gray-800">{m.name}</td>
                         {weekData.dates.map(d => {
                           const hrs = m.days[d] ?? 0
-                          const isToday = d === new Date().toISOString().slice(0, 10)
+                          const isToday = d === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
                           return <td key={d} className={`text-center px-3 py-3 tabular-nums ${isToday ? 'bg-indigo-50/30' : ''} ${hrs > 0 ? 'text-gray-700 font-medium' : 'text-gray-200'}`}>
                             {hrs > 0 ? formatDuration(hrs) : '—'}
                           </td>

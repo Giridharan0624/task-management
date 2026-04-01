@@ -10,7 +10,8 @@ import { Avatar } from '@/components/ui/AvatarUpload'
 import { formatDuration } from '@/lib/utils/formatDuration'
 
 function getToday() {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export function AttendanceTable() {

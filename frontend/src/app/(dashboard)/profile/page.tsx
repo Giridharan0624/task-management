@@ -66,10 +66,10 @@ export default function ProfilePage() {
   const [hobby, setHobby] = useState('')
   const [companyPrefix, setCompanyPrefix] = useState('')
   const [editConfirmed, setEditConfirmed] = useState(false)
-  const [bioDataConfirmed, setBioDataConfirmed] = useState(false)
-  const [bioDataSaving, setBioDataSaving] = useState(false)
-  const [bioDataSuccess, setBioDataSuccess] = useState(false)
-  const [bioDataError, setBioDataError] = useState('')
+  const [personalInfoConfirmed, setBioDataConfirmed] = useState(false)
+  const [personalInfoSaving, setBioDataSaving] = useState(false)
+  const [personalInfoSuccess, setBioDataSuccess] = useState(false)
+  const [personalInfoError, setBioDataError] = useState('')
 
   useEffect(() => {
     getProfile().then((p) => {
@@ -148,7 +148,7 @@ export default function ProfilePage() {
   if (!user) return null
   const dp = profile || user
   const isOwner = dp.systemRole === 'OWNER'
-  const bioDataSubmitted = !!(profile?.dateOfBirth)
+  const personalInfoSubmitted = !!(profile?.dateOfBirth)
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -156,7 +156,7 @@ export default function ProfilePage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900 tracking-tight">Profile</h1>
-        {!editing && (isOwner || bioDataSubmitted) && (
+        {!editing && (isOwner || personalInfoSubmitted) && (
           <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
             {isOwner ? 'Edit Company Profile' : 'Edit Profile'}
           </Button>
@@ -294,7 +294,7 @@ export default function ProfilePage() {
         </Section>
 
         {/* Contact & Work section — hidden for OWNER (company account) */}
-        {!isOwner && bioDataSubmitted && (
+        {!isOwner && personalInfoSubmitted && (
           <Section title="Contact & Work">
             {editing ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -347,8 +347,8 @@ export default function ProfilePage() {
           </Section>
         )}
 
-        {/* Skills section — hidden for OWNER, shown after bio data submitted */}
-        {!isOwner && bioDataSubmitted && (
+        {/* Skills section — hidden for OWNER, shown after personal info submitted */}
+        {!isOwner && personalInfoSubmitted && (
           <Section title="Skills">
             {editing ? (
               <div>
@@ -382,7 +382,7 @@ export default function ProfilePage() {
         )}
 
         {/* Edit mode: checkbox + save/cancel at bottom */}
-        {editing && (isOwner || bioDataSubmitted) && (
+        {editing && (isOwner || personalInfoSubmitted) && (
           <div className="border-t border-gray-100 px-6 py-5">
             <label className="flex items-start gap-3 cursor-pointer mb-4">
               <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
@@ -406,23 +406,23 @@ export default function ProfilePage() {
 
       </div>
 
-      {/* Bio Data form — only shown once (before first submission), hidden for OWNER */}
-      {!isOwner && !bioDataSubmitted && (
+      {/* Personal Info form — only shown once (before first submission), hidden for OWNER */}
+      {!isOwner && !personalInfoSubmitted && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Bio Data</h3>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Personal Info</h3>
           </div>
           <div className="px-6 py-5">
-            {bioDataSuccess && (
+            {personalInfoSuccess && (
               <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 mb-4 animate-fade-in">
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Bio data saved successfully.
               </div>
             )}
-            {bioDataError && (
+            {personalInfoError && (
               <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 mb-4">
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                {bioDataError}
+                {personalInfoError}
               </div>
             )}
 
@@ -492,9 +492,9 @@ export default function ProfilePage() {
             <div className="mt-5 pt-4 border-t border-gray-100">
               <label className="flex items-start gap-3 cursor-pointer mb-4">
                 <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
-                  bioDataConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                  personalInfoConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
                 }`}>
-                  {bioDataConfirmed && (
+                  {personalInfoConfirmed && (
                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -502,7 +502,7 @@ export default function ProfilePage() {
                 </div>
                 <input
                   type="checkbox"
-                  checked={bioDataConfirmed}
+                  checked={personalInfoConfirmed}
                   onChange={(e) => setBioDataConfirmed(e.target.checked)}
                   className="sr-only"
                 />
@@ -511,8 +511,8 @@ export default function ProfilePage() {
 
               <div className="flex justify-end">
                 <Button
-                  disabled={!bioDataConfirmed || bioDataSaving}
-                  loading={bioDataSaving}
+                  disabled={!personalInfoConfirmed || personalInfoSaving}
+                  loading={personalInfoSaving}
                   onClick={async () => {
                     setBioDataSaving(true)
                     setBioDataSuccess(false)
@@ -529,13 +529,13 @@ export default function ProfilePage() {
                       setBioDataConfirmed(false)
                       setTimeout(() => setBioDataSuccess(false), 4000)
                     } catch (err: unknown) {
-                      setBioDataError(err instanceof Error ? err.message : 'Failed to save bio data')
+                      setBioDataError(err instanceof Error ? err.message : 'Failed to save personal info')
                     } finally {
                       setBioDataSaving(false)
                     }
                   }}
                 >
-                  Submit Bio Data
+                  Submit Personal Info
                 </Button>
               </div>
             </div>
