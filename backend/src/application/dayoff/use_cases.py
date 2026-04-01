@@ -137,3 +137,27 @@ class RejectRequestUseCase:
         day_off.updated_at = now
         self._dayoff_repo.save(day_off)
         return day_off.to_dict()
+
+
+class CancelRequestUseCase:
+    """Allow the requesting member to cancel their own day-off (pending or approved)."""
+    def __init__(self, dayoff_repo: IDayOffRepository):
+        self._dayoff_repo = dayoff_repo
+
+    def execute(self, caller_user_id: str, request_id: str) -> dict:
+        day_off = self._dayoff_repo.find_by_id(request_id)
+        if not day_off:
+            raise NotFoundError("Day-off request not found")
+
+        if day_off.user_id != caller_user_id:
+            raise AuthorizationError("You can only cancel your own day-off requests")
+
+        if day_off.status == "CANCELLED":
+            raise ValidationError("This request is already cancelled")
+
+        now = datetime.now(timezone.utc).isoformat()
+        day_off.status = "CANCELLED"
+        day_off.admin_status = "CANCELLED"
+        day_off.updated_at = now
+        self._dayoff_repo.save(day_off)
+        return day_off.to_dict()

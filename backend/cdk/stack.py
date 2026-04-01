@@ -293,6 +293,7 @@ class TaskManagementStack(Stack):
         dayoff_by_id = dayoffs.add_resource("{requestId}")
         dayoff_approve = dayoff_by_id.add_resource("approve")
         dayoff_reject = dayoff_by_id.add_resource("reject")
+        dayoff_cancel = dayoff_by_id.add_resource("cancel")
 
         add_api_lambda("CreateDayOff", "handlers.dayoff.create_request.handler", "POST", dayoffs)
         add_api_lambda("MyDayOffs", "handlers.dayoff.my_requests.handler", "GET", dayoffs_my)
@@ -300,6 +301,7 @@ class TaskManagementStack(Stack):
         add_api_lambda("AllDayOffs", "handlers.dayoff.all_requests.handler", "GET", dayoffs_all)
         add_api_lambda("ApproveDayOff", "handlers.dayoff.approve.handler", "PUT", dayoff_approve)
         add_api_lambda("RejectDayOff", "handlers.dayoff.reject.handler", "PUT", dayoff_reject)
+        add_api_lambda("CancelDayOff", "handlers.dayoff.cancel.handler", "PUT", dayoff_cancel)
 
         # ─── Task Update handlers ──────────────────────────────────────────
         task_updates = api.root.add_resource("task-updates")

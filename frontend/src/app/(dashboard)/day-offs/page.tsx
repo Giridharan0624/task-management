@@ -9,6 +9,7 @@ import {
   useCreateDayOff,
   useApproveDayOff,
   useRejectDayOff,
+  useCancelDayOff,
 } from '@/lib/hooks/useDayOffs'
 import type { DayOffRequest, DayOffStatus, ApprovalStatus } from '@/types/dayoff'
 import { Spinner } from '@/components/ui/Spinner'
@@ -23,6 +24,7 @@ function StatusBadge({ status }: { status: DayOffStatus | ApprovalStatus }) {
     PENDING: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
     APPROVED: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
     REJECTED: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
+    CANCELLED: 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200',
     'N/A': 'bg-gray-50 text-gray-500 ring-1 ring-inset ring-gray-200',
   }
   return (
@@ -45,14 +47,18 @@ function fmtDate(iso: string) {
 function RequestCard({
   req,
   showActions,
+  showCancel,
   onApprove,
   onReject,
+  onCancel,
   isActing,
 }: {
   req: DayOffRequest
   showActions: boolean
+  showCancel?: boolean
   onApprove: () => void
   onReject: () => void
+  onCancel?: () => void
   isActing: boolean
 }) {
   return (
@@ -85,17 +91,29 @@ function RequestCard({
           <span className="font-semibold text-gray-700">
             {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED'
               ? req.adminName
+              : req.adminStatus === 'CANCELLED' ? 'Cancelled by member'
               : 'Awaiting CEO/MD'}
           </span>
           <StatusBadge status={req.adminStatus} />
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Admin Actions */}
       {showActions && req.status === 'PENDING' && (
         <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
           <Button size="sm" onClick={onApprove} disabled={isActing}>Approve</Button>
           <Button size="sm" variant="danger" onClick={onReject} disabled={isActing}>Reject</Button>
+        </div>
+      )}
+
+      {/* Member Cancel */}
+      {showCancel && req.status !== 'CANCELLED' && req.status !== 'REJECTED' && onCancel && (
+        <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+          <button onClick={() => { if (confirm('Cancel this day-off request?')) onCancel() }}
+            disabled={isActing}
+            className="text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors disabled:opacity-50">
+            Cancel Request
+          </button>
         </div>
       )}
     </div>
@@ -257,6 +275,7 @@ export default function DayOffsPage() {
   const createMutation = useCreateDayOff()
   const approveMutation = useApproveDayOff()
   const rejectMutation = useRejectDayOff()
+  const cancelMutation = useCancelDayOff()
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [allFilter, setAllFilter] = useState<'ALL' | DayOffStatus>('ALL')
@@ -302,7 +321,9 @@ export default function DayOffsPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade">
               {myDayOffs.map((req: DayOffRequest) => (
-                <RequestCard key={req.requestId} req={req} showActions={false} onApprove={() => {}} onReject={() => {}} isActing={false} />
+                <RequestCard key={req.requestId} req={req} showActions={false} showCancel={true}
+                  onApprove={() => {}} onReject={() => {}} onCancel={() => cancelMutation.mutate(req.requestId)}
+                  isActing={cancelMutation.isPending} />
               ))}
             </div>
           )}
@@ -349,7 +370,7 @@ export default function DayOffsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">All Requests</h2>
             <div className="flex items-center gap-1.5">
-              {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((f) => (
+              {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setAllFilter(f)}

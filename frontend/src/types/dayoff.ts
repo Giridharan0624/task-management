@@ -1,5 +1,5 @@
-export type DayOffStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
-export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'N/A'
+export type DayOffStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'N/A'
 
 export interface DayOffRequest {
   requestId: string

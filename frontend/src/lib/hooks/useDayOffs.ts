@@ -8,6 +8,7 @@ import {
   getAllDayOffs,
   approveDayOff,
   rejectDayOff,
+  cancelDayOff,
 } from '@/lib/api/dayoffApi'
 
 const dayOffKeys = {
@@ -67,6 +68,14 @@ export function useRejectDayOff() {
   const invalidateAll = useInvalidateAll()
   return useMutation({
     mutationFn: (requestId: string) => rejectDayOff(requestId),
+    onSuccess: invalidateAll,
+  })
+}
+
+export function useCancelDayOff() {
+  const invalidateAll = useInvalidateAll()
+  return useMutation({
+    mutationFn: (requestId: string) => cancelDayOff(requestId),
     onSuccess: invalidateAll,
   })
 }
