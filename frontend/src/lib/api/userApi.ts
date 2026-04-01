@@ -84,6 +84,7 @@ export interface MyTask {
   assignedByName?: string
   createdBy: string
   createdByName?: string
+  domain?: string
   deadline: string
   createdAt: string
   updatedAt: string

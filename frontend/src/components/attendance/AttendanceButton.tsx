@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useMyAttendance, useSignIn, useSignOut } from '@/lib/hooks/useAttendance'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { useTasks, useDirectTasks } from '@/lib/hooks/useTasks'
@@ -10,267 +10,275 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Select } from '@/components/ui/Select'
 import { formatDuration } from '@/lib/utils/formatDuration'
-import { useLiveHours } from '@/lib/hooks/useLiveHours'
+import { getSessionHours } from '@/lib/utils/liveSession'
+import type { AttendanceSession } from '@/types/attendance'
 
-const DAILY_TARGET_HOURS = 8
-
-const TASK_COLORS = [
-  '#6366f1', '#8b5cf6', '#f97316', '#14b8a6',
-  '#ec4899', '#3b82f6', '#f59e0b', '#10b981',
-]
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-}
-
-function TaskSelector({
-  onStart, loading, buttonLabel,
-}: {
-  onStart: (data: { taskId: string; projectId: string; taskTitle: string; projectName: string; description?: string }) => void
-  loading: boolean; buttonLabel: string
+/* ═══ Task Selector ═══ */
+function TaskSelector({ onStart, loading, label }: {
+  onStart: (d: { taskId: string; projectId: string; taskTitle: string; projectName: string; description?: string }) => void
+  loading: boolean; label: string
 }) {
   const { user } = useAuth()
   const { data: projects } = useProjects()
   const { data: directTasks } = useDirectTasks()
   const [source, setSource] = useState('')
   const [taskId, setTaskId] = useState('')
-  const [description, setDescription] = useState('')
+  const [desc, setDesc] = useState('')
   const { data: projectTasks } = useTasks(source === 'DIRECT' ? '' : source)
 
-  // Timer only shows tasks assigned to the user — admins track their own work
-  const availableTasks = source === 'DIRECT'
+  const tasks = source === 'DIRECT'
     ? (directTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
     : (projectTasks ?? []).filter(t => t.assignedTo.includes(user?.userId ?? ''))
 
   const isMeeting = source === 'MEETING'
-  const selectedTask = isMeeting ? null : availableTasks.find(t => t.taskId === taskId)
-  const selectedProject = (projects ?? []).find(p => p.projectId === source)
-
-  const handleStart = () => {
-    if (isMeeting) {
-      onStart({
-        taskId: 'meeting',
-        projectId: 'DIRECT',
-        taskTitle: 'Meeting',
-        projectName: 'Meeting',
-        description: description.trim() || undefined,
-      })
-      setSource(''); setTaskId(''); setDescription('')
-      return
-    }
-    if (!selectedTask) return
-    onStart({
-      taskId: selectedTask.taskId,
-      projectId: source === 'DIRECT' ? 'DIRECT' : (selectedProject?.projectId ?? ''),
-      taskTitle: selectedTask.title,
-      projectName: source === 'DIRECT' ? 'Direct Task' : (selectedProject?.name ?? ''),
-      description: description.trim() || undefined,
-    })
-    setSource(''); setTaskId(''); setDescription('')
-  }
-
   const canStart = isMeeting || (taskId && source)
+
+  const go = () => {
+    if (isMeeting) {
+      onStart({ taskId: 'meeting', projectId: 'DIRECT', taskTitle: 'Meeting', projectName: 'Meeting', description: desc.trim() || undefined })
+    } else {
+      const t = tasks.find(x => x.taskId === taskId)
+      const p = (projects ?? []).find(x => x.projectId === source)
+      if (!t) return
+      onStart({ taskId: t.taskId, projectId: source === 'DIRECT' ? 'DIRECT' : (p?.projectId ?? ''), taskTitle: t.title, projectName: source === 'DIRECT' ? 'Direct Task' : (p?.name ?? ''), description: desc.trim() || undefined })
+    }
+    setSource(''); setTaskId(''); setDesc('')
+  }
 
   return (
     <div className="space-y-2">
-      <input
-        type="text"
-        value={description}
-        onChange={e => setDescription(e.target.value)}
-        placeholder="What are you working on?"
+      <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="What are you working on?"
         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-[13px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white focus:border-indigo-400 transition-all"
-        onKeyDown={e => { if (e.key === 'Enter' && canStart) handleStart() }}
-      />
+        onKeyDown={e => { if (e.key === 'Enter' && canStart) go() }} />
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select value={source} onChange={v => { setSource(v); setTaskId('') }}
-          options={[
-            { value: 'MEETING', label: 'Meeting' },
-            { value: 'DIRECT', label: 'Direct Tasks' },
-            ...(projects ?? []).map(p => ({ value: p.projectId, label: p.name })),
-          ]}
+          options={[{ value: 'MEETING', label: 'Meeting' }, { value: 'DIRECT', label: 'Direct Tasks' }, ...(projects ?? []).map(p => ({ value: p.projectId, label: p.name }))]}
           placeholder="Select Source" className="sm:flex-1" />
-        {!isMeeting && (
-          <Select value={taskId} onChange={setTaskId}
-            options={availableTasks.map(t => ({ value: t.taskId, label: t.title }))}
-            placeholder="Select Task" disabled={!source} className="sm:flex-1" />
-        )}
-        <Button variant="primary" size="sm" onClick={handleStart}
-          disabled={!canStart || loading} loading={loading} className="whitespace-nowrap">
-          {buttonLabel}
-        </Button>
+        {!isMeeting && <Select value={taskId} onChange={setTaskId} options={tasks.map(t => ({ value: t.taskId, label: t.title }))} placeholder="Select Task" disabled={!source} className="sm:flex-1" />}
+        <Button variant="primary" size="sm" onClick={go} disabled={!canStart || loading} loading={loading} className="whitespace-nowrap">{label}</Button>
       </div>
     </div>
   )
 }
 
-/* ─── Daily Target Ring ─── */
-function DailyTargetRing({ hours }: { hours: number }) {
-  const pct = Math.min((hours / DAILY_TARGET_HOURS) * 100, 100)
-  const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : '#f59e0b'
-  return (
-    <div className="relative flex-shrink-0" style={{ width: 52, height: 52 }}>
-      <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-        <circle cx="18" cy="18" r="15" fill="none" stroke="#f1f5f9" strokeWidth="2.5" />
-        <circle cx="18" cy="18" r="15" fill="none" stroke={color} strokeWidth="2.5"
-          strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[9px] font-bold tabular-nums" style={{ color }}>{Math.round(pct)}%</span>
-      </div>
-    </div>
-  )
+/* ═══ Grouped Task — merges multiple sessions of same task ═══ */
+interface GroupedTask {
+  taskTitle: string
+  projectName: string
+  taskId: string | null
+  projectId: string | null
+  description: string | null
+  totalHours: number
+  sessions: { signInAt: string; signOutAt: string | null; hours: number }[]
 }
 
-/* ─── Daily Summary ─── */
-function DailySummary({ sessions }: { sessions: { taskTitle: string | null; projectName: string | null; hours: number | null; signInAt: string; signOutAt: string | null }[] }) {
-  const taskBreakdown = useMemo(() => {
-    const map = new Map<string, { task: string; project: string; hours: number }>()
-    for (const s of sessions) {
-      const key = s.taskTitle || 'General'
-      const ex = map.get(key)
-      if (ex) ex.hours += s.hours ?? 0
-      else map.set(key, { task: key, project: s.projectName || 'No Project', hours: s.hours ?? 0 })
+function groupSessionsByTask(sessions: AttendanceSession[]): GroupedTask[] {
+  const map = new Map<string, GroupedTask>()
+  for (const s of sessions) {
+    const key = s.taskId || s.taskTitle || s.description || 'general'
+    const hrs = getSessionHours(s)
+    const start = new Date(s.signInAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    const end = s.signOutAt ? new Date(s.signOutAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : null
+    const existing = map.get(key)
+    if (existing) {
+      existing.totalHours += hrs
+      existing.sessions.push({ signInAt: start, signOutAt: end, hours: hrs })
+      if (s.description && !existing.description) existing.description = s.description
+    } else {
+      map.set(key, {
+        taskTitle: s.taskTitle || s.description || 'General',
+        projectName: s.projectName || 'Direct',
+        taskId: s.taskId,
+        projectId: s.projectId,
+        description: s.description,
+        totalHours: hrs,
+        sessions: [{ signInAt: start, signOutAt: end, hours: hrs }],
+      })
     }
-    return Array.from(map.values()).sort((a, b) => b.hours - a.hours)
-  }, [sessions])
+  }
+  return Array.from(map.values())
+}
 
-  const totalHrs = taskBreakdown.reduce((s, t) => s + t.hours, 0)
-  if (taskBreakdown.length === 0) return null
-
+function TaskRow({ task, onResume, loading }: {
+  task: GroupedTask
+  onResume: () => void
+  loading: boolean
+}) {
   return (
-    <div className="space-y-1.5">
-      {taskBreakdown.map((t, i) => (
-        <div key={t.task} className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: TASK_COLORS[i % TASK_COLORS.length] }} />
-          <span className="text-[11px] text-gray-600 flex-1 truncate">{t.task}</span>
-          <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
-            <div className="h-full rounded-full" style={{ width: `${totalHrs > 0 ? (t.hours / totalHrs) * 100 : 0}%`, backgroundColor: TASK_COLORS[i % TASK_COLORS.length] }} />
+    <div className="px-4 py-3 hover:bg-gray-50/80 transition-colors group">
+      <div className="flex items-center gap-3">
+        {/* Resume button */}
+        <button onClick={onResume} disabled={loading}
+          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-600 transition-all disabled:opacity-30 group-hover:scale-105"
+          title="Resume this task">
+          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+        </button>
+
+        {/* Task info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-medium text-gray-800 truncate">{task.taskTitle}</p>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-400 truncate">{task.projectName}</span>
+            {task.description && task.taskTitle !== task.description && (
+              <span className="text-[10px] text-gray-400 italic truncate">— {task.description}</span>
+            )}
           </div>
-          <span className="text-[10px] font-semibold text-gray-500 tabular-nums w-12 text-right">{formatDuration(t.hours)}</span>
         </div>
-      ))}
+
+        {/* Session times — shown inline */}
+        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+          {task.sessions.map((s, i) => (
+            <span key={i} className="text-[10px] text-gray-400 tabular-nums font-mono">
+              {s.signInAt}{s.signOutAt ? ` – ${s.signOutAt}` : ''}
+            </span>
+          ))}
+        </div>
+
+        {/* Total duration */}
+        <span className="text-[13px] font-bold text-indigo-600 tabular-nums w-[70px] text-right flex-shrink-0">
+          {formatDuration(task.totalHours)}
+        </span>
+      </div>
     </div>
   )
 }
 
-function SwitchSection({ onStart, loading }: { onStart: (data: { taskId: string; projectId: string; taskTitle: string; projectName: string; description?: string }) => void; loading: boolean }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="mt-3 border-t border-emerald-200 pt-2">
-      <button onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 transition-colors select-none">
-        <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-        Switch task
-      </button>
-      {open && (
-        <div className="mt-2 animate-fade-in" style={{ animationDuration: '0.15s' }}>
-          <TaskSelector onStart={onStart} loading={loading} buttonLabel="Switch" />
-        </div>
-      )}
-    </div>
-  )
-}
-
+/* ═══ Main Timer ═══ */
 export function AttendanceButton() {
   const { data: attendance, isLoading } = useMyAttendance()
-  const { totalHours: liveTotal } = useLiveHours()
   const signIn = useSignIn()
   const signOut = useSignOut()
 
-  // Last task for quick-restart
-  const lastSession = attendance?.sessions?.filter(s => s.signOutAt)?.slice(-1)[0]
+  // Tick every second for live calculations
+  const [, tick] = useState(0)
+  const active = attendance?.status === 'SIGNED_IN'
+  useEffect(() => {
+    if (!active) return
+    const i = setInterval(() => tick(t => t + 1), 1000)
+    return () => clearInterval(i)
+  }, [active])
 
-  if (isLoading) {
-    return <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex items-center justify-center"><Spinner /></div>
+  if (isLoading) return <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex items-center justify-center"><Spinner /></div>
+
+  // Ensure the active session's signInAt matches currentSignInAt so all
+  // time calculations stay consistent with the LiveTimer display
+  const rawSessions = attendance?.sessions ?? []
+  const sessions = (active && attendance?.currentSignInAt)
+    ? rawSessions.map(s => (!s.signOutAt ? { ...s, signInAt: attendance.currentSignInAt! } : s))
+    : rawSessions
+  // In stopped state, ALL sessions are done — don't rely on signOutAt being set
+  // In active state, filter out the currently running session (last one without signOutAt)
+  const pastSessions = active
+    ? sessions.filter(s => s.signOutAt)
+    : sessions
+  const totalHours = sessions.reduce((s, se) => s + getSessionHours(se), 0)
+
+  // Group past sessions by task for the session list
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const groupedTasks = useMemo(() => groupSessionsByTask(pastSessions), [pastSessions, totalHours])
+
+  const resume = (task: GroupedTask) => {
+    signIn.mutate({
+      taskId: task.taskId || 'meeting',
+      projectId: task.projectId || 'DIRECT',
+      taskTitle: task.taskTitle,
+      projectName: task.projectName || 'Direct Task',
+      description: task.description || undefined,
+    })
   }
 
-  if (!attendance) {
-    return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-[13px] font-semibold text-gray-900">Time Tracker</p>
-            <p className="text-[11px] text-gray-400">Select a project and task to start tracking</p>
-          </div>
-          <DailyTargetRing hours={0} />
-        </div>
-        <TaskSelector onStart={data => signIn.mutate(data)} loading={signIn.isPending} buttonLabel="Start" />
-        {signIn.error && <p className="mt-2 text-[12px] text-red-600">{signIn.error instanceof Error ? signIn.error.message : 'Failed to start timer'}</p>}
-      </div>
-    )
-  }
+  const err = signIn.error || signOut.error
+  const errMsg = err instanceof Error ? err.message : err ? 'Operation failed' : null
 
-  const { sessions, status, currentSignInAt, currentTask } = attendance
+  /* ─── ACTIVE ─── */
+  if (active && attendance) {
+    const cur = attendance.currentTask
+    const curSession = sessions.find(s => !s.signOutAt)
 
-  if (status === 'SIGNED_IN') {
-    const activeDesc = sessions.find(s => !s.signOutAt)?.description
     return (
-      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
-        {/* Active timer — single row */}
-        <div className="flex items-center justify-between">
+      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/30 shadow-sm overflow-hidden">
+        {/* Running timer */}
+        <div className="px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+            <span className="relative flex h-3 w-3 flex-shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
             </span>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-emerald-800 truncate">
-                {currentTask?.taskTitle || 'Working'}
-                {currentTask && <span className="text-emerald-600 font-normal"> · {currentTask.projectName}</span>}
+              <p className="text-[14px] font-bold text-emerald-800 truncate">{cur?.taskTitle || 'Working'}</p>
+              <p className="text-[11px] text-emerald-600 truncate">
+                {cur?.projectName}{curSession?.description && <span className="italic"> — {curSession.description}</span>}
               </p>
-              {activeDesc && <p className="text-[11px] text-emerald-600/70 truncate italic">{activeDesc}</p>}
             </div>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-            <span className="text-[10px] text-emerald-600 tabular-nums hidden sm:inline">{formatDuration(liveTotal)} today</span>
-            {currentSignInAt && (
-              <LiveTimer startTime={currentSignInAt} className="text-xl font-bold text-emerald-700 font-mono tracking-tight" />
-            )}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {attendance.currentSignInAt && <LiveTimer startTime={attendance.currentSignInAt} className="text-2xl font-bold text-emerald-700 font-mono tabular-nums" />}
             <Button variant="danger" size="sm" onClick={() => signOut.mutate()} loading={signOut.isPending}>Stop</Button>
           </div>
         </div>
 
-        {/* Switch — custom collapsible */}
-        <SwitchSection onStart={data => signIn.mutate(data)} loading={signIn.isPending} />
+        {/* Total bar */}
+        <div className="px-5 py-2 bg-emerald-100/50 border-t border-emerald-200/50 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-emerald-700">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
+          <span className="text-[12px] font-bold text-emerald-700 tabular-nums">{formatDuration(totalHours)} today</span>
+        </div>
 
-        {(signIn.error || signOut.error) && (
-          <p className="mt-2 text-[12px] text-red-600">{((signIn.error || signOut.error) as Error)?.message || 'Operation failed'}</p>
+        {/* Previous completed sessions — grouped by task */}
+        {groupedTasks.length > 0 && (
+          <div className="border-t border-emerald-200/50 bg-white/50 divide-y divide-gray-50">
+            {groupedTasks.map((t, i) => (
+              <TaskRow key={i} task={t} onResume={() => resume(t)} loading={signIn.isPending} />
+            ))}
+          </div>
         )}
+
+        {/* Switch task */}
+        <div className="px-5 py-3 border-t border-emerald-200/50 bg-white/50">
+          <TaskSelector onStart={d => signIn.mutate(d)} loading={signIn.isPending} label="Switch" />
+        </div>
+
+        {errMsg && <p className="px-5 py-2 text-[12px] text-red-600 bg-red-50">{errMsg}</p>}
       </div>
     )
   }
 
-  // Signed out — compact: resume button + start new
+  /* ─── STOPPED / NO DATA ─── */
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <p className="text-[13px] font-semibold text-gray-900">Time Tracker</p>
-          <span className="text-[10px] bg-gray-100 text-gray-500 font-semibold px-1.5 py-0.5 rounded-md tabular-nums">{formatDuration(liveTotal)}</span>
+    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
+        <div>
+          <p className="text-[13px] font-bold text-gray-900">Time Tracker</p>
+          {pastSessions.length > 0 && <p className="text-[11px] text-gray-400">{pastSessions.length} session{pastSessions.length !== 1 ? 's' : ''} today</p>}
         </div>
-        {/* Quick restart */}
-        {lastSession && lastSession.taskTitle && (
-          <button
-            onClick={() => signIn.mutate({
-              taskId: lastSession.taskId!, projectId: lastSession.projectId!,
-              taskTitle: lastSession.taskTitle!, projectName: lastSession.projectName!,
-            })}
-            disabled={signIn.isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 text-[11px] font-semibold text-indigo-700 transition-all"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
-            Resume {lastSession.taskTitle}
-          </button>
-        )}
+        <span className="text-[20px] font-bold text-gray-700 font-mono tabular-nums">{pastSessions.length > 0 ? formatDuration(totalHours) : '00:00:00'}</span>
       </div>
 
-      {/* Start new timer */}
-      <TaskSelector onStart={data => signIn.mutate(data)} loading={signIn.isPending} buttonLabel="Start" />
+      {/* Today's sessions — grouped by task, each with resume button */}
+      {groupedTasks.length > 0 && (
+        <div className="border-b border-gray-100">
+          <div className="px-4 py-2 bg-gray-50/60 border-b border-gray-100">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Today&apos;s Sessions</span>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {groupedTasks.map((t, i) => (
+              <TaskRow key={i} task={t} onResume={() => resume(t)} loading={signIn.isPending} />
+            ))}
+          </div>
+          {/* Total row */}
+          <div className="px-4 py-2 bg-gray-50/60 flex items-center justify-between border-t border-gray-100">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</span>
+            <span className="text-[13px] font-bold text-gray-800 tabular-nums">{formatDuration(totalHours)}</span>
+          </div>
+        </div>
+      )}
 
-      {signIn.error && <p className="mt-2 text-[12px] text-red-600">{signIn.error instanceof Error ? signIn.error.message : 'Failed to start timer'}</p>}
+      {/* Start new */}
+      <div className="p-5">
+        <TaskSelector onStart={d => signIn.mutate(d)} loading={signIn.isPending} label="Start" />
+      </div>
+
+      {errMsg && <p className="px-5 pb-3 text-[12px] text-red-600">{errMsg}</p>}
     </div>
   )
 }

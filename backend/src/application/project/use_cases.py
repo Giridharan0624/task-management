@@ -136,10 +136,10 @@ class ListProjectsForUserUseCase:
             if self._task_repo:
                 tasks = self._task_repo.find_by_project(p.project_id)
                 total = len(tasks)
-                done = sum(1 for t in tasks if t.status.value == "DONE")
+                done = sum(1 for t in tasks if str(t.status) == "DONE")
                 d["task_count"] = total
                 d["done_count"] = done
-                d["completion_percent"] = round(sum(STATUS_PROGRESS.get(t.status.value, 0) for t in tasks) / total) if total > 0 else 0
+                d["completion_percent"] = round(sum(STATUS_PROGRESS.get(str(t.status), 0) for t in tasks) / total) if total > 0 else 0
             result.append(d)
         return result
 

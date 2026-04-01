@@ -20,7 +20,8 @@ import { FilterSelect } from '@/components/ui/FilterSelect'
 import Link from 'next/link'
 import type { MyTask } from '@/lib/api/userApi'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
-import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_OPTIONS, TASK_STATUS_PROGRESS } from '@/types/task'
+import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_LABELS, getStatusProgress, getStatusOptions } from '@/types/task'
+import type { TaskDomain } from '@/types/task'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { useUpdateTask } from '@/lib/hooks/useTasks'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
@@ -97,19 +98,20 @@ export default function TasksPage() {
     const q = search.toLowerCase()
     filteredTasks = filteredTasks.filter(t => t.title.toLowerCase().includes(q) || (t.projectName || '').toLowerCase().includes(q))
   }
-  // Sort
-  if (sort !== 'default') {
-    filteredTasks = [...filteredTasks].sort((a, b) => {
-      if (sort === 'priority') return (PRIORITY_ORDER[a.priority] ?? 2) - (PRIORITY_ORDER[b.priority] ?? 2)
-      if (sort === 'deadline') {
-        if (!a.deadline && !b.deadline) return 0; if (!a.deadline) return 1; if (!b.deadline) return -1
-        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-      }
-      if (sort === 'title') return a.title.localeCompare(b.title)
-      if (sort === 'status') return (TASK_STATUS_PROGRESS[a.status] ?? 0) - (TASK_STATUS_PROGRESS[b.status] ?? 0)
-      return 0
-    })
-  }
+  // Sort — default sorts by priority (HIGH first), then deadline
+  filteredTasks = [...filteredTasks].sort((a, b) => {
+    if (sort === 'title') return a.title.localeCompare(b.title)
+    if (sort === 'status') return (TASK_STATUS_PROGRESS[a.status] ?? 0) - (TASK_STATUS_PROGRESS[b.status] ?? 0)
+    if (sort === 'deadline') {
+      if (!a.deadline && !b.deadline) return 0; if (!a.deadline) return 1; if (!b.deadline) return -1
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+    }
+    // Default & priority: sort by priority first, then deadline
+    const p = (PRIORITY_ORDER[a.priority] ?? 2) - (PRIORITY_ORDER[b.priority] ?? 2)
+    if (p !== 0) return p
+    if (!a.deadline && !b.deadline) return 0; if (!a.deadline) return 1; if (!b.deadline) return -1
+    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+  })
 
   return (
     <div className="w-full max-w-6xl space-y-5 animate-fade-in">
@@ -245,11 +247,16 @@ export default function TasksPage() {
                       {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium ${
-                        isDirect ? 'bg-purple-50 text-purple-700' : 'bg-gray-50 text-gray-600'
-                      }`}>
-                        {isDirect ? 'Direct' : task.projectName}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium ${
+                          isDirect ? 'bg-purple-50 text-purple-700' : 'bg-gray-50 text-gray-600'
+                        }`}>
+                          {isDirect ? 'Direct' : task.projectName}
+                        </span>
+                        {task.domain && (
+                          <span className="text-[9px] font-semibold text-gray-400">{DOMAIN_LABELS[task.domain as TaskDomain] || task.domain}</span>
+                        )}
+                      </div>
                     </td>
                     {!isMember && (
                       <td className="px-5 py-3.5">
@@ -278,7 +285,7 @@ export default function TasksPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       {(() => {
-                        const pct = TASK_STATUS_PROGRESS[task.status] ?? 0
+                        const pct = getStatusProgress(task.status, (task.domain as TaskDomain) || 'DEVELOPMENT')
                         const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
                         return (
                           <div className="flex items-center gap-2 min-w-[100px]">
@@ -322,7 +329,7 @@ export default function TasksPage() {
                     <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
                   </div>
                   {(() => {
-                    const pct = TASK_STATUS_PROGRESS[task.status] ?? 0
+                    const pct = getStatusProgress(task.status, (task.domain as TaskDomain) || 'DEVELOPMENT')
                     const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
                     return (
                       <div className="flex items-center gap-2 mb-1.5">

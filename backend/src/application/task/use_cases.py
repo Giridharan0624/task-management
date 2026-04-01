@@ -196,8 +196,8 @@ class UpdateTaskUseCase:
                     raise NotFoundError(f"User {assignee_id} is not a member of project {project_id}")
             assigned_by = caller_user_id
 
-        # Validate status against task's domain
-        task_domain = task.domain or "DEVELOPMENT"
+        # Domain can be updated
+        task_domain = dto.get("domain", task.domain) or "DEVELOPMENT"
         valid_statuses = DOMAIN_STATUSES.get(task_domain, DOMAIN_STATUSES["DEVELOPMENT"])
 
         status = task.status

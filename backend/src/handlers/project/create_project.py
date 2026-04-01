@@ -13,6 +13,7 @@ from infrastructure.dynamodb.user_repository import UserDynamoRepository
 class CreateProjectRequest(BaseModel):
     name: str
     description: Optional[str] = None
+    domain: Optional[str] = "DEVELOPMENT"
     team_lead_id: Optional[str] = None
     member_ids: list[str] = []
 

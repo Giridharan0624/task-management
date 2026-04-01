@@ -85,7 +85,7 @@ export function Select({ options, value, onChange, placeholder = 'Select...', cl
         <div
           data-select-dropdown
           className="fixed z-[9999] bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 animate-fade-in-scale overflow-y-auto"
-          style={{ animationDuration: '0.1s', top: pos.top, left: pos.left, width: pos.width, maxHeight: 240 }}
+          style={{ animationDuration: '0.1s', top: pos.top, left: pos.left, minWidth: pos.width, maxHeight: 240 }}
         >
           {options.map((opt) => (
             <button

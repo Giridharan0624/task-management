@@ -7,21 +7,20 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { getSessionHours } from '@/lib/utils/liveSession'
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
-function useLiveElapsed(signInAt: string | null) {
-  const [elapsed, setElapsed] = useState(0)
+// Force re-render every second when timer is active
+function useTick(active: boolean) {
+  const [, setTick] = useState(0)
   useEffect(() => {
-    if (!signInAt) { setElapsed(0); return }
-    const tick = () => setElapsed(Math.max(0, (Date.now() - new Date(signInAt).getTime()) / 3600000))
-    tick()
-    const interval = setInterval(tick, 1000)
+    if (!active) return
+    const interval = setInterval(() => setTick(t => t + 1), 1000)
     return () => clearInterval(interval)
-  }, [signInAt])
-  return elapsed
+  }, [active])
 }
 
 export function TaskUpdateCard() {
@@ -29,10 +28,8 @@ export function TaskUpdateCard() {
   const { data: attendance, isLoading: attLoading } = useMyAttendance()
   const { data: existingUpdate, isLoading: updateLoading } = useMyTaskUpdate()
   const submitMutation = useSubmitTaskUpdate()
-
-  // Live elapsed for active session
-  const activeSession = attendance?.sessions?.find(s => !s.signOutAt)
-  const liveElapsed = useLiveElapsed(activeSession?.signInAt ?? null)
+  const isTimerActive = attendance?.status === 'SIGNED_IN'
+  useTick(isTimerActive ?? false)
 
   if (attLoading || updateLoading) {
     return <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex justify-center"><Spinner /></div>
@@ -75,9 +72,14 @@ export function TaskUpdateCard() {
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Task Summary</p>
             <div className="space-y-1.5">
               {existingUpdate.taskSummary.map((t, i) => (
-                <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-sm text-gray-700">{i + 1}. {t.taskName}</span>
-                  <span className="text-xs font-semibold text-indigo-600">{t.timeRecorded}</span>
+                <div key={i} className="bg-gray-50 rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{i + 1}. {t.taskName}</span>
+                    <span className="text-xs font-semibold text-indigo-600">{t.timeRecorded}</span>
+                  </div>
+                  {t.description && (
+                    <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">{t.description}</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -126,24 +128,33 @@ export function TaskUpdateCard() {
   }
 
   // ═══ Preview — ready to submit ═══
-  const sessions = attendance.sessions
+  // Sync active session's signInAt with currentSignInAt so times match the LiveTimer
+  const sessions = (isTimerActive && attendance.currentSignInAt)
+    ? attendance.sessions.map(s => (!s.signOutAt ? { ...s, signInAt: attendance.currentSignInAt! } : s))
+    : attendance.sessions
   const signIn = formatTime(sessions[0].signInAt)
   const lastSession = sessions[sessions.length - 1]
   const signOut = lastSession.signOutAt ? formatTime(lastSession.signOutAt) : 'Still working'
   const isStillWorking = !lastSession.signOutAt
 
-  // Build task list with LIVE elapsed for active session
-  const taskHours: Record<string, { hours: number; project: string }> = {}
+  // Build task list — getSessionHours auto-calculates live elapsed for active sessions
+  const taskHours: Record<string, { hours: number; project: string; descriptions: string[] }> = {}
   for (const s of sessions) {
     const name = s.taskTitle || 'General'
     const project = s.projectName || 'Direct Task'
-    const hrs = s.hours ?? (s === activeSession ? liveElapsed : 0)
-    if (taskHours[name]) taskHours[name].hours += hrs
-    else taskHours[name] = { hours: hrs, project }
+    const hrs = getSessionHours(s)
+    if (taskHours[name]) {
+      taskHours[name].hours += hrs
+      if (s.description && !taskHours[name].descriptions.includes(s.description)) {
+        taskHours[name].descriptions.push(s.description)
+      }
+    } else {
+      taskHours[name] = { hours: hrs, project, descriptions: s.description ? [s.description] : [] }
+    }
   }
 
-  const taskList = Object.entries(taskHours).map(([name, v]) => ({ name, time: formatDuration(v.hours), project: v.project }))
-  const totalHours = attendance.totalHours + (isStillWorking ? liveElapsed : 0)
+  const taskList = Object.entries(taskHours).map(([name, v]) => ({ name, time: formatDuration(v.hours), project: v.project, descriptions: v.descriptions }))
+  const totalHours = sessions.reduce((sum, s) => sum + getSessionHours(s), 0)
 
   // Group by project
   const projectMap = new Map<string, typeof taskList>()
@@ -187,9 +198,14 @@ export function TaskUpdateCard() {
               )}
               <div className="space-y-1.5">
                 {tasks.map((t, i) => (
-                  <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="text-sm text-gray-700">{t.name}</span>
-                    <span className="text-xs font-semibold text-indigo-600 tabular-nums">{t.time}</span>
+                  <div key={i} className="bg-gray-50 rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">{t.name}</span>
+                      <span className="text-xs font-semibold text-indigo-600 tabular-nums">{t.time}</span>
+                    </div>
+                    {t.descriptions.length > 0 && (
+                      <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">{t.descriptions.join(', ')}</p>
+                    )}
                   </div>
                 ))}
               </div>

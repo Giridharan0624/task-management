@@ -34,10 +34,14 @@ class CognitoService(IIdentityService):
     @staticmethod
     def delete_user(email: str) -> None:
         """Delete a Cognito user by email/username."""
-        cognito_client.admin_delete_user(
-            UserPoolId=USER_POOL_ID,
-            Username=email,
-        )
+        try:
+            cognito_client.admin_delete_user(
+                UserPoolId=USER_POOL_ID,
+                Username=email,
+            )
+        except cognito_client.exceptions.UserNotFoundException:
+            # User doesn't exist in Cognito — proceed with DynamoDB cleanup
+            pass
 
     @staticmethod
     def update_user_role(email: str, system_role: str) -> None:

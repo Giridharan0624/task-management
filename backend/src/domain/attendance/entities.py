@@ -102,7 +102,7 @@ class Attendance(BaseModel):
 
         last = self.sessions[-1]
         sign_in = datetime.fromisoformat(last.sign_in_at)
-        session_hours = round((now - sign_in).total_seconds() / 3600, 2)
+        session_hours = round((now - sign_in).total_seconds() / 3600, 4)
 
         closed_session = Session(
             sign_in_at=last.sign_in_at,
@@ -116,7 +116,7 @@ class Attendance(BaseModel):
         )
 
         updated_sessions = [*self.sessions[:-1], closed_session]
-        new_total = round(self.total_hours + session_hours, 2)
+        new_total = round(self.total_hours + session_hours, 4)
 
         return Attendance(
             user_id=self.user_id,

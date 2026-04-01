@@ -1,14 +1,20 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { useAttendanceReport } from '@/lib/hooks/useAttendance'
+import { useAttendanceReport, useMyAttendance } from '@/lib/hooks/useAttendance'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import type { Attendance } from '@/types/attendance'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { getSessionHours } from '@/lib/utils/liveSession'
+
+/** Calculate total hours for an attendance record, using live elapsed for active sessions */
+function getRecordHours(r: Attendance): number {
+  return r.sessions.reduce((sum, s) => sum + getSessionHours(s), 0)
+}
 
 function getMonthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
@@ -30,7 +36,7 @@ function generateCSV(records: Attendance[]): string {
   for (const r of records) {
     for (let i = 0; i < r.sessions.length; i++) {
       const s = r.sessions[i]
-      rows.push([r.userName, r.userEmail, r.systemRole, r.date, String(i + 1), s.taskTitle || 'General', s.projectName || '-', formatTime(s.signInAt), s.signOutAt ? formatTime(s.signOutAt) : 'Active', s.hours != null ? formatDuration(s.hours) : '-'])
+      rows.push([r.userName, r.userEmail, r.systemRole, r.date, String(i + 1), s.taskTitle || 'General', s.projectName || '-', formatTime(s.signInAt), s.signOutAt ? formatTime(s.signOutAt) : 'Active', formatDuration(getSessionHours(s))])
     }
   }
   return rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -47,6 +53,16 @@ export default function AttendancePage() {
 
   const { start, end } = getMonthRange(selectedYear, selectedMonth)
   const { data: rawRecords, isLoading } = useAttendanceReport(start, end)
+  const { data: myAttendance } = useMyAttendance()
+  const hasActiveSession = myAttendance?.status === 'SIGNED_IN'
+
+  // Tick every second when there's an active session so live times update
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!hasActiveSession) return
+    const i = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(i)
+  }, [hasActiveSession])
 
   const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
   const monthLabel = new Date(selectedYear, selectedMonth - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
@@ -69,8 +85,8 @@ export default function AttendancePage() {
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
   }, [rawRecords])
 
-  // Stats
-  const totalHours = useMemo(() => records.reduce((s, r) => s + r.totalHours, 0), [records])
+  // Stats — use getRecordHours so active sessions show live elapsed time
+  const totalHours = useMemo(() => records.reduce((s, r) => s + getRecordHours(r), 0), [records])
   const totalSessions = useMemo(() => records.reduce((s, r) => s + r.sessions.length, 0), [records])
   const uniqueMembers = useMemo(() => new Set(records.map(r => r.userId)).size, [records])
   const uniqueDays = useMemo(() => new Set(records.map(r => r.date)).size, [records])
@@ -82,8 +98,9 @@ export default function AttendancePage() {
     for (const r of records) {
       const ex = map.get(r.userId)
       const sessCount = r.sessions.length
-      if (ex) { ex.days += 1; ex.totalHours += r.totalHours; ex.sessions += sessCount }
-      else map.set(r.userId, { name: r.userName, email: r.userEmail, role: r.systemRole, days: 1, totalHours: r.totalHours, sessions: sessCount })
+      const hrs = getRecordHours(r)
+      if (ex) { ex.days += 1; ex.totalHours += hrs; ex.sessions += sessCount }
+      else map.set(r.userId, { name: r.userName, email: r.userEmail, role: r.systemRole, days: 1, totalHours: hrs, sessions: sessCount })
     }
     return Array.from(map.values()).sort((a, b) => b.totalHours - a.totalHours)
   }, [records])
@@ -95,7 +112,7 @@ export default function AttendancePage() {
       if (!s.taskId) continue
       const key = `${r.userId}::${s.taskId}`
       const ex = map.get(key)
-      const hrs = s.hours ?? 0
+      const hrs = getSessionHours(s)
       if (ex) { ex.totalHours += hrs; ex.sessions += 1 }
       else map.set(key, { userName: r.userName, taskTitle: s.taskTitle || 'Unknown', projectName: s.projectName || '-', totalHours: hrs, sessions: 1 })
     }
@@ -279,7 +296,7 @@ export default function AttendancePage() {
                         <span className="text-[12px] text-gray-500 tabular-nums min-w-[110px]">{formatDateLabel(r.date)}</span>
                         <span className="text-[12px] font-medium text-gray-800 flex-1 truncate">{r.userName}</span>
                         <span className="text-[11px] text-gray-400 tabular-nums">{r.sessions.length} session{r.sessions.length !== 1 ? 's' : ''}</span>
-                        <span className="text-[12px] font-bold text-indigo-600 tabular-nums min-w-[70px] text-right">{formatDuration(r.totalHours)}</span>
+                        <span className="text-[12px] font-bold text-indigo-600 tabular-nums min-w-[70px] text-right">{formatDuration(getRecordHours(r))}</span>
                       </button>
                       {isOpen && (
                         <div className="bg-gray-50/70 px-5 pb-3">
@@ -293,7 +310,7 @@ export default function AttendancePage() {
                                 <span className="text-gray-500 truncate">{s.projectName || '-'}</span>
                                 <span className="text-gray-500 font-mono tabular-nums">{formatTime(s.signInAt)}</span>
                                 <span className="text-gray-500 font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                                <span className="text-right font-semibold text-gray-700 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</span>
+                                <span className="text-right font-semibold text-gray-700 tabular-nums">{formatDuration(getSessionHours(s))}</span>
                               </div>
                             ))}
                           </div>

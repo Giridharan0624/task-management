@@ -120,7 +120,8 @@ class GetUserProgressUseCase:
 
             stats = {"TODO": 0, "IN_PROGRESS": 0, "DONE": 0}
             for task in user_tasks:
-                stats[task.status.value] = stats.get(task.status.value, 0) + 1
+                status_str = str(task.status)
+                stats[status_str] = stats.get(status_str, 0) + 1
 
             project_progress.append({
                 "project_id": project.project_id,

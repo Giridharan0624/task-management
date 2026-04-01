@@ -9,7 +9,7 @@ import { useProject } from '@/lib/hooks/useProjects'
 import { useAdmins, useUsers } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
-import { TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_STATUSES, getStatusOptions, getStatusProgress } from '@/types/task'
+import { TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_STATUSES, DOMAIN_OPTIONS, getStatusOptions, getStatusProgress } from '@/types/task'
 import type { TaskDomain } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -34,6 +34,7 @@ interface EditFormValues {
   description: string
   status: TaskStatus
   priority: TaskPriority
+  domain: TaskDomain
   deadline: string
 }
 
@@ -96,6 +97,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         description: task.description ?? '',
         status: task.status,
         priority: task.priority,
+        domain: (task.domain as TaskDomain) || 'DEVELOPMENT',
         deadline: task.deadline ? task.deadline.slice(0, 16) : '',
       })
       setIsEditing(false)
@@ -124,6 +126,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         description: values.description || undefined,
         status: values.status,
         priority: values.priority,
+        domain: values.domain,
         deadline: values.deadline || undefined,
       },
     })
@@ -233,13 +236,23 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition-all"
                 />
               </div>
-              <div>
-                <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Priority</label>
-                <Select
-                  value={watch('priority')}
-                  onChange={(v) => setValue('priority', v as TaskPriority)}
-                  options={[{ value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'HIGH', label: 'High' }]}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Priority</label>
+                  <Select
+                    value={watch('priority')}
+                    onChange={(v) => setValue('priority', v as TaskPriority)}
+                    options={[{ value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'HIGH', label: 'High' }]}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Domain</label>
+                  <Select
+                    value={watch('domain')}
+                    onChange={(v) => setValue('domain', v as TaskDomain)}
+                    options={DOMAIN_OPTIONS}
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Deadline</label>
@@ -265,13 +278,19 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
 
               {/* ── Progress track ── */}
               {(() => {
-                const STAGES: TaskStatus[] = ['TODO','IN_PROGRESS','DEVELOPED','TESTING','TESTED','DEBUGGING','FINAL_TESTING','DONE']
-                const STAGE_CLR: Record<TaskStatus, string> = {
-                  TODO: '#f59e0b', IN_PROGRESS: '#3b82f6', DEVELOPED: '#8b5cf6', TESTING: '#f97316',
-                  TESTED: '#14b8a6', DEBUGGING: '#ef4444', FINAL_TESTING: '#ec4899', DONE: '#10b981',
+                // Prefer project domain (source of truth) over task's stored domain
+                const taskDomain = ((project?.domain || task.domain) as TaskDomain) || 'DEVELOPMENT'
+                const STAGES = DOMAIN_STATUSES[taskDomain] || DOMAIN_STATUSES['DEVELOPMENT']
+                const STAGE_CLR: Record<string, string> = {
+                  TODO: '#f59e0b', IN_PROGRESS: '#3b82f6', DEVELOPED: '#8b5cf6', CODE_REVIEW: '#a855f7',
+                  TESTING: '#f97316', TESTED: '#14b8a6', DEBUGGING: '#ef4444', FINAL_TESTING: '#ec4899',
+                  WIREFRAME: '#64748b', DESIGN: '#6366f1', REVIEW: '#06b6d4', REVISION: '#f43f5e', APPROVED: '#10b981',
+                  PLANNING: '#6366f1', EXECUTION: '#3b82f6',
+                  RESEARCH: '#8b5cf6', ANALYSIS: '#14b8a6', DOCUMENTATION: '#f97316',
+                  DONE: '#10b981',
                 }
                 const currentIdx = STAGES.indexOf(task.status)
-                const pct = TASK_STATUS_PROGRESS[task.status]
+                const pct = getStatusProgress(task.status, taskDomain)
                 return (
                   <div className="mb-5 rounded-xl bg-gray-50 border border-gray-100 p-4">
                     <div className="flex items-center justify-between mb-2.5">
@@ -303,13 +322,13 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   <p className="text-sm text-gray-500 leading-relaxed mt-2 whitespace-pre-wrap">{task.description}</p>
                 )}
                 <div className="flex items-center gap-2 flex-wrap mt-3">
-                  {permissions.canUpdateStatus ? (
+                  {isAssigned ? (
                     <Select
                       value={task.status}
                       onChange={(v) => handleStatusChange(v as TaskStatus)}
                       disabled={statusUpdating}
-                      options={getStatusOptions((task.domain as TaskDomain) || 'DEVELOPMENT')}
-                      className="w-40"
+                      options={getStatusOptions(((project?.domain || task.domain) as TaskDomain) || 'DEVELOPMENT')}
+                      className="w-48"
                     />
                   ) : (
                     <Badge variant={task.status}>{TASK_STATUS_LABEL[task.status]}</Badge>

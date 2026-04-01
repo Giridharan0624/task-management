@@ -15,7 +15,8 @@ import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import type { ProjectRole } from '@/types/user'
-import { TASK_STATUS_PROGRESS, TASK_STATUS_LABEL } from '@/types/task'
+import { TASK_STATUS_PROGRESS, TASK_STATUS_LABEL, DOMAIN_LABELS, getStatusProgress } from '@/types/task'
+import type { TaskDomain } from '@/types/task'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { ProjectReport } from '@/components/reports/ProjectReport'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
@@ -81,7 +82,8 @@ export default function ProjectDetailPage() {
   const totalTasks = tasks?.length ?? 0
   const doneTasks = tasks?.filter((t) => t.status === 'DONE').length ?? 0
   const activeTasks = totalTasks - doneTasks
-  const completionPct = totalTasks > 0 ? Math.round((tasks ?? []).reduce((sum, t) => sum + (TASK_STATUS_PROGRESS[t.status] ?? 0), 0) / totalTasks) : 0
+  const projDomain = (project.domain as TaskDomain) || 'DEVELOPMENT'
+  const completionPct = totalTasks > 0 ? Math.round((tasks ?? []).reduce((sum, t) => sum + getStatusProgress(t.status, projDomain), 0) / totalTasks) : 0
 
   // Upcoming deadlines — tasks due in the next 7 days (not done)
   const now = new Date()
@@ -122,6 +124,11 @@ export default function ProjectDetailPage() {
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+                {project.domain && (
+                  <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                    {DOMAIN_LABELS[project.domain as TaskDomain] || project.domain}
+                  </span>
+                )}
                 {projectStatus && (
                   <span className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold border ${hc.bg} ${hc.text}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${hc.dot}`} />

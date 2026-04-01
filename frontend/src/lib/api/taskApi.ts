@@ -16,6 +16,7 @@ export interface UpdateTaskData {
   description?: string
   status?: TaskStatus
   priority?: TaskPriority
+  domain?: string
   deadline?: string
   estimatedHours?: number
   assignedTo?: string[]

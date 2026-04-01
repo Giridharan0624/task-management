@@ -11,13 +11,13 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
-import type { Task, TaskPriority } from '@/types/task'
+import type { Task, TaskPriority, TaskDomain } from '@/types/task'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { TimePicker } from '@/components/ui/TimePicker'
 import { Select } from '@/components/ui/Select'
 import { UserMultiSelect } from '@/components/ui/UserSelect'
 
-import { TASK_STATUS_COLORS, TASK_STATUS_LABEL } from '@/types/task'
+import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, DOMAIN_OPTIONS, DOMAIN_LABELS } from '@/types/task'
 
 const STATUS_COLORS: Record<string, string> = TASK_STATUS_COLORS
 
@@ -81,8 +81,9 @@ export default function DirectTasksPage() {
                   <p className="text-sm font-semibold text-gray-900">{task.title}</p>
                   {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge className={STATUS_COLORS[task.status]}>{task.status.replace('_', ' ')}</Badge>
+                    <Badge className={STATUS_COLORS[task.status]}>{TASK_STATUS_LABEL[task.status] || task.status.replace('_', ' ')}</Badge>
                     <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
+                    {task.domain && <Badge className="bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200">{DOMAIN_LABELS[task.domain] || task.domain}</Badge>}
                     <span className="text-xs text-gray-400">
                       {task.deadline ? `Due ${new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'No deadline'}
                     </span>
@@ -126,12 +127,13 @@ function CreateDirectTaskModal({
 }: {
   users: { userId: string; name: string; email: string }[]
   isPending: boolean
-  onCreate: (data: { title: string; description?: string; priority: TaskPriority; deadline: string; assignedTo: string[] }) => void
+  onCreate: (data: { title: string; description?: string; priority: TaskPriority; domain: TaskDomain; deadline: string; assignedTo: string[] }) => void
   onClose: () => void
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM')
+  const [domain, setDomain] = useState<TaskDomain>('DEVELOPMENT')
   const [deadlineDate, setDeadlineDate] = useState('')
   const [deadlineTime, setDeadlineTime] = useState('')
   const [selected, setSelected] = useState<string[]>([])
@@ -142,7 +144,7 @@ function CreateDirectTaskModal({
     e.preventDefault()
     if (!title || !deadlineDate || selected.length === 0) return
     const deadline = deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate
-    onCreate({ title, description: description || undefined, priority, deadline, assignedTo: selected })
+    onCreate({ title, description: description || undefined, priority, domain, deadline, assignedTo: selected })
   }
 
   return (
@@ -168,11 +170,20 @@ function CreateDirectTaskModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
-              <TimePicker value={deadlineTime} onChange={setDeadlineTime} placeholder="Time" />
-            </div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">Domain</label>
+            <Select
+              value={domain}
+              onChange={(v) => setDomain(v as TaskDomain)}
+              options={DOMAIN_OPTIONS}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
+          <div className="grid grid-cols-2 gap-4">
+            <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
+            <TimePicker value={deadlineTime} onChange={setDeadlineTime} placeholder="Time" />
           </div>
         </div>
 

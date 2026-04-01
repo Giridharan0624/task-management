@@ -7,6 +7,7 @@ import type { ProjectMember } from '@/types/user'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { TaskDetailPanel } from './TaskDetailPanel'
 import { CreateTaskModal } from './CreateTaskModal'
+import { useAuth } from '@/lib/auth/AuthProvider'
 import { useAdmins } from '@/lib/hooks/useUsers'
 import { useUpdateTask } from '@/lib/hooks/useTasks'
 import { FilterSelect } from '@/components/ui/FilterSelect'
@@ -43,6 +44,7 @@ type SortOption = 'default' | 'priority' | 'deadline' | 'title' | 'created'
 const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 
 export function TaskKanban({ projectId, tasks, permissions, members = [], domain = 'DEVELOPMENT' }: TaskKanbanProps) {
+  const { user } = useAuth()
   const STAGES = DOMAIN_STATUSES[domain]
   const statusOptions = getStatusOptions(domain)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -297,8 +299,8 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
                           </div>
                         </button>
 
-                        {/* Quick status change */}
-                        {permissions.canUpdateStatus && (
+                        {/* Quick status change — only for assigned user */}
+                        {(task.assignedTo ?? []).includes(user?.userId ?? '') && (
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                             <FilterSelect value={task.status} onChange={v => updateTask.mutate({ taskId: task.taskId, data: { status: v as string } })}
                               options={statusOptions} className="max-w-[120px]" />
