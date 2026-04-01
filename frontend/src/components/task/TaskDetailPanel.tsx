@@ -107,6 +107,8 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId])
 
+  const confirm = useConfirm()
+
   useEffect(() => {
     if (!task) return
     const handler = (e: KeyboardEvent) => {
@@ -132,8 +134,6 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     })
     setIsEditing(false)
   }
-
-  const confirm = useConfirm()
 
   const handleDelete = async () => {
     if (!await confirm({ title: 'Delete Task', description: 'This task will be permanently deleted. This cannot be undone.', confirmLabel: 'Delete' })) return
@@ -249,7 +249,15 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Domain</label>
                   <Select
                     value={watch('domain')}
-                    onChange={(v) => setValue('domain', v as TaskDomain)}
+                    onChange={(v) => {
+                      const newDomain = v as TaskDomain
+                      setValue('domain', newDomain)
+                      // Reset status if current status doesn't exist in the new domain
+                      const newStatuses = DOMAIN_STATUSES[newDomain]
+                      if (!newStatuses.includes(watch('status'))) {
+                        setValue('status', 'TODO')
+                      }
+                    }}
                     options={DOMAIN_OPTIONS}
                   />
                 </div>

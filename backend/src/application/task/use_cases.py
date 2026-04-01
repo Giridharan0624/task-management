@@ -200,11 +200,10 @@ class UpdateTaskUseCase:
         task_domain = dto.get("domain", task.domain) or "DEVELOPMENT"
         valid_statuses = DOMAIN_STATUSES.get(task_domain, DOMAIN_STATUSES["DEVELOPMENT"])
 
-        status = task.status
-        if dto.get("status"):
-            if dto["status"] not in valid_statuses:
-                raise ValidationError(f"Invalid status '{dto['status']}' for domain {task_domain}")
-            status = dto["status"]
+        status = dto.get("status", str(task.status))
+        # Reset to TODO if current status doesn't exist in the (possibly new) domain
+        if status not in valid_statuses:
+            status = "TODO"
 
         priority = task.priority
         if dto.get("priority"):

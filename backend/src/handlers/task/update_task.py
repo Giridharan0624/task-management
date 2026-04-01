@@ -15,6 +15,7 @@ class UpdateTaskRequest(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
+    domain: Optional[str] = None
     assigned_to: Optional[list[str]] = None
     deadline: Optional[str] = None
 

@@ -2,19 +2,12 @@
 
 import { useState } from 'react'
 import { useMyTasks, useUsers, useAdmins } from '@/lib/hooks/useUsers'
-import { useCreateDirectTask } from '@/lib/hooks/useTasks'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
-import { DatePicker } from '@/components/ui/DatePicker'
-import { TimePicker } from '@/components/ui/TimePicker'
-import { Select } from '@/components/ui/Select'
-import { UserMultiSelect } from '@/components/ui/UserSelect'
 import { TaskDetailPanel } from '@/components/task/TaskDetailPanel'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import Link from 'next/link'
@@ -47,12 +40,10 @@ export default function TasksPage() {
   const { data: tasks, isLoading } = useMyTasks()
   const { data: allUsers } = useUsers()
   const systemPerms = useSystemPermission(user?.systemRole)
-  const createDirectTask = useCreateDirectTask()
   const [filter, setFilter] = useState<FilterStatus>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<'ALL' | TaskPriority>('ALL')
   const [sort, setSort] = useState<SortOption>('default')
   const [activeTab, setActiveTab] = useState<TabType>('my')
-  const [showAssign, setShowAssign] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedDirectTask, setSelectedDirectTask] = useState<Task | null>(null)
 
@@ -123,11 +114,6 @@ export default function TasksPage() {
             {isMember ? 'Tasks assigned to you' : 'View and manage all tasks'}
           </p>
         </div>
-        {systemPerms.canAssignTasks && (
-          <Button onClick={() => setShowAssign(true)}>
-            Assign Task
-          </Button>
-        )}
       </div>
 
       {/* Tabs — only for ADMIN and TOP_TIER */}
@@ -229,6 +215,7 @@ export default function TasksPage() {
                       setSelectedDirectTask({
                         taskId: task.taskId, projectId: 'DIRECT', title: task.title,
                         description: task.description, status: task.status, priority: task.priority,
+                        domain: (task.domain as import('@/types/task').TaskDomain) || 'DEVELOPMENT',
                         assignedTo: task.assignedTo, assignedBy: task.assignedBy, createdBy: task.createdBy,
                         deadline: task.deadline, createdAt: task.createdAt, updatedAt: task.updatedAt,
                       } as Task)
@@ -373,93 +360,7 @@ export default function TasksPage() {
         />
       )}
 
-      {/* Assign Task Modal */}
-      {showAssign && (
-        <AssignModal
-          users={(allUsers ?? []).filter((u) => u.systemRole === 'MEMBER' || u.systemRole === 'ADMIN')}
-          isPending={createDirectTask.isPending}
-          onCreate={(data) => createDirectTask.mutate(data, { onSuccess: () => setShowAssign(false) })}
-          onClose={() => setShowAssign(false)}
-        />
-      )}
     </div>
   )
 }
 
-function AssignModal({
-  users, isPending, onCreate, onClose,
-}: {
-  users: { userId: string; name: string; email: string }[]
-  isPending: boolean
-  onCreate: (data: { title: string; description?: string; priority: TaskPriority; deadline: string; assignedTo: string[]; domain?: string }) => void
-  onClose: () => void
-}) {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<TaskPriority>('MEDIUM')
-  const [domain, setDomain] = useState<import('@/types/task').TaskDomain>('DEVELOPMENT')
-  const [deadlineDate, setDeadlineDate] = useState('')
-  const [deadlineTime, setDeadlineTime] = useState('')
-  const [selected, setSelected] = useState<string[]>([])
-
-  const toggle = (uid: string) => setSelected((prev) => prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid])
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title || !deadlineDate || selected.length === 0) return
-    const deadline = deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate
-    onCreate({ title, description: description || undefined, priority, deadline, assignedTo: selected, domain })
-  }
-
-  return (
-    <Modal isOpen onClose={onClose} title="Assign Task" size="lg">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-1">Task Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="What needs to be done?"
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 outline-none transition-all" />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-1">Description <span className="font-normal text-gray-400">(optional)</span></label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Details..."
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 outline-none resize-none transition-all" />
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Domain</label>
-            <Select value={domain} onChange={(v) => setDomain(v as import('@/types/task').TaskDomain)}
-              options={[{ value: 'DEVELOPMENT', label: 'Development' }, { value: 'DESIGNING', label: 'Designing' }, { value: 'MANAGEMENT', label: 'Management' }, { value: 'RESEARCH', label: 'Research' }]} />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Priority</label>
-            <Select
-              value={priority}
-              onChange={(v) => setPriority(v as TaskPriority)}
-              options={[{ value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'HIGH', label: 'High' }]}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Deadline</label>
-            <div className="grid grid-cols-2 gap-2">
-              <DatePicker value={deadlineDate} onChange={setDeadlineDate} min={new Date().toISOString().slice(0, 10)} />
-              <TimePicker value={deadlineTime} onChange={setDeadlineTime} placeholder="Time" />
-            </div>
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-1">Assign To ({selected.length})</label>
-          <UserMultiSelect
-            users={users.map((u) => ({ userId: u.userId, name: u.name, email: u.email }))}
-            selected={selected}
-            onChange={setSelected}
-            placeholder="Search users..."
-          />
-        </div>
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={isPending} disabled={!title || !deadlineDate || selected.length === 0}>Assign Task</Button>
-        </div>
-      </form>
-    </Modal>
-  )
-}
