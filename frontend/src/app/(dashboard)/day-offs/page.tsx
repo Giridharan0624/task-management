@@ -13,6 +13,7 @@ import {
 } from '@/lib/hooks/useDayOffs'
 import type { DayOffRequest, DayOffStatus, ApprovalStatus } from '@/types/dayoff'
 import { Spinner } from '@/components/ui/Spinner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -109,7 +110,7 @@ function RequestCard({
       {/* Member Cancel */}
       {showCancel && req.status !== 'CANCELLED' && req.status !== 'REJECTED' && onCancel && (
         <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-          <button onClick={() => { if (confirm('Cancel this day-off request?')) onCancel() }}
+          <button onClick={onCancel}
             disabled={isActing}
             className="text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors disabled:opacity-50">
             Cancel Request
@@ -276,6 +277,7 @@ export default function DayOffsPage() {
   const approveMutation = useApproveDayOff()
   const rejectMutation = useRejectDayOff()
   const cancelMutation = useCancelDayOff()
+  const confirmDialog = useConfirm()
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [allFilter, setAllFilter] = useState<'ALL' | DayOffStatus>('ALL')
@@ -322,7 +324,9 @@ export default function DayOffsPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade">
               {myDayOffs.map((req: DayOffRequest) => (
                 <RequestCard key={req.requestId} req={req} showActions={false} showCancel={true}
-                  onApprove={() => {}} onReject={() => {}} onCancel={() => cancelMutation.mutate(req.requestId)}
+                  onApprove={() => {}} onReject={() => {}} onCancel={async () => {
+                    if (await confirmDialog({ title: 'Cancel Day Off', description: 'Are you sure you want to cancel this day-off request?', confirmLabel: 'Cancel Request' })) cancelMutation.mutate(req.requestId)
+                  }}
                   isActing={cancelMutation.isPending} />
               ))}
             </div>

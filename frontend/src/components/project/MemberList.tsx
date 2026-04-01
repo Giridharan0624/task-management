@@ -13,6 +13,7 @@ import { Avatar } from '@/components/ui/AvatarUpload'
 import { UserSelect } from '@/components/ui/UserSelect'
 import { Select } from '@/components/ui/Select'
 import { FilterSelect } from '@/components/ui/FilterSelect'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 interface MemberListProps {
   projectId: string
@@ -98,8 +99,10 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
     onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
   })
 
+  const confirm = useConfirm()
+
   const handleRemove = async (userId: string) => {
-    if (!confirm('Remove this member from the project?')) return
+    if (!await confirm({ title: 'Remove Member', description: 'This member will lose access to the project and its tasks.', confirmLabel: 'Remove' })) return
     setRemovingId(userId)
     try {
       await removeProjectMember(projectId, userId)

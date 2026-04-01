@@ -26,6 +26,7 @@ class User(BaseModel):
     college_name: Optional[str] = None
     area_of_interest: Optional[str] = None
     hobby: Optional[str] = None
+    company_prefix: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -70,6 +71,7 @@ class User(BaseModel):
             "college_name": self.college_name,
             "area_of_interest": self.area_of_interest,
             "hobby": self.hobby,
+            "company_prefix": self.company_prefix,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

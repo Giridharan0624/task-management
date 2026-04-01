@@ -33,6 +33,7 @@ export interface UpdateProfileData {
   collegeName?: string
   areaOfInterest?: string
   hobby?: string
+  companyPrefix?: string
 }
 
 export function updateProfile(data: UpdateProfileData): Promise<User> {

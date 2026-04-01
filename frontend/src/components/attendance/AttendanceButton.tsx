@@ -133,6 +133,26 @@ function DailySummary({ sessions }: { sessions: { taskTitle: string | null; proj
   )
 }
 
+function SwitchSection({ onStart, loading }: { onStart: (data: { taskId: string; projectId: string; taskTitle: string; projectName: string; description?: string }) => void; loading: boolean }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-3 border-t border-emerald-200 pt-2">
+      <button onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 transition-colors select-none">
+        <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        Switch task
+      </button>
+      {open && (
+        <div className="mt-2 animate-fade-in" style={{ animationDuration: '0.15s' }}>
+          <TaskSelector onStart={onStart} loading={loading} buttonLabel="Switch" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AttendanceButton() {
   const { data: attendance, isLoading } = useMyAttendance()
   const { totalHours: liveTotal } = useLiveHours()
@@ -192,13 +212,8 @@ export function AttendanceButton() {
           </div>
         </div>
 
-        {/* Switch — collapsible */}
-        <details className="mt-3 border-t border-emerald-200 pt-2">
-          <summary className="text-[11px] font-semibold text-emerald-700 cursor-pointer hover:text-emerald-900 select-none">Switch task</summary>
-          <div className="mt-2">
-            <TaskSelector onStart={data => signIn.mutate(data)} loading={signIn.isPending} buttonLabel="Switch" />
-          </div>
-        </details>
+        {/* Switch — custom collapsible */}
+        <SwitchSection onStart={data => signIn.mutate(data)} loading={signIn.isPending} />
 
         {(signIn.error || signOut.error) && (
           <p className="mt-2 text-[12px] text-red-600">{((signIn.error || signOut.error) as Error)?.message || 'Operation failed'}</p>

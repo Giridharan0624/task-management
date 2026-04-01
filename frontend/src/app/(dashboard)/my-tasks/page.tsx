@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useMyTasks, useUsers, useAdmins } from '@/lib/hooks/useUsers'
 import { useCreateDirectTask } from '@/lib/hooks/useTasks'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
@@ -40,6 +41,7 @@ const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 const TOP_TIER = ['OWNER', 'CEO', 'MD']
 
 export default function TasksPage() {
+  const router = useRouter()
   const { user } = useAuth()
   const { data: tasks, isLoading } = useMyTasks()
   const { data: allUsers } = useUsers()
@@ -312,7 +314,7 @@ export default function TasksPage() {
                       deadline: task.deadline, createdAt: task.createdAt, updatedAt: task.updatedAt,
                     } as Task)
                   } else {
-                    window.location.href = `/projects/${task.projectId}`
+                    router.push(`/projects/${task.projectId}`)
                   }
                 }} className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
                   <div className="flex items-start justify-between gap-2 mb-1">

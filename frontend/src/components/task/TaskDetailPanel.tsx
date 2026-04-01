@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
 import { TASK_STATUS_OPTIONS, TASK_STATUS_LABEL, TASK_STATUS_PROGRESS } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -128,8 +129,10 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     setIsEditing(false)
   }
 
+  const confirm = useConfirm()
+
   const handleDelete = async () => {
-    if (!confirm('Delete this task? This cannot be undone.')) return
+    if (!await confirm({ title: 'Delete Task', description: 'This task will be permanently deleted. This cannot be undone.', confirmLabel: 'Delete' })) return
     await deleteTask.mutateAsync(task.taskId)
     onClose()
   }

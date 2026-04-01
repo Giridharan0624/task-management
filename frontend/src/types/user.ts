@@ -19,6 +19,7 @@ export interface User {
   collegeName?: string
   areaOfInterest?: string
   hobby?: string
+  companyPrefix?: string
   createdAt: string
   updatedAt: string
 }

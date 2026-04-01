@@ -31,6 +31,7 @@ class UserMapper:
             college_name=item.get("college_name"),
             area_of_interest=item.get("area_of_interest"),
             hobby=item.get("hobby"),
+            company_prefix=item.get("company_prefix"),
             created_at=item.get("created_at") or item.get("createdAt", ""),
             updated_at=item.get("updated_at") or item.get("updatedAt", ""),
         )
@@ -77,4 +78,6 @@ class UserMapper:
             item["area_of_interest"] = user.area_of_interest
         if user.hobby:
             item["hobby"] = user.hobby
+        if user.company_prefix:
+            item["company_prefix"] = user.company_prefix
         return item

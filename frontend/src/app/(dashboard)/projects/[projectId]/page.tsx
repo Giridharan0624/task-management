@@ -20,6 +20,7 @@ import { formatDuration } from '@/lib/utils/formatDuration'
 import { ProjectReport } from '@/components/reports/ProjectReport'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { parseDeadline, isOverdue as checkOverdue } from '@/lib/utils/deadline'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -42,8 +43,10 @@ export default function ProjectDetailPage() {
   const projectRole = currentMember?.projectRole as ProjectRole | undefined
   const permissions = usePermission(projectRole, user?.systemRole)
 
+  const confirm = useConfirm()
+
   const handleDeleteProject = async () => {
-    if (!confirm('Delete this project and all its tasks? This cannot be undone.')) return
+    if (!await confirm({ title: 'Delete Project', description: 'This will permanently delete the project, all tasks, and member assignments. This cannot be undone.', confirmLabel: 'Delete' })) return
     await deleteProject.mutateAsync(projectId)
     router.push('/projects')
   }

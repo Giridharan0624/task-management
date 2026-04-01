@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useProjects, useDeleteProject } from '@/lib/hooks/useProjects'
 import { useUsers } from '@/lib/hooks/useUsers'
@@ -22,9 +23,10 @@ export function ProjectList() {
   if (user) nameMap.set(user.userId, user.name || user.email)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const confirm = useConfirm()
 
   const handleDelete = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return
+    if (!await confirm({ title: 'Delete Project', description: 'This will permanently delete the project and all its tasks. This cannot be undone.', confirmLabel: 'Delete' })) return
     setDeletingId(projectId)
     try {
       await deleteProject.mutateAsync(projectId)

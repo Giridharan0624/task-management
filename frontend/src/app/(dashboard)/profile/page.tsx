@@ -64,6 +64,7 @@ export default function ProfilePage() {
   const [collegeName, setCollegeName] = useState('')
   const [areaOfInterest, setAreaOfInterest] = useState('')
   const [hobby, setHobby] = useState('')
+  const [companyPrefix, setCompanyPrefix] = useState('')
   const [editConfirmed, setEditConfirmed] = useState(false)
   const [bioDataConfirmed, setBioDataConfirmed] = useState(false)
   const [bioDataSaving, setBioDataSaving] = useState(false)
@@ -83,6 +84,7 @@ export default function ProfilePage() {
       setCollegeName(p.collegeName || '')
       setAreaOfInterest(p.areaOfInterest || '')
       setHobby(p.hobby || '')
+      setCompanyPrefix(p.companyPrefix || 'NS')
     })
   }, [])
 
@@ -115,6 +117,7 @@ export default function ProfilePage() {
       const updated = await updateProfile({
         name, phone, designation, location, bio, skills,
         dateOfBirth, collegeName, areaOfInterest, hobby,
+        ...(user?.systemRole === 'OWNER' && companyPrefix ? { companyPrefix } : {}),
       })
       setProfile(updated)
       updateUser({ name })
@@ -231,9 +234,21 @@ export default function ProfilePage() {
             />
             <div className="flex-1 min-w-0">
               {editing ? (
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">{isOwner ? 'Company Name' : 'Full Name'}</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-400 mb-1 block">{isOwner ? 'Company Name' : 'Full Name'}</label>
+                    <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+                  </div>
+                  {isOwner && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-400 mb-1 block">Employee ID Prefix</label>
+                      <div className="flex items-center gap-2">
+                        <input value={companyPrefix} onChange={(e) => setCompanyPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                          placeholder="NS" maxLength={6} className={`${inputClass} w-24 uppercase font-mono`} />
+                        <span className="text-[11px] text-gray-400">Format: {companyPrefix || 'NS'}-DEPT-YXXXX</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>

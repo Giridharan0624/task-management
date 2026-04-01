@@ -75,7 +75,7 @@ export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable
         onUpload(data.secure_url)
       }
     } catch (err) {
-      console.error('Upload failed:', err)
+      void err // Upload failed silently — loading state resets
     } finally {
       setUploading(false)
     }

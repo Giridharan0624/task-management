@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 import logging
 import os
 import secrets
@@ -206,15 +207,26 @@ class CreateUserUseCase:
         if existing:
             raise ValidationError(f"User with email {email} already exists")
 
-        # Generate a unique employee ID
-        next_num = self._user_repo.get_next_employee_number()
-        employee_id = f"EMP-{next_num:04d}"
+        # Get company prefix from OWNER
+        all_users_for_prefix = self._user_repo.find_all()
+        owner = next((u for u in all_users_for_prefix if u.system_role == SystemRole.OWNER), None)
+        company_prefix = (owner.company_prefix if owner and owner.company_prefix else "NS").upper()
 
-        # Ensure employee ID is unique (guard against race conditions)
+        # Generate new-format employee ID: PREFIX-DEPT-YYHASH
+        dept_codes = {
+            "Development": "DEV", "Designing": "DES",
+            "Management": "MGT", "Research": "RSH",
+        }
+        dept_code = dept_codes.get(dto.get("department", ""), "GEN")
+        year = datetime.now(timezone.utc).strftime("%y")
+        hash_hex = hashlib.sha256(email.lower().encode()).hexdigest().upper()
+        hash_chars = ''.join(c for c in hash_hex if c.isalnum())[:4]
+        employee_id = f"{company_prefix}-{dept_code}-{year}{hash_chars}"
+
+        # Collision handling — append extra hash chars if needed
         if self._user_repo.find_by_employee_id(employee_id):
-            # Collision — increment until we find an unused one
-            for offset in range(1, 100):
-                candidate = f"EMP-{next_num + offset:04d}"
+            for extra in range(4, 8):
+                candidate = f"{company_prefix}-{dept_code}-{year}{''.join(c for c in hash_hex if c.isalnum())[:extra + 1]}"
                 if not self._user_repo.find_by_employee_id(candidate):
                     employee_id = candidate
                     break
@@ -252,9 +264,7 @@ class CreateUserUseCase:
             from infrastructure.email.gmail_service import GmailEmailService
             app_url = os.environ.get("APP_URL", "")
 
-            # Get company name from OWNER account
-            all_users = self._user_repo.find_all()
-            owner = next((u for u in all_users if u.system_role == SystemRole.OWNER), None)
+            # Get company name from OWNER account (reuse earlier query)
             company_name = owner.name if owner else "TaskFlow"
 
             GmailEmailService.send_welcome_email(
