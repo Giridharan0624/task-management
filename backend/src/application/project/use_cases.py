@@ -39,6 +39,7 @@ class CreateProjectUseCase:
             raise AuthorizationError("Only owners and admins can create projects")
 
         team_lead_id = dto.get("team_lead_id")
+        project_manager_id = dto.get("project_manager_id")
         member_ids = dto.get("member_ids", [])
 
         # Validate team lead exists
@@ -46,6 +47,12 @@ class CreateProjectUseCase:
             tl_user = self._user_repo.find_by_id(team_lead_id)
             if not tl_user:
                 raise NotFoundError(f"Team lead user {team_lead_id} not found")
+
+        # Validate project manager exists
+        if project_manager_id:
+            pm_user = self._user_repo.find_by_id(project_manager_id)
+            if not pm_user:
+                raise NotFoundError(f"Project manager user {project_manager_id} not found")
 
         # Validate all members exist
         for uid in member_ids:
@@ -71,9 +78,18 @@ class CreateProjectUseCase:
             )
             self._project_repo.save_member(tl_member)
 
+        # Add project manager
+        if project_manager_id:
+            pm_member = ProjectMember.create(
+                project_id=project_id,
+                user_id=project_manager_id,
+                project_role=ProjectRole.PROJECT_MANAGER,
+            )
+            self._project_repo.save_member(pm_member)
+
         # Add members
         for uid in member_ids:
-            if uid == team_lead_id:
+            if uid in (team_lead_id, project_manager_id):
                 continue
             m = ProjectMember.create(
                 project_id=project_id,

@@ -6,6 +6,7 @@ export interface CreateProjectData {
   name: string
   description?: string
   teamLeadId?: string
+  projectManagerId?: string
   memberIds?: string[]
   domain?: string
 }

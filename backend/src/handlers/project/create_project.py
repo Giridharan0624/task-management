@@ -15,6 +15,7 @@ class CreateProjectRequest(BaseModel):
     description: Optional[str] = None
     domain: Optional[str] = "DEVELOPMENT"
     team_lead_id: Optional[str] = None
+    project_manager_id: Optional[str] = None
     member_ids: list[str] = []
 
 

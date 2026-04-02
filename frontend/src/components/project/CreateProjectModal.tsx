@@ -27,6 +27,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   const createProject = useCreateProject()
   const { data: allUsers } = useUsers()
   const [teamLeadId, setTeamLeadId] = useState('')
+  const [projectManagerId, setProjectManagerId] = useState('')
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [domain, setDomain] = useState<TaskDomain>('DEVELOPMENT')
 
@@ -51,11 +52,13 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
       name: values.name,
       description: values.description || undefined,
       teamLeadId: teamLeadId || undefined,
+      projectManagerId: projectManagerId || undefined,
       memberIds: selectedMembers.length > 0 ? selectedMembers : undefined,
       domain,
     })
     reset()
     setTeamLeadId('')
+    setProjectManagerId('')
     setSelectedMembers([])
     setDomain('DEVELOPMENT')
     onClose()
@@ -64,6 +67,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   const handleClose = () => {
     reset()
     setTeamLeadId('')
+    setProjectManagerId('')
     setSelectedMembers([])
     setDomain('DEVELOPMENT')
     onClose()
@@ -110,6 +114,19 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           />
         </div>
 
+        {/* Project Manager Selection */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Project Manager</label>
+          <UserSelect
+            users={availableUsers
+              .filter((u) => u.userId !== teamLeadId)
+              .map((u) => ({ userId: u.userId, name: u.name || u.email, email: u.email, avatarUrl: u.avatarUrl, extra: u.systemRole }))}
+            value={projectManagerId}
+            onChange={setProjectManagerId}
+            placeholder="Select a Project Manager"
+          />
+        </div>
+
         {/* Team Members Selection */}
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">
@@ -120,7 +137,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           ) : (
             <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
               {availableUsers
-                .filter((u) => u.userId !== teamLeadId)
+                .filter((u) => u.userId !== teamLeadId && u.userId !== projectManagerId)
                 .map((u) => {
                   const isSelected = selectedMembers.includes(u.userId)
                   return (
