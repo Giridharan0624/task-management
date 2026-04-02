@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let loginEmail = identifier.trim()
 
     // If it looks like an employee ID, resolve to email first
-    if (/^(EMP-\d+|[A-Z]{2,4}-[A-Z]{3}-\d{2}[A-Z0-9]+)$/i.test(loginEmail)) {
+    if (/^(EMP-\d+|[A-Z]{2,4}-[A-Z]{3}-\d{2}[A-Z0-9]+|[A-Z]{2,4}-[A-Z0-9]+)$/i.test(loginEmail) && !loginEmail.includes('@')) {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
       const res = await fetch(`${apiUrl}/resolve-employee?employeeId=${loginEmail}`)
       if (!res.ok) throw new Error('Employee ID not found')
