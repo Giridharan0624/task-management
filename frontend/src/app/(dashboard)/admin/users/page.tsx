@@ -568,8 +568,8 @@ export default function UsersPage() {
               </div>
             )}
 
-            {/* Day-Off Score */}
-            {(() => {
+            {/* Day-Off Score — only for ADMIN and MEMBER (CEO/MD can't request day-offs) */}
+            {viewUser.systemRole !== 'CEO' && viewUser.systemRole !== 'MD' && viewUser.systemRole !== 'OWNER' && (() => {
               const now = new Date()
               const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
               const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
