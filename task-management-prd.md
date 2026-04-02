@@ -29,14 +29,15 @@ A comprehensive, serverless task management and time tracking platform where org
 ## 2. Objectives
 
 * Build a fully serverless application on AWS
-* Implement 5-tier system RBAC (OWNER > CEO > MD > ADMIN > MEMBER)
+* Implement 3-tier system RBAC (OWNER > ADMIN > MEMBER)
 * Implement 4-tier project RBAC (ADMIN > PROJECT_MANAGER > TEAM_LEAD > MEMBER)
 * Support domain-specific task pipelines (Development, Designing, Management, Research)
 * Clockify-style live time tracking with task switching
 * Comprehensive reporting (Summary, Detailed, Weekly views)
 * Attendance monitoring with team-wide visibility
-* Day-off request workflow with approval/rejection/cancellation
+* Day-off request workflow with self-approval prevention
 * Dark mode with comprehensive theme system
+* Seamless real-time polling for cross-user data sync
 * Follow Domain-Driven Design (DDD) with clean architecture layers
 
 ---
@@ -45,11 +46,9 @@ A comprehensive, serverless task management and time tracking platform where org
 
 | Role | Description |
 |---|---|
-| **OWNER** | System administrator — manages all users, projects, company settings |
-| **CEO** | Full system access, approves day-offs, manages admins and members |
-| **MD** | Full system access, approves day-offs, manages admins and members |
-| **ADMIN** | Project manager — creates projects, assigns tasks, manages members |
-| **MEMBER** | Team member — works on assigned tasks, tracks time, updates status |
+| **OWNER** | Super admin — manages all users, projects, company settings, approves day-offs |
+| **ADMIN** | Full management access — creates users/projects, assigns tasks, approves day-offs (not own), tracks time |
+| **MEMBER** | Team member — works on assigned tasks, tracks time, requests day-offs |
 
 ---
 
@@ -57,33 +56,41 @@ A comprehensive, serverless task management and time tracking platform where org
 
 ### 4.1 Authentication & Authorization
 * Login via email or Employee ID (auto-resolved to email)
+* Employee ID regex supports all formats: `NS-OWNER`, `NS-26AK76`, `NS-DEV-26AK76`
 * AWS Cognito SRP authentication (password never sent to server)
 * JWT stored in localStorage with automatic expiry check (60s interval)
 * First-login password change flow (OTP → set new password)
 * Forgot password with verification code
-* 5-tier system RBAC enforced at use case layer
+* 3-tier system RBAC enforced at use case layer
 * 4-tier project RBAC (ADMIN, PROJECT_MANAGER, TEAM_LEAD, MEMBER)
+* **Live role sync**: Backend reads role from DynamoDB (not JWT) on every API call
+* **Frontend role sync**: Dashboard polls `/users/me` every 15s, auto-updates auth context
+* Role changes take effect immediately without re-login
 
 ### 4.2 User Management
-* OWNER creates CEO, MD, ADMIN, MEMBER
-* CEO/MD creates ADMIN, MEMBER
-* ADMIN creates MEMBER only
-* Employee ID format: `{PREFIX}-{DEPT}-{YY}{HASH}` (e.g., NS-DEV-26A7K3)
+* OWNER creates ADMIN, MEMBER
+* ADMIN creates ADMIN, MEMBER
+* MEMBER cannot create anyone
+* Employee ID format: `{PREFIX}-{YY}{HASH}` (e.g., NS-26AK76)
 * Company prefix configurable by OWNER from profile
-* Department-based employee IDs (DEV, DES, MGT, RSH, GEN)
+* Date of joining picker in user creation
 * Welcome email with OTP via Gmail SMTP (Secrets Manager)
 * User profile with avatar (Cloudinary), bio, skills, personal info
 * Profile completeness indicator
 * Online status indicators (from attendance data)
+* Day-off score displayed in user profile modal
 
 ### 4.3 Project Management
 * Projects have a name, description, domain, and estimated hours
 * **4 domains**: Development, Designing, Management, Research
+* Domain editable from project settings
 * Each domain determines the task pipeline steps
+* Domain change auto-migrates orphaned task statuses to TODO
 * Project health indicators (ON_TRACK, AT_RISK, BEHIND, COMPLETED)
-* Project progress with weighted scoring
-* Upcoming deadlines widget
+* Project progress with pipeline-based scoring
+* Upcoming deadlines widget (calendar-date comparison, not timestamp)
 * Project-level time reports
+* Per-project unique color (consistent hash-based gradient)
 * Breadcrumb navigation
 
 ### 4.4 Task Management — Domain-Specific Pipelines
@@ -92,7 +99,7 @@ A comprehensive, serverless task management and time tracking platform where org
 |---|---|
 | **Development** | To Do → In Progress → Developed → Code Review → Testing → Debugging → Final Testing → Done |
 | **Designing** | To Do → In Progress → Wireframe → Design → Review → Revision → Approved → Done |
-| **Management** | To Do → In Progress → Planning → Execution → Review → Done |
+| **Management** | To Do → Planning → In Progress → Execution → Review → Done |
 | **Research** | To Do → In Progress → Research → Analysis → Documentation → Review → Done |
 
 * Tasks inherit domain from their project
@@ -101,28 +108,33 @@ A comprehensive, serverless task management and time tracking platform where org
 * Priority levels: LOW, MEDIUM, HIGH
 * Status-based progress scores (auto-calculated per domain)
 * Pipeline list view with collapsible status groups
+* **Tasks grouped by project** in My Tasks page
+* Orphaned statuses (from domain change) fall back to first stage
 * Search, sort (priority/deadline/title/status), filter (priority/assignee/overdue)
 * Quick status change on task rows (hover dropdown)
-* Deadline overdue detection (date-only = end of day)
+* Deadline overdue detection (calendar-date comparison, not timestamp)
 * Task detail panel with progress track, assignee management, comments
 
 ### 4.5 Time Tracking (Clockify-style)
 * Select source → select task → start timer
 * **Meeting** option — one-click meeting tracking (no task required)
-* "What are you working on?" description field
+* "What are you working on?" description field **(required)**
+* Description reflected in task updates and reports
 * Live timer ticking in real-time (00:00:00 format)
-* Timer visible in sidebar on every page
+* **Tab title updates live** even in background tabs (Web Worker, not throttled)
+* **Favicon shows red recording dot** when timer is active
+* Timer visible in sidebar on every page (ADMIN and MEMBER)
 * Task switching auto-stops current timer, starts new
-* Daily target progress ring (8-hour goal)
 * Quick-restart last task button
 * Optimistic UI — timer starts instantly (no waiting for API)
-* Session description stored and shown in task updates
-* Timer descriptions included in reports
+* **Running session visible in session list** with live-ticking duration
+* Session times spread across available space (flex-wrap layout)
 
 ### 4.6 Attendance
 * Sign-in/sign-out with task and project tracking
 * Multiple sessions per day with cumulative hours
 * Team attendance table with live timers for active users
+* **Online count shows all users** regardless of active tab/filter
 * Monthly attendance reports with CSV export
 * Per-member summary (days present, total hours, avg/day, distribution)
 * Per-task breakdown
@@ -131,12 +143,17 @@ A comprehensive, serverless task management and time tracking platform where org
 * Day-off integration (shows who's on leave)
 
 ### 4.7 Day-Off Requests
-* Members request single-day or multi-day leave
-* Auto-routed to CEO/MD for approval
-* Approve/Reject by CEO/MD
-* **Cancel by member** (pending or approved requests)
+* **ADMIN and MEMBER** can request day-offs
+* OWNER cannot request (no one above to approve)
+* Auto-routed to any ADMIN or OWNER for approval
+* **Self-approval prevention**: ADMIN cannot approve/reject their own request
+* Approve/Reject by OWNER or any other ADMIN
+* **Cancel by requester** (pending or approved requests)
 * Day-off banner showing who's on leave today
 * Filter by status: ALL, PENDING, APPROVED, REJECTED, CANCELLED
+* **Day-off score** (per month): 100 (0 days off), 75 (1-2), 50 (3-5), 25 (6+)
+* Score shown in: user profile modal, day-offs page, all-requests table
+* **Team scores overview** for OWNER on day-offs page
 * Custom confirmation dialog (no browser native popups)
 
 ### 4.8 Reports — 3 Views
@@ -154,22 +171,24 @@ A comprehensive, serverless task management and time tracking platform where org
 * Member Workload with stacked task breakdown bars
 * Collapsible session log with CSV export
 
-**Shared features**: Period selector (Daily/Weekly/Monthly/All Time), date navigation, member filter, live auto-refresh (60s), `formatDuration` (Xh Ym Zs) everywhere
+**Shared features**: Period selector (Daily/Weekly/Monthly/All Time), date navigation, member filter, live auto-refresh, `formatDuration` (Xh Ym Zs) everywhere
 
 ### 4.9 Dashboard
 * **Timer** as hero element (Admin/Member) — first thing visible
 * Overdue tasks alert (red card)
+* **Pending task updates alert** — shows users who worked today but haven't submitted
 * 4 stat cards with sparkline mini-charts (7-day trend)
-* Upcoming deadlines (next 3 days)
-* Project progress mini-cards with completion bars
+* Upcoming deadlines (next 3 days, calendar-date comparison)
+* Project progress mini-cards with **unique per-project colors**
 * Team attendance table
 * Quick action cards
 * Task update submission widget
 * Date display in greeting
+* OWNER and ADMIN share the same full dashboard view
 
 ### 4.10 Task Updates
 * Auto-generated from attendance sessions
-* Includes timer description ("What are you working on?")
+* Includes timer description ("What are you working on?") — **mandatory field**
 * Project-grouped task summaries with time bars
 * Sign-in/sign-out display
 * "Still working" warning (blocks submit if timer active)
@@ -189,7 +208,7 @@ A comprehensive, serverless task management and time tracking platform where org
 
 ### 4.12 UI/UX Features
 * **Command Palette** (Cmd+K / Ctrl+K) — search pages, projects, tasks
-* **Notification Center** — bell icon with overdue tasks, deadline alerts, timer warnings
+* **Notification Center** — bell icon with **total notification count badge** (red for urgent, indigo for info)
 * **Toast notifications** — success/error/info feedback
 * **Custom confirmation dialogs** — no browser native popups
 * **FilterSelect** component — portal-based dropdown for all filters
@@ -201,24 +220,41 @@ A comprehensive, serverless task management and time tracking platform where org
 * **Collapsible sidebar** with mini timer widget
 * **Progress bar animations** on mount
 * **Live-updating hours** everywhere timer is running
+* **Walkthrough tour** — shown once per user on first login
+* **Seamless polling** — 10-30s intervals with background tab suppression
+
+### 4.13 Real-Time Data Sync
+* React Query polling with tiered intervals:
+  * **10s**: Tasks, today's attendance, my tasks (critical)
+  * **15s**: My attendance, comments, profile/role sync
+  * **30s**: Users, projects, day-offs, task updates (standard)
+* `staleTime` matches `refetchInterval` to prevent duplicate fetches
+* `refetchIntervalInBackground: false` — zero polling in hidden tabs
+* Optimistic updates on: tasks, users, day-offs, comments
+* Window focus refetch for instant catch-up
 
 ---
 
 ## 5. System Roles & Permissions
 
-### System Roles (5-tier)
+### System Roles (3-tier)
 
-| Permission | OWNER | CEO | MD | ADMIN | MEMBER |
-|---|---|---|---|---|---|
-| Create CEO/MD | Yes | No | No | No | No |
-| Create Admin | Yes | Yes | Yes | No | No |
-| Create Member | Yes | Yes | Yes | Yes | No |
-| Approve Day-offs | No | Yes | Yes | No | No |
-| Manage Projects | Yes | Yes | Yes | Yes | No |
-| View Reports | Yes | Yes | Yes | Yes | No |
-| View All Tasks | Yes | Yes | Yes | Yes | No |
-| Use Timer | No | No | No | Yes | Yes |
-| Submit Task Update | No | No | No | Yes | Yes |
+| Permission | OWNER | ADMIN | MEMBER |
+|---|---|---|---|
+| Create Admin | Yes | Yes | No |
+| Create Member | Yes | Yes | No |
+| Change Roles | Yes | No | No |
+| Delete Admin | Yes | No | No |
+| Delete Member | Yes | Yes | No |
+| Approve Day-offs | Yes (any) | Yes (not own) | No |
+| Request Day-offs | No | Yes | Yes |
+| Manage Projects | Yes | Yes | No |
+| View All Users | Yes | Yes | No |
+| View Reports | Yes | Yes | No |
+| View All Tasks | Yes | Yes | Assigned only |
+| Use Timer | No | Yes | Yes |
+| Submit Task Update | No | Yes | Yes |
+| Company Prefix | Yes | No | No |
 
 ### Project Roles (4-tier)
 
@@ -241,10 +277,10 @@ A comprehensive, serverless task management and time tracking platform where org
 | Field | Type | Notes |
 |---|---|---|
 | user_id | string | Cognito sub (UUID) |
-| employee_id | string? | Format: NS-DEV-26A7K3 |
+| employee_id | string? | Format: NS-26AK76 |
 | email | string | Unique, immutable |
 | name | string | Editable |
-| system_role | enum | OWNER, CEO, MD, ADMIN, MEMBER |
+| system_role | enum | OWNER, ADMIN, MEMBER |
 | department | string? | Development, Designing, Management, Research |
 | company_prefix | string? | OWNER only — used for employee ID generation |
 | phone, designation, location, bio | string? | Profile fields |
@@ -252,7 +288,7 @@ A comprehensive, serverless task management and time tracking platform where org
 | skills | list[string] | Skill tags |
 | date_of_birth, college_name, area_of_interest, hobby | string? | Personal info |
 | created_by | string? | Creator's user ID |
-| created_at, updated_at | datetime | ISO 8601 |
+| created_at, updated_at | datetime | ISO 8601 (created_at used as join date) |
 
 ### Project
 | Field | Type | Notes |
@@ -290,7 +326,7 @@ A comprehensive, serverless task management and time tracking platform where org
 | hours | float? | Calculated on sign-out |
 | task_id, project_id | string? | What was worked on |
 | task_title, project_name | string? | Denormalized for display |
-| description | string? | "What are you working on?" |
+| description | string | "What are you working on?" (required) |
 
 ### DayOffRequest
 | Field | Type | Notes |
@@ -300,7 +336,7 @@ A comprehensive, serverless task management and time tracking platform where org
 | start_date, end_date | string | ISO dates |
 | reason | string | |
 | status | enum | PENDING, APPROVED, REJECTED, CANCELLED |
-| admin_id, admin_name | string? | Approver |
+| admin_id, admin_name | string? | Approver (auto-assigned, cannot be self) |
 
 ---
 
@@ -323,9 +359,11 @@ Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery e
 ## 8. Security
 
 * AWS Cognito JWT authentication on all endpoints
+* Backend reads authoritative role from DynamoDB (not stale JWT claims)
 * Secrets Manager for Gmail SMTP credentials (not hardcoded)
 * CORS restricted to frontend domain + localhost
 * RBAC enforced at both API Gateway and use case layer
+* Self-approval prevention on day-off requests
 * Password policy: 8+ chars, uppercase, lowercase, digits
 * DynamoDB Point-in-Time Recovery enabled
 * No native browser dialogs — custom themed confirmations
@@ -342,7 +380,7 @@ Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery e
 | Auth | Cognito User Pool | Email sign-in, custom attributes |
 | API | API Gateway REST | Cognito authorizer, CORS |
 | Secrets | Secrets Manager | Gmail credentials |
-| Frontend | Vercel + localhost | Next.js 16 |
+| Frontend | Vercel | Next.js 16, auto-deploy on push |
 | Images | Cloudinary | Unsigned avatar uploads |
 | Email | Gmail SMTP | Welcome emails with OTP |
 | Region | ap-south-1 (Mumbai) | |
@@ -375,44 +413,57 @@ Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery e
 
 ## 11. Implemented Features Checklist
 
-- [x] 5-tier system RBAC (OWNER > CEO > MD > ADMIN > MEMBER)
+- [x] 3-tier system RBAC (OWNER > ADMIN > MEMBER)
 - [x] 4-tier project RBAC (ADMIN > PM > TEAM_LEAD > MEMBER)
 - [x] Domain-specific task pipelines (Development, Designing, Management, Research)
-- [x] Clockify-style live time tracking with descriptions
+- [x] Domain editing with auto-migration of orphaned task statuses
+- [x] Clockify-style live time tracking with mandatory descriptions
 - [x] Meeting tracking (no task required)
 - [x] Reports: Summary, Detailed, Weekly views
 - [x] Project-level reports with charts
 - [x] Attendance monitoring with CSV export
-- [x] Day-off workflow (request/approve/reject/cancel)
+- [x] Day-off workflow with self-approval prevention
+- [x] Day-off score (monthly, tier-based)
 - [x] Task updates with timer descriptions
-- [x] Dark mode with comprehensive theme system
+- [x] Dark mode with comprehensive theme system (100+ CSS overrides)
 - [x] Command palette (Cmd+K)
-- [x] Notification center
+- [x] Notification center with total count badge
 - [x] Toast notifications
 - [x] Custom confirmation dialogs
-- [x] Employee ID: PREFIX-DEPT-YYHASH format
+- [x] Employee ID: PREFIX-YYHASH format
+- [x] Date of joining picker in user creation
 - [x] Profile completeness tracking
 - [x] Sparkline charts in dashboard
 - [x] Skeleton loaders
 - [x] Breadcrumbs
 - [x] All native elements replaced with custom components
-- [x] Deadline overdue = end of day for date-only deadlines
+- [x] Deadline overdue = calendar-date comparison (not timestamp)
 - [x] AWS Secrets Manager for credentials
 - [x] DynamoDB Point-in-Time Recovery
 - [x] CORS restricted to allowed origins
-- [x] 15+ backend unit tests
+- [x] Seamless real-time polling (10-30s intervals)
+- [x] Optimistic updates on mutations
+- [x] Background tab polling suppression
+- [x] Live role sync (frontend polls /users/me, backend reads DynamoDB)
+- [x] Tab title + red dot favicon when timer active
+- [x] Web Worker for background tab timer ticking
+- [x] Tasks grouped by project in My Tasks page
+- [x] Per-project unique colors (hash-based)
+- [x] Pending task updates alert on dashboard
+- [x] Walkthrough tour (per-user, first login only)
+- [x] Onboarding tour for new users
 
 ---
 
 ## 12. Future Enhancements
 
-* Real-time updates via WebSockets
+* Real-time updates via WebSockets (replace polling)
+* Direct task assignment (CEO/Admin to user without project)
 * File attachments on tasks (S3)
 * Drag-and-drop task reordering
 * Activity feed / audit log
 * Project notes / wiki
 * Milestones / phases
 * Mobile-optimized bottom navigation
-* Onboarding tour for new users
 * Pagination for large datasets
 * Email notifications for task assignments
