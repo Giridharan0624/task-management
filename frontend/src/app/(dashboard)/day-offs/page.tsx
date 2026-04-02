@@ -148,7 +148,7 @@ function RequestCard({
             {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED'
               ? req.adminName
               : req.adminStatus === 'CANCELLED' ? 'Cancelled by member'
-              : 'Awaiting CEO/MD'}
+              : 'Awaiting Admin'}
           </span>
           <StatusBadge status={req.adminStatus} />
         </div>
@@ -213,7 +213,7 @@ function CreateModal({
 
   return (
     <Modal isOpen onClose={onClose} title="Request Day Off" size="lg">
-      <p className="text-xs text-gray-400 mb-5">Your request will be sent to the CEO/MD for approval</p>
+      <p className="text-xs text-gray-400 mb-5">Your request will be sent to an admin for approval</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Duration type toggle */}
@@ -320,8 +320,8 @@ function CreateModal({
 export default function DayOffsPage() {
   const { user } = useAuth()
   const role = user?.systemRole
-  const isTopTier = role === 'OWNER' || role === 'CEO' || role === 'MD'
-  const isOwner = isTopTier
+  const isTopTier = role === 'OWNER'
+  const isOwner = role === 'OWNER'
   const isAdminOrOwner = isTopTier || role === 'ADMIN'
 
   const { data: myDayOffs, isLoading: myLoading } = useMyDayOffs()
@@ -366,12 +366,12 @@ export default function DayOffsPage() {
         )}
       </div>
 
-      {/* ── Team Day-Off Scores (OWNER/CEO/MD) ── */}
+      {/* ── Team Day-Off Scores (OWNER) ── */}
       {isOwner && allDayOffs && allUsers && (
         <section>
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Team Day-Off Scores · {new Date().toLocaleDateString('en-US', { month: 'long' })}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {allUsers.filter(u => u.systemRole !== 'OWNER' && u.systemRole !== 'CEO' && u.systemRole !== 'MD').map(u => {
+            {allUsers.filter(u => u.systemRole !== 'OWNER').map(u => {
               const { score, daysOff } = getDayOffScore(u.userId, allDayOffs)
               const color = score === 100 ? 'text-emerald-600' : score >= 75 ? 'text-blue-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'
               const bg = score === 100 ? 'border-emerald-100' : score >= 75 ? 'border-blue-100' : score >= 50 ? 'border-amber-100' : 'border-red-100'
@@ -421,8 +421,8 @@ export default function DayOffsPage() {
         </section>
       )}
 
-      {/* ── Section 2: Pending Approvals (CEO / MD only) ── */}
-      {(role === 'CEO' || role === 'MD') && (
+      {/* ── Section 2: Pending Approvals (OWNER / ADMIN) ── */}
+      {(role === 'OWNER' || role === 'ADMIN') && (
         <section>
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">
             Pending Approvals
@@ -444,7 +444,7 @@ export default function DayOffsPage() {
                 <RequestCard
                   key={req.requestId}
                   req={req}
-                  showActions={true}
+                  showActions={req.userId !== user?.userId}
                   onApprove={() => approveMutation.mutate(req.requestId)}
                   onReject={() => rejectMutation.mutate(req.requestId)}
                   isActing={isActing}
@@ -512,7 +512,7 @@ export default function DayOffsPage() {
                         <td className="px-5 py-3.5 text-gray-600 max-w-[200px] truncate">{req.reason}</td>
                         <td className="px-5 py-3.5">
                           <span className="font-semibold text-gray-700">
-                            {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED' ? req.adminName : 'Awaiting CEO/MD'}
+                            {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED' ? req.adminName : 'Awaiting Admin'}
                           </span>
                         </td>
                         <td className="px-5 py-3.5">

@@ -18,8 +18,6 @@ import { useMemo } from 'react'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800 ring-1 ring-inset ring-purple-200',
-  CEO: 'bg-violet-100 text-violet-800 ring-1 ring-inset ring-violet-200',
-  MD: 'bg-fuchsia-100 text-fuchsia-800 ring-1 ring-inset ring-fuchsia-200',
   ADMIN: 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200',
   MEMBER: 'bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200',
 }
@@ -271,14 +269,14 @@ function use7DayHours() {
   }, [data])
 }
 
-/* ─── Owner Dashboard ─── */
+/* ─── Admin Dashboard (OWNER + ADMIN) ─── */
 function OwnerDashboard() {
   const { data: users, isLoading: usersLoading } = useUsers()
   const { data: projects, isLoading: projectsLoading } = useProjects()
   const { data: myTasks } = useMyTasks()
   const sparkData = use7DayHours()
 
-  const adminCount = (users ?? []).filter(u => ['ADMIN', 'CEO', 'MD'].includes(u.systemRole)).length
+  const adminCount = (users ?? []).filter(u => u.systemRole === 'ADMIN').length
   const memberCount = (users ?? []).filter(u => u.systemRole === 'MEMBER').length
 
   const now = new Date()
@@ -477,8 +475,7 @@ export default function DashboardPage() {
         <Badge className={ROLE_COLORS[user?.systemRole ?? 'MEMBER']}>{user?.systemRole}</Badge>
       </div>
 
-      {(user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD') && <OwnerDashboard />}
-      {user?.systemRole === 'ADMIN' && <AdminDashboard />}
+      {(user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN') && <OwnerDashboard />}
       {user?.systemRole === 'MEMBER' && <MemberDashboard />}
     </div>
   )

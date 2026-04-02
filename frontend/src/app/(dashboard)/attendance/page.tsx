@@ -64,7 +64,7 @@ export default function AttendancePage() {
     return () => clearInterval(i)
   }, [hasActiveSession])
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
+  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
   const monthLabel = new Date(selectedYear, selectedMonth - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
   // Filter records

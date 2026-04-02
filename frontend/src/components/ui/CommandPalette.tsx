@@ -52,7 +52,7 @@ export function CommandPalette() {
     if (open) setTimeout(() => inputRef.current?.focus(), 50)
   }, [open])
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
+  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
 
   const items = useMemo<CommandItem[]>(() => {
     const nav: CommandItem[] = [

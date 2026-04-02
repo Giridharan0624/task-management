@@ -14,7 +14,7 @@ class TaskUpdateDynamoRepository:
         self._table.put_item(Item=item)
 
     def find_by_date(self, date: str) -> list[TaskUpdate]:
-        """Get all task updates for a given date (for owner/CEO/MD view)."""
+        """Get all task updates for a given date (for owner/admin view)."""
         response = self._table.query(
             KeyConditionExpression=Key("PK").eq(f"TASKUPDATE#{date}")
         )

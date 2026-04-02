@@ -9,7 +9,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
-  const isOwnerOrAdmin = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
+  const isOwnerOrAdmin = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
 
   useEffect(() => {
     if (!isLoading && !isOwnerOrAdmin) {

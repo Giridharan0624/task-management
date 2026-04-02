@@ -20,22 +20,11 @@ import { Walkthrough } from '@/components/ui/Walkthrough'
 import { NotificationCenter } from '@/components/ui/NotificationCenter'
 import type { User } from '@/types/user'
 
-const ownerNav = [
+const adminNav = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home' },
   { name: 'All Tasks', href: '/my-tasks', icon: 'tasks' },
   { name: 'Task Updates', href: '/task-updates', icon: 'update' },
   { name: 'Users', href: '/admin/users', icon: 'users' },
-  { name: 'Projects', href: '/projects', icon: 'board' },
-  { name: 'Reports', href: '/reports', icon: 'report' },
-  { name: 'Attendance', href: '/attendance', icon: 'clock' },
-  { name: 'Day Offs', href: '/day-offs', icon: 'calendar' },
-]
-
-const adminNav = [
-  { name: 'Dashboard', href: '/dashboard', icon: 'home' },
-  { name: 'Tasks', href: '/my-tasks', icon: 'tasks' },
-  { name: 'Task Updates', href: '/task-updates', icon: 'update' },
-  { name: 'Members', href: '/admin/users', icon: 'users' },
   { name: 'Projects', href: '/projects', icon: 'board' },
   { name: 'Reports', href: '/reports', icon: 'report' },
   { name: 'Attendance', href: '/attendance', icon: 'clock' },
@@ -53,10 +42,8 @@ const memberNav = [
 function getNavItems(role?: string) {
   switch (role) {
     case 'OWNER':
-    case 'CEO':
-    case 'MD':
-      return ownerNav
-    case 'ADMIN': return adminNav
+    case 'ADMIN':
+      return adminNav
     default: return memberNav
   }
 }
@@ -90,8 +77,7 @@ function NavIcon({ type }: { type: string }) {
 function SidebarTimer() {
   const { user } = useAuth()
   const { totalHours, isActive, attendance } = useLiveHours()
-  const topTier = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD'
-  if (topTier || !attendance) return null
+  if (user?.systemRole === 'OWNER' || !attendance) return null
 
   const task = attendance.currentTask
 
@@ -185,7 +171,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = getNavItems(user.systemRole)
   const closeSidebar = () => setSidebarOpen(false)
 
-  const isPrivileged = user.systemRole === 'OWNER' || user.systemRole === 'CEO' || user.systemRole === 'MD' || user.systemRole === 'ADMIN'
+  const isPrivileged = user.systemRole === 'OWNER' || user.systemRole === 'ADMIN'
 
   const pendingCount = isPrivileged ? (pendingDayOffs ?? []).length : 0
   const todoTaskCount = (myTasks ?? []).filter((t) => t.status !== 'DONE').length

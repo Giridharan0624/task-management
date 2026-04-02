@@ -7,7 +7,7 @@ from handlers.shared.response import build_error, build_success
 from handlers.shared.validate_body import validate_body
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
 from domain.user.entities import User
-from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
+from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError
 
 
@@ -22,17 +22,9 @@ def handler(event, context):
         body = validate_body(UpdateDepartmentRequest, event.get("body"))
         user_repo = UserDynamoRepository()
 
-        # TOP_TIER (OWNER/CEO/MD) can change anyone's department, ADMIN can change only MEMBERs
-        if auth.system_role in TOP_TIER_VALUES:
-            pass
-        elif auth.system_role == SystemRole.ADMIN.value:
-            target = user_repo.find_by_id(body.user_id)
-            if not target:
-                raise NotFoundError("User not found")
-            if target.system_role != SystemRole.MEMBER:
-                raise AuthorizationError("Admins can only change department of members")
-        else:
-            raise AuthorizationError("Only owners, CEO, MD, and admins can change departments")
+        # OWNER and ADMIN can change anyone's department
+        if auth.system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners and admins can change departments")
 
         target_user = user_repo.find_by_id(body.user_id)
         if not target_user:

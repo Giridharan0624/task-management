@@ -7,7 +7,7 @@ from domain.attendance.entities import Attendance
 from domain.attendance.repository import IAttendanceRepository
 from domain.task.repository import ITaskRepository
 from domain.user.repository import IUserRepository
-from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
+from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
 
@@ -123,20 +123,11 @@ class ListTodayAttendanceUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners, CEO, MD, and admins can view team attendance")
+            raise AuthorizationError("Only owners and admins can view team attendance")
 
         date = _today()
         records = self._attendance_repo.find_all_by_date(date)
-
-        if caller_system_role in TOP_TIER_VALUES:
-            return [r.to_dict() for r in records]
-
-        # Admin sees all except top-tier
-        return [
-            r.to_dict()
-            for r in records
-            if r.system_role not in TOP_TIER_VALUES
-        ]
+        return [r.to_dict() for r in records]
 
 
 class GetAttendanceReportUseCase:
@@ -146,15 +137,8 @@ class GetAttendanceReportUseCase:
     def execute(self, caller_user_id: str, caller_system_role: str, start_date: str, end_date: str) -> list[dict]:
         records = self._attendance_repo.find_all_by_date_range(start_date, end_date)
 
-        if caller_system_role in TOP_TIER_VALUES:
+        if caller_system_role in PRIVILEGED_ROLES:
             return [r.to_dict() for r in records]
-
-        if caller_system_role == SystemRole.ADMIN.value:
-            return [
-                r.to_dict()
-                for r in records
-                if r.system_role not in TOP_TIER_VALUES
-            ]
 
         # MEMBER sees only their own records
         return [r.to_dict() for r in records if r.user_id == caller_user_id]

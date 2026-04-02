@@ -6,10 +6,8 @@ from datetime import datetime, timezone
 from domain.dayoff.entities import DayOffRequest
 from domain.dayoff.repository import IDayOffRepository
 from domain.user.repository import IUserRepository
-from domain.user.value_objects import SystemRole, TOP_TIER_VALUES, PRIVILEGED_ROLES
+from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
-
-_APPROVER_ROLES = (SystemRole.CEO, SystemRole.MD)
 
 
 class CreateDayOffRequestUseCase:
@@ -25,19 +23,21 @@ class CreateDayOffRequestUseCase:
         if not user:
             raise NotFoundError("User not found")
 
-        if user.system_role.value in TOP_TIER_VALUES:
-            raise AuthorizationError("Management accounts (OWNER/CEO/MD) cannot request day offs")
+        if user.system_role == SystemRole.OWNER:
+            raise AuthorizationError("Owner cannot request day offs")
 
-        # Auto-find CEO or MD as approver
+        # Auto-find an approver (any ADMIN or OWNER, but not the requester)
         all_users = self._user_repo.find_all()
         approver = None
         for u in all_users:
-            if u.system_role in _APPROVER_ROLES:
+            if u.user_id == caller_user_id:
+                continue
+            if u.system_role.value in PRIVILEGED_ROLES:
                 approver = u
                 break
 
         if not approver:
-            raise ValidationError("No CEO or MD found in the system to approve day-off requests")
+            raise ValidationError("No admin or owner found to approve day-off requests")
 
         request_id = str(uuid.uuid4())
         day_off = DayOffRequest.create(
@@ -70,10 +70,12 @@ class GetPendingApprovalsUseCase:
         self._dayoff_repo = dayoff_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in (SystemRole.CEO.value, SystemRole.MD.value):
+        if caller_system_role not in PRIVILEGED_ROLES:
             return []
         requests = self._dayoff_repo.find_all()
-        return [r.to_dict() for r in requests if r.status == "PENDING" and r.admin_status == "PENDING"]
+        # Show pending requests, but exclude caller's own requests (can't self-approve)
+        return [r.to_dict() for r in requests
+                if r.status == "PENDING" and r.admin_status == "PENDING" and r.user_id != caller_user_id]
 
 
 class GetAllRequestsUseCase:
@@ -82,7 +84,7 @@ class GetAllRequestsUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners, CEO, MD, and admins can view all day-off requests")
+            raise AuthorizationError("Only owners and admins can view all day-off requests")
         requests = self._dayoff_repo.find_all()
         return [r.to_dict() for r in requests]
 
@@ -93,12 +95,15 @@ class ApproveRequestUseCase:
         self._user_repo = user_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str, request_id: str) -> dict:
-        if caller_system_role not in (SystemRole.CEO.value, SystemRole.MD.value):
-            raise AuthorizationError("Only CEO and MD can approve day-off requests")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners and admins can approve day-off requests")
 
         day_off = self._dayoff_repo.find_by_id(request_id)
         if not day_off:
             raise NotFoundError("Day-off request not found")
+
+        if day_off.user_id == caller_user_id:
+            raise AuthorizationError("Cannot approve your own day-off request")
 
         caller = self._user_repo.find_by_id(caller_user_id)
         caller_name = caller.name if caller else caller_user_id
@@ -119,12 +124,15 @@ class RejectRequestUseCase:
         self._user_repo = user_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str, request_id: str) -> dict:
-        if caller_system_role not in (SystemRole.CEO.value, SystemRole.MD.value):
-            raise AuthorizationError("Only CEO and MD can reject day-off requests")
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only owners and admins can reject day-off requests")
 
         day_off = self._dayoff_repo.find_by_id(request_id)
         if not day_off:
             raise NotFoundError("Day-off request not found")
+
+        if day_off.user_id == caller_user_id:
+            raise AuthorizationError("Cannot reject your own day-off request")
 
         caller = self._user_repo.find_by_id(caller_user_id)
         caller_name = caller.name if caller else caller_user_id
@@ -140,7 +148,7 @@ class RejectRequestUseCase:
 
 
 class CancelRequestUseCase:
-    """Allow the requesting member to cancel their own day-off (pending or approved)."""
+    """Allow the requesting user to cancel their own day-off (pending or approved)."""
     def __init__(self, dayoff_repo: IDayOffRepository):
         self._dayoff_repo = dayoff_repo
 

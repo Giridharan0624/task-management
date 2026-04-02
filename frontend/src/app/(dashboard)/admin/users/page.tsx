@@ -20,8 +20,6 @@ import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-800',
-  CEO: 'bg-violet-100 text-violet-800',
-  MD: 'bg-fuchsia-100 text-fuchsia-800',
   ADMIN: 'bg-red-100 text-red-800',
   MEMBER: 'bg-blue-100 text-blue-800',
 }
@@ -88,7 +86,7 @@ export default function UsersPage() {
     )
   }
 
-  const isTopTier = currentUser?.systemRole === 'OWNER' || currentUser?.systemRole === 'CEO' || currentUser?.systemRole === 'MD'
+  const isTopTier = currentUser?.systemRole === 'OWNER'
   const isOwner = currentUser?.systemRole === 'OWNER'
 
   // Build a userId -> name map for resolving "created by"
@@ -96,12 +94,11 @@ export default function UsersPage() {
   if (currentUser) userMap.set(currentUser.userId, currentUser.name || currentUser.email)
 
   // Filter users by role groups
-  const ceoMd = (users ?? []).filter((u) => u.systemRole === 'CEO' || u.systemRole === 'MD')
   const adminsOnly = (users ?? []).filter((u) => u.systemRole === 'ADMIN')
   const members = (users ?? []).filter((u) => u.systemRole === 'MEMBER')
 
   const rawDisplayedUsers = isTopTier
-    ? (activeTab === 'ADMIN' ? [...ceoMd, ...adminsOnly] : members)
+    ? (activeTab === 'ADMIN' ? adminsOnly : members)
     : members
 
   const deptFiltered = deptFilter === 'ALL'
@@ -139,15 +136,12 @@ export default function UsersPage() {
 
   // Available roles for creation based on caller
   const creatableRoles = isOwner
-    ? ['CEO', 'MD', 'ADMIN', 'MEMBER']
-    : isTopTier
-      ? ['ADMIN', 'MEMBER']
-      : ['MEMBER']
+    ? ['ADMIN', 'MEMBER']
+    : ['MEMBER']
 
   const handleCreateUser = async () => {
     setError('')
-    const isCeoMd = newRole === 'CEO' || newRole === 'MD'
-    if (!newEmail || !newName || (!isCeoMd && !newDepartment)) {
+    if (!newEmail || !newName || !newDepartment) {
       setError('All fields are required')
       return
     }
@@ -223,7 +217,7 @@ export default function UsersPage() {
         </div>
         {isTopTier && (
           <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p className="text-xl font-bold text-violet-700 tabular-nums">{ceoMd.length + adminsOnly.length}</p>
+            <p className="text-xl font-bold text-violet-700 tabular-nums">{adminsOnly.length}</p>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Management</p>
           </div>
         )}
@@ -269,7 +263,7 @@ export default function UsersPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Management ({ceoMd.length + adminsOnly.length})
+            Management ({adminsOnly.length})
           </button>
           <button
             onClick={() => setActiveTab('MEMBER')}
@@ -349,15 +343,14 @@ export default function UsersPage() {
                     <Button variant="secondary" size="sm" onClick={() => setProgressUser(u.userId)}>
                       Progress
                     </Button>
-                    {isTopTier && u.systemRole !== 'OWNER' && u.systemRole !== 'CEO' && u.systemRole !== 'MD' && (
+                    {isOwner && u.systemRole !== 'OWNER' && (
                       <Button variant="secondary" size="sm" onClick={() => setSelectedUser(u)}>
                         Role
                       </Button>
                     )}
                     {u.systemRole !== 'OWNER' && u.userId !== currentUser?.userId && (
                       (() => {
-                        const isCeoMd = u.systemRole === 'CEO' || u.systemRole === 'MD'
-                        const canDelete = isOwner || (isTopTier && !isCeoMd) || (currentUser?.systemRole === 'ADMIN' && u.systemRole === 'MEMBER')
+                        const canDelete = currentUser?.systemRole === 'OWNER' || (currentUser?.systemRole === 'ADMIN' && u.systemRole === 'MEMBER')
                         return canDelete ? (
                           <Button variant="danger" size="sm" onClick={() => setDeleteTarget(u)}>
                             Delete
@@ -421,8 +414,7 @@ export default function UsersPage() {
               options={creatableRoles.map((r) => ({ value: r, label: r }))}
             />
           </div>
-          {newRole !== 'CEO' && newRole !== 'MD' && (
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
               <Select
                 value={newDepartment}
@@ -435,8 +427,7 @@ export default function UsersPage() {
                   { value: 'Research', label: 'Research' },
                 ]}
               />
-            </div>
-          )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining</label>
             <DatePicker
@@ -568,8 +559,8 @@ export default function UsersPage() {
               </div>
             )}
 
-            {/* Day-Off Score — only for ADMIN and MEMBER (CEO/MD can't request day-offs) */}
-            {viewUser.systemRole !== 'CEO' && viewUser.systemRole !== 'MD' && viewUser.systemRole !== 'OWNER' && (() => {
+            {/* Day-Off Score — only for ADMIN and MEMBER */}
+            {viewUser.systemRole !== 'OWNER' && (() => {
               const now = new Date()
               const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
               const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`

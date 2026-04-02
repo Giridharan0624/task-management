@@ -49,10 +49,10 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
   const [search, setSearch] = useState('')
 
   const hasTeamLead = members.some(m => m.projectRole === 'TEAM_LEAD')
-  const isPrivileged = callerSystemRole === 'OWNER' || callerSystemRole === 'CEO' || callerSystemRole === 'MD' || callerSystemRole === 'ADMIN'
+  const isPrivileged = callerSystemRole === 'OWNER' || callerSystemRole === 'ADMIN'
 
   const memberUserIds = new Set(members.map(m => m.userId))
-  const topTierRoles = new Set(['OWNER', 'CEO', 'MD'])
+  const topTierRoles = new Set(['OWNER'])
   const availableUsers = (allUsers ?? []).filter(u => !memberUserIds.has(u.userId) && !topTierRoles.has(u.systemRole))
 
   // Task counts per member

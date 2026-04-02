@@ -29,7 +29,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 }
 
 const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-const TOP_TIER = ['OWNER', 'CEO', 'MD']
+const TOP_TIER = ['OWNER', 'ADMIN']
 
 export default function TasksPage() {
   const router = useRouter()

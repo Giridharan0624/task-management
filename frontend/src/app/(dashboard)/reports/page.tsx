@@ -92,7 +92,7 @@ export default function ReportsPage() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [memberFilter, setMemberFilter] = useState<string>('ALL')
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
+  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
 
   // Summary/Detailed data
   const { start, end, label } = useMemo(() => getDateRange(period, offset), [period, offset])

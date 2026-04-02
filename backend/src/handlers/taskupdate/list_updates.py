@@ -12,7 +12,7 @@ def handler(event, context):
         auth = extract_auth_context(event)
 
         if auth.system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners, CEO, MD, and admins can view all task updates")
+            raise AuthorizationError("Only owners and admins can view all task updates")
 
         query_params = event.get("queryStringParameters") or {}
         date = query_params.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))

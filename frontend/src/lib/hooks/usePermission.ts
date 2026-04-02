@@ -2,12 +2,7 @@
 
 import type { ProjectRole, SystemRole } from '@/types/user'
 
-const TOP_TIER: SystemRole[] = ['OWNER', 'CEO', 'MD']
-const PRIVILEGED: SystemRole[] = ['OWNER', 'CEO', 'MD', 'ADMIN']
-
-function isTopTier(role?: SystemRole) {
-  return !!role && TOP_TIER.includes(role)
-}
+const PRIVILEGED: SystemRole[] = ['OWNER', 'ADMIN']
 
 function isPrivileged(role?: SystemRole) {
   return !!role && PRIVILEGED.includes(role)
@@ -27,9 +22,9 @@ export interface SystemPermissions {
   canCreateProject: boolean
   canManageUsers: boolean
   canManageAdmins: boolean
-  canCreateCeoMd: boolean
   canViewProgress: boolean
   canAssignTasks: boolean
+  canApproveDayOffs: boolean
 }
 
 export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole): Permissions {
@@ -51,15 +46,14 @@ export function usePermission(projectRole?: ProjectRole, systemRole?: SystemRole
 }
 
 export function useSystemPermission(systemRole?: SystemRole): SystemPermissions {
-  const top = isTopTier(systemRole)
   const priv = isPrivileged(systemRole)
 
   return {
     canCreateProject: priv,
     canManageUsers: priv,
-    canManageAdmins: top,
-    canCreateCeoMd: systemRole === 'OWNER',
+    canManageAdmins: systemRole === 'OWNER',
     canViewProgress: priv,
     canAssignTasks: priv,
+    canApproveDayOffs: priv,
   }
 }

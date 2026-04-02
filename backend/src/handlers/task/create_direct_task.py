@@ -31,7 +31,7 @@ def handler(event, context):
         auth = extract_auth_context(event)
 
         if auth.system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners, CEO, MD, and admins can create direct tasks")
+            raise AuthorizationError("Only owners and admins can create direct tasks")
 
         body = validate_body(CreateDirectTaskRequest, event.get("body"))
         user_repo = UserDynamoRepository()

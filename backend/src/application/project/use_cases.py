@@ -36,7 +36,7 @@ class CreateProjectUseCase:
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners, CEO, MD, and admins can create projects")
+            raise AuthorizationError("Only owners and admins can create projects")
 
         team_lead_id = dto.get("team_lead_id")
         member_ids = dto.get("member_ids", [])

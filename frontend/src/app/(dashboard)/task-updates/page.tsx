@@ -102,7 +102,7 @@ export default function TaskUpdatesPage() {
   const avatarMap = new Map<string, string | undefined>()
   for (const u of allUsers ?? []) { if (u.avatarUrl) avatarMap.set(u.userId, u.avatarUrl) }
 
-  const canView = user?.systemRole === 'OWNER' || user?.systemRole === 'CEO' || user?.systemRole === 'MD' || user?.systemRole === 'ADMIN'
+  const canView = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
 
   const filteredUpdates = useMemo(() => {
     if (!updates) return []

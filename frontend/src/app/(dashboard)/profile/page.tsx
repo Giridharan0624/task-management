@@ -17,8 +17,6 @@ import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-700 ring-1 ring-inset ring-purple-200',
-  CEO: 'bg-violet-100 text-violet-700 ring-1 ring-inset ring-violet-200',
-  MD: 'bg-fuchsia-100 text-fuchsia-700 ring-1 ring-inset ring-fuchsia-200',
   ADMIN: 'bg-red-100 text-red-700 ring-1 ring-inset ring-red-200',
   MEMBER: 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200',
 }
