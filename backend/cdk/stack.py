@@ -108,7 +108,7 @@ class TaskManagementStack(Stack):
             rest_api_name="TaskManagementApi",
             deploy_options=apigw.StageOptions(stage_name="prod"),
             default_cors_preflight_options=apigw.CorsOptions(
-                allow_origins=["https://task-flow-ns.vercel.app", "http://localhost:3000"],
+                allow_origins=["https://taskflow-ns.vercel.app", "http://localhost:3000"],
                 allow_methods=apigw.Cors.ALL_METHODS,
                 allow_headers=["Content-Type", "Authorization"],
             ),
@@ -139,7 +139,7 @@ class TaskManagementStack(Stack):
             "TABLE_NAME": table.table_name,
             "USER_POOL_ID": user_pool.user_pool_id,
             "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
-            "ALLOWED_ORIGIN": "https://task-flow-ns.vercel.app",
+            "ALLOWED_ORIGIN": "https://taskflow-ns.vercel.app",
         }
 
         lambda_defaults = dict(
@@ -237,7 +237,7 @@ class TaskManagementStack(Stack):
             cognito_policies=["cognito-idp:AdminCreateUser"],
         )
         create_user_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
-        create_user_fn.add_environment("APP_URL", "https://task-flow-ns.vercel.app")
+        create_user_fn.add_environment("APP_URL", "https://taskflow-ns.vercel.app")
         gmail_secret.grant_read(create_user_fn)
         add_api_lambda(
             "DeleteUser",
