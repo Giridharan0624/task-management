@@ -77,6 +77,12 @@ export function Walkthrough() {
     if (!user || !mounted) return
     const key = STORAGE_PREFIX + user.userId
     const seen = localStorage.getItem(key)
+    // Migrate old global key to per-user key
+    const oldGlobal = localStorage.getItem('taskflow_walkthrough_seen')
+    if (oldGlobal && !seen) {
+      localStorage.setItem(key, 'true')
+      return
+    }
     if (!seen) setVisible(true)
   }, [user, mounted])
 

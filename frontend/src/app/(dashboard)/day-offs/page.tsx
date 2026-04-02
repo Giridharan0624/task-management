@@ -12,6 +12,7 @@ import {
   useCancelDayOff,
 } from '@/lib/hooks/useDayOffs'
 import type { DayOffRequest, DayOffStatus, ApprovalStatus } from '@/types/dayoff'
+import { useUsers } from '@/lib/hooks/useUsers'
 import { Spinner } from '@/components/ui/Spinner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
@@ -31,6 +32,60 @@ function StatusBadge({ status }: { status: DayOffStatus | ApprovalStatus }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-lg ${styles[status] ?? styles['N/A']}`}>
       {status}
+    </span>
+  )
+}
+
+/* ─── Day-Off Score ─── */
+function getDayOffScore(userId: string, dayOffs: DayOffRequest[]) {
+  const now = new Date()
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
+  let daysOff = 0
+  for (const d of dayOffs) {
+    if (d.userId !== userId || d.status !== 'APPROVED') continue
+    const start = d.startDate.slice(0, 10)
+    const end = d.endDate.slice(0, 10)
+    if (start > monthEnd || end < monthStart) continue
+    const from = new Date(Math.max(new Date(start).getTime(), new Date(monthStart).getTime()))
+    const to = new Date(Math.min(new Date(end).getTime(), new Date(monthEnd).getTime()))
+    daysOff += Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  }
+  const score = daysOff === 0 ? 100 : daysOff <= 2 ? 75 : daysOff <= 5 ? 50 : 25
+  return { score, daysOff }
+}
+
+function DayOffScoreCard({ userId, dayOffs }: { userId: string; dayOffs: DayOffRequest[] }) {
+  const { score, daysOff } = getDayOffScore(userId, dayOffs)
+  const scoreColor = score === 100 ? 'text-emerald-600' : score >= 75 ? 'text-blue-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'
+  const scoreBg = score === 100 ? 'bg-emerald-50 border-emerald-200' : score >= 75 ? 'bg-blue-50 border-blue-200' : score >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+  const scoreLabel = score === 100 ? 'Excellent' : score >= 75 ? 'Good' : score >= 50 ? 'Average' : 'Low'
+  const monthName = new Date().toLocaleDateString('en-US', { month: 'long' })
+
+  return (
+    <div className={`rounded-xl border p-3.5 ${scoreBg}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Day-Off Score · {monthName}</p>
+          <div className="flex items-center gap-2">
+            <span className={`text-2xl font-bold tabular-nums ${scoreColor}`}>{score}</span>
+            <span className={`text-[11px] font-semibold ${scoreColor}`}>{scoreLabel}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] text-gray-500">{daysOff} day{daysOff !== 1 ? 's' : ''} off</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DayOffScoreBadge({ userId, dayOffs }: { userId: string; dayOffs: DayOffRequest[] }) {
+  const { score } = getDayOffScore(userId, dayOffs)
+  const color = score === 100 ? 'bg-emerald-100 text-emerald-700' : score >= 75 ? 'bg-blue-100 text-blue-700' : score >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold tabular-nums ${color}`}>
+      {score}
     </span>
   )
 }
@@ -272,6 +327,7 @@ export default function DayOffsPage() {
   const { data: myDayOffs, isLoading: myLoading } = useMyDayOffs()
   const { data: pendingDayOffs, isLoading: pendingLoading } = usePendingDayOffs()
   const { data: allDayOffs, isLoading: allLoading } = useAllDayOffs()
+  const { data: allUsers } = useUsers()
 
   const createMutation = useCreateDayOff()
   const approveMutation = useApproveDayOff()
@@ -309,6 +365,37 @@ export default function DayOffsPage() {
           </Button>
         )}
       </div>
+
+      {/* ── Team Day-Off Scores (OWNER/CEO/MD) ── */}
+      {isOwner && allDayOffs && allUsers && (
+        <section>
+          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Team Day-Off Scores · {new Date().toLocaleDateString('en-US', { month: 'long' })}</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {allUsers.filter(u => u.systemRole !== 'OWNER' && u.systemRole !== 'CEO' && u.systemRole !== 'MD').map(u => {
+              const { score, daysOff } = getDayOffScore(u.userId, allDayOffs)
+              const color = score === 100 ? 'text-emerald-600' : score >= 75 ? 'text-blue-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'
+              const bg = score === 100 ? 'border-emerald-100' : score >= 75 ? 'border-blue-100' : score >= 50 ? 'border-amber-100' : 'border-red-100'
+              return (
+                <div key={u.userId} className={`bg-white rounded-xl border ${bg} p-3 shadow-sm`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[12px] font-semibold text-gray-800 truncate">{u.name || u.email}</p>
+                    <span className={`text-lg font-bold tabular-nums ${color}`}>{score}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400">{u.systemRole}</span>
+                    <span className="text-[10px] text-gray-400">{daysOff}d off</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── My Day-Off Score (ADMIN/MEMBER) ── */}
+      {user && !isOwner && allDayOffs && (
+        <DayOffScoreCard userId={user.userId} dayOffs={allDayOffs} />
+      )}
 
       {/* ── Section 1: My Requests (not for OWNER) ── */}
       {!isOwner && (
@@ -406,6 +493,7 @@ export default function DayOffsPage() {
                       <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Dates</th>
                       <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Reason</th>
                       <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Approved By</th>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Score</th>
                       <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</th>
                     </tr>
                   </thead>
@@ -426,6 +514,9 @@ export default function DayOffsPage() {
                           <span className="font-semibold text-gray-700">
                             {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED' ? req.adminName : 'Awaiting CEO/MD'}
                           </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <DayOffScoreBadge userId={req.userId} dayOffs={allDayOffs ?? []} />
                         </td>
                         <td className="px-5 py-3.5">
                           <StatusBadge status={req.status} />

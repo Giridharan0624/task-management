@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/Select'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { FilterSelect } from '@/components/ui/FilterSelect'
+import { useAllDayOffs } from '@/lib/hooks/useDayOffs'
 import type { User } from '@/types/user'
 
 const ROLE_COLORS: Record<string, string> = {
@@ -33,6 +34,7 @@ export default function UsersPage() {
   const systemPerms = useSystemPermission(currentUser?.systemRole)
   const { data: users, isLoading } = useUsers()
   const { data: todayAttendance } = useTodayAttendance()
+  const { data: allDayOffs } = useAllDayOffs()
   const createUserMutation = useCreateUser()
   const deleteUserMutation = useDeleteUser()
   const updateRole = useUpdateUserRole()
@@ -565,6 +567,45 @@ export default function UsersPage() {
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewUser.bio}</p>
               </div>
             )}
+
+            {/* Day-Off Score */}
+            {(() => {
+              const now = new Date()
+              const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+              const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
+              let daysOff = 0
+              for (const d of allDayOffs ?? []) {
+                if (d.userId !== viewUser.userId || d.status !== 'APPROVED') continue
+                const start = d.startDate.slice(0, 10)
+                const end = d.endDate.slice(0, 10)
+                if (start > monthEnd || end < monthStart) continue
+                const from = new Date(Math.max(new Date(start).getTime(), new Date(monthStart).getTime()))
+                const to = new Date(Math.min(new Date(end).getTime(), new Date(monthEnd).getTime()))
+                daysOff += Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
+              }
+              const score = daysOff === 0 ? 100 : daysOff <= 2 ? 75 : daysOff <= 5 ? 50 : 25
+              const scoreColor = score === 100 ? 'text-emerald-600' : score >= 75 ? 'text-blue-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'
+              const scoreBg = score === 100 ? 'bg-emerald-50 border-emerald-200' : score >= 75 ? 'bg-blue-50 border-blue-200' : score >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+              const scoreLabel = score === 100 ? 'Excellent' : score >= 75 ? 'Good' : score >= 50 ? 'Average' : 'Low'
+              const monthName = now.toLocaleDateString('en-US', { month: 'long' })
+
+              return (
+                <div className={`rounded-xl border p-3.5 ${scoreBg}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Day-Off Score · {monthName}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-2xl font-bold tabular-nums ${scoreColor}`}>{score}</span>
+                        <span className={`text-[11px] font-semibold ${scoreColor}`}>{scoreLabel}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] text-gray-500">{daysOff} day{daysOff !== 1 ? 's' : ''} off</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Details */}
             <div className="grid grid-cols-2 gap-3">
