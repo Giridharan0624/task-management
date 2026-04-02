@@ -97,9 +97,9 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
           <label className="text-xs font-medium text-gray-500 mb-1 block">Priority</label>
           <div className="flex gap-1.5">
             {([
-              { value: 'LOW' as const, label: 'Low', active: 'bg-slate-100 border-slate-400 text-slate-700', idle: 'bg-slate-50 border-slate-200 text-slate-500' },
-              { value: 'MEDIUM' as const, label: 'Med', active: 'bg-amber-100 border-amber-400 text-amber-700', idle: 'bg-amber-50 border-amber-200 text-amber-600' },
-              { value: 'HIGH' as const, label: 'High', active: 'bg-red-100 border-red-400 text-red-700', idle: 'bg-red-50 border-red-200 text-red-500' },
+              { value: 'LOW' as const, label: 'Low', active: 'bg-slate-200 border-slate-500 text-slate-800 ring-2 ring-slate-300', idle: 'bg-white border-slate-200 text-slate-400' },
+              { value: 'MEDIUM' as const, label: 'Med', active: 'bg-amber-200 border-amber-500 text-amber-800 ring-2 ring-amber-300', idle: 'bg-white border-amber-200 text-amber-400' },
+              { value: 'HIGH' as const, label: 'High', active: 'bg-red-200 border-red-500 text-red-800 ring-2 ring-red-300', idle: 'bg-white border-red-200 text-red-400' },
             ]).map((p) => (
               <label key={p.value} className="flex-1 cursor-pointer">
                 <input type="radio" value={p.value} {...register('priority')} className="sr-only" />
