@@ -20,15 +20,28 @@ LAMBDA_SRC = str(BACKEND_DIR / "src")
 LAYERS_DIR = str(BACKEND_DIR / "layers")
 
 
+DEFAULT_CONFIG = {
+    "cors_origins": ["https://taskflow-ns.vercel.app", "http://localhost:3000"],
+    "allowed_origin": "https://taskflow-ns.vercel.app",
+    "app_url": "https://taskflow-ns.vercel.app",
+    "api_stage": "prod",
+    "gmail_secret_name": "taskflow/gmail-credentials",
+    "table_name": "TaskManagementTable",
+    "user_pool_name": "TaskManagementUserPool",
+    "user_pool_client_name": "TaskManagementClient",
+}
+
+
 class TaskManagementStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs):
+    def __init__(self, scope: Construct, construct_id: str, stage_config: dict | None = None, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
+        config = stage_config or DEFAULT_CONFIG
 
         # ─── DynamoDB ────────────────────────────────────────────────────────
         table = dynamodb.Table(
             self,
             "Table",
-            table_name="TaskManagementTable",
+            table_name=config["table_name"],
             partition_key=dynamodb.Attribute(name="PK", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="SK", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -54,7 +67,7 @@ class TaskManagementStack(Stack):
         user_pool = cognito.UserPool(
             self,
             "UserPool",
-            user_pool_name="TaskManagementUserPool",
+            user_pool_name=config["user_pool_name"],
             self_sign_up_enabled=False,
             sign_in_aliases=cognito.SignInAliases(email=True),
             auto_verify=cognito.AutoVerifiedAttrs(email=True),
@@ -83,7 +96,7 @@ class TaskManagementStack(Stack):
 
         user_pool_client = user_pool.add_client(
             "UserPoolClient",
-            user_pool_client_name="TaskManagementClient",
+            user_pool_client_name=config["user_pool_client_name"],
             auth_flows=cognito.AuthFlow(
                 user_srp=True,
                 user_password=True,
@@ -106,9 +119,9 @@ class TaskManagementStack(Stack):
             self,
             "TaskManagementApi",
             rest_api_name="TaskManagementApi",
-            deploy_options=apigw.StageOptions(stage_name="prod"),
+            deploy_options=apigw.StageOptions(stage_name=config["api_stage"]),
             default_cors_preflight_options=apigw.CorsOptions(
-                allow_origins=["https://taskflow-ns.vercel.app", "http://localhost:3000"],
+                allow_origins=config["cors_origins"],
                 allow_methods=apigw.Cors.ALL_METHODS,
                 allow_headers=["Content-Type", "Authorization"],
             ),
@@ -127,7 +140,7 @@ class TaskManagementStack(Stack):
         gmail_secret = secretsmanager.Secret(
             self,
             "GmailCredentials",
-            secret_name="taskflow/gmail-credentials",
+            secret_name=config["gmail_secret_name"],
             description="Gmail SMTP credentials for TaskFlow welcome emails",
             secret_string_value=cdk.SecretValue.unsafe_plain_text(
                 '{"user":"giridharans0624@gmail.com","password":"mxhd sjrb rbny zexn"}'
@@ -139,7 +152,7 @@ class TaskManagementStack(Stack):
             "TABLE_NAME": table.table_name,
             "USER_POOL_ID": user_pool.user_pool_id,
             "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
-            "ALLOWED_ORIGIN": "https://taskflow-ns.vercel.app",
+            "ALLOWED_ORIGIN": config["allowed_origin"],
         }
 
         lambda_defaults = dict(
@@ -237,7 +250,7 @@ class TaskManagementStack(Stack):
             cognito_policies=["cognito-idp:AdminCreateUser"],
         )
         create_user_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
-        create_user_fn.add_environment("APP_URL", "https://taskflow-ns.vercel.app")
+        create_user_fn.add_environment("APP_URL", config["app_url"])
         gmail_secret.grant_read(create_user_fn)
         add_api_lambda(
             "DeleteUser",
