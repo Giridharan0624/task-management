@@ -8,12 +8,8 @@ import (
 	"github.com/go-resty/resty/v2"
 
 	"taskflow-desktop/internal/auth"
+	"taskflow-desktop/internal/config"
 	"taskflow-desktop/internal/state"
-)
-
-const (
-	// Base URL matches the existing deployed backend
-	BaseURL = "https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging"
 )
 
 // StartTimerData is the payload for POST /attendance/sign-in.
@@ -66,8 +62,9 @@ type Client struct {
 
 // NewClient creates a new API client.
 func NewClient(authService *auth.Service, appState *state.AppState) *Client {
+	cfg := config.Get()
 	client := resty.New().
-		SetBaseURL(BaseURL).
+		SetBaseURL(cfg.APIURL).
 		SetHeader("Content-Type", "application/json")
 
 	return &Client{

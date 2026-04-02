@@ -15,15 +15,11 @@ import (
 	cognito "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 
+	"taskflow-desktop/internal/config"
 	"taskflow-desktop/internal/state"
 )
 
 const (
-	// These match the existing Cognito configuration in backend/cdk/stack.py
-	CognitoRegion   = "ap-south-1"
-	UserPoolID      = "ap-south-1_NedaPlHsx"
-	ClientID        = "36i0ejo32b4c5u6un0g75h4bme"
-
 	// Keychain service name for storing tokens
 	KeyringService = "taskflow-desktop"
 )
@@ -51,21 +47,24 @@ type Service struct {
 	client         *cognito.Client
 	tokens         *Tokens
 	state          *state.AppState
+	clientID       string // Cognito app client ID from config
 	lastLoginEmail string // stored for NEW_PASSWORD_REQUIRED challenge
 }
 
 // NewService creates a new auth service.
 func NewService(appState *state.AppState) *Service {
+	cfg := config.Get()
+
 	// Use anonymous credentials — Cognito InitiateAuth is a public (unauthenticated) API.
-	// No AWS access keys needed, just like the web app's amazon-cognito-identity-js.
 	client := cognito.New(cognito.Options{
-		Region: CognitoRegion,
+		Region:      cfg.CognitoRegion,
 		Credentials: aws.AnonymousCredentials{},
 	})
 
 	return &Service{
-		client: client,
-		state:  appState,
+		client:   client,
+		state:    appState,
+		clientID: cfg.CognitoClientID,
 	}
 }
 
@@ -89,7 +88,7 @@ func (s *Service) Login(identifier, password string) (*LoginResult, error) {
 
 	input := &cognito.InitiateAuthInput{
 		AuthFlow: types.AuthFlowTypeUserPasswordAuth,
-		ClientId: aws.String(ClientID),
+		ClientId: aws.String(s.clientID),
 		AuthParameters: map[string]string{
 			"USERNAME": email,
 			"PASSWORD": password,
@@ -141,7 +140,7 @@ func (s *Service) Login(identifier, password string) (*LoginResult, error) {
 func (s *Service) CompleteNewPasswordChallenge(session, newPassword string) error {
 	input := &cognito.RespondToAuthChallengeInput{
 		ChallengeName: types.ChallengeNameTypeNewPasswordRequired,
-		ClientId:      aws.String(ClientID),
+		ClientId:      aws.String(s.clientID),
 		Session:       aws.String(session),
 		ChallengeResponses: map[string]string{
 			"NEW_PASSWORD": newPassword,
@@ -216,7 +215,7 @@ func (s *Service) refreshTokens() error {
 
 	input := &cognito.InitiateAuthInput{
 		AuthFlow: types.AuthFlowTypeRefreshTokenAuth,
-		ClientId: aws.String(ClientID),
+		ClientId: aws.String(s.clientID),
 		AuthParameters: map[string]string{
 			"REFRESH_TOKEN": s.tokens.RefreshToken,
 		},
@@ -301,12 +300,11 @@ func isEmployeeID(s string) bool {
 	return employeeIDRegex.MatchString(s)
 }
 
-const apiBaseURL = "https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging"
-
 // resolveEmployeeID calls GET /resolve-employee?employeeId=... to get the email.
 // This endpoint does not require authentication.
 func (s *Service) resolveEmployeeID(employeeID string) (string, error) {
-	url := fmt.Sprintf("%s/resolve-employee?employeeId=%s", apiBaseURL, employeeID)
+	cfg := config.Get()
+	url := fmt.Sprintf("%s/resolve-employee?employeeId=%s", cfg.APIURL, employeeID)
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("network error: %w", err)

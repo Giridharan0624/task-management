@@ -26,6 +26,9 @@ wails_bindings/
 Thumbs.db
 .DS_Store
 
+# Config (contains environment-specific values)
+config.json
+
 # Temp/generated
 *.log
 generate-icon.html
