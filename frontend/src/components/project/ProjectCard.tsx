@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import type { Project } from '@/types/project'
 import { Button } from '@/components/ui/Button'
+import { getProjectColor } from '@/lib/utils/projectColor'
 
 interface ProjectCardProps {
   project: Project
@@ -12,18 +13,8 @@ interface ProjectCardProps {
   creatorName?: string
 }
 
-const PROJECT_GRADIENTS = [
-  'from-indigo-500 to-violet-600',
-  'from-cyan-500 to-blue-600',
-  'from-emerald-500 to-teal-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-500 to-pink-600',
-  'from-fuchsia-500 to-purple-600',
-]
-
 function getGradient(name: string): string {
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return PROJECT_GRADIENTS[hash % PROJECT_GRADIENTS.length]
+  return getProjectColor(name)
 }
 
 export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting, creatorName }: ProjectCardProps) {

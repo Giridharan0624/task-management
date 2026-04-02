@@ -199,6 +199,8 @@ function UpcomingDeadlines({ tasks }: { tasks: { taskId: string; projectId: stri
 
 
 /* ─── Project Progress Cards (for owner/admin) ─── */
+import { getProjectColor } from '@/lib/utils/projectColor'
+
 function ProjectProgressCards({ projects }: { projects: { projectId: string; name: string; taskCount?: number; doneCount?: number; completionPercent?: number }[] }) {
   if (!projects.length) return null
   return (
@@ -212,7 +214,7 @@ function ProjectProgressCards({ projects }: { projects: { projectId: string; nam
           return (
             <Link key={p.projectId} href={`/projects/${p.projectId}`} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${getProjectColor(p.name)} flex items-center justify-center flex-shrink-0`}>
                   <span className="text-white text-[11px] font-bold">{p.name.charAt(0).toUpperCase()}</span>
                 </div>
                 <div className="min-w-0 flex-1">
