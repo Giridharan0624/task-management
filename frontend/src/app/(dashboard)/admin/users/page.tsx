@@ -354,7 +354,8 @@ export default function UsersPage() {
                     )}
                     {u.systemRole !== 'OWNER' && u.userId !== currentUser?.userId && (
                       (() => {
-                        const canDelete = isTopTier || (currentUser?.systemRole === 'ADMIN' && u.systemRole !== 'ADMIN')
+                        const isCeoMd = u.systemRole === 'CEO' || u.systemRole === 'MD'
+                        const canDelete = isOwner || (isTopTier && !isCeoMd) || (currentUser?.systemRole === 'ADMIN' && u.systemRole === 'MEMBER')
                         return canDelete ? (
                           <Button variant="danger" size="sm" onClick={() => setDeleteTarget(u)}>
                             Delete

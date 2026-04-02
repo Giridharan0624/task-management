@@ -63,7 +63,7 @@ const STEPS: WalkthroughStep[] = [
   },
 ]
 
-const STORAGE_KEY = 'taskflow_walkthrough_seen'
+const STORAGE_PREFIX = 'taskflow_walkthrough_seen_'
 
 export function Walkthrough() {
   const { user } = useAuth()
@@ -75,14 +75,15 @@ export function Walkthrough() {
 
   useEffect(() => {
     if (!user || !mounted) return
-    const seen = localStorage.getItem(STORAGE_KEY)
+    const key = STORAGE_PREFIX + user.userId
+    const seen = localStorage.getItem(key)
     if (!seen) setVisible(true)
   }, [user, mounted])
 
   const dismiss = useCallback(() => {
     setVisible(false)
-    localStorage.setItem(STORAGE_KEY, 'true')
-  }, [])
+    if (user) localStorage.setItem(STORAGE_PREFIX + user.userId, 'true')
+  }, [user])
 
   const next = () => {
     if (step < STEPS.length - 1) setStep(s => s + 1)
@@ -176,6 +177,8 @@ export function Walkthrough() {
 /**
  * Call this to reset the walkthrough (show it again on next page load).
  */
-export function resetWalkthrough() {
-  localStorage.removeItem(STORAGE_KEY)
+export function resetWalkthrough(userId?: string) {
+  if (userId) {
+    localStorage.removeItem(STORAGE_PREFIX + userId)
+  }
 }

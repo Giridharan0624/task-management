@@ -309,10 +309,12 @@ class DeleteUserUseCase:
             raise AuthorizationError("Cannot delete the owner account")
 
         # Authorization: who can delete whom
-        if caller_system_role in TOP_TIER_VALUES:
-            # TOP_TIER can delete anyone except other top-tier
+        if caller_system_role == SystemRole.OWNER.value:
+            pass  # OWNER can delete anyone (except self and OWNER, already checked above)
+        elif caller_system_role in TOP_TIER_VALUES:
+            # CEO/MD can delete ADMIN and MEMBER only
             if target_user.system_role.value in TOP_TIER_VALUES:
-                raise AuthorizationError("Cannot delete another top-tier account (OWNER/CEO/MD)")
+                raise AuthorizationError("Only the owner can delete CEO/MD accounts")
         elif caller_system_role == SystemRole.ADMIN.value:
             # Admin can only delete MEMBER
             if target_user.system_role != SystemRole.MEMBER:
