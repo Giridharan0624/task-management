@@ -129,14 +129,14 @@ function TaskRow({ task, onResume, loading }: {
         {/* Session times — spread across available space */}
         <div className="flex-1 flex flex-wrap gap-x-3 gap-y-0.5">
           {task.sessions.map((s, i) => (
-            <span key={i} className="text-[10px] text-gray-400 tabular-nums font-mono">
-              {s.signInAt}{s.signOutAt ? ` – ${s.signOutAt}` : ''}
+            <span key={i} className={`text-[10px] tabular-nums font-mono ${s.signOutAt ? 'text-gray-400' : 'text-emerald-500'}`}>
+              {s.signInAt}{s.signOutAt ? ` – ${s.signOutAt}` : ' – now'}
             </span>
           ))}
         </div>
 
         {/* Total duration */}
-        <span className="text-[13px] font-bold text-indigo-600 tabular-nums w-[70px] text-right flex-shrink-0">
+        <span className={`text-[13px] font-bold tabular-nums w-[80px] text-right flex-shrink-0 font-mono ${task.sessions.some(s => !s.signOutAt) ? 'text-emerald-600' : 'text-indigo-600'}`}>
           {formatDuration(task.totalHours)}
         </span>
       </div>
@@ -167,16 +167,11 @@ export function AttendanceButton() {
   const sessions = (active && attendance?.currentSignInAt)
     ? rawSessions.map(s => (!s.signOutAt ? { ...s, signInAt: attendance.currentSignInAt! } : s))
     : rawSessions
-  // In stopped state, ALL sessions are done — don't rely on signOutAt being set
-  // In active state, filter out the currently running session (last one without signOutAt)
-  const pastSessions = active
-    ? sessions.filter(s => s.signOutAt)
-    : sessions
   const totalHours = sessions.reduce((s, se) => s + getSessionHours(se), 0)
 
-  // Group past sessions by task for the session list
+  // Group ALL sessions by task (including running session)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const groupedTasks = useMemo(() => groupSessionsByTask(pastSessions), [pastSessions, totalHours])
+  const groupedTasks = useMemo(() => groupSessionsByTask(sessions), [sessions, totalHours])
 
   const resume = (task: GroupedTask) => {
     signIn.mutate({
@@ -221,7 +216,7 @@ export function AttendanceButton() {
         {/* Total bar */}
         <div className="px-5 py-2 bg-emerald-100/50 border-t border-emerald-200/50 flex items-center justify-between">
           <span className="text-[11px] font-semibold text-emerald-700">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
-          <span className="text-[12px] font-bold text-emerald-700 tabular-nums">{formatDuration(totalHours)} today</span>
+          <span className="text-[12px] font-bold text-emerald-700 tabular-nums font-mono">{formatDuration(totalHours)} today</span>
         </div>
 
         {/* Previous completed sessions — grouped by task */}
@@ -250,9 +245,9 @@ export function AttendanceButton() {
       <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
         <div>
           <p className="text-[13px] font-bold text-gray-900">Time Tracker</p>
-          {pastSessions.length > 0 && <p className="text-[11px] text-gray-400">{pastSessions.length} session{pastSessions.length !== 1 ? 's' : ''} today</p>}
+          {sessions.length > 0 && <p className="text-[11px] text-gray-400">{sessions.length} session{sessions.length !== 1 ? 's' : ''} today</p>}
         </div>
-        <span className="text-[20px] font-bold text-gray-700 font-mono tabular-nums">{pastSessions.length > 0 ? formatDuration(totalHours) : '00:00:00'}</span>
+        <span className="text-[20px] font-bold text-gray-700 font-mono tabular-nums">{sessions.length > 0 ? formatDuration(totalHours) : '00:00:00'}</span>
       </div>
 
       {/* Today's sessions — grouped by task, each with resume button */}
