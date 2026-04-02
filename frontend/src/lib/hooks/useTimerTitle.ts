@@ -48,7 +48,7 @@ function setTimerFavicon(active: boolean) {
   // Green dot — bottom right
   ctx.beginPath()
   ctx.arc(26, 26, 5, 0, Math.PI * 2)
-  ctx.fillStyle = '#10b981'
+  ctx.fillStyle = '#ef4444'
   ctx.fill()
   ctx.strokeStyle = '#ffffff'
   ctx.lineWidth = 1.5
