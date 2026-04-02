@@ -7,6 +7,7 @@ import type {
 } from "../app";
 import { Timer, formatDuration } from "./Timer";
 import { TaskSelector } from "./TaskSelector";
+import { TaskFlowLogo } from "./Logo";
 import { useTheme } from "../lib/useTheme";
 
 interface TimerViewProps {
@@ -264,10 +265,16 @@ function Shell({ user, onLogout, children, bottom }: { user: User; onLogout: () 
       {/* Pinned bottom area (task selector) */}
       {bottom}
 
-      <footer class="px-3 py-1.5 text-center" style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)" }}>
+      <footer class="px-3 py-1.5 flex items-center justify-between" style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)" }}>
+        <div class="flex items-center gap-1.5">
+          <TaskFlowLogo size={16} />
+          <span class="text-[10px] font-extrabold tracking-tight" style={{ color: "var(--color-text-muted)" }}>
+            Task<span style={{ color: "var(--color-primary)" }}>Flow</span>
+          </span>
+        </div>
         <a href="https://taskflow-ns.vercel.app" target="_blank"
           class="text-[10px] font-medium transition-colors" style={{ color: "var(--color-text-muted)" }}>
-          Open Web Dashboard ↗
+          Dashboard ↗
         </a>
       </footer>
     </div>

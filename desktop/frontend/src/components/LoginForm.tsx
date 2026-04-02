@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import type { User, LoginResult } from "../app";
 import { useTheme } from "../lib/useTheme";
+import { TaskFlowLogo } from "./Logo";
 
 interface LoginFormProps {
   onSuccess: (user: User) => void;
@@ -59,11 +60,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
       {/* Logo */}
       <div class="mb-8 text-center">
-        <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-          style={{ background: "var(--color-primary-light)" }}>
-          <span class="text-xl font-bold" style={{ color: "var(--color-primary)" }}>T</span>
-        </div>
-        <h1 class="text-xl font-bold" style={{ color: "var(--color-text)" }}>TaskFlow</h1>
+        <TaskFlowLogo size={56} class="mx-auto mb-4" />
+        <h1 class="text-xl font-extrabold tracking-tight" style={{ color: "var(--color-text)" }}>
+          Task<span style={{ color: "var(--color-primary)" }}>Flow</span>
+        </h1>
         <p class="text-[12px] mt-1" style={{ color: "var(--color-text-muted)" }}>Desktop Time Tracker</p>
       </div>
 

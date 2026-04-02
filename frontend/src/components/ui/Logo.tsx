@@ -26,25 +26,25 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
         'shadow-lg shadow-indigo-500/25',
         'ring-1 ring-indigo-400/10',
       )}>
-        <svg viewBox="0 0 32 32" fill="none" className="w-[58%] h-[58%]">
-          {/* Vertical stem */}
+        <svg viewBox="0 0 32 32" fill="none" className="w-[62%] h-[62%]">
+          {/* Vertical stem — centered */}
           <path
-            d="M10 7v18"
+            d="M13 6v20"
             stroke="white"
             strokeWidth="3.2"
             strokeLinecap="round"
           />
-          {/* Top crossbar — extends left for T, right with arrow for F */}
+          {/* Top crossbar with arrow */}
           <path
-            d="M4 7h16l4 4"
+            d="M7 6h14l4 4"
             stroke="white"
             strokeWidth="2.8"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* Middle bar → shorter flow arrow */}
+          {/* Middle bar — flow arrow */}
           <path
-            d="M10 16h8l3 3"
+            d="M13 16h8l3 3"
             stroke="rgba(255,255,255,0.55)"
             strokeWidth="2.4"
             strokeLinecap="round"
