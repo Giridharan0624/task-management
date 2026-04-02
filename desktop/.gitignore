@@ -1,5 +1,6 @@
 # Build output
 build/bin/
+build/windows/installer/*.exe
 frontend/dist/
 frontend/node_modules/
 
@@ -11,6 +12,10 @@ frontend/node_modules/
 *.dylib
 vendor/
 
+# Wails
+wailsbindings/
+wails_bindings/
+
 # IDE
 .vscode/
 .idea/
@@ -20,3 +25,9 @@ vendor/
 # OS
 Thumbs.db
 .DS_Store
+
+# Temp/generated
+*.log
+generate-icon.html
+convert-icon.ps1
+install-nsis.ps1

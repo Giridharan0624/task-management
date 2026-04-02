@@ -262,7 +262,6 @@ function Shell({ user, onLogout, children, bottom }: { user: User; onLogout: () 
 
       <div class="flex-1 overflow-y-auto">{children}</div>
 
-      {/* Pinned bottom area (task selector) */}
       {bottom}
 
       <footer class="px-3 py-1.5 flex items-center justify-between" style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)" }}>
