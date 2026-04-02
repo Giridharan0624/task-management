@@ -200,7 +200,50 @@
 
   /* Emerald active states (timer) */
   .dark .border-emerald-200 { border-color: rgba(16,185,129,0.25) !important; }
+  .dark .border-2.border-emerald-200 { border-color: rgba(16,185,129,0.3) !important; }
   .dark .bg-emerald-50\/50 { background-color: rgba(16,185,129,0.08) !important; }
+  .dark .bg-emerald-50\/30 { background-color: rgba(16,185,129,0.06) !important; }
+  .dark .bg-emerald-100\/50 { background-color: rgba(16,185,129,0.12) !important; }
+  .dark .border-emerald-200\/50 { border-color: rgba(16,185,129,0.15) !important; }
+  .dark .bg-white\/50 { background-color: rgba(25,27,36,0.6) !important; }
+
+  /* Emerald text for timer */
+  .dark .text-emerald-800 { color: #6ee7b7 !important; }
+  .dark .text-emerald-600 { color: #34d399 !important; }
+
+  /* Select/dropdown in dark mode */
+  .dark select option { background: #1f222c !important; color: #e4e4ec !important; }
+  .dark select option:checked { background: #1e1b4b !important; color: #818cf8 !important; }
+  .dark select option:hover { background: #252836 !important; }
+
+  /* Gradient stat cards — keep gradient visible in dark */
+  .dark .bg-gradient-to-br { opacity: 0.9; }
+
+  /* White text on gradient cards should stay white in dark mode */
+  .dark .bg-gradient-to-br .text-white { color: #ffffff !important; }
+
+  /* Red text variants */
+  .dark .text-red-600 { color: #f87171 !important; }
+  .dark .text-red-500 { color: #ef4444 !important; }
+
+  /* Amber text variants */
+  .dark .text-amber-600 { color: #fbbf24 !important; }
+  .dark .text-amber-500 { color: #f59e0b !important; }
+
+  /* Blue text */
+  .dark .text-blue-600 { color: #60a5fa !important; }
+
+  /* Indigo text */
+  .dark .text-indigo-600 { color: #818cf8 !important; }
+  .dark .text-indigo-500 { color: #a5b4fc !important; }
+
+  /* Hover on border for indigo */
+  .dark .hover\:border-indigo-200\/60:hover { border-color: rgba(99,102,241,0.25) !important; }
+  .dark .hover\:border-indigo-200:hover { border-color: rgba(99,102,241,0.3) !important; }
+  .dark .hover\:border-indigo-300:hover { border-color: rgba(99,102,241,0.35) !important; }
+
+  /* Hover shadow in dark */
+  .dark .hover\:shadow-md:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
 
   /* Kanban scroll */
   .dark .kanban-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1) !important; }
