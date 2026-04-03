@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from domain.activity.entities import UserActivity
+from domain.activity.entities import UserActivity, DailySummary
 
 
 class IActivityRepository(ABC):
@@ -18,4 +18,12 @@ class IActivityRepository(ABC):
 
     @abstractmethod
     def find_all_by_date_range(self, start_date: str, end_date: str) -> list[UserActivity]:
+        ...
+
+    @abstractmethod
+    def save_summary(self, summary: DailySummary) -> None:
+        ...
+
+    @abstractmethod
+    def find_summary(self, user_id: str, date: str) -> Optional[DailySummary]:
         ...

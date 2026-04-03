@@ -8,6 +8,7 @@ STAGING_CONFIG = {
     "app_url": "http://localhost:3000",
     "api_stage": "staging",
     "gmail_secret_name": "taskflow-staging/gmail-credentials",
+    "groq_secret_name": "taskflow-staging/groq-api-key",
     "table_name": "TaskManagementTable-staging",
     "user_pool_name": "TaskManagementUserPool-staging",
     "user_pool_client_name": "TaskManagementClient-staging",

@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 
-from domain.activity.entities import UserActivity, ActivityBucket
+from domain.activity.entities import UserActivity, ActivityBucket, DailySummary
 from domain.activity.repository import IActivityRepository
 from infrastructure.dynamodb.user_repository import UserDynamoRepository
+from infrastructure.ai.groq_service import generate_work_summary
 from shared.errors import ValidationError, AuthorizationError
 
 
@@ -98,3 +99,66 @@ class GetActivityReportUseCase:
 
         activities = self._activity_repo.find_all_by_date_range(start_date, end_date)
         return [a.to_dict() for a in activities]
+
+
+class GenerateSummaryUseCase:
+    """Generates an AI work summary for a user's daily activity. Admin only."""
+
+    def __init__(self, activity_repo: IActivityRepository):
+        self._activity_repo = activity_repo
+
+    def execute(self, caller_system_role: str, target_user_id: str, date: str, task_context: str = "") -> dict:
+        if caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("Only admins can generate summaries")
+
+        if not target_user_id or not date:
+            raise ValidationError("user_id and date are required")
+
+        # Get the user's activity for the day
+        activity = self._activity_repo.find_by_user_and_date(target_user_id, date)
+        if not activity:
+            raise ValidationError(f"No activity data found for {date}")
+
+        if len(activity.buckets) == 0:
+            raise ValidationError("No activity buckets recorded for this day")
+
+        # Call Groq AI
+        ai_result = generate_work_summary(activity.to_dict(), task_context)
+
+        # Build and save summary
+        summary = DailySummary(
+            user_id=target_user_id,
+            date=date,
+            summary=ai_result["summary"],
+            key_activities=ai_result["key_activities"],
+            productivity_score=ai_result["productivity_score"],
+            concerns=ai_result["concerns"],
+            total_active_minutes=activity.total_active_minutes,
+            total_idle_minutes=activity.total_idle_minutes,
+            app_usage=activity.app_usage,
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            user_name=activity.user_name,
+        )
+
+        self._activity_repo.save_summary(summary)
+        return summary.to_dict()
+
+
+class GetSummaryUseCase:
+    """Returns a stored AI summary for a user+date."""
+
+    def __init__(self, activity_repo: IActivityRepository):
+        self._activity_repo = activity_repo
+
+    def execute(self, caller_user_id: str, caller_system_role: str, target_user_id: str, date: str) -> dict | None:
+        # Users can view their own summary; admins can view anyone's
+        if caller_user_id != target_user_id and caller_system_role not in PRIVILEGED_ROLES:
+            raise AuthorizationError("You can only view your own summary")
+
+        if not date:
+            date = _today()
+
+        summary = self._activity_repo.find_summary(target_user_id, date)
+        if not summary:
+            return None
+        return summary.to_dict()

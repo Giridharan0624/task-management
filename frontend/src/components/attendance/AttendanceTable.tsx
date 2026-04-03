@@ -127,6 +127,7 @@ export function AttendanceTable() {
                       <div>
                         <p className="text-sm font-semibold text-emerald-700">{record.currentTask.taskTitle}</p>
                         <p className="text-xs text-gray-400">{record.currentTask.projectName}</p>
+                        {(() => { const active = record.sessions.find(s => !s.signOutAt); return active?.description ? <p className="text-[10px] text-gray-400 italic mt-0.5">— {active.description}</p> : null })()}
                       </div>
                     ) : record.status === 'SIGNED_IN' ? (
                       <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-700 uppercase tracking-wide">

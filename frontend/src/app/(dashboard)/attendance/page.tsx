@@ -32,11 +32,11 @@ function formatDateLabel(dateStr: string) {
 }
 
 function generateCSV(records: Attendance[]): string {
-  const rows: string[][] = [['Name', 'Email', 'Role', 'Date', 'Session #', 'Task', 'Project', 'Start', 'End', 'Duration']]
+  const rows: string[][] = [['Name', 'Email', 'Role', 'Date', 'Session #', 'Task', 'Project', 'Description', 'Start', 'End', 'Duration']]
   for (const r of records) {
     for (let i = 0; i < r.sessions.length; i++) {
       const s = r.sessions[i]
-      rows.push([r.userName, r.userEmail, r.systemRole, r.date, String(i + 1), s.taskTitle || 'General', s.projectName || '-', formatTime(s.signInAt), s.signOutAt ? formatTime(s.signOutAt) : 'Active', formatDuration(getSessionHours(s))])
+      rows.push([r.userName, r.userEmail, r.systemRole, r.date, String(i + 1), s.taskTitle || 'General', s.projectName || '-', s.description || '', formatTime(s.signInAt), s.signOutAt ? formatTime(s.signOutAt) : 'Active', formatDuration(getSessionHours(s))])
     }
   }
   return rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -283,7 +283,7 @@ export default function AttendancePage() {
               <div className="px-5 py-10 text-center text-[13px] text-gray-300">No attendance records for {monthLabel}</div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {records.map((r, idx) => {
+                {[...records].sort((a, b) => b.date.localeCompare(a.date)).map((r, idx) => {
                   const key = `${r.userId}-${r.date}-${idx}`
                   const isOpen = expandedRows.has(key)
                   return (
@@ -305,12 +305,15 @@ export default function AttendancePage() {
                           </div>
                           <div className="divide-y divide-gray-100">
                             {r.sessions.map((s, j) => (
-                              <div key={j} className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2 py-2 text-[11px]">
-                                <span className="text-gray-700 font-medium truncate">{s.taskTitle || 'General'}</span>
-                                <span className="text-gray-500 truncate">{s.projectName || '-'}</span>
-                                <span className="text-gray-500 font-mono tabular-nums">{formatTime(s.signInAt)}</span>
-                                <span className="text-gray-500 font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                                <span className="text-right font-semibold text-gray-700 tabular-nums">{formatDuration(getSessionHours(s))}</span>
+                              <div key={j} className="py-2 text-[11px]">
+                                <div className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2">
+                                  <span className="text-gray-700 font-medium truncate">{s.taskTitle || 'General'}</span>
+                                  <span className="text-gray-500 truncate">{s.projectName || '-'}</span>
+                                  <span className="text-gray-500 font-mono tabular-nums">{formatTime(s.signInAt)}</span>
+                                  <span className="text-gray-500 font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
+                                  <span className="text-right font-semibold text-gray-700 tabular-nums">{formatDuration(getSessionHours(s))}</span>
+                                </div>
+                                {s.description && <p className="text-[10px] text-gray-400 italic mt-0.5 pl-0.5">— {s.description}</p>}
                               </div>
                             ))}
                           </div>

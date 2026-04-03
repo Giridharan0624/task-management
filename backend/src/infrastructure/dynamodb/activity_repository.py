@@ -1,7 +1,7 @@
 from typing import Optional
 from boto3.dynamodb.conditions import Key, Attr
 
-from domain.activity.entities import UserActivity
+from domain.activity.entities import UserActivity, DailySummary
 from domain.activity.repository import IActivityRepository
 from infrastructure.dynamodb.client import get_table
 from infrastructure.mappers.activity_mapper import ActivityMapper
@@ -55,3 +55,16 @@ class ActivityDynamoRepository(IActivityRepository):
         result = [ActivityMapper.to_domain(item) for item in items]
         result.sort(key=lambda a: (a.date, a.user_name))
         return result
+
+    def save_summary(self, summary: DailySummary) -> None:
+        item = ActivityMapper.summary_to_dynamo(summary)
+        self._table.put_item(Item=item)
+
+    def find_summary(self, user_id: str, date: str) -> Optional[DailySummary]:
+        response = self._table.get_item(
+            Key={"PK": f"USER#{user_id}", "SK": f"SUMMARY#{date}"}
+        )
+        item = response.get("Item")
+        if not item:
+            return None
+        return ActivityMapper.summary_to_domain(item)

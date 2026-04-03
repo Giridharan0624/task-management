@@ -12,6 +12,7 @@ import { useTheme } from '@/lib/theme/ThemeProvider'
 import { useMyTasks } from '@/lib/hooks/useUsers'
 import { useLiveHours } from '@/lib/hooks/useLiveHours'
 import { useProjects } from '@/lib/hooks/useProjects'
+import { useMyDayOffs } from '@/lib/hooks/useDayOffs'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import type { User } from '@/types/user'
 
@@ -91,10 +92,30 @@ export default function ProfilePage() {
   const { totalHours: liveTodayHours } = useLiveHours()
   const { data: projects } = useProjects()
 
+  const { data: myDayOffs } = useMyDayOffs()
+
   const tasksDone = (myTasks ?? []).filter(t => t.status === 'DONE').length
   const totalTasks = (myTasks ?? []).length
   const todayHours = liveTodayHours
   const projectCount = (projects ?? []).length
+
+  // Day-off score (same logic as day-offs page)
+  const dayOffScore = (() => {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+    let daysOff = 0
+    for (const d of (myDayOffs ?? [])) {
+      if (d.status !== 'APPROVED') continue
+      const start = d.startDate > monthStart ? d.startDate : monthStart
+      const end = d.endDate < monthEnd ? d.endDate : monthEnd
+      if (start > end) continue
+      const from = new Date(start + 'T00:00:00')
+      const to = new Date(end + 'T00:00:00')
+      daysOff += Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    }
+    return daysOff === 0 ? 100 : daysOff <= 2 ? 75 : daysOff <= 5 ? 50 : 25
+  })()
 
   // Profile completeness
   const completenessFields = [
@@ -177,7 +198,7 @@ export default function ProfilePage() {
 
       {/* Quick Stats + Profile Completeness */}
       {!isOwner && !editing && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
             <p className="text-xl font-bold text-emerald-700 tabular-nums">{tasksDone}</p>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Tasks Done</p>
@@ -194,22 +215,36 @@ export default function ProfilePage() {
             <p className="text-xl font-bold text-cyan-700 tabular-nums">{formatDuration(todayHours)}</p>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Today</p>
           </div>
+          <div className={`rounded-xl border p-4 shadow-sm ${
+            dayOffScore === 100 ? 'bg-emerald-50 border-emerald-200' :
+            dayOffScore >= 75 ? 'bg-blue-50 border-blue-200' :
+            dayOffScore >= 50 ? 'bg-amber-50 border-amber-200' :
+            'bg-red-50 border-red-200'
+          }`}>
+            <p className={`text-xl font-bold tabular-nums ${
+              dayOffScore === 100 ? 'text-emerald-700' :
+              dayOffScore >= 75 ? 'text-blue-700' :
+              dayOffScore >= 50 ? 'text-amber-700' :
+              'text-red-700'
+            }`}>{dayOffScore}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Day-Off Score</p>
+          </div>
           {/* Profile completeness */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex items-center gap-3">
-            <div className="relative flex-shrink-0" style={{ width: 40, height: 40 }}>
-              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                <circle cx="18" cy="18" r="14" fill="none" stroke={completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b'}
-                  strokeWidth="3" strokeDasharray={`${completeness} ${100 - completeness}`} strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[8px] font-bold tabular-nums" style={{ color: completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b' }}>{completeness}%</span>
+          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-shrink-0" style={{ width: 28, height: 28 }}>
+                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3.5" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke={completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b'}
+                    strokeWidth="3.5" strokeDasharray={`${completeness} ${100 - completeness}`} strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-[7px] font-bold tabular-nums" style={{ color: completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b' }}>{completeness}%</span>
+                </div>
               </div>
+              <p className="text-sm font-bold tabular-nums" style={{ color: completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b' }}>{filledCount}/{completenessFields.length}</p>
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Profile</p>
-              <p className="text-[10px] text-gray-400">{filledCount}/{completenessFields.length} fields</p>
-            </div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Profile</p>
           </div>
         </div>
       )}

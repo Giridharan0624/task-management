@@ -15,6 +15,8 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
+    aws_events as events,
+    aws_events_targets as events_targets,
 )
 from constructs import Construct
 
@@ -360,6 +362,37 @@ class TaskManagementStack(Stack):
         add_api_lambda("PostHeartbeat", "handlers.activity.post_heartbeat.handler", "POST", activity_heartbeat)
         add_api_lambda("GetMyActivity", "handlers.activity.get_my_activity.handler", "GET", activity_me)
         add_api_lambda("GetActivityReport", "handlers.activity.get_report.handler", "GET", activity_report)
+
+        # Activity AI summary
+        activity_summary = activity.add_resource("summary")
+        groq_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "GroqApiKey", config.get("groq_secret_name", "taskflow/groq-api-key")
+        )
+        generate_summary_fn = add_api_lambda(
+            "GenerateSummary", "handlers.activity.generate_summary.handler", "POST", activity_summary
+        )
+        generate_summary_fn.add_environment("GROQ_SECRET_ARN", groq_secret.secret_arn)
+        groq_secret.grant_read(generate_summary_fn)
+        # AI calls need more time than the default 10s
+        generate_summary_fn.node.default_child.add_property_override("Timeout", 60)
+
+        add_api_lambda("GetSummary", "handlers.activity.get_summary.handler", "GET", activity_summary)
+
+        # Scheduled: auto-generate AI summaries at 11:30 PM IST (18:00 UTC) daily
+        auto_summary_fn = _lambda.Function(
+            self, "AutoGenerateSummaries",
+            handler="handlers.activity.auto_generate_summaries.handler",
+            **{**lambda_defaults, "timeout": Duration.minutes(5)},
+        )
+        auto_summary_fn.add_environment("GROQ_SECRET_ARN", groq_secret.secret_arn)
+        groq_secret.grant_read(auto_summary_fn)
+        table.grant_read_write_data(auto_summary_fn)
+
+        events.Rule(
+            self, "DailySummarySchedule",
+            schedule=events.Schedule.cron(hour="18", minute="0"),  # 11:30 PM IST = 18:00 UTC
+            targets=[events_targets.LambdaFunction(auto_summary_fn)],
+        )
 
         # ─── Upload handlers (S3 presigned URLs) ──────────────────────────
         uploads = api.root.add_resource("uploads")

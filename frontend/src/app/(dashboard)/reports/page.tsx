@@ -8,12 +8,13 @@ import { Spinner } from '@/components/ui/Spinner'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import type { Attendance } from '@/types/attendance'
 import { FilterSelect } from '@/components/ui/FilterSelect'
+import { ActivityReport } from '@/components/reports/ActivityReport'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts'
 
-type ReportView = 'summary' | 'detailed' | 'weekly'
+type ReportView = 'summary' | 'detailed' | 'weekly' | 'activity'
 type Period = 'daily' | 'weekly' | 'monthly'
 
 const COLORS = [
@@ -194,9 +195,9 @@ export default function ReportsPage() {
 
   // ──── Detailed data ────
   const detailedRows = useMemo(() => {
-    const rows: { date: string; member: string; project: string; task: string; signIn: string; signOut: string | null; hours: number | null }[] = []
+    const rows: { date: string; member: string; project: string; task: string; description: string; signIn: string; signOut: string | null; hours: number | null }[] = []
     for (const r of records) for (const s of r.sessions) {
-      rows.push({ date: r.date, member: r.userName || r.userEmail, project: s.projectName || 'No Project', task: s.taskTitle || 'General', signIn: s.signInAt, signOut: s.signOutAt, hours: s.hours })
+      rows.push({ date: r.date, member: r.userName || r.userEmail, project: s.projectName || 'No Project', task: s.taskTitle || 'General', description: s.description || '', signIn: s.signInAt, signOut: s.signOutAt, hours: s.hours })
     }
     return rows.sort((a, b) => new Date(b.signIn).getTime() - new Date(a.signIn).getTime())
   }, [records])
@@ -281,7 +282,7 @@ export default function ReportsPage() {
 
       {/* View tabs */}
       <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {([['summary', 'Summary'], ['detailed', 'Detailed'], ['weekly', 'Weekly']] as [ReportView, string][]).map(([v, l]) => (
+        {([['summary', 'Summary'], ['detailed', 'Detailed'], ['weekly', 'Weekly'], ['activity', 'Activity']] as [ReportView, string][]).map(([v, l]) => (
           <button key={v} onClick={() => setView(v)}
             className={`px-4 py-2 rounded-lg text-[12px] font-semibold transition-all ${view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             {l}
@@ -433,7 +434,17 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {isLoading ? <div className="flex justify-center py-20"><Spinner size="lg" /></div> : (
+          {isLoading ? <div className="flex justify-center py-20"><Spinner size="lg" /></div> : (() => {
+            // Group by member
+            const memberGroups = new Map<string, { member: string; totalHours: number; sessions: typeof detailedRows }>()
+            for (const r of detailedRows) {
+              const ex = memberGroups.get(r.member)
+              if (ex) { ex.totalHours += (r.hours ?? 0); ex.sessions.push(r) }
+              else memberGroups.set(r.member, { member: r.member, totalHours: r.hours ?? 0, sessions: [r] })
+            }
+            const groups = Array.from(memberGroups.values()).sort((a, b) => b.totalHours - a.totalHours)
+
+            return (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -447,28 +458,18 @@ export default function ReportsPage() {
                 </button>
               </div>
 
-              {/* Table header */}
-              <div className="grid grid-cols-[100px_1fr_1fr_1fr_90px_90px_80px] gap-2 px-5 py-2 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                <span>Date</span><span>Member</span><span>Project</span><span>Task</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
-              </div>
-
-              <div className="divide-y divide-gray-50 max-h-[60vh] overflow-y-auto">
-                {detailedRows.length === 0 ? (
-                  <div className="px-5 py-12 text-center text-[13px] text-gray-300">No sessions in this period</div>
-                ) : detailedRows.map((r, i) => (
-                  <div key={i} className="grid grid-cols-[100px_1fr_1fr_1fr_90px_90px_80px] gap-2 items-center px-5 py-2.5 hover:bg-gray-50/50 transition-colors text-[12px]">
-                    <span className="text-gray-500 tabular-nums">{formatDateShort(r.date)}</span>
-                    <span className="font-medium text-gray-800 truncate">{r.member}</span>
-                    <span className="text-gray-600 truncate">{r.project}</span>
-                    <span className="text-gray-600 truncate">{r.task}</span>
-                    <span className="text-gray-500 font-mono tabular-nums text-[11px]">{formatTime(r.signIn)}</span>
-                    <span className="text-gray-500 font-mono tabular-nums text-[11px]">{r.signOut ? formatTime(r.signOut) : <span className="text-emerald-600 font-medium font-sans">Active</span>}</span>
-                    <span className="text-right font-semibold text-gray-700 tabular-nums">{r.hours != null ? formatDuration(r.hours) : '—'}</span>
-                  </div>
-                ))}
-              </div>
+              {groups.length === 0 ? (
+                <div className="px-5 py-12 text-center text-[13px] text-gray-300">No sessions in this period</div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {groups.map(g => (
+                    <DetailedMemberGroup key={g.member} group={g} />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+            )
+          })()}
         </div>
       )}
 
@@ -542,11 +543,54 @@ export default function ReportsPage() {
           )}
         </div>
       )}
+
+      {view === 'activity' && (
+        <ActivityReport />
+      )}
     </div>
   )
 }
 
 /* ─── Sub-components ─── */
+
+function DetailedMemberGroup({ group }: { group: { member: string; totalHours: number; sessions: { date: string; project: string; task: string; description: string; signIn: string; signOut: string | null; hours: number | null }[] } }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div>
+      <button onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors text-left">
+        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0 ${open ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="text-[13px] font-semibold text-gray-800 flex-1">{group.member}</span>
+        <span className="text-[11px] text-gray-400 tabular-nums">{group.sessions.length} session{group.sessions.length !== 1 ? 's' : ''}</span>
+        <span className="text-[13px] font-bold text-indigo-600 tabular-nums min-w-[80px] text-right">{formatDuration(group.totalHours)}</span>
+      </button>
+      {open && (
+        <div className="bg-gray-50/70 px-5 pb-3">
+          <div className="grid grid-cols-[80px_1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+            <span>Date</span><span>Project</span><span>Task</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {group.sessions.map((s, i) => (
+              <div key={i} className="py-2 text-[11px]">
+                <div className="grid grid-cols-[80px_1fr_1fr_80px_80px_70px] gap-2">
+                  <span className="text-gray-500">{formatDateShort(s.date)}</span>
+                  <span className="text-gray-600 truncate">{s.project}</span>
+                  <span className="text-gray-700 font-medium truncate">{s.task}</span>
+                  <span className="text-gray-500 font-mono tabular-nums">{formatTime(s.signIn)}</span>
+                  <span className="text-gray-500 font-mono tabular-nums">{s.signOut ? formatTime(s.signOut) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
+                  <span className="text-right font-semibold text-gray-700 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</span>
+                </div>
+                {s.description && <p className="text-[10px] text-gray-400 italic mt-0.5">— {s.description}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon?: React.ReactNode }) {
   const gradients: Record<string, string> = {
@@ -572,9 +616,9 @@ function StatCard({ label, value, color, icon }: { label: string; value: string;
 function MemberBreakdown({ records, totalHours }: { records: Attendance[]; totalHours: number }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const rows = useMemo(() => {
-    const map = new Map<string, { userId: string; name: string; hours: number; sessions: { date: string; signInAt: string; signOutAt: string | null; hours: number | null; taskTitle: string; projectName: string }[] }>()
+    const map = new Map<string, { userId: string; name: string; hours: number; sessions: { date: string; signInAt: string; signOutAt: string | null; hours: number | null; taskTitle: string; projectName: string; description: string }[] }>()
     for (const r of records) {
-      const sessions = r.sessions.map(s => ({ date: r.date, signInAt: s.signInAt, signOutAt: s.signOutAt, hours: s.hours, taskTitle: s.taskTitle || 'General', projectName: s.projectName || 'No Project' }))
+      const sessions = r.sessions.map(s => ({ date: r.date, signInAt: s.signInAt, signOutAt: s.signOutAt, hours: s.hours, taskTitle: s.taskTitle || 'General', projectName: s.projectName || 'No Project', description: s.description || '' }))
       const ex = map.get(r.userId)
       if (ex) { ex.hours += sessions.reduce((s, se) => s + (se.hours ?? 0), 0); ex.sessions.push(...sessions) }
       else map.set(r.userId, { userId: r.userId, name: r.userName || r.userEmail || r.userId, hours: sessions.reduce((s, se) => s + (se.hours ?? 0), 0), sessions })
@@ -613,13 +657,16 @@ function MemberBreakdown({ records, totalHours }: { records: Attendance[]; total
                   </div>
                   <div className="divide-y divide-gray-100">
                     {row.sessions.sort((a, b) => new Date(a.signInAt).getTime() - new Date(b.signInAt).getTime()).map((s, j) => (
-                      <div key={j} className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 py-2 text-[11px] hover:bg-white/60 transition-colors">
-                        <span className="text-gray-500">{formatDateShort(s.date)}</span>
-                        <span className="text-gray-700 font-medium truncate">{s.projectName}</span>
-                        <span className="text-gray-600 truncate">{s.taskTitle}</span>
-                        <span className="text-gray-500 font-mono tabular-nums">{formatTime(s.signInAt)}</span>
-                        <span className="text-gray-500 font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                        <span className="text-right font-semibold text-gray-700 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</span>
+                      <div key={j} className="py-2 text-[11px] hover:bg-white/60 transition-colors">
+                        <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2">
+                          <span className="text-gray-500">{formatDateShort(s.date)}</span>
+                          <span className="text-gray-700 font-medium truncate">{s.projectName}</span>
+                          <span className="text-gray-600 truncate">{s.taskTitle}</span>
+                          <span className="text-gray-500 font-mono tabular-nums">{formatTime(s.signInAt)}</span>
+                          <span className="text-gray-500 font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
+                          <span className="text-right font-semibold text-gray-700 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</span>
+                        </div>
+                        {s.description && <p className="text-[10px] text-gray-400 italic mt-0.5 ml-[90px]">— {s.description}</p>}
                       </div>
                     ))}
                   </div>

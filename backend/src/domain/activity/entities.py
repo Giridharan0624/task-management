@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime, timezone
 
 
 class ActivityBucket(BaseModel):
@@ -54,4 +55,34 @@ class UserActivity(BaseModel):
             "user_name": self.user_name,
             "user_email": self.user_email,
             "bucket_count": len(self.buckets),
+        }
+
+
+class DailySummary(BaseModel):
+    """AI-generated daily work summary for a user."""
+    user_id: str
+    date: str
+    summary: str = ""
+    key_activities: list[str] = []
+    productivity_score: int = 0          # 1-10
+    concerns: list[str] = []
+    total_active_minutes: float = 0.0
+    total_idle_minutes: float = 0.0
+    app_usage: dict[str, int] = {}
+    generated_at: str = ""
+    user_name: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "user_id": self.user_id,
+            "date": self.date,
+            "summary": self.summary,
+            "key_activities": self.key_activities,
+            "productivity_score": self.productivity_score,
+            "concerns": self.concerns,
+            "total_active_minutes": round(self.total_active_minutes, 1),
+            "total_idle_minutes": round(self.total_idle_minutes, 1),
+            "app_usage": self.app_usage,
+            "generated_at": self.generated_at,
+            "user_name": self.user_name,
         }
