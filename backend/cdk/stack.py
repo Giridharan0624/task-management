@@ -12,6 +12,9 @@ from aws_cdk import (
     aws_apigateway as apigw,
     aws_iam as iam,
     aws_secretsmanager as secretsmanager,
+    aws_s3 as s3,
+    aws_cloudfront as cloudfront,
+    aws_cloudfront_origins as origins,
 )
 from constructs import Construct
 
@@ -61,6 +64,42 @@ class TaskManagementStack(Stack):
             partition_key=dynamodb.Attribute(name="GSI2PK", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="GSI2SK", type=dynamodb.AttributeType.STRING),
             projection_type=dynamodb.ProjectionType.ALL,
+        )
+
+        # ─── S3 (file uploads — avatars + task attachments) ─────────────────
+        uploads_bucket = s3.Bucket(
+            self,
+            "UploadsBucket",
+            bucket_name=f"taskflow-uploads-{config.get('api_stage', 'prod')}",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.RETAIN,
+            cors=[
+                s3.CorsRule(
+                    allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+                    allowed_origins=["*"],  # Presigned URLs are accessed from browser directly — origin varies
+                    allowed_headers=["*"],
+                    exposed_headers=["ETag"],
+                    max_age=3600,
+                )
+            ],
+            lifecycle_rules=[
+                s3.LifecycleRule(
+                    prefix="temp/",
+                    expiration=Duration.days(1),  # Auto-delete temp uploads after 1 day
+                ),
+            ],
+        )
+
+        # ─── CloudFront CDN (serves uploaded files) ─────────────────────────
+        cdn = cloudfront.Distribution(
+            self,
+            "UploadsCDN",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.S3BucketOrigin.with_origin_access_control(uploads_bucket),
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+                cache_policy=cloudfront.CachePolicy.CACHING_OPTIMIZED,
+            ),
         )
 
         # ─── Cognito ─────────────────────────────────────────────────────────
@@ -312,6 +351,25 @@ class TaskManagementStack(Stack):
         add_api_lambda("RejectDayOff", "handlers.dayoff.reject.handler", "PUT", dayoff_reject)
         add_api_lambda("CancelDayOff", "handlers.dayoff.cancel.handler", "PUT", dayoff_cancel)
 
+        # ─── Activity handlers (desktop app heartbeats) ───────────────────
+        activity = api.root.add_resource("activity")
+        activity_heartbeat = activity.add_resource("heartbeat")
+        activity_me = activity.add_resource("me")
+        activity_report = activity.add_resource("report")
+
+        add_api_lambda("PostHeartbeat", "handlers.activity.post_heartbeat.handler", "POST", activity_heartbeat)
+        add_api_lambda("GetMyActivity", "handlers.activity.get_my_activity.handler", "GET", activity_me)
+        add_api_lambda("GetActivityReport", "handlers.activity.get_report.handler", "GET", activity_report)
+
+        # ─── Upload handlers (S3 presigned URLs) ──────────────────────────
+        uploads = api.root.add_resource("uploads")
+        uploads_presign = uploads.add_resource("presign")
+
+        presign_fn = add_api_lambda("GetPresignedUrl", "handlers.upload.presign.handler", "GET", uploads_presign)
+        presign_fn.add_environment("UPLOADS_BUCKET", uploads_bucket.bucket_name)
+        presign_fn.add_environment("CDN_DOMAIN", cdn.distribution_domain_name)
+        uploads_bucket.grant_put(presign_fn)
+
         # ─── Task Update handlers ──────────────────────────────────────────
         task_updates = api.root.add_resource("task-updates")
         task_updates_me = task_updates.add_resource("me")
@@ -325,3 +383,5 @@ class TaskManagementStack(Stack):
         CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id, description="Cognito User Pool ID")
         CfnOutput(self, "UserPoolClientId", value=user_pool_client.user_pool_client_id, description="Cognito Client ID")
         CfnOutput(self, "TableName", value=table.table_name, description="DynamoDB Table Name")
+        CfnOutput(self, "UploadsBucketName", value=uploads_bucket.bucket_name, description="S3 uploads bucket")
+        CfnOutput(self, "CDNDomain", value=cdn.distribution_domain_name, description="CloudFront CDN domain")

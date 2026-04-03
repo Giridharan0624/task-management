@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { Spinner } from './Spinner'
 import { ImageCropper } from './ImageCropper'
+import { uploadAvatar } from '@/lib/api/uploadApi'
 
 interface AvatarUploadProps {
   currentUrl?: string
@@ -37,45 +38,28 @@ export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Read file and open cropper
     const reader = new FileReader()
     reader.onload = () => {
       setCropSrc(reader.result as string)
     }
     reader.readAsDataURL(file)
-
-    // Reset input so same file can be selected again
     e.target.value = ''
   }
 
   const handleCropComplete = async (croppedBlob: Blob) => {
+    console.log('Crop complete, uploading to S3...', croppedBlob.size, 'bytes')
     setCropSrc(null)
-    if (!cloudName || !uploadPreset) return
-
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', croppedBlob, 'avatar.jpg')
-      formData.append('upload_preset', uploadPreset)
-      formData.append('folder', 'taskflow-avatars')
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json()
-      if (data.secure_url) {
-        onUpload(data.secure_url)
-      }
+      const cdnUrl = await uploadAvatar(croppedBlob)
+      console.log('Upload success, CDN URL:', cdnUrl)
+      onUpload(cdnUrl)
     } catch (err) {
-      void err // Upload failed silently — loading state resets
+      console.error('Avatar upload failed:', err)
     } finally {
       setUploading(false)
     }
@@ -98,7 +82,7 @@ export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable
           </div>
         )}
 
-        {editable && cloudName && uploadPreset && (
+        {editable && (
           <>
             <button
               type="button"
@@ -126,7 +110,6 @@ export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable
         )}
       </div>
 
-      {/* Image Cropper Modal */}
       {cropSrc && (
         <ImageCropper
           imageSrc={cropSrc}
