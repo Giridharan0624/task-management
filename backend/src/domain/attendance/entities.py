@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from pydantic import BaseModel
+
+IST = timezone(timedelta(hours=5, minutes=30))
 
 
 class Session(BaseModel):
@@ -50,7 +52,7 @@ class Attendance(BaseModel):
         )
         return cls(
             user_id=user_id,
-            date=now.strftime("%Y-%m-%d"),
+            date=now.astimezone(IST).strftime("%Y-%m-%d"),
             sessions=[session],
             total_hours=0.0,
             user_name=user_name,

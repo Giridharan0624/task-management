@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from domain.attendance.entities import Attendance
@@ -10,9 +10,15 @@ from domain.user.repository import IUserRepository
 from domain.user.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared.errors import AuthorizationError, NotFoundError, ValidationError
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
 
 def _today() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return datetime.now(IST).strftime("%Y-%m-%d")
+
+
+def _yesterday() -> str:
+    return (datetime.now(IST) - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 class SignInUseCase:
@@ -50,6 +56,13 @@ class SignInUseCase:
         user = self._user_repo.find_by_id(caller_user_id)
         if not user:
             raise NotFoundError("User not found")
+
+        # Auto-close yesterday's active session if date has rolled over
+        if not existing or not existing.is_signed_in:
+            yesterday_record = self._attendance_repo.find_by_user_and_date(caller_user_id, _yesterday())
+            if yesterday_record and yesterday_record.is_signed_in:
+                closed = yesterday_record.sign_out()
+                self._attendance_repo.save(closed)
 
         if existing and existing.is_signed_in:
             if task_id:
@@ -95,10 +108,16 @@ class SignOutUseCase:
     def execute(self, caller_user_id: str) -> dict:
         date = _today()
         attendance = self._attendance_repo.find_by_user_and_date(caller_user_id, date)
-        if not attendance:
-            raise ValidationError("You are not signed in today")
-        if not attendance.is_signed_in:
-            raise ValidationError("You are not currently signed in")
+
+        # If no active session today, check yesterday (cross-midnight work)
+        if not attendance or not attendance.is_signed_in:
+            yesterday_record = self._attendance_repo.find_by_user_and_date(caller_user_id, _yesterday())
+            if yesterday_record and yesterday_record.is_signed_in:
+                attendance = yesterday_record
+            elif not attendance:
+                raise ValidationError("You are not signed in today")
+            else:
+                raise ValidationError("You are not currently signed in")
 
         updated = attendance.sign_out()
         self._attendance_repo.save(updated)
@@ -112,9 +131,15 @@ class GetMyAttendanceUseCase:
     def execute(self, caller_user_id: str) -> dict | None:
         date = _today()
         attendance = self._attendance_repo.find_by_user_and_date(caller_user_id, date)
-        if not attendance:
-            return None
-        return attendance.to_dict()
+        if attendance:
+            return attendance.to_dict()
+
+        # Check yesterday for active session (user still signed in past midnight)
+        yesterday_record = self._attendance_repo.find_by_user_and_date(caller_user_id, _yesterday())
+        if yesterday_record and yesterday_record.is_signed_in:
+            return yesterday_record.to_dict()
+
+        return None
 
 
 class ListTodayAttendanceUseCase:
@@ -127,6 +152,14 @@ class ListTodayAttendanceUseCase:
 
         date = _today()
         records = self._attendance_repo.find_all_by_date(date)
+
+        # Include yesterday's records that still have active sessions (cross-midnight)
+        today_user_ids = {r.user_id for r in records}
+        yesterday_records = self._attendance_repo.find_all_by_date(_yesterday())
+        for r in yesterday_records:
+            if r.is_signed_in and r.user_id not in today_user_ids:
+                records.append(r)
+
         return [r.to_dict() for r in records]
 
 

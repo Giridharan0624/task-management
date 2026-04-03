@@ -26,11 +26,16 @@ export function AttendanceTable() {
   const attendance = records ?? []
   const today = getToday()
 
+  const now = new Date()
   const onDayOff = (allDayOffs ?? []).filter((d) => {
     if (d.status !== 'APPROVED') return false
     const start = d.startDate.slice(0, 10)
-    const end = d.endDate.slice(0, 10)
-    return today >= start && today <= end
+    const endDateOnly = d.endDate.slice(0, 10)
+    // If day-off ends today, check if the end time has passed
+    if (endDateOnly === today) {
+      return today >= start && new Date(d.endDate) > now
+    }
+    return today >= start && today <= endDateOnly
   })
 
   if (isLoading) {

@@ -1,3 +1,5 @@
+import type { Attendance } from './attendance'
+
 export interface TaskSummaryItem {
   taskName: string
   timeRecorded: string
@@ -15,4 +17,10 @@ export interface TaskUpdate {
   taskSummary: TaskSummaryItem[]
   totalTime: string
   createdAt: string
+}
+
+export interface PendingTaskUpdate {
+  pendingDate: string
+  submitted: false
+  attendance: Attendance
 }

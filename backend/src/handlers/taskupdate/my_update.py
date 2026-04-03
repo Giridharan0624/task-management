@@ -24,8 +24,12 @@ def handler(event, context):
         yesterday_update = update_repo.find_by_user_and_date(auth.user_id, ist_yesterday)
 
         if yesterday_attendance and yesterday_attendance.sessions and not yesterday_update:
-            # Yesterday has work but no task update submitted — flag it
-            return build_success(200, {"pending_date": ist_yesterday, "submitted": False})
+            # Yesterday has work but no task update submitted — include attendance for preview
+            return build_success(200, {
+                "pending_date": ist_yesterday,
+                "submitted": False,
+                "attendance": yesterday_attendance.to_dict(),
+            })
 
         # Check if already submitted for today
         today_update = update_repo.find_by_user_and_date(auth.user_id, ist_today)
