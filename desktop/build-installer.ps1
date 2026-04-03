@@ -4,9 +4,17 @@ Set-Location "D:\NEUROSTACK\PROJECTS\task-management\desktop"
 Write-Host "=== Building TaskFlow Desktop Installer ==="
 Write-Host ""
 
-# Step 1: Production build
+# Step 1: Production build with injected config
 Write-Host "Step 1: Building production binary..."
-wails build 2>&1
+$pkg = "taskflow-desktop/internal/config"
+$ldflags = @(
+    "-X '${pkg}.apiURL=https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging'"
+    "-X '${pkg}.cognitoRegion=ap-south-1'"
+    "-X '${pkg}.cognitoPoolID=ap-south-1_NedaPlHsx'"
+    "-X '${pkg}.cognitoClientID=36i0ejo32b4c5u6un0g75h4bme'"
+    "-X '${pkg}.webDashboardURL=https://taskflow-ns.vercel.app'"
+) -join " "
+wails build -ldflags "$ldflags" 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "BUILD FAILED"
     exit 1

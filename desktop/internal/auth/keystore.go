@@ -11,17 +11,15 @@ const (
 	keyIdToken      = "id_token"
 	keyAccessToken  = "access_token"
 	keyRefreshToken = "refresh_token"
-	keyMeta         = "meta" // stores ExpiresAt
+	keyMeta         = "meta"
 )
 
-// tokenMeta holds non-token metadata that fits in a single keyring entry.
 type tokenMeta struct {
 	ExpiresAt int64 `json:"expiresAt"`
 }
 
-// saveTokensToKeyring persists tokens to the OS keychain.
-// Each token is stored separately to stay under the Windows Credential Manager
-// size limit (~2560 bytes per entry).
+// saveTokensToKeyring encrypts tokens with DPAPI then stores in OS keychain.
+// Double protection: DPAPI encryption (user-scoped) + Windows Credential Manager.
 func (s *Service) saveTokensToKeyring() error {
 	entries := map[string]string{
 		keyIdToken:      s.tokens.IDToken,
@@ -30,12 +28,15 @@ func (s *Service) saveTokensToKeyring() error {
 	}
 
 	for key, val := range entries {
-		if err := keyring.Set(KeyringService, key, val); err != nil {
+		encrypted, err := encryptDPAPI(val)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt %s: %w", key, err)
+		}
+		if err := keyring.Set(KeyringService, key, encrypted); err != nil {
 			return fmt.Errorf("failed to save %s to keyring: %w", key, err)
 		}
 	}
 
-	// Store metadata separately
 	meta, _ := json.Marshal(tokenMeta{ExpiresAt: s.tokens.ExpiresAt})
 	if err := keyring.Set(KeyringService, keyMeta, string(meta)); err != nil {
 		return fmt.Errorf("failed to save meta to keyring: %w", err)
@@ -44,21 +45,22 @@ func (s *Service) saveTokensToKeyring() error {
 	return nil
 }
 
-// loadTokensFromKeyring reads tokens from the OS keychain.
+// loadTokensFromKeyring reads and decrypts tokens from the OS keychain.
 func (s *Service) loadTokensFromKeyring() (*Tokens, error) {
-	idToken, err := keyring.Get(KeyringService, keyIdToken)
-	if err != nil {
-		return nil, fmt.Errorf("no stored tokens: %w", err)
-	}
+	keys := []string{keyIdToken, keyAccessToken, keyRefreshToken}
+	decrypted := make(map[string]string)
 
-	accessToken, err := keyring.Get(KeyringService, keyAccessToken)
-	if err != nil {
-		return nil, fmt.Errorf("no stored access token: %w", err)
-	}
-
-	refreshToken, err := keyring.Get(KeyringService, keyRefreshToken)
-	if err != nil {
-		return nil, fmt.Errorf("no stored refresh token: %w", err)
+	for _, key := range keys {
+		encrypted, err := keyring.Get(KeyringService, key)
+		if err != nil {
+			return nil, fmt.Errorf("no stored %s: %w", key, err)
+		}
+		plain, err := decryptDPAPI(encrypted)
+		if err != nil {
+			// Fallback: might be unencrypted (from older version)
+			plain = encrypted
+		}
+		decrypted[key] = plain
 	}
 
 	metaStr, err := keyring.Get(KeyringService, keyMeta)
@@ -72,9 +74,9 @@ func (s *Service) loadTokensFromKeyring() (*Tokens, error) {
 	}
 
 	return &Tokens{
-		IDToken:      idToken,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		IDToken:      decrypted[keyIdToken],
+		AccessToken:  decrypted[keyAccessToken],
+		RefreshToken: decrypted[keyRefreshToken],
 		ExpiresAt:    meta.ExpiresAt,
 	}, nil
 }

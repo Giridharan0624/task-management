@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -150,6 +152,21 @@ func (a *App) fetchAttendance() {
 
 // Login handles user authentication. Called from frontend.
 func (a *App) Login(email, password string) (*auth.LoginResult, error) {
+	// Validate inputs
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return nil, fmt.Errorf("email or employee ID is required")
+	}
+	if len(email) > 256 {
+		return nil, fmt.Errorf("email too long")
+	}
+	if password == "" {
+		return nil, fmt.Errorf("password is required")
+	}
+	if len(password) > 256 {
+		return nil, fmt.Errorf("password too long")
+	}
+
 	result, err := a.AuthService.Login(email, password)
 	if err != nil {
 		return nil, err
@@ -166,6 +183,12 @@ func (a *App) Login(email, password string) (*auth.LoginResult, error) {
 
 // SetNewPassword completes the NEW_PASSWORD_REQUIRED challenge.
 func (a *App) SetNewPassword(session, newPassword string) error {
+	if session == "" {
+		return fmt.Errorf("invalid session")
+	}
+	if len(newPassword) < 8 {
+		return fmt.Errorf("password must be at least 8 characters")
+	}
 	err := a.AuthService.CompleteNewPasswordChallenge(session, newPassword)
 	if err != nil {
 		return err
@@ -189,6 +212,20 @@ func (a *App) Logout() error {
 
 // SignIn starts a timer on a task. Called from frontend.
 func (a *App) SignIn(data api.StartTimerData) (*api.Attendance, error) {
+	// Validate description is present
+	data.Description = strings.TrimSpace(data.Description)
+	if data.Description == "" {
+		return nil, fmt.Errorf("description is required")
+	}
+	if len(data.Description) > 500 {
+		return nil, fmt.Errorf("description too long")
+	}
+	// Sanitize all string fields
+	data.TaskID = strings.TrimSpace(data.TaskID)
+	data.ProjectID = strings.TrimSpace(data.ProjectID)
+	data.TaskTitle = strings.TrimSpace(data.TaskTitle)
+	data.ProjectName = strings.TrimSpace(data.ProjectName)
+
 	attendance, err := a.APIClient.SignIn(data)
 	if err != nil {
 		return nil, err

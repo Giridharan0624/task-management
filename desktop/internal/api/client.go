@@ -1,8 +1,10 @@
 package api
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/go-resty/resty/v2"
@@ -60,10 +62,23 @@ type Client struct {
 	appState    *state.AppState
 }
 
-// NewClient creates a new API client.
+// NewClient creates a new API client with HTTPS enforced and TLS 1.3 minimum.
 func NewClient(authService *auth.Service, appState *state.AppState) *Client {
 	cfg := config.Get()
-	client := resty.New().
+
+	// Enforce HTTPS — reject HTTP URLs
+	if !strings.HasPrefix(cfg.APIURL, "https://") {
+		panic("API URL must use HTTPS — refusing to start with insecure connection")
+	}
+
+	// TLS 1.3 minimum, no insecure ciphers
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS13,
+		},
+	}
+
+	client := resty.NewWithClient(&http.Client{Transport: transport}).
 		SetBaseURL(cfg.APIURL).
 		SetHeader("Content-Type", "application/json")
 

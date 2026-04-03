@@ -53,7 +53,7 @@ func (w *WindowTracker) GetActiveWindowApp() string {
 		uintptr(pid),
 	)
 	if handle == 0 {
-		return getWindowTitle(hwnd)
+		return "Other"
 	}
 	defer procCloseHandle.Call(handle)
 
@@ -68,26 +68,12 @@ func (w *WindowTracker) GetActiveWindowApp() string {
 
 	exePath := syscall.UTF16ToString(buf[:])
 	if exePath == "" {
-		return getWindowTitle(hwnd)
+		// Don't fall back to window title — it can contain sensitive data
+		// (file paths, URLs, database names, etc.)
+		return "Other"
 	}
 
 	return friendlyAppName(exePath)
-}
-
-// getWindowTitle returns the window title as a fallback.
-func getWindowTitle(hwnd uintptr) string {
-	var buf [256]uint16
-	procGetWindowTextW.Call(hwnd, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
-	title := syscall.UTF16ToString(buf[:])
-
-	// Extract just the app name from the title (usually after " - ")
-	if idx := strings.LastIndex(title, " - "); idx != -1 {
-		return strings.TrimSpace(title[idx+3:])
-	}
-	if len(title) > 30 {
-		return title[:30]
-	}
-	return title
 }
 
 // friendlyAppName converts an exe path to a friendly display name.
