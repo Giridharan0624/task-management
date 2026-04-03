@@ -60,12 +60,8 @@ htmlcov/
 coverage/
 *.lcov
 
-# ─── Desktop App (Wails) ──────────────────────────────────────────────────────
-desktop/build/bin/
-desktop/build/windows/installer/*.exe
-desktop/frontend/dist/
-desktop/frontend/node_modules/
-desktop/config.json
+# ─── Desktop App (separate repo) ─────────────────────────────────────────────
+desktop/
 
 # ─── Backend Outputs ──────────────────────────────────────────────────────────
 backend/output.json
