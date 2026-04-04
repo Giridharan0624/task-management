@@ -29,50 +29,40 @@ function setTimerFavicon(active: boolean) {
     return
   }
 
-  // Draw a 32x32 favicon with the TaskFlow icon + green dot
+  // Load the logo and draw it with a red recording dot
   const canvas = document.createElement('canvas')
   canvas.width = 32
   canvas.height = 32
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // Background — indigo rounded rect
-  ctx.beginPath()
-  ctx.roundRect(0, 0, 32, 32, 8)
-  const grad = ctx.createLinearGradient(0, 0, 32, 32)
-  grad.addColorStop(0, '#4f46e5')
-  grad.addColorStop(1, '#7c3aed')
-  ctx.fillStyle = grad
-  ctx.fill()
+  const img = new Image()
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, 32, 32)
 
-  // "T" letter
-  ctx.fillStyle = 'white'
-  ctx.font = 'bold 20px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('T', 16, 17)
+    // Red dot — bottom right
+    ctx.beginPath()
+    ctx.arc(26, 26, 5, 0, Math.PI * 2)
+    ctx.fillStyle = '#ef4444'
+    ctx.fill()
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
 
-  // Green dot — bottom right
-  ctx.beginPath()
-  ctx.arc(26, 26, 5, 0, Math.PI * 2)
-  ctx.fillStyle = '#ef4444'
-  ctx.fill()
-  ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = 1.5
-  ctx.stroke()
-
-  const url = canvas.toDataURL('image/png')
-
-  if (existing) {
-    existing.href = url
-  } else {
-    const link = document.createElement('link')
-    link.rel = 'icon'
-    link.type = 'image/png'
-    link.href = url
-    link.setAttribute('data-timer', 'true')
-    document.head.appendChild(link)
+    const url = canvas.toDataURL('image/png')
+    const el = document.querySelector('link[rel="icon"][data-timer]') as HTMLLinkElement | null
+    if (el) {
+      el.href = url
+    } else {
+      const link = document.createElement('link')
+      link.rel = 'icon'
+      link.type = 'image/png'
+      link.href = url
+      link.setAttribute('data-timer', 'true')
+      document.head.appendChild(link)
+    }
   }
+  img.src = '/logo.png'
 }
 
 export function useTimerTitle() {
