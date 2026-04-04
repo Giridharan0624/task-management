@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { useUpdateTask, useDeleteTask, useAssignTask } from '@/lib/hooks/useTasks'
@@ -21,6 +21,65 @@ import { Avatar } from '@/components/ui/AvatarUpload'
 import { Select } from '@/components/ui/Select'
 import { UserSelect } from '@/components/ui/UserSelect'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  TODO: '#f59e0b', IN_PROGRESS: '#3b82f6', DEVELOPED: '#8b5cf6', CODE_REVIEW: '#a855f7',
+  TESTING: '#f97316', TESTED: '#14b8a6', DEBUGGING: '#ef4444', FINAL_TESTING: '#ec4899',
+  WIREFRAME: '#64748b', DESIGN: '#6366f1', REVIEW: '#06b6d4', REVISION: '#f43f5e', APPROVED: '#10b981',
+  PLANNING: '#6366f1', EXECUTION: '#3b82f6',
+  RESEARCH: '#8b5cf6', ANALYSIS: '#14b8a6', DOCUMENTATION: '#f97316',
+  DONE: '#10b981',
+}
+
+function StatusDropdown({ value, onChange, disabled, domain }: { value: string; onChange: (v: string) => void; disabled?: boolean; domain: TaskDomain }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const options = getStatusOptions(domain)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Element)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const selected = options.find(o => o.value === value)
+  const dotColor = STATUS_DOT_COLORS[value] || '#9ca3af'
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(!open)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-gray-700 hover:border-gray-300 transition-all disabled:opacity-50"
+      >
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+        {selected?.label || value}
+        <svg className={`w-3 h-3 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-[99999] bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 min-w-[160px] max-h-[240px] overflow-y-auto animate-fade-in-scale" style={{ animationDuration: '0.1s' }}>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left transition-colors ${
+                value === opt.value ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_DOT_COLORS[opt.value] || '#9ca3af' }} />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface TaskDetailPanelProps {
   task: Task | null
@@ -284,9 +343,29 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
           ) : (
             <div className="flex flex-col min-h-full">
 
-              {/* ── Progress track ── */}
+              {/* ── Title + Badges ── */}
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-gray-900 leading-snug mb-2">{task.title}</h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {isAssigned ? (
+                    <StatusDropdown
+                      value={task.status}
+                      onChange={(v) => handleStatusChange(v as TaskStatus)}
+                      disabled={statusUpdating}
+                      domain={((project?.domain || task.domain) as TaskDomain) || 'DEVELOPMENT'}
+                    />
+                  ) : (
+                    <Badge variant={task.status}>{TASK_STATUS_LABEL[task.status]}</Badge>
+                  )}
+                  <Badge variant={task.priority}>{task.priority}</Badge>
+                  {isOverdue && (
+                    <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md ring-1 ring-inset ring-red-200">OVERDUE</span>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Inline Progress ── */}
               {(() => {
-                // Prefer project domain (source of truth) over task's stored domain
                 const taskDomain = ((project?.domain || task.domain) as TaskDomain) || 'DEVELOPMENT'
                 const STAGES = DOMAIN_STATUSES[taskDomain] || DOMAIN_STATUSES['DEVELOPMENT']
                 const STAGE_CLR: Record<string, string> = {
@@ -300,144 +379,101 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 const currentIdx = STAGES.indexOf(task.status)
                 const pct = getStatusProgress(task.status, taskDomain)
                 return (
-                  <div className="mb-5 rounded-xl bg-gray-50 border border-gray-100 p-4">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-[11px] font-semibold text-gray-500">Progress</span>
-                      <span className="text-[11px] font-bold tabular-nums" style={{ color: STAGE_CLR[task.status] }}>{pct}%</span>
+                  <div className="mb-5">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <div className="flex items-center gap-1 flex-1">
+                        {STAGES.map((s, i) => (
+                          <div key={s} className="flex-1 h-1.5 rounded-full overflow-hidden bg-gray-100">
+                            {i <= currentIdx && (
+                              <div className="h-full w-full rounded-full" style={{ backgroundColor: STAGE_CLR[task.status] }} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[11px] font-bold tabular-nums flex-shrink-0" style={{ color: STAGE_CLR[task.status] }}>{pct}%</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {STAGES.map((s, i) => (
-                        <div key={s} className="flex-1 h-[5px] rounded-full overflow-hidden bg-gray-200">
-                          {i <= currentIdx && (
-                            <div className="h-full w-full rounded-full" style={{ backgroundColor: STAGE_CLR[task.status] }} />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[10px] text-gray-400">To Do</span>
-                      <span className="text-[10px] font-medium" style={{ color: STAGE_CLR[task.status] }}>{TASK_STATUS_LABEL[task.status]}</span>
-                      <span className="text-[10px] text-gray-400">Done</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-gray-300">{TASK_STATUS_LABEL[STAGES[0]]}</span>
+                      <span className="text-[10px] font-medium" style={{ color: STAGE_CLR[task.status] }}>Stage {currentIdx + 1}/{STAGES.length}</span>
+                      <span className="text-[10px] text-gray-300">{TASK_STATUS_LABEL[STAGES[STAGES.length - 1]]}</span>
                     </div>
                   </div>
                 )
               })()}
 
-              {/* ── Title + Status + Priority ── */}
-              <div className="mb-5">
-                <h3 className="text-lg font-bold text-gray-900 leading-snug">{task.title}</h3>
-                {task.description && (
-                  <p className="text-sm text-gray-500 leading-relaxed mt-2 whitespace-pre-wrap">{task.description}</p>
-                )}
-                <div className="flex items-center gap-2 flex-wrap mt-3">
-                  {isAssigned ? (
-                    <Select
-                      value={task.status}
-                      onChange={(v) => handleStatusChange(v as TaskStatus)}
-                      disabled={statusUpdating}
-                      options={getStatusOptions(((project?.domain || task.domain) as TaskDomain) || 'DEVELOPMENT')}
-                      className="w-48"
-                    />
-                  ) : (
-                    <Badge variant={task.status}>{TASK_STATUS_LABEL[task.status]}</Badge>
-                  )}
-                  <Badge variant={task.priority}>{task.priority}</Badge>
-                  {isOverdue && (
-                    <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md ring-1 ring-inset ring-red-200">OVERDUE</span>
-                  )}
+              {/* ── Description ── */}
+              {task.description && (
+                <p className="text-[13px] text-gray-500 leading-relaxed mb-5 whitespace-pre-wrap">{task.description}</p>
+              )}
+
+              {/* ── Metadata Grid ── */}
+              <div className="grid grid-cols-2 gap-2 mb-5">
+                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Deadline</p>
+                  <p className={`text-[12px] font-semibold mt-0.5 ${isOverdue ? 'text-red-600' : 'text-gray-800'}`}>
+                    {task.deadline
+                      ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : '—'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Created</p>
+                  <p className="text-[12px] font-semibold text-gray-800 mt-0.5">{new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Created by</p>
+                  <p className="text-[12px] font-semibold text-gray-800 mt-0.5 truncate">{resolveName(task.createdBy)}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Assigned by</p>
+                  <p className="text-[12px] font-semibold text-gray-800 mt-0.5 truncate">{task.assignedBy ? resolveName(task.assignedBy) : '—'}</p>
                 </div>
               </div>
 
-              {/* ── Two-column: Assignees + Details ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5 pb-5 border-b border-gray-100">
-                {/* Assignees */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Assigned To</p>
+              {/* ── Assignees ── */}
+              <div className="mb-5 pb-5 border-b border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Assigned To</p>
+                <div className="flex items-center flex-wrap gap-2">
                   {task.assignedTo && task.assignedTo.length > 0 ? (
-                    <div className="flex flex-col gap-1.5">
-                      {task.assignedTo.map((userId) => (
-                        <div key={userId} className="flex items-center justify-between py-1">
-                          <div className="flex items-center gap-2">
-                            <Avatar url={resolveAvatar(userId)} name={resolveName(userId)} size="sm" />
-                            <span className="text-[13px] font-medium text-gray-800">{resolveName(userId)}</span>
-                          </div>
-                          {permissions.canAssignTask && (
-                            <button onClick={() => handleUnassign(userId)} className="text-gray-200 hover:text-red-500 transition-colors" title="Remove">
-                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[13px] text-gray-300 italic">No one assigned</p>
-                  )}
-                  {permissions.canAssignTask && (
-                    showAssignInput ? (
-                      <div className="mt-2 space-y-2">
-                        {availableMembers.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">All members assigned.</p>
-                        ) : (
-                          <UserSelect
-                            users={availableMembers.map((m) => ({ userId: m.userId, name: m.user?.name || m.user?.email || m.userId, email: m.user?.email || '', avatarUrl: m.user?.avatarUrl, extra: m.projectRole }))}
-                            value={selectedAssignee}
-                            onChange={setSelectedAssignee}
-                            placeholder="Search member..."
-                          />
+                    task.assignedTo.map((userId) => (
+                      <div key={userId} className="inline-flex items-center gap-2 bg-gray-50 rounded-full pl-1 pr-2.5 py-1 border border-gray-100">
+                        <Avatar url={resolveAvatar(userId)} name={resolveName(userId)} size="sm" />
+                        <span className="text-[12px] font-medium text-gray-800">{resolveName(userId)}</span>
+                        {permissions.canAssignTask && (
+                          <button onClick={() => handleUnassign(userId)} className="text-gray-300 hover:text-red-500 transition-colors ml-0.5" title="Remove">
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
                         )}
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={handleAssign} loading={assignTask.isPending} disabled={!selectedAssignee}>Add</Button>
-                          <button onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
-                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <p className="text-[12px] text-gray-300 italic">No one assigned</p>
+                  )}
+                  {permissions.canAssignTask && !showAssignInput && (
+                    <button onClick={() => setShowAssignInput(true)} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1.5 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-100 transition-all border border-indigo-100">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+                {permissions.canAssignTask && showAssignInput && (
+                  <div className="mt-3 space-y-2">
+                    {availableMembers.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">All members assigned.</p>
                     ) : (
-                      <button onClick={() => setShowAssignInput(true)} className="flex items-center gap-1 mt-2 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                        Add assignee
-                      </button>
-                    )
-                  )}
-                </div>
-
-                {/* Details */}
-                <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Details</p>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    <div>
-                      <p className="text-[10px] text-gray-400">Deadline</p>
-                      <p className={`text-[13px] font-medium ${isOverdue ? 'text-red-600' : 'text-gray-800'}`}>
-                        {task.deadline
-                          ? `${new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(task.deadline).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
-                          : '—'
-                        }
-                      </p>
+                      <UserSelect
+                        users={availableMembers.map((m) => ({ userId: m.userId, name: m.user?.name || m.user?.email || m.userId, email: m.user?.email || '', avatarUrl: m.user?.avatarUrl, extra: m.projectRole }))}
+                        value={selectedAssignee}
+                        onChange={setSelectedAssignee}
+                        placeholder="Search member..."
+                      />
+                    )}
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleAssign} loading={assignTask.isPending} disabled={!selectedAssignee}>Add</Button>
+                      <button onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    <div>
-                      <p className="text-[10px] text-gray-400">Created by</p>
-                      <p className="text-[13px] font-medium text-gray-800">{resolveName(task.createdBy)}</p>
-                    </div>
-                  </div>
-                  {task.assignedBy && (
-                    <div className="flex items-center gap-2">
-                      <svg className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                      <div>
-                        <p className="text-[10px] text-gray-400">Assigned by</p>
-                        <p className="text-[13px] font-medium text-gray-800">{resolveName(task.assignedBy)}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <div>
-                      <p className="text-[10px] text-gray-400">Created</p>
-                      <p className="text-[13px] font-medium text-gray-800">{new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* ── Updates / Comments ── */}
@@ -447,11 +483,11 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 </p>
 
                 {comments && comments.length > 0 ? (
-                  <div className="space-y-3 mb-4 flex-1">
+                  <div className="space-y-2.5 mb-4 flex-1">
                     {comments.map((comment) => (
                       <div key={comment.commentId} className="flex gap-2.5">
                         <Avatar url={resolveAvatar(comment.authorId)} name={resolveName(comment.authorId)} size="sm" />
-                        <div className="flex-1 min-w-0 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-[12px] font-bold text-gray-800">{resolveName(comment.authorId)}</span>
                             <span className="text-[10px] text-gray-400">
@@ -468,13 +504,14 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 )}
 
                 {canComment && (
-                  <div className="flex gap-2 items-start">
+                  <div className="flex gap-2 items-start pt-3 border-t border-gray-100">
                     <textarea
                       rows={1}
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
                       placeholder="Write an update..."
                       className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-[13px] placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/40 focus:bg-white resize-none transition-all"
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
                     />
                     <Button size="sm" onClick={handlePostComment} loading={createComment.isPending} disabled={!commentText.trim()}>Post</Button>
                   </div>

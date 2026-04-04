@@ -15,6 +15,9 @@ import type { TaskStatus, TaskPriority } from '@/types/task'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_LABELS, getStatusProgress, getStatusOptions } from '@/types/task'
 import type { TaskDomain } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
+import { TaskDetailPanel } from '@/components/task/TaskDetailPanel'
+import { usePermission } from '@/lib/hooks/usePermission'
+import type { Task } from '@/types/task'
 
 type FilterStatus = 'ALL' | TaskStatus
 type TabType = 'my' | 'all'
@@ -42,6 +45,8 @@ export default function TasksPage() {
   const [sort, setSort] = useState<SortOption>('default')
   const [activeTab, setActiveTab] = useState<TabType>('my')
   const [search, setSearch] = useState('')
+  const [selectedTask, setSelectedTask] = useState<MyTask | null>(null)
+  const permissions = usePermission(undefined, user?.systemRole)
 
   const isTopTier = TOP_TIER.includes(user?.systemRole ?? '')
   const isAdmin = user?.systemRole === 'ADMIN'
@@ -248,13 +253,11 @@ export default function TasksPage() {
                         {group.tasks.map((task) => {
                           const isOverdue = checkOverdue(task.deadline, task.status)
                           return (
-                            <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => {
-                              router.push(`/projects/${task.projectId}`)
-                            }}>
+                            <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => setSelectedTask(task)}>
                               <td className="px-5 py-3">
-                                <Link href={`/projects/${task.projectId}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                                <span className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
                                   {task.title}
-                                </Link>
+                                </span>
                                 {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
                               </td>
                               {!isMember && (
@@ -311,7 +314,7 @@ export default function TasksPage() {
                     {group.tasks.map((task) => {
                       const isOverdue = checkOverdue(task.deadline, task.status)
                       return (
-                        <div key={task.taskId} onClick={() => router.push(`/projects/${task.projectId}`)}
+                        <div key={task.taskId} onClick={() => setSelectedTask(task)}
                           className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
@@ -348,6 +351,12 @@ export default function TasksPage() {
         )
       })()}
 
+      <TaskDetailPanel
+        task={selectedTask as unknown as Task | null}
+        projectId={selectedTask?.projectId ?? ''}
+        permissions={permissions}
+        onClose={() => setSelectedTask(null)}
+      />
     </div>
   )
 }
