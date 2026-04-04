@@ -12,6 +12,7 @@ class ActivityBucket(BaseModel):
     idle_seconds: int = 0               # Seconds with no input (>2s gap)
     top_app: Optional[str] = None       # App with most usage in this window
     app_breakdown: dict[str, int] = {}  # app name → seconds
+    screenshot_url: Optional[str] = None  # CDN URL of screenshot taken in this window
 
 
 class UserActivity(BaseModel):
@@ -43,6 +44,14 @@ class UserActivity(BaseModel):
         for app, seconds in bucket.app_breakdown.items():
             self.app_usage[app] = self.app_usage.get(app, 0) + seconds
 
+    @property
+    def screenshots(self) -> list[dict]:
+        """All screenshots from the day, chronologically."""
+        return [
+            {"url": b.screenshot_url, "timestamp": b.timestamp}
+            for b in self.buckets if b.screenshot_url
+        ]
+
     def to_dict(self) -> dict:
         return {
             "user_id": self.user_id,
@@ -55,6 +64,7 @@ class UserActivity(BaseModel):
             "user_name": self.user_name,
             "user_email": self.user_email,
             "bucket_count": len(self.buckets),
+            "screenshots": self.screenshots,
         }
 
 

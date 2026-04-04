@@ -184,6 +184,11 @@ function ActivityCard({ activity, date }: { activity: UserActivity; date: string
         </div>
       )}
 
+      {/* Screenshots timeline */}
+      {activity.screenshots && activity.screenshots.length > 0 && (
+        <ScreenshotGallery screenshots={activity.screenshots} />
+      )}
+
       {/* AI Summary */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-2">
@@ -267,6 +272,74 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
               ⚠ {c}
             </span>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ═══ Screenshot gallery ═══ */
+function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timestamp: string }[] }) {
+  const [selected, setSelected] = useState<string | null>(null)
+
+  return (
+    <div className="px-5 py-4 border-b border-gray-50 dark:border-gray-800">
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+        Screenshots ({screenshots.length})
+      </p>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+        {screenshots.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => setSelected(s.url)}
+            className="group relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-indigo-400 transition-all hover:shadow-md"
+          >
+            <img
+              src={s.url}
+              alt={`Screenshot ${i + 1}`}
+              className="w-full aspect-video object-cover"
+              loading="lazy"
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 py-1">
+              <span className="text-[8px] text-white font-medium tabular-nums">
+                {new Date(s.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Fullscreen modal */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setSelected(null)}
+        >
+          <div className="relative max-w-5xl w-full" onClick={e => e.stopPropagation()}>
+            <img src={selected} alt="Screenshot" className="w-full rounded-xl shadow-2xl" />
+            <button
+              onClick={() => setSelected(null)}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            {/* Navigation */}
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">
+              {screenshots.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelected(s.url)}
+                  className={`w-12 h-7 rounded overflow-hidden border-2 transition-all ${
+                    s.url === selected ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={s.url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

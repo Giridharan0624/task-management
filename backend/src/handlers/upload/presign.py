@@ -28,6 +28,11 @@ UPLOAD_TYPES = {
         "max_size": 5 * 1024 * 1024,       # 5 MB
         "allowed_types": ["image/jpeg", "image/png", "image/webp"],
     },
+    "screenshot": {
+        "prefix": "screenshots",
+        "max_size": 2 * 1024 * 1024,        # 2 MB (compressed JPEG)
+        "allowed_types": ["image/jpeg"],
+    },
     "attachment": {
         "prefix": "attachments",
         "max_size": 25 * 1024 * 1024,       # 25 MB

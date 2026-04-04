@@ -8,6 +8,12 @@ export interface ActivityBucket {
   idleSeconds: number
   topApp: string | null
   appBreakdown: Record<string, number>
+  screenshotUrl: string | null
+}
+
+export interface Screenshot {
+  url: string
+  timestamp: string
 }
 
 export interface UserActivity {
@@ -18,6 +24,7 @@ export interface UserActivity {
   totalIdleMinutes: number
   activityScore: number
   appUsage: Record<string, number>
+  screenshots: Screenshot[]
   userName: string
   userEmail: string
   bucketCount: number
