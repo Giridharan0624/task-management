@@ -102,16 +102,16 @@ export default function ProfilePage() {
   // Day-off score (same logic as day-offs page)
   const dayOffScore = (() => {
     const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
     let daysOff = 0
     for (const d of (myDayOffs ?? [])) {
       if (d.status !== 'APPROVED') continue
-      const start = d.startDate > monthStart ? d.startDate : monthStart
-      const end = d.endDate < monthEnd ? d.endDate : monthEnd
-      if (start > end) continue
-      const from = new Date(start + 'T00:00:00')
-      const to = new Date(end + 'T00:00:00')
+      const start = d.startDate.slice(0, 10)
+      const end = d.endDate.slice(0, 10)
+      if (start > monthEnd || end < monthStart) continue
+      const from = new Date(Math.max(new Date(start).getTime(), new Date(monthStart).getTime()))
+      const to = new Date(Math.min(new Date(end).getTime(), new Date(monthEnd).getTime()))
       daysOff += Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
     }
     return daysOff === 0 ? 100 : daysOff <= 2 ? 75 : daysOff <= 5 ? 50 : 25
