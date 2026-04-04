@@ -313,6 +313,8 @@ Both environments have identical infrastructure (32 Lambdas, full API routes, S3
 
 ---
 
-## Built With
+## Author
 
-Built by **NEUROSTACK**. All rights reserved.
+Developed by **Giridharan S** at **NEUROSTACK**
+
+Copyright 2026 NEUROSTACK. All rights reserved.
