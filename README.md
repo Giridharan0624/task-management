@@ -181,52 +181,79 @@ Output: `desktop/build/windows/installer/TaskFlowDesktop-Setup-1.0.0.exe`
 ```
 task-management/
 ├── backend/
-│   ├── cdk/                     # AWS CDK infrastructure
-│   │   ├── app.py               # Production entry point
-│   │   ├── app_staging.py       # Staging entry point
-│   │   └── stack.py             # Stack definition (all resources)
+│   ├── cdk/                          # AWS CDK infrastructure
+│   │   ├── app.py                    # Production entry point
+│   │   ├── app_staging.py            # Staging entry point
+│   │   └── stack.py                  # Stack definition (all resources)
 │   ├── src/
-│   │   ├── handlers/            # Lambda entry points (32 functions)
-│   │   ├── application/         # Use cases (business logic + RBAC)
-│   │   ├── domain/              # Entities, value objects, interfaces
-│   │   ├── infrastructure/      # DynamoDB, Cognito, S3, Groq, Gmail
-│   │   └── shared/              # Errors, response builder, auth context
-│   └── tests/                   # Pytest test suite
+│   │   ├── contexts/                 # Bounded contexts (DDD)
+│   │   │   ├── user/                 # User management context
+│   │   │   │   ├── domain/           # Entities, value objects, interfaces
+│   │   │   │   ├── application/      # Use cases (business logic + RBAC)
+│   │   │   │   ├── infrastructure/   # DynamoDB repo, Cognito, Gmail
+│   │   │   │   └── handlers/         # Lambda entry points
+│   │   │   ├── project/              # Project management context
+│   │   │   ├── task/                 # Task management context
+│   │   │   ├── attendance/           # Time tracking context
+│   │   │   ├── dayoff/               # Day-off request context
+│   │   │   ├── comment/              # Task comments context
+│   │   │   ├── taskupdate/           # Daily work updates context
+│   │   │   ├── activity/             # Desktop activity monitoring + AI
+│   │   │   └── upload/               # S3 file upload context
+│   │   └── shared_kernel/            # Cross-cutting concerns
+│   │       ├── auth_context.py       # JWT extraction + DynamoDB role lookup
+│   │       ├── response.py           # API response builder
+│   │       ├── validate_body.py      # Pydantic body validation
+│   │       ├── errors.py             # Shared exception classes
+│   │       └── dynamo_client.py      # DynamoDB table reference
+│   └── tests/                        # Pytest test suite
 │
-├── frontend/                    # Next.js 16 web application
-│   ├── public/                  # Static assets (logo)
+├── frontend/                         # Next.js 16 web application
+│   ├── public/                       # Static assets (logo)
 │   └── src/
-│       ├── app/                 # App Router pages
-│       │   ├── (auth)/          # Login page
-│       │   └── (dashboard)/     # All dashboard pages
-│       ├── components/          # React components
-│       │   ├── ui/              # Base UI (20+ custom components)
-│       │   ├── attendance/      # Timer, attendance table
-│       │   ├── task/            # Kanban, task detail, create modal
-│       │   ├── project/         # Project cards, member list
-│       │   └── reports/         # Charts, activity reports
-│       ├── lib/                 # Utilities
-│       │   ├── api/             # API client modules
-│       │   ├── auth/            # Cognito auth provider
-│       │   ├── hooks/           # React Query hooks
-│       │   └── utils/           # Helpers (formatting, colors, etc.)
-│       └── types/               # TypeScript type definitions
+│       ├── app/                      # App Router pages
+│       │   ├── (auth)/               # Login page
+│       │   └── (dashboard)/          # All dashboard pages
+│       ├── components/               # React components
+│       │   ├── ui/                   # Base UI (20+ custom components)
+│       │   ├── attendance/           # Timer, attendance table
+│       │   ├── task/                 # Kanban, task detail, create modal
+│       │   ├── project/              # Project cards, member list
+│       │   └── reports/              # Charts, activity reports
+│       ├── lib/                      # Utilities
+│       │   ├── api/                  # API client modules
+│       │   ├── auth/                 # Cognito auth provider
+│       │   ├── hooks/                # React Query hooks
+│       │   └── utils/                # Helpers (formatting, colors, etc.)
+│       └── types/                    # TypeScript type definitions
 │
-├── desktop/                     # Wails v2 desktop app
-│   ├── internal/                # Go backend
-│   │   ├── auth/                # Cognito + DPAPI encryption
-│   │   ├── api/                 # HTTP client (TLS 1.3)
-│   │   ├── monitor/             # Activity, screenshots, notifications
-│   │   ├── tray/                # System tray (Win32 API)
-│   │   └── updater/             # Auto-update via GitHub releases
-│   ├── frontend/                # Preact UI
-│   └── build/                   # Build artifacts + NSIS installer
+├── desktop/                          # Wails v2 desktop app
+│   ├── internal/                     # Go backend
+│   │   ├── auth/                     # Cognito + DPAPI encryption
+│   │   ├── api/                      # HTTP client (TLS 1.3)
+│   │   ├── monitor/                  # Activity, screenshots, notifications
+│   │   ├── tray/                     # System tray (Win32 API)
+│   │   └── updater/                  # Auto-update via GitHub releases
+│   ├── frontend/                     # Preact UI
+│   └── build/                        # Build artifacts + NSIS installer
 │
-└── docs/                        # Documentation
-    ├── task-management-prd.md   # Product requirements document
-    ├── RBAC-DOCUMENTATION.md    # Complete permission reference
-    ├── TIMER-ARCHITECTURE.md    # Timer implementation details
-    └── ...                      # Migration guides, roadmaps
+└── docs/                             # Documentation
+    ├── task-management-prd.md        # Product requirements document
+    ├── RBAC-DOCUMENTATION.md         # Complete permission reference
+    ├── TIMER-ARCHITECTURE.md         # Timer implementation details
+    └── ...                           # Migration guides, roadmaps
+```
+
+### Backend Architecture (DDD Bounded Contexts)
+
+Each bounded context is self-contained with its own domain, application, infrastructure, and handler layers:
+
+```
+contexts/{context}/
+├── domain/           # Entities, value objects, repository interfaces
+├── application/      # Use cases (business logic + authorization)
+├── infrastructure/   # DynamoDB repository, mappers, external services
+└── handlers/         # Lambda entry points (API request/response)
 ```
 
 ---
