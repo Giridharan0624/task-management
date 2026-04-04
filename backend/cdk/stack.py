@@ -387,10 +387,9 @@ class TaskManagementStack(Stack):
         auto_summary_fn.add_environment("GROQ_SECRET_ARN", groq_secret.secret_arn)
         groq_secret.grant_read(auto_summary_fn)
         table.grant_read_write_data(auto_summary_fn)
-
         events.Rule(
             self, "DailySummarySchedule",
-            schedule=events.Schedule.cron(hour="18", minute="0"),  # 11:30 PM IST = 18:00 UTC
+            schedule=events.Schedule.cron(hour="18", minute="0"),
             targets=[events_targets.LambdaFunction(auto_summary_fn)],
         )
 

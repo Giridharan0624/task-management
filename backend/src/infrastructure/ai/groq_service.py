@@ -1,3 +1,8 @@
+"""
+AI service for generating work summaries.
+Uses Groq API (LLaMA 3.3 70B).
+API key loaded from AWS Secrets Manager at runtime.
+"""
 import json
 import os
 import urllib.request
@@ -10,8 +15,8 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 _cached_api_key = None
 
 
-def _get_groq_api_key() -> str:
-    """Load Groq API key from Secrets Manager (cached after first call)."""
+def _get_api_key() -> str:
+    """Load API key from Secrets Manager (cached after first call)."""
     global _cached_api_key
     if _cached_api_key:
         return _cached_api_key
@@ -28,7 +33,6 @@ def _get_groq_api_key() -> str:
             _cached_api_key = secret_str
         return _cached_api_key
 
-    # Fallback to env var (for local testing)
     key = os.environ.get("GROQ_API_KEY", "")
     if key:
         _cached_api_key = key
@@ -42,9 +46,9 @@ def generate_work_summary(activity_data: dict, task_context: str = "") -> dict:
     Calls Groq LLaMA 3.3 70B to generate a work summary from activity data.
     Returns: { summary, key_activities, productivity_score, concerns }
     """
-    api_key = _get_groq_api_key()
+    api_key = _get_api_key()
     if not api_key:
-        raise RuntimeError("GROQ_API_KEY not set")
+        raise RuntimeError("Groq API key not set")
 
     # Build the prompt
     active_min = activity_data.get("total_active_minutes", 0)
@@ -53,7 +57,6 @@ def generate_work_summary(activity_data: dict, task_context: str = "") -> dict:
     keyboard = sum(b.get("keyboard_count", 0) for b in activity_data.get("buckets", []))
     mouse = sum(b.get("mouse_count", 0) for b in activity_data.get("buckets", []))
 
-    # Format app usage as readable text
     app_lines = []
     for app, seconds in sorted(app_usage.items(), key=lambda x: -x[1]):
         hours = seconds // 3600
@@ -110,6 +113,7 @@ Rules:
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
+            "User-Agent": "TaskFlow/1.0",
         },
     )
 
@@ -123,7 +127,7 @@ Rules:
     # Extract the AI response
     content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
 
-    # Parse JSON from response (handle potential markdown wrapping)
+    # Parse JSON from response
     content = content.strip()
     if content.startswith("```"):
         content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
