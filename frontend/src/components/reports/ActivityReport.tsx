@@ -197,7 +197,7 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
                   <Cell fill="#34d399" />
                   <Cell fill="#fbbf24" />
                 </Pie>
-                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(v: number) => `${v}m`} />
+                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(v) => `${v}m`} />
               </PieChart>
             </ResponsiveContainer>
             <div className="flex justify-center gap-4 text-[10px] -mt-2">
