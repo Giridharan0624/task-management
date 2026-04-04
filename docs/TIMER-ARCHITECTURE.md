@@ -5,7 +5,7 @@
 > The timer never actually "runs" continuously anywhere.
 > It's **recomputed every time using timestamps**.
 
-This is the same approach used by Clockify, Toggl, and other time-tracking apps.
+This is the standard approach used by professional time-tracking applications.
 
 ---
 
@@ -240,18 +240,18 @@ The favicon also swaps to show a red recording dot (canvas-drawn) when the timer
 
 ---
 
-## Comparison to Clockify
+## Timer Capabilities
 
-| Feature | TaskFlow | Clockify |
-|---------|----------|----------|
-| Timestamp-based | Yes | Yes |
-| No background process | Yes | Yes |
-| Survives page refresh | Yes | Yes |
-| Survives browser close | Yes | Yes |
-| Optimistic UI | Yes | Yes |
-| Background tab title | Yes (Web Worker) | Yes |
-| Recording indicator | Red dot favicon | Green dot favicon |
-| Task switching | Auto-close + new session | Same |
-| Mandatory description | Yes | Optional |
+| Feature | Supported |
+|---------|-----------|
+| Timestamp-based (no background process) | Yes |
+| Survives page refresh | Yes |
+| Survives browser close | Yes |
+| Optimistic UI (instant start) | Yes |
+| Background tab title update (Web Worker) | Yes |
+| Recording indicator (red dot favicon) | Yes |
+| Task switching (auto-close + new session) | Yes |
+| Mandatory description | Yes |
+| Desktop + Web sync | Yes |
 
-TaskFlow's timer is architecturally identical to Clockify's approach.
+TaskFlow's timer follows industry-standard timestamp-based architecture.

@@ -127,7 +127,7 @@ Tasks follow a workflow that depends on the project's **domain**:
 
 ## Time Tracking
 
-TaskFlow has built-in time tracking, similar to Clockify.
+TaskFlow has built-in time tracking with live session management.
 
 ### Starting the Timer
 1. On your dashboard, find the **Time Tracker**

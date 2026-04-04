@@ -44,7 +44,7 @@ A full-stack application for organizations to manage projects, assign tasks, tra
 | **Role-Based Access** | 3-tier system RBAC (OWNER > ADMIN > MEMBER) + 4-tier project roles |
 | **Project Management** | 4 domains (Development, Designing, Management, Research) with custom pipelines |
 | **Task Pipelines** | Domain-specific stages (e.g., To Do > In Progress > Code Review > Testing > Done) |
-| **Time Tracking** | Clockify-style timer with task switching, meeting mode, mandatory descriptions |
+| **Time Tracking** | Live timer with task switching, meeting mode, mandatory descriptions |
 | **Attendance** | Team attendance dashboard, monthly reports, CSV export |
 | **Day-Off Management** | Request/approve/reject workflow with self-approval prevention |
 | **Reports** | Summary, Detailed, Weekly, and Activity views with charts |

@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-A comprehensive, serverless task management and time tracking platform where organizations manage users, projects, and tasks across multiple domains (Development, Designing, Management, Research). Each domain has its own workflow pipeline. Built-in Clockify-style time tracking, attendance monitoring, reports, and day-off management.
+A comprehensive, serverless task management and time tracking platform where organizations manage users, projects, and tasks across multiple domains (Development, Designing, Management, Research). Each domain has its own workflow pipeline. Built-in live time tracking, attendance monitoring, reports, and day-off management.
 
 **Tech Stack:**
 
@@ -32,7 +32,7 @@ A comprehensive, serverless task management and time tracking platform where org
 * Implement 3-tier system RBAC (OWNER > ADMIN > MEMBER)
 * Implement 4-tier project RBAC (ADMIN > PROJECT_MANAGER > TEAM_LEAD > MEMBER)
 * Support domain-specific task pipelines (Development, Designing, Management, Research)
-* Clockify-style live time tracking with task switching
+* live live time tracking with task switching
 * Comprehensive reporting (Summary, Detailed, Weekly views)
 * Attendance monitoring with team-wide visibility
 * Day-off request workflow with self-approval prevention
@@ -115,7 +115,7 @@ A comprehensive, serverless task management and time tracking platform where org
 * Deadline overdue detection (calendar-date comparison, not timestamp)
 * Task detail panel with progress track, assignee management, comments
 
-### 4.5 Time Tracking (Clockify-style)
+### 4.5 Time Tracking (live)
 * Select source → select task → start timer
 * **Meeting** option — one-click meeting tracking (no task required)
 * "What are you working on?" description field **(required)**
@@ -417,7 +417,7 @@ Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery e
 - [x] 4-tier project RBAC (ADMIN > PM > TEAM_LEAD > MEMBER)
 - [x] Domain-specific task pipelines (Development, Designing, Management, Research)
 - [x] Domain editing with auto-migration of orphaned task statuses
-- [x] Clockify-style live time tracking with mandatory descriptions
+- [x] live live time tracking with mandatory descriptions
 - [x] Meeting tracking (no task required)
 - [x] Reports: Summary, Detailed, Weekly views
 - [x] Project-level reports with charts
