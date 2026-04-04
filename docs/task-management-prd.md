@@ -22,7 +22,7 @@ A comprehensive, serverless task management and time tracking platform where org
 * Tailwind CSS — styling with dark mode support
 * TanStack React Query — server state management
 * Recharts — data visualization
-* Cloudinary — avatar image hosting
+* S3 + CloudFront — avatar image hosting
 
 ---
 
@@ -75,7 +75,7 @@ A comprehensive, serverless task management and time tracking platform where org
 * Company prefix configurable by OWNER from profile
 * Date of joining picker in user creation
 * Welcome email with OTP via Gmail SMTP (Secrets Manager)
-* User profile with avatar (Cloudinary), bio, skills, personal info
+* User profile with avatar (S3 + CloudFront), bio, skills, personal info
 * Profile completeness indicator
 * Online status indicators (from attendance data)
 * Day-off score displayed in user profile modal
@@ -196,7 +196,7 @@ A comprehensive, serverless task management and time tracking platform where org
 * Pending yesterday's update prompt
 
 ### 4.11 Profile
-* Avatar upload with image cropping (Cloudinary)
+* Avatar upload with image cropping (S3 + CloudFront)
 * Quick stats: tasks done, active tasks, projects, today's hours
 * Profile completeness ring (11 fields tracked)
 * Joined date display
@@ -284,7 +284,7 @@ A comprehensive, serverless task management and time tracking platform where org
 | department | string? | Development, Designing, Management, Research |
 | company_prefix | string? | OWNER only — used for employee ID generation |
 | phone, designation, location, bio | string? | Profile fields |
-| avatar_url | string? | Cloudinary URL |
+| avatar_url | string? | S3 + CloudFront URL |
 | skills | list[string] | Skill tags |
 | date_of_birth, college_name, area_of_interest, hobby | string? | Personal info |
 | created_by | string? | Creator's user ID |
@@ -381,7 +381,7 @@ Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery e
 | API | API Gateway REST | Cognito authorizer, CORS |
 | Secrets | Secrets Manager | Gmail credentials |
 | Frontend | Vercel | Next.js 16, auto-deploy on push |
-| Images | Cloudinary | Unsigned avatar uploads |
+| Images | S3 + CloudFront | Unsigned avatar uploads |
 | Email | Gmail SMTP | Welcome emails with OTP |
 | Region | ap-south-1 (Mumbai) | |
 
