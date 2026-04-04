@@ -250,7 +250,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Desktop app download */}
       <a
-        href="https://d32wbqjdb87hcf.cloudfront.net/downloads/TaskFlowDesktop-Setup-1.0.0.exe"
+        href="https://dtzl7r6jcvxb2.cloudfront.net/downloads/TaskFlowDesktop-Setup-1.0.0.exe"
         download
         className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 hover:bg-indigo-100 transition-all group"
       >

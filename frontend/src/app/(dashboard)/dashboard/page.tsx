@@ -52,7 +52,7 @@ function StatCard({ icon, label, value, color, gradient, href, sparkData, sparkC
 function DesktopAppCard() {
   return (
     <a
-      href="https://d32wbqjdb87hcf.cloudfront.net/downloads/TaskFlowDesktop-Setup-1.0.0.exe"
+      href="https://dtzl7r6jcvxb2.cloudfront.net/downloads/TaskFlowDesktop-Setup-1.0.0.exe"
       download
       className="flex items-center gap-4 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-2xl border border-indigo-100 p-5 hover:shadow-md hover:border-indigo-200 transition-all group"
     >
