@@ -318,7 +318,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
 
                         {/* Quick status change — only for assigned user */}
                         {(task.assignedTo ?? []).includes(user?.userId ?? '') && (
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                          <div onClick={e => e.stopPropagation()}>
                             <FilterSelect value={task.status} onChange={v => updateTask.mutate({ taskId: task.taskId, data: { status: v as string } })}
                               options={statusOptions} className="max-w-[120px]" />
                           </div>
