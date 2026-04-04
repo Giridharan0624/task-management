@@ -248,6 +248,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </button>
       </div>
 
+      {/* Desktop app download */}
+      <a
+        href="https://d32wbqjdb87hcf.cloudfront.net/downloads/TaskFlowDesktop-Setup-1.0.0.exe"
+        download
+        className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 hover:bg-indigo-100 transition-all group"
+      >
+        <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+        <div>
+          <p className="text-[11px] font-semibold text-indigo-700 group-hover:text-indigo-800">Desktop App</p>
+          <p className="text-[9px] text-indigo-400">Windows · v1.0.0</p>
+        </div>
+      </a>
+
       {/* NEUROSTACK branding */}
       <p className="text-center text-[10px] text-gray-400 pb-3">
         Powered by <span className="font-semibold text-gray-500">NEUROSTACK</span>
