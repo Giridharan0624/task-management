@@ -252,40 +252,40 @@ class TaskManagementStack(Stack):
         users_admins = users.add_resource("admins")
 
         # ─── Project handlers ────────────────────────────────────────────────
-        add_api_lambda("CreateProject", "handlers.project.create_project.handler", "POST", projects)
-        add_api_lambda("ListProjects", "handlers.project.list_projects.handler", "GET", projects)
-        add_api_lambda("GetProject", "handlers.project.get_project.handler", "GET", project)
-        add_api_lambda("UpdateProject", "handlers.project.update_project.handler", "PUT", project)
-        add_api_lambda("DeleteProject", "handlers.project.delete_project.handler", "DELETE", project)
+        add_api_lambda("CreateProject", "contexts.project.handlers.create_project.handler", "POST", projects)
+        add_api_lambda("ListProjects", "contexts.project.handlers.list_projects.handler", "GET", projects)
+        add_api_lambda("GetProject", "contexts.project.handlers.get_project.handler", "GET", project)
+        add_api_lambda("UpdateProject", "contexts.project.handlers.update_project.handler", "PUT", project)
+        add_api_lambda("DeleteProject", "contexts.project.handlers.delete_project.handler", "DELETE", project)
         project_status = project.add_resource("status")
-        add_api_lambda("GetProjectStatus", "handlers.project.get_project_status.handler", "GET", project_status)
-        add_api_lambda("AddMember", "handlers.project.add_member.handler", "POST", members)
-        add_api_lambda("RemoveMember", "handlers.project.remove_member.handler", "DELETE", member)
-        add_api_lambda("UpdateMemberRole", "handlers.project.update_member_role.handler", "PUT", member_role)
+        add_api_lambda("GetProjectStatus", "contexts.project.handlers.get_project_status.handler", "GET", project_status)
+        add_api_lambda("AddMember", "contexts.project.handlers.add_member.handler", "POST", members)
+        add_api_lambda("RemoveMember", "contexts.project.handlers.remove_member.handler", "DELETE", member)
+        add_api_lambda("UpdateMemberRole", "contexts.project.handlers.update_member_role.handler", "PUT", member_role)
 
         # ─── Task handlers ───────────────────────────────────────────────────
-        add_api_lambda("CreateTask", "handlers.task.create_task.handler", "POST", tasks)
-        add_api_lambda("ListTasks", "handlers.task.list_tasks.handler", "GET", tasks)
-        add_api_lambda("GetTask", "handlers.task.get_task.handler", "GET", task)
-        add_api_lambda("UpdateTask", "handlers.task.update_task.handler", "PUT", task)
-        add_api_lambda("DeleteTask", "handlers.task.delete_task.handler", "DELETE", task)
-        add_api_lambda("AssignTask", "handlers.task.assign_task.handler", "PUT", task_assign)
+        add_api_lambda("CreateTask", "contexts.task.handlers.create_task.handler", "POST", tasks)
+        add_api_lambda("ListTasks", "contexts.task.handlers.list_tasks.handler", "GET", tasks)
+        add_api_lambda("GetTask", "contexts.task.handlers.get_task.handler", "GET", task)
+        add_api_lambda("UpdateTask", "contexts.task.handlers.update_task.handler", "PUT", task)
+        add_api_lambda("DeleteTask", "contexts.task.handlers.delete_task.handler", "DELETE", task)
+        add_api_lambda("AssignTask", "contexts.task.handlers.assign_task.handler", "PUT", task_assign)
 
 
         # ─── Comment handlers ────────────────────────────────────────────────
-        add_api_lambda("CreateComment", "handlers.comment.create_comment.handler", "POST", comments)
-        add_api_lambda("ListComments", "handlers.comment.list_comments.handler", "GET", comments)
+        add_api_lambda("CreateComment", "contexts.comment.handlers.create_comment.handler", "POST", comments)
+        add_api_lambda("ListComments", "contexts.comment.handlers.list_comments.handler", "GET", comments)
 
         # ─── User handlers ───────────────────────────────────────────────────
-        add_api_lambda("GetProfile", "handlers.user.get_profile.handler", "GET", users_me)
-        add_api_lambda("UpdateProfile", "handlers.user.update_profile.handler", "PUT", users_me, cognito_policies=["cognito-idp:AdminUpdateUserAttributes"])
-        add_api_lambda("MyTasks", "handlers.user.my_tasks.handler", "GET", users_me_tasks)
-        add_api_lambda("ListUsers", "handlers.user.list_users.handler", "GET", users)
+        add_api_lambda("GetProfile", "contexts.user.handlers.get_profile.handler", "GET", users_me)
+        add_api_lambda("UpdateProfile", "contexts.user.handlers.update_profile.handler", "PUT", users_me, cognito_policies=["cognito-idp:AdminUpdateUserAttributes"])
+        add_api_lambda("MyTasks", "contexts.user.handlers.my_tasks.handler", "GET", users_me_tasks)
+        add_api_lambda("ListUsers", "contexts.user.handlers.list_users.handler", "GET", users)
 
         # ─── User management (with Cognito admin permissions) ────────────────
         create_user_fn = add_api_lambda(
             "CreateUser",
-            "handlers.user.create_user.handler",
+            "contexts.user.handlers.create_user.handler",
             "POST",
             users,
             cognito_policies=["cognito-idp:AdminCreateUser"],
@@ -295,25 +295,25 @@ class TaskManagementStack(Stack):
         gmail_secret.grant_read(create_user_fn)
         add_api_lambda(
             "DeleteUser",
-            "handlers.user.delete_user.handler",
+            "contexts.user.handlers.delete_user.handler",
             "DELETE",
             user_by_id,
             cognito_policies=["cognito-idp:AdminDeleteUser"],
         )
         add_api_lambda(
             "UpdateUserRole",
-            "handlers.user.update_user_role.handler",
+            "contexts.user.handlers.update_user_role.handler",
             "PUT",
             users_role,
             cognito_policies=["cognito-idp:AdminUpdateUserAttributes"],
         )
-        add_api_lambda("GetUserProgress", "handlers.user.get_user_progress.handler", "GET", user_progress)
-        add_api_lambda("UpdateUserDepartment", "handlers.user.update_user_department.handler", "PUT", users_department)
-        add_api_lambda("ListAdmins", "handlers.user.list_admins.handler", "GET", users_admins)
+        add_api_lambda("GetUserProgress", "contexts.user.handlers.get_user_progress.handler", "GET", user_progress)
+        add_api_lambda("UpdateUserDepartment", "contexts.user.handlers.update_user_department.handler", "PUT", users_department)
+        add_api_lambda("ListAdmins", "contexts.user.handlers.list_admins.handler", "GET", users_admins)
 
         # ─── Public endpoint (no auth) — resolve employee ID to email for login
         resolve_employee = api.root.add_resource("resolve-employee")
-        resolve_fn = _lambda.Function(self, "ResolveEmployee", handler="handlers.user.resolve_employee.handler", **lambda_defaults)
+        resolve_fn = _lambda.Function(self, "ResolveEmployee", handler="contexts.user.handlers.resolve_employee.handler", **lambda_defaults)
         table.grant_read_data(resolve_fn)
         resolve_employee.add_method(
             "GET",
@@ -328,12 +328,12 @@ class TaskManagementStack(Stack):
         attendance_me = attendance.add_resource("me")
         attendance_today = attendance.add_resource("today")
 
-        add_api_lambda("AttendanceSignIn", "handlers.attendance.sign_in.handler", "POST", attendance_sign_in)
-        add_api_lambda("AttendanceSignOut", "handlers.attendance.sign_out.handler", "PUT", attendance_sign_out)
-        add_api_lambda("GetMyAttendance", "handlers.attendance.get_my_attendance.handler", "GET", attendance_me)
-        add_api_lambda("ListTodayAttendance", "handlers.attendance.list_today_attendance.handler", "GET", attendance_today)
+        add_api_lambda("AttendanceSignIn", "contexts.attendance.handlers.sign_in.handler", "POST", attendance_sign_in)
+        add_api_lambda("AttendanceSignOut", "contexts.attendance.handlers.sign_out.handler", "PUT", attendance_sign_out)
+        add_api_lambda("GetMyAttendance", "contexts.attendance.handlers.get_my_attendance.handler", "GET", attendance_me)
+        add_api_lambda("ListTodayAttendance", "contexts.attendance.handlers.list_today_attendance.handler", "GET", attendance_today)
         attendance_report = attendance.add_resource("report")
-        add_api_lambda("GetAttendanceReport", "handlers.attendance.get_report.handler", "GET", attendance_report)
+        add_api_lambda("GetAttendanceReport", "contexts.attendance.handlers.get_report.handler", "GET", attendance_report)
 
         # ─── Day Off handlers ──────────────────────────────────────────────
         dayoffs = api.root.add_resource("day-offs")
@@ -345,13 +345,13 @@ class TaskManagementStack(Stack):
         dayoff_reject = dayoff_by_id.add_resource("reject")
         dayoff_cancel = dayoff_by_id.add_resource("cancel")
 
-        add_api_lambda("CreateDayOff", "handlers.dayoff.create_request.handler", "POST", dayoffs)
-        add_api_lambda("MyDayOffs", "handlers.dayoff.my_requests.handler", "GET", dayoffs_my)
-        add_api_lambda("PendingDayOffs", "handlers.dayoff.pending_approvals.handler", "GET", dayoffs_pending)
-        add_api_lambda("AllDayOffs", "handlers.dayoff.all_requests.handler", "GET", dayoffs_all)
-        add_api_lambda("ApproveDayOff", "handlers.dayoff.approve.handler", "PUT", dayoff_approve)
-        add_api_lambda("RejectDayOff", "handlers.dayoff.reject.handler", "PUT", dayoff_reject)
-        add_api_lambda("CancelDayOff", "handlers.dayoff.cancel.handler", "PUT", dayoff_cancel)
+        add_api_lambda("CreateDayOff", "contexts.dayoff.handlers.create_request.handler", "POST", dayoffs)
+        add_api_lambda("MyDayOffs", "contexts.dayoff.handlers.my_requests.handler", "GET", dayoffs_my)
+        add_api_lambda("PendingDayOffs", "contexts.dayoff.handlers.pending_approvals.handler", "GET", dayoffs_pending)
+        add_api_lambda("AllDayOffs", "contexts.dayoff.handlers.all_requests.handler", "GET", dayoffs_all)
+        add_api_lambda("ApproveDayOff", "contexts.dayoff.handlers.approve.handler", "PUT", dayoff_approve)
+        add_api_lambda("RejectDayOff", "contexts.dayoff.handlers.reject.handler", "PUT", dayoff_reject)
+        add_api_lambda("CancelDayOff", "contexts.dayoff.handlers.cancel.handler", "PUT", dayoff_cancel)
 
         # ─── Activity handlers (desktop app heartbeats) ───────────────────
         activity = api.root.add_resource("activity")
@@ -359,9 +359,9 @@ class TaskManagementStack(Stack):
         activity_me = activity.add_resource("me")
         activity_report = activity.add_resource("report")
 
-        add_api_lambda("PostHeartbeat", "handlers.activity.post_heartbeat.handler", "POST", activity_heartbeat)
-        add_api_lambda("GetMyActivity", "handlers.activity.get_my_activity.handler", "GET", activity_me)
-        add_api_lambda("GetActivityReport", "handlers.activity.get_report.handler", "GET", activity_report)
+        add_api_lambda("PostHeartbeat", "contexts.activity.handlers.post_heartbeat.handler", "POST", activity_heartbeat)
+        add_api_lambda("GetMyActivity", "contexts.activity.handlers.get_my_activity.handler", "GET", activity_me)
+        add_api_lambda("GetActivityReport", "contexts.activity.handlers.get_report.handler", "GET", activity_report)
 
         # Activity AI summary
         activity_summary = activity.add_resource("summary")
@@ -369,19 +369,19 @@ class TaskManagementStack(Stack):
             self, "GroqApiKey", config.get("groq_secret_name", "taskflow/groq-api-key")
         )
         generate_summary_fn = add_api_lambda(
-            "GenerateSummary", "handlers.activity.generate_summary.handler", "POST", activity_summary
+            "GenerateSummary", "contexts.activity.handlers.generate_summary.handler", "POST", activity_summary
         )
         generate_summary_fn.add_environment("GROQ_SECRET_ARN", groq_secret.secret_arn)
         groq_secret.grant_read(generate_summary_fn)
         # AI calls need more time than the default 10s
         generate_summary_fn.node.default_child.add_property_override("Timeout", 60)
 
-        add_api_lambda("GetSummary", "handlers.activity.get_summary.handler", "GET", activity_summary)
+        add_api_lambda("GetSummary", "contexts.activity.handlers.get_summary.handler", "GET", activity_summary)
 
         # Scheduled: auto-generate AI summaries at 11:30 PM IST (18:00 UTC) daily
         auto_summary_fn = _lambda.Function(
             self, "AutoGenerateSummaries",
-            handler="handlers.activity.auto_generate_summaries.handler",
+            handler="contexts.activity.handlers.auto_generate_summaries.handler",
             **{**lambda_defaults, "timeout": Duration.minutes(5)},
         )
         auto_summary_fn.add_environment("GROQ_SECRET_ARN", groq_secret.secret_arn)
@@ -397,7 +397,7 @@ class TaskManagementStack(Stack):
         uploads = api.root.add_resource("uploads")
         uploads_presign = uploads.add_resource("presign")
 
-        presign_fn = add_api_lambda("GetPresignedUrl", "handlers.upload.presign.handler", "GET", uploads_presign)
+        presign_fn = add_api_lambda("GetPresignedUrl", "contexts.upload.handlers.presign.handler", "GET", uploads_presign)
         presign_fn.add_environment("UPLOADS_BUCKET", uploads_bucket.bucket_name)
         presign_fn.add_environment("CDN_DOMAIN", cdn.distribution_domain_name)
         uploads_bucket.grant_put(presign_fn)
@@ -406,9 +406,9 @@ class TaskManagementStack(Stack):
         task_updates = api.root.add_resource("task-updates")
         task_updates_me = task_updates.add_resource("me")
 
-        add_api_lambda("SubmitTaskUpdate", "handlers.taskupdate.submit_update.handler", "POST", task_updates)
-        add_api_lambda("ListTaskUpdates", "handlers.taskupdate.list_updates.handler", "GET", task_updates)
-        add_api_lambda("MyTaskUpdate", "handlers.taskupdate.my_update.handler", "GET", task_updates_me)
+        add_api_lambda("SubmitTaskUpdate", "contexts.taskupdate.handlers.submit_update.handler", "POST", task_updates)
+        add_api_lambda("ListTaskUpdates", "contexts.taskupdate.handlers.list_updates.handler", "GET", task_updates)
+        add_api_lambda("MyTaskUpdate", "contexts.taskupdate.handlers.my_update.handler", "GET", task_updates_me)
 
         # ─── Outputs ─────────────────────────────────────────────────────────
         CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")
