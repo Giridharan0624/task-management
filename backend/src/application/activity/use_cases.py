@@ -42,14 +42,17 @@ class RecordHeartbeatUseCase:
         if active_seconds + idle_seconds > 600:  # Max 10 minutes per bucket (5 min + buffer)
             raise ValidationError("Bucket duration exceeds maximum")
 
+        screenshot_url = data.get("screenshot_url", None)
+
         bucket = ActivityBucket(
             timestamp=timestamp,
             keyboard_count=keyboard_count,
             mouse_count=mouse_count,
             active_seconds=active_seconds,
             idle_seconds=idle_seconds,
-            top_app=top_app[:50] if top_app else None,  # Sanitize app name length
-            app_breakdown={k[:50]: v for k, v in list(app_breakdown.items())[:20]},  # Max 20 apps
+            top_app=top_app[:50] if top_app else None,
+            app_breakdown={k[:50]: v for k, v in list(app_breakdown.items())[:20]},
+            screenshot_url=screenshot_url,
         )
 
         # Get or create daily activity record

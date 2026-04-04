@@ -86,15 +86,16 @@ export function ActivityReport() {
       )}
 
       {/* User cards */}
-      {filteredActivities.map(activity => (
-        <ActivityCard key={activity.userId} activity={activity} date={date} />
-      ))}
+      {filteredActivities.map(activity => {
+        const userInfo = (users ?? []).find(u => u.userId === activity.userId)
+        return <ActivityCard key={activity.userId} activity={activity} date={date} userInfo={userInfo} />
+      })}
     </div>
   )
 }
 
 /* ═══ Per-user activity card ═══ */
-function ActivityCard({ activity, date }: { activity: UserActivity; date: string }) {
+function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; date: string; userInfo?: any }) {
   const { data: summary } = useSummary(activity.userId, date)
   const generateMutation = useGenerateSummary()
 
@@ -116,13 +117,34 @@ function ActivityCard({ activity, date }: { activity: UserActivity; date: string
     generateMutation.mutate({ userId: activity.userId, date })
   }
 
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[var(--color-surface)] shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-50 dark:border-gray-800 flex items-center justify-between">
-        <div>
-          <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{activity.userName || 'User'}</p>
-          <p className="text-[11px] text-gray-400">{activity.userEmail}</p>
+      {/* Header — click to expand/collapse */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3">
+          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          {userInfo?.avatarUrl ? (
+            <img src={userInfo.avatarUrl} alt={activity.userName} className="w-9 h-9 rounded-xl object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-sm font-bold">{(activity.userName || '?').charAt(0).toUpperCase()}</span>
+            </div>
+          )}
+          <div>
+            <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{activity.userName || 'User'}</p>
+            <p className="text-[11px] text-gray-400">
+              {userInfo?.employeeId && <span className="font-medium text-indigo-600 dark:text-indigo-400">{userInfo.employeeId}</span>}
+              {userInfo?.employeeId && ' · '}
+              {activity.userEmail}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <StatBadge label="Active" value={formatDuration(activity.totalActiveMinutes / 60)} color="emerald" />
@@ -132,10 +154,12 @@ function ActivityCard({ activity, date }: { activity: UserActivity; date: string
           <StatBadge label="Mouse" value={totalMouse.toLocaleString()} color="indigo" />
           <StatBadge label="Buckets" value={String(activity.bucketCount)} color="indigo" />
         </div>
-      </div>
+      </button>
 
-      {/* Charts row */}
-      {appData.length > 0 && (
+      {!expanded && <div className="h-0" />}
+
+      {/* Expandable content */}
+      {expanded && appData.length > 0 && (
         <div className="px-5 py-4 grid grid-cols-2 gap-4 border-b border-gray-50 dark:border-gray-800">
           {/* Bar chart — hours by app */}
           <div>
@@ -185,12 +209,12 @@ function ActivityCard({ activity, date }: { activity: UserActivity; date: string
       )}
 
       {/* Screenshots timeline */}
-      {activity.screenshots && activity.screenshots.length > 0 && (
+      {expanded && activity.screenshots && activity.screenshots.length > 0 && (
         <ScreenshotGallery screenshots={activity.screenshots} />
       )}
 
       {/* AI Summary */}
-      <div className="px-5 py-4">
+      {expanded && <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">AI Work Summary</p>
           <button
@@ -217,7 +241,7 @@ function ActivityCard({ activity, date }: { activity: UserActivity; date: string
             {generateMutation.error instanceof Error ? generateMutation.error.message : 'Failed to generate summary'}
           </p>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
