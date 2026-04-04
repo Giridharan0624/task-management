@@ -17,8 +17,15 @@ function setTimerFavicon(active: boolean) {
   const existing = document.querySelector('link[rel="icon"][data-timer]') as HTMLLinkElement | null
 
   if (!active) {
-    // Remove the dynamic favicon — browser falls back to the default /icon
+    // Remove the dynamic favicon and force restore default
     if (existing) existing.remove()
+    // Force browser to re-read the default favicon
+    const defaultIcon = document.querySelector('link[rel="icon"]:not([data-timer])') as HTMLLinkElement | null
+    if (defaultIcon) {
+      const href = defaultIcon.href
+      defaultIcon.href = ''
+      defaultIcon.href = href
+    }
     return
   }
 
