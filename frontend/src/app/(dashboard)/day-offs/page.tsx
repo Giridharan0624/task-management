@@ -63,7 +63,7 @@ function DayOffScoreCard({ userId, dayOffs }: { userId: string; dayOffs: DayOffR
   const monthName = new Date().toLocaleDateString('en-US', { month: 'long' })
 
   return (
-    <div className={`rounded-xl border p-3.5 ${scoreBg}`}>
+    <div className={`rounded-2xl border p-3.5 ${scoreBg}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Day-Off Score · {monthName}</p>

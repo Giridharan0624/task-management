@@ -368,14 +368,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
               {(() => {
                 const taskDomain = ((project?.domain || task.domain) as TaskDomain) || 'DEVELOPMENT'
                 const STAGES = DOMAIN_STATUSES[taskDomain] || DOMAIN_STATUSES['DEVELOPMENT']
-                const STAGE_CLR: Record<string, string> = {
-                  TODO: '#f59e0b', IN_PROGRESS: '#3b82f6', DEVELOPED: '#8b5cf6', CODE_REVIEW: '#a855f7',
-                  TESTING: '#f97316', TESTED: '#14b8a6', DEBUGGING: '#ef4444', FINAL_TESTING: '#ec4899',
-                  WIREFRAME: '#64748b', DESIGN: '#6366f1', REVIEW: '#06b6d4', REVISION: '#f43f5e', APPROVED: '#10b981',
-                  PLANNING: '#6366f1', EXECUTION: '#3b82f6',
-                  RESEARCH: '#8b5cf6', ANALYSIS: '#14b8a6', DOCUMENTATION: '#f97316',
-                  DONE: '#10b981',
-                }
+                const STAGE_CLR = STATUS_DOT_COLORS
                 const currentIdx = STAGES.indexOf(task.status)
                 const pct = getStatusProgress(task.status, taskDomain)
                 return (

@@ -42,7 +42,7 @@ export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting, c
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex cursor-pointer flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-indigo-200/60 hover-lift"
+      className="group relative flex cursor-pointer flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-gray-200 hover-lift"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">

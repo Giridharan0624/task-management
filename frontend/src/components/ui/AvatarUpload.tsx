@@ -51,15 +51,13 @@ export function AvatarUpload({ currentUrl, name, size = 'lg', onUpload, editable
   }
 
   const handleCropComplete = async (croppedBlob: Blob) => {
-    console.log('Crop complete, uploading to S3...', croppedBlob.size, 'bytes')
     setCropSrc(null)
     setUploading(true)
     try {
       const cdnUrl = await uploadAvatar(croppedBlob)
-      console.log('Upload success, CDN URL:', cdnUrl)
       onUpload(cdnUrl)
-    } catch (err) {
-      console.error('Avatar upload failed:', err)
+    } catch {
+      // Upload failed silently — user can retry
     } finally {
       setUploading(false)
     }

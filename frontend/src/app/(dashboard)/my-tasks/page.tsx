@@ -182,7 +182,7 @@ export default function TasksPage() {
 
       {/* Task Table — grouped by project */}
       {filteredTasks.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-16 text-center">
+        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-12 text-center">
           <p className="text-gray-400 text-sm">
             {filter === 'ALL' ? 'No tasks found.' : `No ${filter.replace('_', ' ').toLowerCase()} tasks.`}
           </p>
@@ -209,7 +209,7 @@ export default function TasksPage() {
                 <div key={group.projectId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                   {/* Project group header */}
                   <Link href={group.projectId === 'DIRECT' ? '/my-tasks' : `/projects/${group.projectId}`}
-                    className="flex items-center justify-between px-5 py-3 bg-gray-50/80 border-b border-gray-100 hover:bg-gray-100/60 transition-colors">
+                    className="flex items-center justify-between px-5 py-3 bg-gray-50/60 border-b border-gray-100 hover:bg-gray-100/60 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg>

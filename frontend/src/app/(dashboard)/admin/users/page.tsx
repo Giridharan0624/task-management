@@ -159,8 +159,8 @@ export default function UsersPage() {
       setNewRole('MEMBER')
       setNewDepartment('')
       setNewDateOfJoining('')
-    } catch (err: any) {
-      setError(err.message || 'Failed to create user')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create user')
     }
   }
 
@@ -169,8 +169,8 @@ export default function UsersPage() {
     try {
       await deleteUserMutation.mutateAsync(deleteTarget.userId)
       setDeleteTarget(null)
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete user')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user')
     }
   }
 
@@ -178,8 +178,8 @@ export default function UsersPage() {
     try {
       await updateRole.mutateAsync({ userId, systemRole: role })
       setSelectedUser(null)
-    } catch (err: any) {
-      setError(err.message || 'Failed to update role')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update role')
     }
   }
 
@@ -281,7 +281,7 @@ export default function UsersPage() {
       {/* User Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50/80">
+          <thead className="bg-gray-50/60">
             <tr>
               <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">User</th>
               <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Department</th>
@@ -293,7 +293,7 @@ export default function UsersPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-50">
             {displayedUsers.map((u) => (
-              <tr key={u.userId} className="hover:bg-gray-50/60 transition-colors">
+              <tr key={u.userId} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="relative">

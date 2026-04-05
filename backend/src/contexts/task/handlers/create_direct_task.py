@@ -31,14 +31,14 @@ def handler(event, context):
         auth = extract_auth_context(event)
 
         if auth.system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can create direct tasks")
+            raise AuthorizationError("You don't have permission to create direct tasks.")
 
         body = validate_body(CreateDirectTaskRequest, event.get("body"))
         user_repo = UserDynamoRepository()
         task_repo = TaskDynamoRepository()
 
         if not body.assigned_to:
-            raise ValidationError("At least one assignee is required")
+            raise ValidationError("Please assign this task to at least one team member.")
 
         # Validate all assignees exist
         assignee_names = []

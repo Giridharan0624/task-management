@@ -17,14 +17,14 @@ class CreateDayOffRequestUseCase:
 
     def execute(self, caller_user_id: str, start_date: str, end_date: str, reason: str) -> dict:
         if not start_date or not end_date or not reason:
-            raise ValidationError("start_date, end_date, and reason are required")
+            raise ValidationError("Please fill in the start date, end date, and reason for your day-off request.")
 
         user = self._user_repo.find_by_id(caller_user_id)
         if not user:
             raise NotFoundError("User not found")
 
         if user.system_role == SystemRole.OWNER:
-            raise AuthorizationError("Owner cannot request day offs")
+            raise AuthorizationError("The Owner account cannot request day-offs.")
 
         # Auto-find an approver (any ADMIN or OWNER, but not the requester)
         all_users = self._user_repo.find_all()
@@ -37,7 +37,7 @@ class CreateDayOffRequestUseCase:
                 break
 
         if not approver:
-            raise ValidationError("No admin or owner found to approve day-off requests")
+            raise ValidationError("No one is available to approve your request. Please contact your administrator.")
 
         request_id = str(uuid.uuid4())
         day_off = DayOffRequest.create(
@@ -84,7 +84,7 @@ class GetAllRequestsUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can view all day-off requests")
+            raise AuthorizationError("You don't have permission to view all day-off requests.")
         requests = self._dayoff_repo.find_all()
         return [r.to_dict() for r in requests]
 
@@ -96,14 +96,14 @@ class ApproveRequestUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str, request_id: str) -> dict:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can approve day-off requests")
+            raise AuthorizationError("You don't have permission to approve day-off requests.")
 
         day_off = self._dayoff_repo.find_by_id(request_id)
         if not day_off:
             raise NotFoundError("Day-off request not found")
 
         if day_off.user_id == caller_user_id:
-            raise AuthorizationError("Cannot approve your own day-off request")
+            raise AuthorizationError("You cannot approve your own day-off request. Another admin must approve it.")
 
         caller = self._user_repo.find_by_id(caller_user_id)
         caller_name = caller.name if caller else caller_user_id
@@ -125,14 +125,14 @@ class RejectRequestUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str, request_id: str) -> dict:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can reject day-off requests")
+            raise AuthorizationError("You don't have permission to reject day-off requests.")
 
         day_off = self._dayoff_repo.find_by_id(request_id)
         if not day_off:
             raise NotFoundError("Day-off request not found")
 
         if day_off.user_id == caller_user_id:
-            raise AuthorizationError("Cannot reject your own day-off request")
+            raise AuthorizationError("You cannot reject your own day-off request.")
 
         caller = self._user_repo.find_by_id(caller_user_id)
         caller_name = caller.name if caller else caller_user_id
@@ -158,10 +158,10 @@ class CancelRequestUseCase:
             raise NotFoundError("Day-off request not found")
 
         if day_off.user_id != caller_user_id:
-            raise AuthorizationError("You can only cancel your own day-off requests")
+            raise AuthorizationError("You can only cancel your own day-off requests.")
 
         if day_off.status == "CANCELLED":
-            raise ValidationError("This request is already cancelled")
+            raise ValidationError("This day-off request has already been cancelled.")
 
         now = datetime.now(timezone.utc).isoformat()
         day_off.status = "CANCELLED"

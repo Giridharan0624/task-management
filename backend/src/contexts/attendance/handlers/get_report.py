@@ -13,7 +13,7 @@ def handler(event, context):
         end_date = params.get("endDate") or params.get("end_date")
 
         if not start_date or not end_date:
-            raise ValidationError("startDate and endDate query parameters are required")
+            raise ValidationError("Please select both a start date and end date.")
 
         attendance_repo = AttendanceDynamoRepository()
         use_case = GetAttendanceReportUseCase(attendance_repo)

@@ -39,7 +39,7 @@ class CreateTaskUseCase:
 
         # Owner/Admin/Team Lead can create tasks; Members cannot
         if not _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only owners, admins, and team leads can create tasks")
+            raise AuthorizationError("You don't have permission to create tasks in this project.")
 
         # Domain comes from the project
         domain = project.domain or "DEVELOPMENT"
@@ -103,7 +103,7 @@ class GetTaskUseCase:
         if caller_system_role not in PRIVILEGED_ROLES:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
-                raise AuthorizationError("You are not a member of this project")
+                raise AuthorizationError("You don't have access to this project.")
 
         task = self._task_repo.find_by_id(task_id)
         if not task or task.project_id != project_id:
@@ -129,7 +129,7 @@ class ListTasksForProjectUseCase:
         if caller_system_role not in PRIVILEGED_ROLES:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
-                raise AuthorizationError("You are not a member of this project")
+                raise AuthorizationError("You don't have access to this project.")
 
         tasks = self._task_repo.find_by_project(project_id)
 
@@ -174,13 +174,13 @@ class UpdateTaskUseCase:
             pass
         elif caller_system_role == SystemRole.MEMBER.value:
             if caller_user_id not in task.assigned_to:
-                raise AuthorizationError("You can only update tasks assigned to you")
+                raise AuthorizationError("You can only update tasks that are assigned to you.")
             allowed_fields = {"project_id", "task_id", "status"}
             extra_fields = set(dto.keys()) - allowed_fields
             if extra_fields:
-                raise AuthorizationError("Members can only update the status of their assigned tasks")
+                raise AuthorizationError("You can only change the status of tasks assigned to you.")
         else:
-            raise AuthorizationError("Unauthorized to update tasks")
+            raise AuthorizationError("You don't have permission to update tasks in this project.")
 
         # Apply updates
         title = dto.get("title", task.title)
@@ -257,9 +257,9 @@ class DeleteTaskUseCase:
 
         if project_id == "DIRECT":
             if caller_system_role not in PRIVILEGED_ROLES:
-                raise AuthorizationError("Only privileged users can delete direct tasks")
+                raise AuthorizationError("You don't have permission to delete direct tasks.")
         elif not _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only owners, admins, and team leads can delete tasks")
+            raise AuthorizationError("You don't have permission to delete tasks in this project.")
 
         # Cascade delete comments
         if self._comment_repo:
@@ -288,7 +288,7 @@ class AssignTaskUseCase:
 
         # Authorization: Owner/Admin/Team Lead can assign
         if not _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only owners, admins, and team leads can assign tasks")
+            raise AuthorizationError("You don't have permission to assign tasks in this project.")
 
         # Validate each assignee is a project member
         for assignee_id in assignee_ids:

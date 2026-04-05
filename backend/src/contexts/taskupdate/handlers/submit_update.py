@@ -49,7 +49,7 @@ def handler(event, context):
                 target_date = ist_today
 
         if not attendance or not attendance.sessions:
-            raise ValidationError("No attendance record found. Start the timer and work before submitting.")
+            raise ValidationError("No work sessions found. Start the timer in the Desktop App and track your work before submitting.")
 
         # Check if already submitted for this date
         existing = update_repo.find_by_user_and_date(auth.user_id, target_date)

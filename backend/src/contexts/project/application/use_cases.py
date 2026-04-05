@@ -36,7 +36,7 @@ class CreateProjectUseCase:
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can create projects")
+            raise AuthorizationError("You don't have permission to create projects.")
 
         team_lead_id = dto.get("team_lead_id")
         project_manager_id = dto.get("project_manager_id")
@@ -114,7 +114,7 @@ class GetProjectUseCase:
 
         caller_member = self._project_repo.find_member(project_id, caller_user_id)
         if not caller_member and caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("You are not a member of this project")
+            raise AuthorizationError("You don't have access to this project.")
 
         members = self._project_repo.find_members(project_id)
         enriched_members = []
@@ -174,7 +174,7 @@ class UpdateProjectUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only project admins can update project details")
+            raise AuthorizationError("You don't have permission to update this project.")
 
         now = datetime.now(timezone.utc).isoformat()
         overrides: dict = {"updated_at": now}
@@ -218,7 +218,7 @@ class DeleteProjectUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only project admins can delete this project")
+            raise AuthorizationError("You don't have permission to delete this project.")
 
         self._project_repo.delete_all_project_data(project_id)
 
@@ -238,7 +238,7 @@ class AddProjectMemberUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only project admins can add members")
+            raise AuthorizationError("You don't have permission to add members to this project.")
 
         target_user = self._user_repo.find_by_id(target_user_id)
         if not target_user:
@@ -254,7 +254,7 @@ class AddProjectMemberUseCase:
             existing_members = self._project_repo.find_members(project_id)
             for m in existing_members:
                 if m.project_role == ProjectRole.TEAM_LEAD:
-                    raise ValidationError("This project already has a Team Lead. Remove the current one first.")
+                    raise ValidationError("This project already has a Team Lead. Please remove the current one before assigning a new one.")
 
         member = ProjectMember.create(
             project_id=project_id,
@@ -280,7 +280,7 @@ class RemoveProjectMemberUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only project admins can remove members")
+            raise AuthorizationError("You don't have permission to remove members from this project.")
 
         self._project_repo.remove_member(project_id, target_user_id)
 
@@ -300,7 +300,7 @@ class UpdateMemberRoleUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         if not _is_project_admin_or_privileged(self._project_repo, project_id, caller_user_id, caller_system_role):
-            raise AuthorizationError("Only project admins can update member roles")
+            raise AuthorizationError("You don't have permission to change member roles in this project.")
 
         target_member = self._project_repo.find_member(project_id, target_user_id)
         if not target_member:
@@ -316,7 +316,7 @@ class UpdateMemberRoleUseCase:
             existing_members = self._project_repo.find_members(project_id)
             for m in existing_members:
                 if m.project_role == ProjectRole.TEAM_LEAD and m.user_id != target_user_id:
-                    raise ValidationError("This project already has a Team Lead. Remove the current one first.")
+                    raise ValidationError("This project already has a Team Lead. Please remove the current one before assigning a new one.")
 
         updated_member = ProjectMember(
             project_id=target_member.project_id,

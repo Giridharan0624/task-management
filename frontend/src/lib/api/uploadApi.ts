@@ -34,8 +34,6 @@ export async function uploadFile(
 ): Promise<string> {
   // Step 1: Get presigned URL from our API
   const { uploadUrl, fileUrl } = await getPresignedUrl(type, filename, contentType)
-  console.log('Presigned URL:', uploadUrl)
-  console.log('CDN URL:', fileUrl)
 
   // Step 2: Upload directly to S3 (no auth header — the URL itself is the auth)
   const res = await fetch(uploadUrl, {

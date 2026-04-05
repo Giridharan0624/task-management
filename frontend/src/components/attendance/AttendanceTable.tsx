@@ -102,7 +102,7 @@ export function AttendanceTable() {
       ) : attendance.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/80">
+            <thead className="bg-gray-50/60">
               <tr>
                 <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">User</th>
                 <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Current Task</th>
@@ -112,7 +112,7 @@ export function AttendanceTable() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-50">
               {attendance.map((record) => (
-                <tr key={record.userId} className="hover:bg-gray-50/60 transition-colors">
+                <tr key={record.userId} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2.5">
                       <Avatar url={getAvatar(record.userId)} name={record.userName} size="sm" />

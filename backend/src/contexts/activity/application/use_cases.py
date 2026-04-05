@@ -34,13 +34,13 @@ class RecordHeartbeatUseCase:
         timestamp = data.get("timestamp", datetime.now(timezone.utc).isoformat())
 
         if not isinstance(keyboard_count, int) or keyboard_count < 0:
-            raise ValidationError("Invalid keyboard_count")
+            raise ValidationError("Invalid activity data received. Please restart the Desktop App.")
         if not isinstance(mouse_count, int) or mouse_count < 0:
-            raise ValidationError("Invalid mouse_count")
+            raise ValidationError("Invalid activity data received. Please restart the Desktop App.")
         if not isinstance(active_seconds, int) or active_seconds < 0:
-            raise ValidationError("Invalid active_seconds")
+            raise ValidationError("Invalid activity data received. Please restart the Desktop App.")
         if active_seconds + idle_seconds > 600:  # Max 10 minutes per bucket (5 min + buffer)
-            raise ValidationError("Bucket duration exceeds maximum")
+            raise ValidationError("Activity data exceeds the maximum allowed duration.")
 
         screenshot_url = data.get("screenshot_url", None)
 
@@ -95,10 +95,10 @@ class GetActivityReportUseCase:
 
     def execute(self, caller_system_role: str, start_date: str, end_date: str) -> list[dict]:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only admins can view activity reports")
+            raise AuthorizationError("You don't have permission to view activity reports.")
 
         if not start_date or not end_date:
-            raise ValidationError("start_date and end_date are required")
+            raise ValidationError("Please select both a start date and end date.")
 
         activities = self._activity_repo.find_all_by_date_range(start_date, end_date)
         return [a.to_dict() for a in activities]
@@ -112,10 +112,10 @@ class GenerateSummaryUseCase:
 
     def execute(self, caller_system_role: str, target_user_id: str, date: str, task_context: str = "") -> dict:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only admins can generate summaries")
+            raise AuthorizationError("You don't have permission to generate AI summaries.")
 
         if not target_user_id or not date:
-            raise ValidationError("user_id and date are required")
+            raise ValidationError("User and date are required to generate a summary.")
 
         # Get the user's activity for the day
         activity = self._activity_repo.find_by_user_and_date(target_user_id, date)
@@ -123,7 +123,7 @@ class GenerateSummaryUseCase:
             raise ValidationError(f"No activity data found for {date}")
 
         if len(activity.buckets) == 0:
-            raise ValidationError("No activity buckets recorded for this day")
+            raise ValidationError("No activity was recorded on this day. The Desktop App must be running to track activity.")
 
         # Call Groq AI
         ai_result = generate_work_summary(activity.to_dict(), task_context)
@@ -156,7 +156,7 @@ class GetSummaryUseCase:
     def execute(self, caller_user_id: str, caller_system_role: str, target_user_id: str, date: str) -> dict | None:
         # Users can view their own summary; admins can view anyone's
         if caller_user_id != target_user_id and caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("You can only view your own summary")
+            raise AuthorizationError("You can only view your own activity summary.")
 
         if not date:
             date = _today()

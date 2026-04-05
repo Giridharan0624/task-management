@@ -201,7 +201,7 @@ export default function AttendancePage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <tr className="bg-gray-50/60 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       <th className="text-left px-5 py-2.5">Member</th>
                       <th className="text-left px-5 py-2.5">Role</th>
                       <th className="text-center px-5 py-2.5">Days</th>
@@ -249,7 +249,7 @@ export default function AttendancePage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <tr className="bg-gray-50/60 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       <th className="text-left px-5 py-2.5">Member</th>
                       <th className="text-left px-5 py-2.5">Project</th>
                       <th className="text-left px-5 py-2.5">Task</th>
@@ -299,7 +299,7 @@ export default function AttendancePage() {
                         <span className="text-[12px] font-bold text-indigo-600 tabular-nums min-w-[70px] text-right">{formatDuration(getRecordHours(r))}</span>
                       </button>
                       {isOpen && (
-                        <div className="bg-gray-50/70 px-5 pb-3">
+                        <div className="bg-gray-50/60 px-5 pb-3">
                           <div className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                             <span>Task</span><span>Project</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
                           </div>

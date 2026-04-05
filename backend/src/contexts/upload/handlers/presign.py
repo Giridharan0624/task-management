@@ -80,7 +80,7 @@ def handler(event, context):
 
         # Validate filename
         if not filename or len(filename) > 255:
-            raise ValidationError("Invalid filename")
+            raise ValidationError("The file name is not valid. Please rename the file and try again.")
 
         # Extract extension
         ext = ""

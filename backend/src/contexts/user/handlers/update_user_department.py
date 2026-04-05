@@ -24,7 +24,7 @@ def handler(event, context):
 
         # OWNER and ADMIN can change anyone's department
         if auth.system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can change departments")
+            raise AuthorizationError("You don't have permission to change user departments.")
 
         target_user = user_repo.find_by_id(body.user_id)
         if not target_user:

@@ -23,7 +23,7 @@ class ListUsersUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can list users")
+            raise AuthorizationError("You don't have permission to view the user list.")
         users = self._user_repo.find_all()
         return [u.to_dict() for u in users]
 
@@ -36,7 +36,7 @@ class UpdateUserRoleUseCase:
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         if caller_system_role != SystemRole.OWNER.value:
-            raise AuthorizationError("Only the owner can change user roles")
+            raise AuthorizationError("Only the Owner can change user roles.")
 
         target_user_id = dto["user_id"]
         new_role_value = dto["system_role"]
@@ -46,7 +46,7 @@ class UpdateUserRoleUseCase:
             raise NotFoundError(f"User {target_user_id} not found")
 
         if target_user.system_role == SystemRole.OWNER:
-            raise AuthorizationError("Cannot change the owner role")
+            raise AuthorizationError("The Owner role cannot be changed.")
 
         try:
             new_role = SystemRole(new_role_value)
@@ -54,7 +54,7 @@ class UpdateUserRoleUseCase:
             raise ValidationError(f"Invalid system role: {new_role_value}")
 
         if new_role == SystemRole.OWNER:
-            raise AuthorizationError("Cannot promote to owner")
+            raise AuthorizationError("Users cannot be promoted to the Owner role.")
 
         if new_role not in (SystemRole.ADMIN, SystemRole.MEMBER):
             raise ValidationError(f"Invalid target role: {new_role_value}")
@@ -78,7 +78,7 @@ class GetUserProgressUseCase:
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can view user progress")
+            raise AuthorizationError("You don't have permission to view user progress.")
 
         target_user_id = dto["user_id"]
         target_user = self._user_repo.find_by_id(target_user_id)
@@ -154,14 +154,14 @@ class CreateUserUseCase:
 
         # Cannot create an owner
         if role_enum == SystemRole.OWNER:
-            raise AuthorizationError("Cannot create an owner account")
+            raise AuthorizationError("An Owner account cannot be created.")
 
         # Authorization: who can create whom
         if caller_system_role in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
             if role_enum not in (SystemRole.ADMIN, SystemRole.MEMBER):
-                raise AuthorizationError("Can only create admin or member accounts")
+                raise AuthorizationError("You can only create Admin or Member accounts.")
         else:
-            raise AuthorizationError("Members cannot create user accounts")
+            raise AuthorizationError("You don't have permission to create user accounts.")
 
         # Check if email already exists
         existing = self._user_repo.find_by_email(email)
@@ -187,7 +187,7 @@ class CreateUserUseCase:
                     employee_id = candidate
                     break
             else:
-                raise ValidationError("Unable to generate a unique employee ID")
+                raise ValidationError("Could not generate a unique employee ID. Please try again.")
 
         # Generate one-time password
         otp = self._generate_otp()
@@ -261,22 +261,22 @@ class DeleteUserUseCase:
         target_user_id = dto["user_id"]
 
         if target_user_id == caller_user_id:
-            raise AuthorizationError("Cannot delete your own account")
+            raise AuthorizationError("You cannot delete your own account.")
 
         target_user = self._user_repo.find_by_id(target_user_id)
         if not target_user:
             raise NotFoundError(f"User {target_user_id} not found")
 
         if target_user.system_role == SystemRole.OWNER:
-            raise AuthorizationError("Cannot delete the owner account")
+            raise AuthorizationError("The Owner account cannot be deleted.")
 
         if caller_system_role == SystemRole.OWNER.value:
             pass  # OWNER can delete anyone
         elif caller_system_role == SystemRole.ADMIN.value:
             if target_user.system_role != SystemRole.MEMBER:
-                raise AuthorizationError("Admins can only delete member accounts")
+                raise AuthorizationError("You can only delete Member accounts.")
         else:
-            raise AuthorizationError("Members cannot delete user accounts")
+            raise AuthorizationError("You don't have permission to delete user accounts.")
 
         # Delete from Cognito
         self._cognito.delete_user(target_user.email)

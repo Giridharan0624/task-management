@@ -25,7 +25,7 @@ class CreateCommentUseCase:
         # Caller must be assigned to the task OR be privileged (OWNER/ADMIN)
         if caller_system_role not in PRIVILEGED_ROLES:
             if caller_user_id not in task.assigned_to:
-                raise AuthorizationError("You must be assigned to this task to comment")
+                raise AuthorizationError("You must be assigned to this task to post a comment.")
 
         comment = ProgressComment.create(
             comment_id=str(uuid.uuid4()),
@@ -55,7 +55,7 @@ class ListCommentsUseCase:
         if caller_system_role not in PRIVILEGED_ROLES:
             member = self._project_repo.find_member(task.project_id, caller_user_id)
             if not member:
-                raise AuthorizationError("You must be a project member to view comments")
+                raise AuthorizationError("You must be a member of this project to view comments.")
 
         comments = self._comment_repo.find_by_task(task_id)
         return [c.to_dict() for c in comments]

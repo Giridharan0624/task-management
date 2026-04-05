@@ -76,7 +76,7 @@ class SignInUseCase:
                 self._auto_move_task_to_in_progress(task_id)
                 return switched.to_dict()
             else:
-                raise ValidationError("You are already signed in. Provide a task to switch.")
+                raise ValidationError("You are already tracking time. Select a task to switch to, or stop the current timer first.")
 
         if existing:
             updated = existing.sign_in(
@@ -115,9 +115,9 @@ class SignOutUseCase:
             if yesterday_record and yesterday_record.is_signed_in:
                 attendance = yesterday_record
             elif not attendance:
-                raise ValidationError("You are not signed in today")
+                raise ValidationError("You haven't started tracking today. Start the timer in the Desktop App first.")
             else:
-                raise ValidationError("You are not currently signed in")
+                raise ValidationError("Your timer is not running. Start tracking in the Desktop App first.")
 
         updated = attendance.sign_out()
         self._attendance_repo.save(updated)
@@ -148,7 +148,7 @@ class ListTodayAttendanceUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
         if caller_system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("Only owners and admins can view team attendance")
+            raise AuthorizationError("You don't have permission to view team attendance.")
 
         date = _today()
         records = self._attendance_repo.find_all_by_date(date)
