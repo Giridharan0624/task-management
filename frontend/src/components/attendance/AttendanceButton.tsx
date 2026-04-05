@@ -153,51 +153,48 @@ export function AttendanceButton() {
   }
 
   /* ─── STOPPED / NO DATA ─── */
+  const hasSessions = groupedTasks.length > 0
+
   return (
     <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
-        <div>
-          <p className="text-[13px] font-bold text-gray-900">Time Tracker</p>
-          {sessions.length > 0 && <p className="text-[11px] text-gray-400">{sessions.length} session{sessions.length !== 1 ? 's' : ''} today</p>}
-        </div>
-        <span className="text-[20px] font-bold text-gray-700 font-mono tabular-nums">{sessions.length > 0 ? formatDuration(totalHours) : '00:00:00'}</span>
-      </div>
-
-      {/* Today's sessions (read-only) */}
-      {groupedTasks.length > 0 && (
-        <div className="border-b border-gray-100">
-          <div className="px-4 py-2 bg-gray-50/60 border-b border-gray-100">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Today&apos;s Sessions</span>
+      {hasSessions ? (
+        <>
+          {/* Header with total */}
+          <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
+            <div>
+              <p className="text-[13px] font-bold text-gray-900">Time Tracker</p>
+              <p className="text-[11px] text-gray-400">{sessions.length} session{sessions.length !== 1 ? 's' : ''} today</p>
+            </div>
+            <span className="text-[20px] font-bold text-gray-700 font-mono tabular-nums">{formatDuration(totalHours)}</span>
           </div>
+
+          {/* Sessions */}
           <div className="divide-y divide-gray-50">
             {groupedTasks.map((t, i) => (
               <SessionRow key={i} task={t} />
             ))}
           </div>
-          <div className="px-4 py-2 bg-gray-50/60 flex items-center justify-between border-t border-gray-100">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</span>
-            <span className="text-[13px] font-bold text-gray-800 tabular-nums">{formatDuration(totalHours)}</span>
-          </div>
-        </div>
-      )}
 
-      {/* Download desktop app prompt */}
-      <div className="p-5">
-        <div className="text-center">
-          <svg className="w-8 h-8 text-gray-200 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-          <p className="text-[13px] font-medium text-gray-500 mb-1">Start tracking from the Desktop App</p>
-          <p className="text-[11px] text-gray-400 mb-3">Timer, screenshots, and activity monitoring</p>
-          <a
-            href={DOWNLOAD_URL}
-            download
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-indigo-700 transition-all shadow-sm"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Download Desktop App
-          </a>
-        </div>
-      </div>
+          {/* Footer */}
+          <div className="px-4 py-2.5 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timer stopped</span>
+            <p className="text-[10px] text-gray-400">
+              Use <a href={DOWNLOAD_URL} download className="text-indigo-600 font-semibold hover:text-indigo-800">Desktop App</a> to resume
+            </p>
+          </div>
+        </>
+      ) : (
+        <a href={DOWNLOAD_URL} download className="flex items-center gap-4 p-5 group hover:bg-gray-50/50 transition-colors">
+          <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-100 transition-colors">
+            <svg className="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+          </div>
+          <div className="flex-1">
+            <p className="text-[13px] font-bold text-gray-800 group-hover:text-indigo-700 transition-colors">Start Tracking</p>
+            <p className="text-[11px] text-gray-400">Download the Desktop App to track time, capture screenshots, and monitor activity</p>
+          </div>
+          <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+        </a>
+      )}
     </div>
   )
 }
