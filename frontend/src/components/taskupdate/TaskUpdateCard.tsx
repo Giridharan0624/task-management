@@ -137,6 +137,8 @@ export function TaskUpdateCard() {
           <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <p className="text-sm font-bold text-emerald-700">Task Update Submitted</p>
           <span className="text-[10px] text-gray-400 ml-auto">
+            {new Date(existingUpdate.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            {' · '}
             {new Date(existingUpdate.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>

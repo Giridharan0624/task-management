@@ -333,7 +333,6 @@ function OwnerDashboard() {
         <ActionCard href="/projects" icon={Icons.create} title="Create Project" subtitle="Start a new project" />
       </div>
 
-      <DesktopAppCard />
     </>
   )
 }
@@ -471,7 +470,6 @@ function MemberDashboard() {
         )}
       </div>
 
-      <DesktopAppCard />
     </>
   )
 }

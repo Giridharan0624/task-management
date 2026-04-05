@@ -13,52 +13,42 @@ interface WalkthroughStep {
 const STEPS: WalkthroughStep[] = [
   {
     title: 'Welcome to TaskFlow!',
-    description: 'TaskFlow helps you manage projects, track time, and collaborate with your team. Let us show you around.',
+    description: 'Your team\'s workspace for managing projects, tracking progress, and staying productive. Let us give you a quick tour.',
     icon: <svg className="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
   },
   {
-    title: 'Time Tracker',
-    description: 'Track your work hours with the built-in timer. Select a project and task, type what you\'re working on, and hit Start. Use "Meeting" for quick meeting tracking.',
-    icon: <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    title: 'Desktop App for Time Tracking',
+    description: 'Download the TaskFlow Desktop App to track your work hours. It captures screenshots, monitors app usage, and syncs everything here automatically.',
+    icon: <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
   },
   {
-    title: 'Projects & Tasks',
-    description: 'Each project has its own domain (Development, Designing, Management, or Research) with unique pipeline steps. Create tasks, assign team members, and track progress.',
+    title: 'Projects & Domains',
+    description: 'Each project belongs to a domain — Development, Designing, Management, or Research. The domain determines the task pipeline stages your team follows.',
     icon: <svg className="w-8 h-8 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg>,
   },
   {
     title: 'Task Pipeline',
-    description: 'Tasks move through stages like To Do, In Progress, Testing, and Done. Each domain has its own workflow. Update status by clicking the dropdown on any task.',
+    description: 'Tasks flow through stages like To Do, In Progress, Code Review, Testing, and Done. Update your task status using the dropdown on any assigned task.',
     icon: <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
   },
   {
-    title: 'Reports & Analytics',
-    description: 'View detailed time reports in Summary, Detailed, and Weekly formats. Each project also has its own report tab with charts and breakdowns.',
+    title: 'Reports & Activity',
+    description: 'View time reports (Summary, Detailed, Weekly) and activity reports with app usage, screenshots, and AI-generated work summaries from the desktop app.',
     icon: <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
   },
   {
     title: 'Daily Task Updates',
-    description: 'At the end of your day, submit a Task Update from your dashboard. It auto-generates from your tracked sessions. Stop your timer first, then click Submit.',
+    description: 'At the end of your day, stop the desktop timer and submit a Task Update from your dashboard. It auto-generates a summary from your tracked sessions.',
     icon: <svg className="w-8 h-8 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
   },
   {
     title: 'Day Off Requests',
-    description: 'Need a day off? Submit a request from the Day Offs page. Your admin will approve or reject it. You can cancel anytime.',
+    description: 'Request time off from the Day Offs page. Admins can approve or reject requests. You can cancel anytime. Your monthly day-off score tracks attendance.',
     icon: <svg className="w-8 h-8 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
   },
   {
-    title: 'Quick Navigation',
-    description: 'Press Ctrl+K (or Cmd+K) to open the Command Palette. Search for any page, project, or task instantly. Check the bell icon for notifications about overdue tasks.',
-    icon: <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
-  },
-  {
-    title: 'Your Profile',
-    description: 'Visit your Profile to upload a photo, add skills, and fill in your personal info. A completeness ring shows your progress. Toggle dark mode from there too.',
-    icon: <svg className="w-8 h-8 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-  },
-  {
     title: 'You\'re All Set!',
-    description: 'Start by exploring your Dashboard. Track your first task, check out your projects, and make TaskFlow your team\'s home for work.',
+    description: 'Download the Desktop App from your dashboard to start tracking. Use Ctrl+K to search anything, and check the bell icon for notifications. Welcome to the team!',
     icon: <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" /></svg>,
   },
 ]
@@ -77,13 +67,20 @@ export function Walkthrough() {
     if (!user || !mounted) return
     const key = STORAGE_PREFIX + user.userId
     const seen = localStorage.getItem(key)
-    // Migrate old global key to per-user key
-    const oldGlobal = localStorage.getItem('taskflow_walkthrough_seen')
-    if (oldGlobal && !seen) {
-      localStorage.setItem(key, 'true')
-      return
+    if (seen) return
+
+    // Only show walkthrough for accounts created in the last 5 minutes (truly new users)
+    if (user.createdAt) {
+      const created = new Date(user.createdAt).getTime()
+      const fiveMinAgo = Date.now() - 5 * 60 * 1000
+      if (created < fiveMinAgo) {
+        // Account is older than 5 minutes — not a first login, skip walkthrough
+        localStorage.setItem(key, 'true')
+        return
+      }
     }
-    if (!seen) setVisible(true)
+
+    setVisible(true)
   }, [user, mounted])
 
   const dismiss = useCallback(() => {
