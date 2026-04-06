@@ -3,9 +3,9 @@ import aws_cdk as cdk
 from stack import TaskManagementStack
 
 COMPANY_CONFIG = {
-    "cors_origins": ["http://localhost:3000"],
-    "allowed_origin": "http://localhost:3000",
-    "app_url": "http://localhost:3000",
+    "cors_origins": ["https://taskflow.neurostack.in", "http://localhost:3000"],
+    "allowed_origin": "https://taskflow.neurostack.in",
+    "app_url": "https://taskflow.neurostack.in",
     "api_stage": "prod",
     "gmail_secret_name": "taskflow/gmail-credentials",
     "groq_secret_name": "taskflow/groq-api-key",
