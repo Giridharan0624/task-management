@@ -164,11 +164,11 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
           {/* Bar chart — hours by app */}
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">App Usage (hours)</p>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={appData} layout="vertical" margin={{ left: 60, right: 10, top: 0, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={Math.max(160, appData.length * 36)}>
+              <BarChart data={appData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
                 <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={55} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={110} />
                 <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
                 <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
                   {appData.map((_, i) => (
@@ -305,13 +305,22 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
 /* ═══ Screenshot gallery ═══ */
 function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timestamp: string }[] }) {
   const [selected, setSelected] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState(true)
 
   return (
     <div className="px-5 py-4 border-b border-gray-50 dark:border-gray-800">
-      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-        Screenshots ({screenshots.length})
-      </p>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex items-center gap-2 w-full text-left mb-3 group"
+      >
+        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${collapsed ? '' : 'rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-gray-600 transition-colors">
+          Screenshots ({screenshots.length})
+        </span>
+      </button>
+      {!collapsed && <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
         {screenshots.map((s, i) => (
           <button
             key={i}
@@ -331,7 +340,7 @@ function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timest
             </div>
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* Fullscreen modal */}
       {selected && (
