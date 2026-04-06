@@ -16,10 +16,11 @@ COMPANY_CONFIG = {
 }
 
 app = cdk.App()
-TaskManagementStack(
+stack = TaskManagementStack(
     app,
     "taskflow",
     stage_config=COMPANY_CONFIG,
     env=cdk.Environment(region="ap-south-1"),
 )
+cdk.Tags.of(stack).add("awsApplication", "arn:aws:resource-groups:ap-south-1:896823725438:group/taskflow/0eos9sfk62frvq2uhxwn7aw5z4")
 app.synth()
