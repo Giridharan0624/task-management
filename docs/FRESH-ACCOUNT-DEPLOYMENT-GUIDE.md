@@ -11,7 +11,7 @@ Deploy the TaskFlow application to a completely new AWS account — fresh start,
 | DynamoDB table | Empty — no users, projects, or tasks |
 | Cognito User Pool | Empty — seed one OWNER account |
 | API Gateway | New URL |
-| 40+ Lambda functions | Same code, new deployment |
+| 32 Lambda functions | Same code, new deployment |
 | S3 bucket | Empty |
 | CloudFront CDN | New domain |
 | Secrets Manager | New secrets (Gmail, Groq) |
@@ -47,31 +47,9 @@ cd backend/cdk
 cdk bootstrap aws://NEW_ACCOUNT_ID/ap-south-1 --profile new-account
 ```
 
-### Step 3: Fix Hardcoded Gmail Credentials
+### Step 3: Verify Gmail Secret Configuration
 
-**Before deploying**, fix `backend/cdk/stack.py` — the file currently contains hardcoded Gmail credentials in plaintext. This is a security risk.
-
-**Current code (remove this):**
-```python
-gmail_secret = secretsmanager.Secret(
-    self,
-    "GmailCredentials",
-    secret_name=config["gmail_secret_name"],
-    description="Gmail SMTP credentials for TaskFlow welcome emails",
-    secret_string_value=cdk.SecretValue.unsafe_plain_text(
-        '{"user":"...","password":"..."}'
-    ),
-)
-```
-
-**Replace with:**
-```python
-gmail_secret = secretsmanager.Secret.from_secret_name_v2(
-    self, "GmailCredentials", config["gmail_secret_name"]
-)
-```
-
-This references a pre-created secret by name instead of creating one with hardcoded values.
+`backend/cdk/stack.py` uses `Secret.from_secret_name_v2()` to reference a pre-created secret by name. No code changes needed — just ensure the secret exists in the target account (see Step 4).
 
 ### Step 4: Pre-Create Secrets in the New Account
 
@@ -203,7 +181,24 @@ NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=taskflow-avatars
 
 ### Step 8: Update Desktop App Config
 
-Update the desktop app config with the new API URL, Cognito Pool ID, and Client ID. Rebuild and distribute the new installer.
+Update `desktop/config.json` with the new values:
+
+```json
+{
+  "api_url": "https://<NEW_API_ID>.execute-api.ap-south-1.amazonaws.com/prod",
+  "cognito_region": "ap-south-1",
+  "cognito_user_pool_id": "<NEW_POOL_ID>",
+  "cognito_client_id": "<NEW_CLIENT_ID>",
+  "web_dashboard_url": "https://<YOUR_VERCEL_DOMAIN>"
+}
+```
+
+Then rebuild and distribute the new installer:
+```bash
+cd desktop
+wails build
+powershell -File build-installer.ps1
+```
 
 ### Step 9: Update CORS (if Vercel domain changed)
 
@@ -263,6 +258,19 @@ After deployment, verify:
 | Seed OWNER + point frontend | 15 min |
 | Verify | 10 min |
 | **Total** | **~1 hour** |
+
+---
+
+## Multi-Account Deployment
+
+To deploy to a separate account (e.g. a company account) with a different stack name, use a dedicated CDK entry point. See `backend/cdk/app_company.py` as an example:
+
+```bash
+cd backend/cdk
+cdk deploy --app "python app_company.py" --profile company
+```
+
+This creates a fully independent stack (`taskflow`) with its own DynamoDB table, Cognito pool, and all resources — no overlap with existing deployments.
 
 ---
 

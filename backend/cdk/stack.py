@@ -72,7 +72,7 @@ class TaskManagementStack(Stack):
         uploads_bucket = s3.Bucket(
             self,
             "UploadsBucket",
-            bucket_name=f"taskflow-uploads-{config.get('api_stage', 'prod')}",
+            bucket_name=config.get("uploads_bucket_name", f"taskflow-uploads-{config.get('api_stage', 'prod')}"),
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.RETAIN,
@@ -178,14 +178,8 @@ class TaskManagementStack(Stack):
         )
 
         # ─── Gmail Credentials (Secrets Manager) ────────────────────────────
-        gmail_secret = secretsmanager.Secret(
-            self,
-            "GmailCredentials",
-            secret_name=config["gmail_secret_name"],
-            description="Gmail SMTP credentials for TaskFlow welcome emails",
-            secret_string_value=cdk.SecretValue.unsafe_plain_text(
-                '{"user":"giridharans0624@gmail.com","password":"mxhd sjrb rbny zexn"}'
-            ),
+        gmail_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "GmailCredentials", config["gmail_secret_name"]
         )
 
         # ─── Shared Lambda config ────────────────────────────────────────────
