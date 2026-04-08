@@ -74,6 +74,51 @@ function NavIcon({ type }: { type: string }) {
   }
 }
 
+const DESKTOP_DOWNLOADS = {
+  windows: { label: 'Windows', icon: '💻', ext: '.exe' },
+  linux: { label: 'Linux', icon: '🐧', ext: '.AppImage' },
+  macos: { label: 'macOS', icon: '🍎', ext: '.dmg' },
+}
+
+function getOS(): 'windows' | 'linux' | 'macos' {
+  if (typeof navigator === 'undefined') return 'windows'
+  const ua = navigator.userAgent.toLowerCase()
+  if (ua.includes('mac')) return 'macos'
+  if (ua.includes('linux')) return 'linux'
+  return 'windows'
+}
+
+function DesktopDownloadLink() {
+  const [latest, setLatest] = useState<{ version: string; downloads: Record<string, string> } | null>(null)
+  const os = getOS()
+
+  useEffect(() => {
+    fetch('https://d32wbqjdb87hcf.cloudfront.net/releases/latest.json')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setLatest(data) })
+      .catch(() => {})
+  }, [])
+
+  const info = DESKTOP_DOWNLOADS[os]
+  const version = latest?.version || '1.0.0'
+  const downloadUrl = latest?.downloads?.[os] || `https://github.com/Giridharan0624/taskflow-desktop/releases/latest`
+
+  return (
+    <a
+      href={downloadUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-500/10 dark:border-indigo-500/20 px-3 py-2 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all group"
+    >
+      <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+      <div>
+        <p className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 group-hover:text-indigo-800">Desktop App {info.icon}</p>
+        <p className="text-[9px] text-indigo-400">{info.label} · v{version}</p>
+      </div>
+    </a>
+  )
+}
+
 function SidebarTimer() {
   const { user } = useAuth()
   const { totalHours, isActive, attendance } = useLiveHours()
@@ -248,18 +293,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </button>
       </div>
 
-      {/* Desktop app download */}
-      <a
-        href="https://dtzl7r6jcvxb2.cloudfront.net/downloads/TaskFlowDesktop-Setup-1.0.0.exe"
-        download
-        className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 hover:bg-indigo-100 transition-all group"
-      >
-        <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-        <div>
-          <p className="text-[11px] font-semibold text-indigo-700 group-hover:text-indigo-800">Desktop App</p>
-          <p className="text-[9px] text-indigo-400">Windows · v1.0.0</p>
-        </div>
-      </a>
+      {/* Desktop app download — auto-detects OS */}
+      <DesktopDownloadLink />
 
       {/* NEUROSTACK branding */}
       <p className="text-center text-[10px] text-gray-400 pb-3">

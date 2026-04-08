@@ -2,9 +2,9 @@
 
 **Serverless Task Management & Time Tracking Platform**
 
-A full-stack application for organizations to manage projects, assign tasks, track work hours, monitor employee activity, and generate AI-powered productivity reports. Features a web dashboard and a Windows desktop companion app.
+A full-stack application for organizations to manage projects, assign tasks, track work hours, monitor employee activity, and generate AI-powered productivity reports. Features a web dashboard and a cross-platform desktop companion app (Windows, Linux, macOS).
 
-[Live Demo](https://taskflow-ns.vercel.app) | [Download Desktop App](https://dtzl7r6jcvxb2.cloudfront.net/downloads/TaskFlowDesktop-Setup-1.0.0.exe)
+[Live Demo](https://taskflow-ns.vercel.app) | [Desktop App (Windows)](https://github.com/Giridharan0624/taskflow-desktop/releases/latest) | [Desktop App (Linux)](https://github.com/Giridharan0624/taskflow-desktop/releases/latest) | [Desktop App (macOS)](https://github.com/Giridharan0624/taskflow-desktop/releases/latest)
 
 ---
 
@@ -79,7 +79,9 @@ A full-stack application for organizations to manage projects, assign tasks, tra
 | AI | Groq API (LLaMA 3.3 70B) for work summaries |
 | Secrets | AWS Secrets Manager (Gmail SMTP, Groq API key) |
 | Web Frontend | Next.js 16, TypeScript, Tailwind CSS, React Query, Recharts |
-| Desktop | Go 1.22, Wails v2, Preact, NSIS installer |
+| Desktop | Go 1.22, Wails v2, Preact, kbinani/screenshot, fyne.io/systray |
+| Desktop Installers | NSIS (Windows), AppImage (Linux), DMG (macOS) |
+| Desktop CI/CD | GitHub Actions (builds all 3 platforms on tag push) |
 | Deployment | Vercel (web), AWS CDK (backend), S3/CloudFront (desktop) |
 
 ---

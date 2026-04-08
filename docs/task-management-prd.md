@@ -452,13 +452,23 @@ Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery e
 - [x] Pending task updates alert on dashboard
 - [x] Walkthrough tour (per-user, first login only)
 - [x] Onboarding tour for new users
+- [x] Cross-platform desktop companion app (Windows, Linux, macOS)
+- [x] Desktop activity monitoring (keyboard, mouse, active app tracking)
+- [x] Desktop screenshot capture every 10 min (GPU-safe DXGI)
+- [x] AI-powered daily work summaries (Groq LLaMA 3.3)
+- [x] S3 + CloudFront for file uploads (replaced Cloudinary)
+- [x] Activity reports page with app usage charts + AI summary
+- [x] Screenshot gallery in activity reports
+- [x] Desktop auto-update via GitHub releases
+- [x] CI/CD for all 3 platforms via GitHub Actions
+- [x] Desktop system tray with background operation
+- [x] Desktop consent/privacy notice in installer
 
 ---
 
 ## 12. Future Enhancements
 
 * Real-time updates via WebSockets (replace polling)
-* Direct task assignment (CEO/Admin to user without project)
 * File attachments on tasks (S3)
 * Drag-and-drop task reordering
 * Activity feed / audit log
@@ -467,3 +477,7 @@ Single table: **TaskManagementTable** (PAY_PER_REQUEST, Point-in-Time Recovery e
 * Mobile-optimized bottom navigation
 * Pagination for large datasets
 * Email notifications for task assignments
+* Desktop keyboard shortcuts (global hotkeys)
+* Desktop floating mini-widget (always-on-top timer)
+* Desktop offline mode (queue actions, sync when online)
+* Optional screenshot blur for sensitive apps

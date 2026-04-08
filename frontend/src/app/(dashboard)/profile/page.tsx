@@ -581,6 +581,9 @@ export default function ProfilePage() {
 
       {/* Security — Change Password */}
       <ChangePasswordSection />
+
+      {/* Desktop App Download */}
+      <DesktopAppSection />
     </div>
   )
 }
@@ -828,5 +831,60 @@ function ChangePasswordSection() {
         )}
       </Modal>
     </>
+  )
+}
+
+function DesktopAppSection() {
+  const [latest, setLatest] = useState<{ version: string; downloads: Record<string, string> } | null>(null)
+
+  useEffect(() => {
+    fetch('https://d32wbqjdb87hcf.cloudfront.net/releases/latest.json')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setLatest(data) })
+      .catch(() => {})
+  }, [])
+
+  const version = latest?.version || '1.0.0'
+  const platforms = [
+    { key: 'windows', label: 'Windows', icon: '💻', ext: '.exe' },
+    { key: 'linux', label: 'Linux', icon: '🐧', ext: '.AppImage' },
+    { key: 'macos', label: 'macOS', icon: '🍎', ext: '.dmg' },
+  ]
+
+  return (
+    <div className="bg-white dark:bg-[var(--color-surface)] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60 dark:bg-gray-800/30">
+        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Desktop App</h3>
+        <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">v{version}</span>
+      </div>
+      <div className="px-6 py-5">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          Track time, monitor activity, and take screenshots with the desktop companion app.
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          {platforms.map(p => {
+            const url = latest?.downloads?.[p.key] || `https://github.com/Giridharan0624/taskflow-desktop/releases/latest`
+            return (
+              <a
+                key={p.key}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-all group"
+              >
+                <span className="text-2xl">{p.icon}</span>
+                <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-300">{p.label}</span>
+                <span className="text-[10px] text-gray-400">{p.ext}</span>
+              </a>
+            )
+          })}
+        </div>
+        <p className="text-[10px] text-gray-400 mt-3 text-center">
+          <a href="https://github.com/Giridharan0624/taskflow-desktop/releases" target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:text-indigo-600">
+            View all releases on GitHub →
+          </a>
+        </p>
+      </div>
+    </div>
   )
 }
