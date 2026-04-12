@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getUsers, getAdmins, updateUserRole, updateUserDepartment, getUserProgress, createUser, deleteUser, getMyTasks } from '@/lib/api/userApi'
+import { getUsers, getAdmins, updateUserRole, updateUserDepartment, getUserProgress, createUser, deleteUser, getMyTasks, getBirthdays } from '@/lib/api/userApi'
 import type { User } from '@/types/user'
 
 const userKeys = {
@@ -111,5 +111,14 @@ export function useMyTasks() {
     queryFn: getMyTasks,
     staleTime: 10000,
     refetchInterval: 10000,
+  })
+}
+
+export function useBirthdays() {
+  return useQuery({
+    queryKey: ['birthdays'],
+    queryFn: getBirthdays,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   })
 }

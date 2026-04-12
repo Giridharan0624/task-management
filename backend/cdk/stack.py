@@ -244,6 +244,7 @@ class TaskManagementStack(Stack):
         users_role = users.add_resource("role")
         users_department = users.add_resource("department")
         users_admins = users.add_resource("admins")
+        users_birthdays = users.add_resource("birthdays")
 
         # ─── Project handlers ────────────────────────────────────────────────
         add_api_lambda("CreateProject", "contexts.project.handlers.create_project.handler", "POST", projects)
@@ -304,6 +305,7 @@ class TaskManagementStack(Stack):
         add_api_lambda("GetUserProgress", "contexts.user.handlers.get_user_progress.handler", "GET", user_progress)
         add_api_lambda("UpdateUserDepartment", "contexts.user.handlers.update_user_department.handler", "PUT", users_department)
         add_api_lambda("ListAdmins", "contexts.user.handlers.list_admins.handler", "GET", users_admins)
+        add_api_lambda("GetBirthdays", "contexts.user.handlers.get_birthdays.handler", "GET", users_birthdays)
 
         # ─── Public endpoint (no auth) — resolve employee ID to email for login
         resolve_employee = api.root.add_resource("resolve-employee")

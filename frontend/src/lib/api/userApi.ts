@@ -93,3 +93,22 @@ export interface MyTask {
 export function getMyTasks(): Promise<MyTask[]> {
   return apiClient.get<MyTask[]>('/users/me/tasks')
 }
+
+export interface BirthdayUser {
+  userId: string
+  name: string
+  avatarUrl?: string
+  designation?: string
+  department?: string
+  dateOfBirth: string
+  daysUntil?: number
+}
+
+export interface BirthdayData {
+  today: BirthdayUser[]
+  upcoming: BirthdayUser[]
+}
+
+export function getBirthdays(): Promise<BirthdayData> {
+  return apiClient.get<BirthdayData>('/users/birthdays')
+}

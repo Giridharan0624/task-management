@@ -7,6 +7,7 @@ import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { AttendanceButton } from '@/components/attendance/AttendanceButton'
+import { BirthdayBanner } from '@/components/ui/BirthdayBanner'
 import { AttendanceTable } from '@/components/attendance/AttendanceTable'
 import { TaskUpdateCard } from '@/components/taskupdate/TaskUpdateCard'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABEL } from '@/types/task'
@@ -477,6 +478,9 @@ export default function DashboardPage() {
         </div>
         <Badge className={ROLE_COLORS[user?.systemRole ?? 'MEMBER']}>{user?.systemRole}</Badge>
       </div>
+
+      {/* Birthday Banner */}
+      <BirthdayBanner />
 
       {(user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN') && <OwnerDashboard />}
       {user?.systemRole === 'MEMBER' && <MemberDashboard />}
