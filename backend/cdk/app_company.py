@@ -3,7 +3,7 @@ import aws_cdk as cdk
 from stack import TaskManagementStack
 
 COMPANY_CONFIG = {
-    "cors_origins": ["https://taskflow.neurostack.in", "http://localhost:3000"],
+    "cors_origins": ["https://taskflow.neurostack.in", "https://ns-taskflow.vercel.app", "http://localhost:3000"],
     "allowed_origin": "https://taskflow.neurostack.in",
     "app_url": "https://taskflow.neurostack.in",
     "api_stage": "prod",
