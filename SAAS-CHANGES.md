@@ -9,7 +9,7 @@ A side-by-side document of every behavior, file, and concept that changes when T
 | Concept | Before (single-tenant) | After (multi-tenant SaaS) |
 |---------|-----------------------|---------------------------|
 | Tenant identity | None — data implicitly belongs to NEUROSTACK | Every row tagged with `org_id`; `Organization` is a first-class entity |
-| URL | `taskflow-ns.vercel.app` | `{slug}.taskflow.com` per tenant |
+| URL | `taskflow-ns.vercel.app` | Single domain `taskflow.neurostack.in`; tenants disambiguated by workspace-code field on the login form |
 | Signup | Admin manually creates users in AWS console | Public `POST /signup` creates Org + first OWNER |
 | Adding users | Admin creates directly | OWNER sends email invite → user accepts |
 | Roles | Hardcoded enum: OWNER / ADMIN / MEMBER | Tenant-defined roles + permission matrix (seeded with 3 defaults) |
@@ -21,7 +21,7 @@ A side-by-side document of every behavior, file, and concept that changes when T
 | Email uniqueness | Globally unique | Unique per tenant (same email can exist in two orgs) |
 | Employee ID | Hardcoded `EMP-####` prefix | Per-org `company_prefix` (already modeled on User, finally wired) |
 | Timezone / locale / currency | Not configurable | Per-org `OrgSettings` |
-| Desktop app | Tenant baked in at build time via `-ldflags` | Workspace URL prompted on first launch, saved locally |
+| Desktop app | Tenant baked in at build time via `-ldflags` | Workspace code prompted on first launch, saved locally; API URL still baked in (single shared API) |
 
 ---
 
@@ -43,7 +43,7 @@ PK=ORG#{org}#USER#{userId}            SK=PROFILE
 PK=ORG#{org}#PROJECT#{projectId}      SK=META | TASK#{taskId} | MEMBER#{userId}
 PK=ORG#{org}                          SK=ORG | SETTINGS | PLAN
 PK=ORG#{org}                          SK=ROLE#{roleId} | PIPELINE#{id} | INVITE#{token}
-PK=SLUG#{slug}                        SK=ORG                    # new: subdomain resolver
+PK=SLUG#{slug}                        SK=ORG                    # new: workspace-code resolver
 GSI1PK=ORG#{org}#EMAIL#{email}                                  # scoped per-tenant
 GSI2PK=ORG#{org}#EMPLOYEE#{employeeId}                          # scoped per-tenant
 ```
@@ -110,7 +110,7 @@ activity.view  activity.export
 | `backend/src/contexts/org/application/create_organization.py` | Signup use case (atomic org + settings + first user) |
 | `backend/src/contexts/org/application/accept_invite.py` | Invite acceptance use case |
 | `backend/src/contexts/org/handlers/signup_org.py` | Public `POST /signup` Lambda |
-| `backend/src/contexts/org/handlers/get_org_by_slug.py` | Public `GET /orgs/by-slug/{slug}` (subdomain resolver) |
+| `backend/src/contexts/org/handlers/get_org_by_slug.py` | Public `GET /orgs/by-slug/{slug}` (workspace-code resolver, called from the login form) |
 | `backend/src/contexts/org/handlers/get_current_org.py` | Authed `GET /orgs/current` |
 | `backend/src/contexts/org/handlers/update_settings.py` | Authed `PUT /orgs/current/settings` |
 | `backend/src/contexts/org/handlers/send_invite.py` | Authed `POST /orgs/current/invites` |
@@ -128,7 +128,7 @@ activity.view  activity.export
 | File | What changes |
 |------|--------------|
 | [backend/src/shared_kernel/auth_context.py](backend/src/shared_kernel/auth_context.py) | Add `org_id` field to `AuthContext`; read from JWT `custom:orgId` |
-| [backend/cdk/stack.py](backend/cdk/stack.py) | Add `custom:orgId` attribute; wildcard cert; pre-token trigger; regex CORS; `POST /signup` public route; drop hardcoded `cors_origins` |
+| [backend/cdk/stack.py](backend/cdk/stack.py) | Add `custom:orgId` attribute; cert for `taskflow.neurostack.in`; pre-token trigger; single-origin CORS list; `POST /signup` public route; Route53 records in the `neurostack.in` zone |
 | `backend/src/contexts/*/infrastructure/dynamo_repository.py` (×8) | Accept `org_id`, route all PK construction through `tenant_keys` |
 | [backend/src/contexts/user/infrastructure/dynamo_repository.py](backend/src/contexts/user/infrastructure/dynamo_repository.py) | `_generate_employee_id` reads `settings.employee_id_prefix` instead of hardcoded `EMP-` |
 | [backend/src/contexts/user/domain/entities.py](backend/src/contexts/user/domain/entities.py) | Add `org_id`, `role_id`; `system_role` becomes backward-compat property |
@@ -152,8 +152,9 @@ activity.view  activity.export
 ### New files
 | File | Purpose |
 |------|---------|
-| `frontend/src/middleware.ts` | Extract subdomain from host, inject `x-org-slug` header |
-| `frontend/src/providers/TenantProvider.tsx` | Load org config, configure Amplify, expose `TenantContext` |
+| `frontend/src/providers/TenantProvider.tsx` | Reads workspace code from `localStorage.workspace` / `?workspace=` query / login form; fetches org config; configures Amplify; exposes `TenantContext` |
+| `frontend/src/components/WorkspaceField.tsx` | Reusable workspace-code input with debounced availability check (used on login + signup) |
+| `frontend/src/app/login/page.tsx` | Three-field login (workspace code, employee ID, password); pre-fills workspace from query/localStorage |
 | `frontend/src/lib/i18n.ts` | Base strings + tenant terminology overrides, `t(key)` function |
 | `frontend/src/lib/api/orgs.ts` | API client for org/settings/roles/pipelines/invites |
 | `frontend/src/hooks/useTenantPipelines.ts` | Reads pipelines from `TenantContext` |
@@ -183,10 +184,10 @@ activity.view  activity.export
 
 | File | Change |
 |------|--------|
-| [desktop/internal/config/config.go](desktop/internal/config/config.go) | Keep only `API_URL` baked in via ldflags; drop `APP_NAME` bake-in |
-| `desktop/internal/config/workspace.go` (**new**) | Read/write `~/.taskflow/workspace.json` with saved subdomain |
-| `desktop/frontend/src/FirstRun.tsx` (**new**) | First-launch "Enter your workspace URL" panel |
-| `desktop/internal/auth/cognito.go` | Resolve org via `/orgs/by-slug/{slug}` before SRP login |
+| [desktop/internal/config/config.go](desktop/internal/config/config.go) | Keep only `API_URL` baked in via ldflags (pointing at `https://api.taskflow.neurostack.in`); drop `APP_NAME` bake-in |
+| `desktop/internal/config/workspace.go` (**new**) | Read/write `~/.taskflow/workspace.json` with saved workspace code |
+| `desktop/frontend/src/FirstRun.tsx` (**new**) | First-launch "Enter your workspace code" panel (accepts `acme`, not a full URL) |
+| `desktop/internal/auth/cognito.go` | Resolve org via `GET /orgs/by-slug/{workspace}` before SRP login |
 | `desktop/internal/monitor/screenshot.go` | Skip screenshot goroutine if `features.screenshots == false` |
 | `desktop/internal/tray/tray.go` | Tooltip uses `settings.display_name`; add "Switch Workspace" menu item |
 
@@ -196,16 +197,17 @@ activity.view  activity.export
 
 | Resource | Before | After |
 |----------|--------|-------|
-| Domain | `taskflow-ns.vercel.app` hardcoded | Route53 `taskflow.com` zone + wildcard ACM cert `*.taskflow.com` (us-east-1) |
-| API Gateway domain | Default | Custom `api.taskflow.com` (single, not wildcarded) |
-| CORS | Hardcoded list in stack.py | Regex in Lambda response based on request `Origin` header |
+| Domain | `taskflow-ns.vercel.app` hardcoded | Route53 records in existing `neurostack.in` zone: `taskflow.neurostack.in` (CloudFront) + `api.taskflow.neurostack.in` (API Gateway) |
+| ACM certs | None (Vercel-managed) | `taskflow.neurostack.in` cert in `us-east-1` (CloudFront) and `ap-south-1` (API Gateway). No wildcard cert. |
+| API Gateway domain | Default | Custom `api.taskflow.neurostack.in` |
+| CORS | Hardcoded list in stack.py | Single-origin literal `['https://taskflow.neurostack.in', 'http://localhost:3000']` validated in Lambda against request `Origin` |
 | Cognito custom attributes | `employeeId` only | + `orgId` (immutable), `roleId`, `systemRole` |
 | Cognito triggers | None | Pre-token-generation Lambda |
 | DynamoDB table | Single table, no `org_id` | Same table, keys prefixed with `ORG#{id}#` |
 | S3 bucket | `taskflow-uploads-prod` | Same bucket, object keys prefixed `orgs/{orgId}/` |
 | Public routes | Only `POST /users/login` | + `POST /signup`, `GET /orgs/by-slug/{slug}`, `POST /invites/{token}/accept` |
 | Scheduled Lambdas | None | Nightly retention sweeper (deletes activity beyond `plan.retention_days`) |
-| Rate limiting | None | WAF rate-based rule keyed on `x-org-slug` header |
+| Rate limiting | None | WAF rate-based rule keyed on `x-workspace-code` header set by the frontend after the workspace resolves |
 
 ---
 
@@ -257,5 +259,5 @@ To keep scope sane, these stay the same:
 - All existing Cognito users get `custom:orgId = "neurostack"` via `admin_update_user_attributes`
 - NEUROSTACK is seeded as a Free-tier org first, then manually upgraded to Enterprise
 - NEUROSTACK's existing task `domain` strings (`DEVELOPMENT`, etc.) become pipeline IDs of the same name — no task row migration needed
-- Users continue accessing the app at `neurostack.taskflow.com` with zero login disruption
+- Users continue accessing the app at `taskflow.neurostack.in` and enter workspace code `neurostack` on the login form — zero login disruption beyond the new field (pre-filled once they've logged in the first time)
 - Branding (logo, colors, name) seeded from current hardcoded values so the UI looks identical post-migration

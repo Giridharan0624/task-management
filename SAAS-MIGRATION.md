@@ -8,7 +8,7 @@ The goal is to convert it into a **multi-tenant SaaS** where any company can sig
 
 **Locked-in architectural decisions:**
 - **Isolation model:** pooled — one DynamoDB table, one Cognito user pool, one S3 bucket, with `org_id` prefixed into every key
-- **Routing:** subdomain per tenant (`acme.taskflow.com`); custom domains deferred
+- **Routing:** single domain `taskflow.neurostack.in` with a workspace-code field on the login form; per-tenant subdomains deferred as a future Pro-tier feature
 - **Existing data:** backfill all NEUROSTACK data as the first tenant (`org_id = "neurostack"`), zero downtime
 - **Billing:** plan limits (Free/Pro/Enterprise) enforced in code; Stripe deferred
 
@@ -29,7 +29,7 @@ PK=ORG#{org}#USER#{userId}            SK=PROFILE
 PK=ORG#{org}#PROJECT#{projectId}      SK=META | TASK#{taskId} | MEMBER#{userId}
 PK=ORG#{org}                          SK=ORG | SETTINGS | PLAN
 PK=ORG#{org}                          SK=ROLE#{roleId} | PIPELINE#{id} | INVITE#{token}
-PK=SLUG#{slug}                        SK=ORG       # subdomain → org_id resolver
+PK=SLUG#{slug}                        SK=ORG       # workspace-code → org_id resolver
 GSI1PK=ORG#{org}#EMAIL#{email}                     # email uniqueness per-tenant
 GSI2PK=ORG#{org}#EMPLOYEE#{employeeId}             # employee IDs scoped per-tenant
 ```
@@ -39,8 +39,8 @@ A new helper module [backend/src/shared_kernel/tenant_keys.py](backend/src/share
 ### S3 key prefixing
 All uploads keyed `orgs/{orgId}/{userId}/{filename}`. The presign handler pulls `orgId` from `AuthContext` and refuses any key outside the tenant's prefix — enforced at presign time, not just via bucket policy.
 
-### Cognito subdomain login
-The frontend resolves `{slug}.taskflow.com` → org metadata via public `GET /orgs/by-slug/{slug}` before initializing Amplify. The user pool and client ID are shared across all tenants; `custom:orgId` on the user ties a login to one org. Two tenants can share the same email because email is no longer a Cognito alias — login uses `employeeId` or slug-scoped email lookup.
+### Cognito workspace-code login
+The frontend is served from a single domain `taskflow.neurostack.in`. The login form has three fields: **workspace code**, employee ID (or email), password. When the user types the workspace code the frontend calls public `GET /orgs/by-slug/{slug}` → fetches org metadata (display name, logo, primary color, Cognito client config) and caches it in `localStorage.workspace` so returning users don't retype it. The Cognito user pool and client ID are shared across all tenants; `custom:orgId` on the user ties a login to one org. Two tenants can share the same email because the workspace code disambiguates at login time and email is no longer a Cognito alias. A "Switch workspace" menu item clears the cached workspace and returns the user to the workspace-code prompt.
 
 ---
 
@@ -61,18 +61,19 @@ The frontend resolves `{slug}.taskflow.com` → org metadata via public `GET /or
 - **Update** [backend/cdk/stack.py](backend/cdk/stack.py):
   - Add `"orgId"` as Cognito `StringAttribute(mutable=False)` in `custom_attributes`
   - Add pre-token-generation Lambda trigger
-  - Replace hardcoded `cors_origins` with regex match (`https://.*\.taskflow\.com`) returned from Lambda using request `Origin` header
+  - Replace hardcoded `cors_origins` list with the literals `['https://taskflow.neurostack.in', 'http://localhost:3000']`, validated against the request `Origin` header in the Lambda response
   - Add `POST /signup` route with `AuthorizationType.NONE`
 
 ### Frontend
-- **New** `frontend/src/middleware.ts` — extract subdomain from host, inject `x-org-slug` header. Use `localtest.me` (wildcard → 127.0.0.1) for local dev, zero hosts-file edits.
-- **New** `frontend/src/providers/TenantProvider.tsx` — reads slug, fetches `GET /orgs/by-slug/{slug}`, configures Amplify, exposes `TenantContext`
-- **New** `frontend/src/app/signup/page.tsx` — collects org name, slug (with availability check), owner email/password; on submit redirects to `https://{slug}.taskflow.com/login`
+- **New** `frontend/src/providers/TenantProvider.tsx` — reads workspace code from `localStorage.workspace` / `?workspace=` query param / login form, fetches `GET /orgs/by-slug/{slug}`, configures Amplify, exposes `TenantContext`. No host-parsing middleware needed — single domain only.
+- **New** `frontend/src/components/WorkspaceField.tsx` — reusable workspace-code input with debounced availability check; used on login and signup
+- **New** `frontend/src/app/login/page.tsx` — three-field form (workspace code, employee ID, password); pre-fills workspace from `?workspace=` query or `localStorage`, sends user to the workspace-code prompt if neither is set
+- **New** `frontend/src/app/signup/page.tsx` — collects org name, slug (with availability check), owner email/password; on submit redirects to `https://taskflow.neurostack.in/login?workspace={slug}&first_login=1`
 - **New** `frontend/src/lib/api/orgs.ts` — API client for org endpoints
 
 ### Infra
-- Route53 hosted zone + ACM wildcard cert `*.taskflow.com` (must be in `us-east-1` for CloudFront)
-- API Gateway custom domain `api.taskflow.com` (single, not wildcarded)
+- Route53 records in the existing `neurostack.in` hosted zone: `taskflow.neurostack.in` → CloudFront (frontend) and `api.taskflow.neurostack.in` → API Gateway custom domain
+- ACM cert for `taskflow.neurostack.in` in `us-east-1` (CloudFront requires it there) and a second cert in `ap-south-1` for the API Gateway custom domain. No wildcard cert needed.
 
 ### Backfill (zero-downtime cutover)
 New script `backend/scripts/backfill_neurostack.py`:
@@ -87,7 +88,7 @@ New script `backend/scripts/backfill_neurostack.py`:
 - Two-phase signup failure: if Cognito `admin_create_user` succeeds but the DynamoDB `TransactWriteItems` for org+settings+first-user fails, you orphan a Cognito user. Wrap in try/except with rollback calling `admin_delete_user`.
 - Hot partition: org-prefixing does not create one hot PK because existing PKs were already user/project-scoped. Audit for any aggregate keys like `ORG#{id}#USER#LIST` and avoid them — always query scoped PKs.
 
-**Exit gate:** NEUROSTACK users still work on `neurostack.taskflow.com`; a fresh org signs up on `acme.taskflow.com` and sees zero NEUROSTACK data.
+**Exit gate:** NEUROSTACK users log in at `taskflow.neurostack.in` with workspace code `neurostack` and see everything as before; a fresh org signs up with workspace code `acme` and sees zero NEUROSTACK data.
 
 ---
 
@@ -99,7 +100,7 @@ New script `backend/scripts/backfill_neurostack.py`:
 - New `backend/src/contexts/org/handlers/accept_invite.py`: public endpoint; validates token; `admin_create_user` with `custom:orgId` from the invite
 - Update [backend/src/contexts/user/handlers/create_user.py](backend/src/contexts/user/handlers/create_user.py): `org_id` is always from `AuthContext`, never from the request body — admins can only create users in their own org
 - Plan-limit check: refuse create if `user_count >= plan.max_users`
-- Frontend `/invite/[token]` page: collects name + password, accepts invite, redirects to org subdomain login
+- Frontend `/invite/[token]` page: collects name + password, accepts invite, redirects to `https://taskflow.neurostack.in/login?workspace={slug}` with the workspace code pre-filled
 
 **Gotcha — email uniqueness:** Cognito enforces globally-unique email aliases by default. Drop email as an alias attribute on the pool; users sign in via `employeeId` (desktop/web both accept it via the existing resolve-employee pattern) or via slug-scoped email lookup. Email becomes a profile-only attribute.
 
@@ -216,10 +217,10 @@ Existing NEUROSTACK tasks have `domain="DEVELOPMENT"` strings. Backfill creates 
 ### Desktop app
 Currently [desktop/internal/config/config.go](desktop/internal/config/config.go) bakes `API_URL` + `APP_NAME` via `-ldflags`. Going multi-tenant:
 
-1. Keep only `API_URL` baked in (single shared API).
-2. On first launch, prompt **"Enter your workspace URL"** (e.g. `acme.taskflow.com`); save to `~/.taskflow/workspace.json`.
-3. Subsequent launches read saved workspace. Add "Switch workspace" system-tray menu item.
-4. Login flow: POST to `/orgs/by-slug/{slug}` → Cognito SRP against shared pool → tokens contain `custom:orgId`.
+1. Keep only `API_URL` baked in (single shared API = `https://api.taskflow.neurostack.in`).
+2. On first launch, prompt **"Enter your workspace code"** (e.g. `acme`); save to `~/.taskflow/workspace.json`.
+3. Subsequent launches read saved workspace. Add "Switch workspace" system-tray menu item that clears the saved code and reopens the prompt.
+4. Login flow: `GET /orgs/by-slug/{workspace}` → Cognito SRP against shared pool → tokens contain `custom:orgId`.
 5. Activity loop reads `features.screenshots` from the settings response; skips the screenshot goroutine entirely when disabled.
 
 **Rejected alternative:** post-login org discovery via a global "which orgs does this email belong to" lookup — contradicts the Phase 2 decision to allow the same email across orgs.
@@ -235,16 +236,16 @@ Currently [desktop/internal/config/config.go](desktop/internal/config/config.go)
 - **Retention sweeper:** new nightly scheduled Lambda that deletes activity heartbeats older than `org.plan.retention_days` (scoped per org)
 
 ### Rate limiting
-- API Gateway Usage Plans keyed per org (generate an API key at signup, require as `x-api-key`), or WAF rate-based rule keyed on `x-org-slug` header. Either works; pick WAF for simplicity.
+- WAF rate-based rule keyed on the `x-workspace-code` request header the frontend sets after the workspace is resolved. Simpler than per-tenant API keys.
 
 ### Final CDK updates — [backend/cdk/stack.py](backend/cdk/stack.py)
-- Wildcard ACM cert in us-east-1 cross-region stack
-- Route53 records
+- ACM cert for `taskflow.neurostack.in` in `us-east-1` (CloudFront) and `ap-south-1` (API Gateway custom domain) — no wildcard
+- Route53 records in the existing `neurostack.in` zone
 - Pre-token-generation Lambda trigger wired to the user pool
-- `DEFAULT_CONFIG` / `STAGING_CONFIG` trimmed: drop `cors_origins` (regex in Lambda now), keep `{stage, domain, table_name, user_pool_name}` only
+- `DEFAULT_CONFIG` / `STAGING_CONFIG` trimmed: `cors_origins` becomes the literal `['https://taskflow.neurostack.in', 'http://localhost:3000']`, keep `{stage, domain, table_name, user_pool_name}`
 - `taskflow/gmail-credentials` secret reused by invite email sender
 
-**Exit gate:** Same desktop binary connects to `acme.taskflow.com` and `neurostack.taskflow.com` simultaneously. Free-plan org cannot create an 11th user.
+**Exit gate:** Same desktop binary connects to workspace codes `acme` and `neurostack` (two instances running side-by-side with separate config dirs). Free-plan org cannot create an 11th user.
 
 ---
 
@@ -252,19 +253,19 @@ Currently [desktop/internal/config/config.go](desktop/internal/config/config.go)
 
 | Phase | Deliverable | Exit gate |
 |-------|-------------|-----------|
-| 1 | Org entity, key scoping, `auth_context.org_id`, signup, backfill, subdomain routing | Two orgs coexist, data fully isolated |
+| 1 | Org entity, key scoping, `auth_context.org_id`, signup, backfill, workspace-code login | Two orgs coexist, data fully isolated |
 | 2 | Invite flow, per-tenant user creation | OWNER invites users only in their own org |
 | 3 | `OrgSettings` — branding, terminology, locale, features | Two orgs show different logo/name/colors/labels simultaneously |
 | 4 | Custom roles + permission matrix, `require()` helper | Tenant-defined role restricts actions correctly |
 | 5 | Custom pipelines, leave types, birthday feature de-hardcoded | Org B uses a Sales pipeline; Org A's DEVELOPMENT unaffected |
-| 6 | Desktop workspace prompt, plan limits, rate limiting, wildcard cert | Desktop connects to any tenant; free plan blocks 11th user |
+| 6 | Desktop workspace prompt, plan limits, rate limiting, taskflow.neurostack.in cert | Desktop connects to any tenant; free plan blocks 11th user |
 
 ---
 
 ## Critical files (quick index)
 
 **Backend:**
-- [backend/cdk/stack.py](backend/cdk/stack.py) — infra, Cognito, CORS, signup route, wildcard cert
+- [backend/cdk/stack.py](backend/cdk/stack.py) — infra, Cognito, CORS, signup route, taskflow.neurostack.in cert
 - [backend/cdk/app.py](backend/cdk/app.py), [backend/cdk/app_staging.py](backend/cdk/app_staging.py) — entry points
 - [backend/src/shared_kernel/auth_context.py](backend/src/shared_kernel/auth_context.py) — org_id injection point
 - [backend/src/shared_kernel/tenant_keys.py](backend/src/shared_kernel/tenant_keys.py) — **new**, key builders
@@ -278,8 +279,9 @@ Currently [desktop/internal/config/config.go](desktop/internal/config/config.go)
 
 **Frontend:**
 - [frontend/src/types/task.ts](frontend/src/types/task.ts) — delete hardcoded pipelines
-- `frontend/src/middleware.ts` — **new**, subdomain detection
-- `frontend/src/providers/TenantProvider.tsx` — **new**, tenant context
+- `frontend/src/providers/TenantProvider.tsx` — **new**, tenant context (workspace code from localStorage / query / login form)
+- `frontend/src/components/WorkspaceField.tsx` — **new**, workspace-code input with availability check
+- `frontend/src/app/login/page.tsx` — **new**, three-field login (workspace, employee ID, password)
 - `frontend/src/lib/i18n.ts` — **new**, terminology overrides
 - [frontend/tailwind.config.ts](frontend/tailwind.config.ts) — CSS-variable theming
 - `frontend/src/app/signup/page.tsx`, `frontend/src/app/invite/[token]/page.tsx` — **new**
@@ -288,7 +290,7 @@ Currently [desktop/internal/config/config.go](desktop/internal/config/config.go)
 
 **Desktop:**
 - [desktop/internal/config/config.go](desktop/internal/config/config.go) — strip tenant config, add workspace prompt
-- `desktop/frontend/src/FirstRun.tsx` — **new**, workspace URL entry
+- `desktop/frontend/src/FirstRun.tsx` — **new**, workspace-code entry panel
 
 ---
 
@@ -296,7 +298,7 @@ Currently [desktop/internal/config/config.go](desktop/internal/config/config.go)
 
 Run per phase:
 
-1. **Local two-org test** — `neurostack.localtest.me:3000` and `acme.localtest.me:3000` both hit the local Next.js dev server; middleware extracts slug from host. `localtest.me` resolves any subdomain to 127.0.0.1 — no hosts file needed.
+1. **Local two-org test** — open two browser profiles (or a normal + incognito window) at `http://localhost:3000`; enter workspace code `neurostack` in one and `acme` in the other. Both hit the same Next.js dev server; `TenantContext` is driven by `localStorage.workspace` per profile. No hosts file or DNS tricks needed.
 2. **Backend isolation test** — new `backend/tests/test_multitenancy.py`: create two orgs, write a task in each, assert Org A's list endpoint never returns Org B's task even with a handcrafted JWT that points at Org B's data.
 3. **Permission test** — token with `custom:orgId=A` attempting to read `PK=ORG#B#...` returns empty (verified at repository layer).
 4. **Existing suite compatibility** — add a `with_org("neurostack")` fixture that stamps `org_id` into the auth context so the existing tests pass unchanged.
@@ -312,7 +314,8 @@ Run per phase:
 - **Stale role in ID token** — after role change, force `Amplify.refreshSession()`; backend should return 403 (not 500) on permission denial so the frontend can retry after refresh
 - **Hardcoded `PRIVILEGED_ROLES` checks** — ~15–25 sites to grep and replace with `require()` — easy to miss one
 - **Hot partition aggregate keys** — audit for any `ORG#{id}#USER#LIST` patterns that could concentrate writes
-- **CloudFront cert region** — wildcard cert must be in `us-east-1` even though the stack runs in `ap-south-1` → use a cross-region CDK stack
+- **CloudFront cert region** — the cert for `taskflow.neurostack.in` must be issued in `us-east-1` even though the API stack runs in `ap-south-1` → use a cross-region CDK stack for the CloudFront cert
+- **Shared-domain cookie isolation** — all tenants share `taskflow.neurostack.in`, so browser cookies are not tenant-isolated at the origin level. Auth is JWT-in-localStorage, and the backend enforces `org_id` from the JWT on every request, so data isolation holds. Do not store any tenant-scoped data in cookies or the shared domain will leak it across tenants.
 - **Backward-compat during cutover** — Phase 1 code must dual-write until the backfill finishes, then flip to new-format-only in a second deploy; never single-deploy the key change
 - **Desktop ldflags regression** — do not bake `APP_NAME` anymore; use `display_name` from the settings fetch so the tray tooltip reflects the tenant
 - **Backfill must also migrate Cognito** — `admin_update_user_attributes` on every existing user to set `custom:orgId=neurostack`; easy to forget because it's not in the DynamoDB script
