@@ -18,7 +18,7 @@ A side-by-side document of every behavior, file, and concept that changes when T
 | Terminology | Hardcoded strings ("Employee", "Task", "Project") | Per-org terminology overrides via i18n keys |
 | Feature set | All features on, always | Per-org feature toggles (birthday wishes, screenshots, AI summaries, etc.) |
 | Limits | Unlimited | Free / Pro / Enterprise plan limits enforced in code |
-| Email uniqueness | Globally unique | Unique per tenant (same email can exist in two orgs) |
+| Email uniqueness | Globally unique | Globally unique (unchanged; standard SaaS pattern — same email cannot exist in two orgs) |
 | Employee ID | Hardcoded `EMP-####` prefix | Per-org `company_prefix` (already modeled on User, finally wired) |
 | Timezone / locale / currency | Not configurable | Per-org `OrgSettings` |
 | Desktop app | Tenant baked in at build time via `-ldflags` | Workspace code prompted on first launch, saved locally; API URL still baked in (single shared API) |
@@ -44,7 +44,7 @@ PK=ORG#{org}#PROJECT#{projectId}      SK=META | TASK#{taskId} | MEMBER#{userId}
 PK=ORG#{org}                          SK=ORG | SETTINGS | PLAN
 PK=ORG#{org}                          SK=ROLE#{roleId} | PIPELINE#{id} | INVITE#{token}
 PK=SLUG#{slug}                        SK=ORG                    # new: workspace-code resolver
-GSI1PK=ORG#{org}#EMAIL#{email}                                  # scoped per-tenant
+GSI1PK=EMAIL#{email}                                            # global (email is globally unique)
 GSI2PK=ORG#{org}#EMPLOYEE#{employeeId}                          # scoped per-tenant
 ```
 
@@ -79,7 +79,7 @@ GSI2PK=ORG#{org}#EMPLOYEE#{employeeId}                          # scoped per-ten
 | Token generation | Standard Cognito flow | **New** pre-token-generation Lambda trigger injects `orgId` + `roleId` into every ID token |
 | `AuthContext` (backend) | `{user_id, email, system_role}` | `{user_id, email, org_id, role_id}` |
 | Role check | `if ctx.system_role not in PRIVILEGED_ROLES:` hardcoded check | `require(ctx, "task.delete")` permission-string helper |
-| Email login alias | Cognito email alias (globally unique) | Dropped — login via `employeeId` or slug-scoped email |
+| Email login alias | Cognito email alias (globally unique) | **Kept unchanged** — email remains the login credential, enforced globally unique across all tenants via Cognito alias |
 | Role changes take effect | Immediately via DB read | Requires ID token refresh (`Amplify.refreshSession()` on role save) |
 
 ### Permission catalog (new)
@@ -154,7 +154,7 @@ activity.view  activity.export
 |------|---------|
 | `frontend/src/providers/TenantProvider.tsx` | Reads workspace code from `localStorage.workspace` / `?workspace=` query / login form; fetches org config; configures Amplify; exposes `TenantContext` |
 | `frontend/src/components/WorkspaceField.tsx` | Reusable workspace-code input with debounced availability check (used on login + signup) |
-| `frontend/src/app/login/page.tsx` | Three-field login (workspace code, employee ID, password); pre-fills workspace from query/localStorage |
+| `frontend/src/app/login/page.tsx` | Three-field login (workspace code, email, password); pre-fills workspace from query/localStorage; post-login validates JWT `custom:orgId` matches the entered workspace |
 | `frontend/src/lib/i18n.ts` | Base strings + tenant terminology overrides, `t(key)` function |
 | `frontend/src/lib/api/orgs.ts` | API client for org/settings/roles/pipelines/invites |
 | `frontend/src/hooks/useTenantPipelines.ts` | Reads pipelines from `TenantContext` |

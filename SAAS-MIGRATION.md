@@ -30,7 +30,7 @@ PK=ORG#{org}#PROJECT#{projectId}      SK=META | TASK#{taskId} | MEMBER#{userId}
 PK=ORG#{org}                          SK=ORG | SETTINGS | PLAN
 PK=ORG#{org}                          SK=ROLE#{roleId} | PIPELINE#{id} | INVITE#{token}
 PK=SLUG#{slug}                        SK=ORG       # workspace-code → org_id resolver
-GSI1PK=ORG#{org}#EMAIL#{email}                     # email uniqueness per-tenant
+GSI1PK=EMAIL#{email}                               # email globally unique (Cognito alias)
 GSI2PK=ORG#{org}#EMPLOYEE#{employeeId}             # employee IDs scoped per-tenant
 ```
 
@@ -39,8 +39,8 @@ A new helper module [backend/src/shared_kernel/tenant_keys.py](backend/src/share
 ### S3 key prefixing
 All uploads keyed `orgs/{orgId}/{userId}/{filename}`. The presign handler pulls `orgId` from `AuthContext` and refuses any key outside the tenant's prefix — enforced at presign time, not just via bucket policy.
 
-### Cognito workspace-code login
-The frontend is served from a single domain `taskflow.neurostack.in`. The login form has three fields: **workspace code**, employee ID (or email), password. When the user types the workspace code the frontend calls public `GET /orgs/by-slug/{slug}` → fetches org metadata (display name, logo, primary color, Cognito client config) and caches it in `localStorage.workspace` so returning users don't retype it. The Cognito user pool and client ID are shared across all tenants; `custom:orgId` on the user ties a login to one org. Two tenants can share the same email because the workspace code disambiguates at login time and email is no longer a Cognito alias. A "Switch workspace" menu item clears the cached workspace and returns the user to the workspace-code prompt.
+### Cognito login (email + password, workspace code for branding)
+The frontend is served from a single domain `taskflow.neurostack.in`. The login form has three fields: **workspace code**, email, password. When the user types the workspace code the frontend calls public `GET /orgs/by-slug/{slug}` → fetches org metadata (display name, logo, primary color, Cognito client config) and caches it in `localStorage.workspace` so returning users don't retype it. The workspace code exists only to theme the login screen and validate the user lands in the right org — it is **not** part of the login credential. Cognito authenticates via **globally unique email + password** using the standard Cognito alias flow. The shared pool enforces email uniqueness across every tenant, so a given email belongs to exactly one org. After login, the frontend verifies the JWT's `custom:orgId` matches the entered workspace code and shows an error like "This email belongs to a different workspace" if they mismatch. A "Switch workspace" menu item clears the cached workspace and returns the user to the workspace-code prompt.
 
 ---
 
@@ -67,7 +67,7 @@ The frontend is served from a single domain `taskflow.neurostack.in`. The login 
 ### Frontend
 - **New** `frontend/src/providers/TenantProvider.tsx` — reads workspace code from `localStorage.workspace` / `?workspace=` query param / login form, fetches `GET /orgs/by-slug/{slug}`, configures Amplify, exposes `TenantContext`. No host-parsing middleware needed — single domain only.
 - **New** `frontend/src/components/WorkspaceField.tsx` — reusable workspace-code input with debounced availability check; used on login and signup
-- **New** `frontend/src/app/login/page.tsx` — three-field form (workspace code, employee ID, password); pre-fills workspace from `?workspace=` query or `localStorage`, sends user to the workspace-code prompt if neither is set
+- **New** `frontend/src/app/login/page.tsx` — three-field form (workspace code, email, password); pre-fills workspace from `?workspace=` query or `localStorage`, sends user to the workspace-code prompt if neither is set; post-login check that the JWT's `custom:orgId` matches the entered workspace code
 - **New** `frontend/src/app/signup/page.tsx` — collects org name, slug (with availability check), owner email/password; on submit redirects to `https://taskflow.neurostack.in/login?workspace={slug}&first_login=1`
 - **New** `frontend/src/lib/api/orgs.ts` — API client for org endpoints
 
@@ -102,7 +102,7 @@ New script `backend/scripts/backfill_neurostack.py`:
 - Plan-limit check: refuse create if `user_count >= plan.max_users`
 - Frontend `/invite/[token]` page: collects name + password, accepts invite, redirects to `https://taskflow.neurostack.in/login?workspace={slug}` with the workspace code pre-filled
 
-**Gotcha — email uniqueness:** Cognito enforces globally-unique email aliases by default. Drop email as an alias attribute on the pool; users sign in via `employeeId` (desktop/web both accept it via the existing resolve-employee pattern) or via slug-scoped email lookup. Email becomes a profile-only attribute.
+**Email uniqueness — kept globally unique (standard SaaS pattern):** Email stays as the Cognito login alias exactly as it is today. Uniqueness is enforced globally across every tenant — a given email cannot exist in two orgs. Signup and invite handlers catch Cognito's `AliasExistsException` and return `409 email_taken`. This matches how every major SaaS works (Slack, Linear, Notion, GitHub). Consultants who need the same email in two orgs use a `+suffix` alias or a different address.
 
 **Exit gate:** Two orgs, each with 3 invited users, log in and see only their own data.
 
@@ -281,7 +281,7 @@ Currently [desktop/internal/config/config.go](desktop/internal/config/config.go)
 - [frontend/src/types/task.ts](frontend/src/types/task.ts) — delete hardcoded pipelines
 - `frontend/src/providers/TenantProvider.tsx` — **new**, tenant context (workspace code from localStorage / query / login form)
 - `frontend/src/components/WorkspaceField.tsx` — **new**, workspace-code input with availability check
-- `frontend/src/app/login/page.tsx` — **new**, three-field login (workspace, employee ID, password)
+- `frontend/src/app/login/page.tsx` — **new**, three-field login (workspace code, email, password)
 - `frontend/src/lib/i18n.ts` — **new**, terminology overrides
 - [frontend/tailwind.config.ts](frontend/tailwind.config.ts) — CSS-variable theming
 - `frontend/src/app/signup/page.tsx`, `frontend/src/app/invite/[token]/page.tsx` — **new**
@@ -310,7 +310,7 @@ Run per phase:
 ## Risks & non-obvious gotchas
 
 - **Cognito user orphaning on signup failure** — wrap in try/except with `admin_delete_user` rollback
-- **Email alias collision** — drop email as Cognito alias; use employeeId or slug-scoped lookup for login
+- **Email uniqueness enforced globally** — email stays as the Cognito login alias; signup and invite handlers must catch `AliasExistsException` and return `409 email_taken`. A given email cannot be reused across tenants. Frontend must validate post-login that the JWT's `custom:orgId` matches the workspace code the user entered, otherwise show a "wrong workspace" error.
 - **Stale role in ID token** — after role change, force `Amplify.refreshSession()`; backend should return 403 (not 500) on permission denial so the frontend can retry after refresh
 - **Hardcoded `PRIVILEGED_ROLES` checks** — ~15–25 sites to grep and replace with `require()` — easy to miss one
 - **Hot partition aggregate keys** — audit for any `ORG#{id}#USER#LIST` patterns that could concentrate writes
