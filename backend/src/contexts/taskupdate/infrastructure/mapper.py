@@ -1,6 +1,7 @@
 import json
 
 from contexts.taskupdate.domain.entities import TaskUpdate, TaskSummaryItem
+from shared_kernel import tenant_keys
 
 
 class TaskUpdateMapper:
@@ -43,3 +44,12 @@ class TaskUpdateMapper:
             "total_time": update.total_time,
             "created_at": update.created_at,
         }
+
+    @staticmethod
+    def to_dynamo_v2(update: TaskUpdate, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = TaskUpdateMapper.to_dynamo(update)
+        item["PK"] = tenant_keys.taskupdate_pk(org_id, update.date)
+        item["GSI1PK"] = tenant_keys.taskupdate_user_gsi1pk(org_id, update.user_id)
+        item["org_id"] = org_id
+        return item

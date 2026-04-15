@@ -119,6 +119,12 @@ class TaskManagementStack(Stack):
             custom_attributes={
                 "systemRole": cognito.StringAttribute(min_len=1, max_len=20, mutable=True),
                 "employeeId": cognito.StringAttribute(min_len=1, max_len=20, mutable=True),
+                # Phase 1 multi-tenant: every user belongs to exactly one org.
+                # mutable=True so the one-time backfill can retroactively set
+                # orgId on existing NEUROSTACK users. Application code treats
+                # this as immutable post-creation — only the signup handler
+                # and the backfill script ever write it.
+                "orgId": cognito.StringAttribute(min_len=1, max_len=64, mutable=True),
             },
             password_policy=cognito.PasswordPolicy(
                 min_length=8,
@@ -196,6 +202,27 @@ class TaskManagementStack(Stack):
             timeout=Duration.seconds(10),
             environment=lambda_env,
             layers=[deps_layer],
+        )
+
+        # ─── Pre-token-generation trigger (multi-tenant claim injection) ────
+        # Runs on every Cognito token issuance. Injects custom:orgId and
+        # custom:systemRole into the ID token so AuthContext can read them
+        # without a per-request DB round-trip. Attached to the UserPool
+        # declared above.
+        pre_token_fn = _lambda.Function(
+            self,
+            "PreTokenTrigger",
+            handler="contexts.org.handlers.pre_token_trigger.handler",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            code=_lambda.Code.from_asset(LAMBDA_SRC),
+            timeout=Duration.seconds(5),
+            environment={"TABLE_NAME": table.table_name},
+            layers=[deps_layer],
+        )
+        table.grant_read_data(pre_token_fn)
+        user_pool.add_trigger(
+            cognito.UserPoolOperation.PRE_TOKEN_GENERATION,
+            pre_token_fn,
         )
 
         # ─── Helper to create Lambda + API route ─────────────────────────────
@@ -315,6 +342,47 @@ class TaskManagementStack(Stack):
             "GET",
             apigw.LambdaIntegration(resolve_fn),
             authorization_type=apigw.AuthorizationType.NONE,
+        )
+
+        # ─── Organization (multi-tenant) handlers ───────────────────────────
+        # Public: POST /signup creates a new tenant and its first owner
+        # Public: GET /orgs/by-slug/{slug} resolves a workspace code for the login page
+        # Authed: GET /orgs/current returns the caller's full org + settings + plan
+        signup_resource = api.root.add_resource("signup")
+        signup_fn = _lambda.Function(
+            self,
+            "SignupOrg",
+            handler="contexts.org.handlers.signup_org.handler",
+            **{**lambda_defaults, "timeout": Duration.seconds(15)},
+        )
+        table.grant_read_write_data(signup_fn)
+        signup_resource.add_method(
+            "POST",
+            apigw.LambdaIntegration(signup_fn),
+            authorization_type=apigw.AuthorizationType.NONE,
+        )
+
+        orgs = api.root.add_resource("orgs")
+        orgs_by_slug = orgs.add_resource("by-slug").add_resource("{slug}")
+        get_by_slug_fn = _lambda.Function(
+            self,
+            "GetOrgBySlug",
+            handler="contexts.org.handlers.get_org_by_slug.handler",
+            **lambda_defaults,
+        )
+        table.grant_read_data(get_by_slug_fn)
+        orgs_by_slug.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_by_slug_fn),
+            authorization_type=apigw.AuthorizationType.NONE,
+        )
+
+        orgs_current = orgs.add_resource("current")
+        add_api_lambda(
+            "GetCurrentOrg",
+            "contexts.org.handlers.get_current_org.handler",
+            "GET",
+            orgs_current,
         )
 
         # ─── Attendance handlers ────────────────────────────────────────────

@@ -1,0 +1,199 @@
+"""Centralized DynamoDB key builders for the multi-tenant schema.
+
+Every PK/SK/GSI key in the org-scoped schema is constructed here so no
+repository string-formats keys inline. Single place to audit for tenant
+leakage and single place to change the schema.
+
+During the Phase 1 cutover we dual-write: each context repository adds the
+new org-scoped items using these helpers *in addition to* its existing
+legacy items. Once the backfill has run and reads are flipped to the new
+format, the legacy inline strings in repositories are removed.
+
+Convention: every multi-tenant key starts with `ORG#{org_id}#`. The only
+exceptions are:
+  - `USER_EMAIL#{email}` — email is globally unique (enforced by Cognito alias)
+  - `SLUG#{slug}` — the workspace-code -> org_id resolver (inherently global)
+"""
+from typing import Final
+
+
+DEFAULT_ORG_ID: Final[str] = "neurostack"
+
+
+# ---------------------------------------------------------------------------
+# Organization internal records (org / settings / plan / role / pipeline / invite)
+# ---------------------------------------------------------------------------
+
+def org_pk(org_id: str) -> str:
+    return f"ORG#{org_id}"
+
+
+def org_sk() -> str:
+    return "ORG"
+
+
+def settings_sk() -> str:
+    return "SETTINGS"
+
+
+def plan_sk() -> str:
+    return "PLAN"
+
+
+def role_sk(role_id: str) -> str:
+    return f"ROLE#{role_id}"
+
+
+def pipeline_sk(pipeline_id: str) -> str:
+    return f"PIPELINE#{pipeline_id}"
+
+
+def invite_sk(token: str) -> str:
+    return f"INVITE#{token}"
+
+
+# ---------------------------------------------------------------------------
+# Slug -> org resolver (global, called pre-login for branding lookup)
+# ---------------------------------------------------------------------------
+
+def slug_pk(slug: str) -> str:
+    return f"SLUG#{slug}"
+
+
+def slug_sk() -> str:
+    return "ORG"
+
+
+# ---------------------------------------------------------------------------
+# User (org-scoped)
+# ---------------------------------------------------------------------------
+
+def user_pk(org_id: str, user_id: str) -> str:
+    return f"ORG#{org_id}#USER#{user_id}"
+
+
+def user_sk() -> str:
+    return "PROFILE"
+
+
+def user_email_gsi1pk(email: str) -> str:
+    """Global — Cognito enforces email uniqueness via the email alias."""
+    return f"USER_EMAIL#{email}"
+
+
+def user_email_gsi1sk() -> str:
+    return "PROFILE"
+
+
+def employee_gsi2pk(org_id: str, employee_id: str) -> str:
+    return f"ORG#{org_id}#EMPLOYEE#{employee_id}"
+
+
+def employee_gsi2sk() -> str:
+    return "PROFILE"
+
+
+# ---------------------------------------------------------------------------
+# Project (org-scoped)
+# ---------------------------------------------------------------------------
+
+def project_pk(org_id: str, project_id: str) -> str:
+    return f"ORG#{org_id}#PROJECT#{project_id}"
+
+
+def project_metadata_sk() -> str:
+    return "METADATA"
+
+
+def project_member_sk(user_id: str) -> str:
+    return f"MEMBER#{user_id}"
+
+
+def user_projects_gsi1pk(org_id: str, user_id: str) -> str:
+    """Secondary index for 'which projects is this user a member of?'"""
+    return f"ORG#{org_id}#USER#{user_id}"
+
+
+# ---------------------------------------------------------------------------
+# Task (lives under project PK)
+# ---------------------------------------------------------------------------
+
+def task_sk(task_id: str) -> str:
+    return f"TASK#{task_id}"
+
+
+def task_lookup_gsi1pk(org_id: str, task_id: str) -> str:
+    """Secondary index for 'find a task by ID without knowing its project.'"""
+    return f"ORG#{org_id}#TASK#{task_id}"
+
+
+# ---------------------------------------------------------------------------
+# Attendance (org + user scoped)
+# ---------------------------------------------------------------------------
+
+def attendance_sk(date: str) -> str:
+    return f"ATTENDANCE#{date}"
+
+
+def attendance_date_gsi1pk(org_id: str, date: str) -> str:
+    return f"ORG#{org_id}#ATTENDANCE_DATE#{date}"
+
+
+# ---------------------------------------------------------------------------
+# DayOff (org + user scoped)
+# ---------------------------------------------------------------------------
+
+def dayoff_sk(created_at: str, request_id: str) -> str:
+    return f"DAYOFF#{created_at}#{request_id}"
+
+
+def dayoff_admin_gsi1pk(org_id: str, admin_id: str) -> str:
+    return f"ORG#{org_id}#DAYOFF_ADMIN#{admin_id}"
+
+
+def dayoff_lead_gsi2pk(org_id: str, lead_id: str) -> str:
+    return f"ORG#{org_id}#DAYOFF_LEAD#{lead_id}"
+
+
+# ---------------------------------------------------------------------------
+# Comment (scoped under task)
+# ---------------------------------------------------------------------------
+
+def comment_pk(org_id: str, task_id: str) -> str:
+    return f"ORG#{org_id}#TASK#{task_id}"
+
+
+def comment_sk(created_at: str, comment_id: str) -> str:
+    return f"COMMENT#{created_at}#{comment_id}"
+
+
+# ---------------------------------------------------------------------------
+# TaskUpdate (daily standups, org-scoped by date)
+# ---------------------------------------------------------------------------
+
+def taskupdate_pk(org_id: str, date: str) -> str:
+    return f"ORG#{org_id}#TASKUPDATE#{date}"
+
+
+def taskupdate_sk(user_id: str, update_id: str) -> str:
+    return f"USER#{user_id}#{update_id}"
+
+
+def taskupdate_user_gsi1pk(org_id: str, user_id: str) -> str:
+    return f"ORG#{org_id}#USER#{user_id}"
+
+
+# ---------------------------------------------------------------------------
+# Activity (org + user scoped)
+# ---------------------------------------------------------------------------
+
+def activity_sk(date: str) -> str:
+    return f"ACTIVITY#{date}"
+
+
+def activity_summary_sk(date: str) -> str:
+    return f"SUMMARY#{date}"
+
+
+def activity_date_gsi1pk(org_id: str, date: str) -> str:
+    return f"ORG#{org_id}#ACTIVITY_DATE#{date}"

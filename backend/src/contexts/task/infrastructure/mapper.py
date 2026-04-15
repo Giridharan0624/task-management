@@ -1,5 +1,6 @@
 from contexts.task.domain.entities import Task
 from contexts.task.domain.value_objects import TaskPriority
+from shared_kernel import tenant_keys
 
 
 class TaskMapper:
@@ -58,4 +59,13 @@ class TaskMapper:
             item["assigned_by"] = task.assigned_by
         if task.estimated_hours is not None:
             item["estimated_hours"] = str(task.estimated_hours)
+        return item
+
+    @staticmethod
+    def to_dynamo_v2(task: Task, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = TaskMapper.to_dynamo(task)
+        item["PK"] = tenant_keys.project_pk(org_id, task.project_id)
+        item["GSI1PK"] = tenant_keys.task_lookup_gsi1pk(org_id, task.task_id)
+        item["org_id"] = org_id
         return item

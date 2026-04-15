@@ -5,16 +5,18 @@ from boto3.dynamodb.conditions import Attr, Key
 from contexts.dayoff.domain.entities import DayOffRequest
 from contexts.dayoff.domain.repository import IDayOffRepository
 from shared_kernel.dynamo_client import get_table
+from shared_kernel.tenant_keys import DEFAULT_ORG_ID
 from contexts.dayoff.infrastructure.mapper import DayOffMapper
 
 
 class DayOffDynamoRepository(IDayOffRepository):
-    def __init__(self):
+    def __init__(self, org_id: str = DEFAULT_ORG_ID):
         self._table = get_table()
+        self._org_id = org_id
 
     def save(self, request: DayOffRequest) -> None:
-        item = DayOffMapper.to_dynamo(request)
-        self._table.put_item(Item=item)
+        self._table.put_item(Item=DayOffMapper.to_dynamo(request))
+        self._table.put_item(Item=DayOffMapper.to_dynamo_v2(request, self._org_id))
 
     def find_by_id(self, request_id: str) -> Optional[DayOffRequest]:
         response = self._table.scan(

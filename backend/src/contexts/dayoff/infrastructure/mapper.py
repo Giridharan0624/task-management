@@ -1,4 +1,5 @@
 from contexts.dayoff.domain.entities import DayOffRequest
+from shared_kernel import tenant_keys
 
 
 class DayOffMapper:
@@ -40,6 +41,18 @@ class DayOffMapper:
         if request.forwarded_by:
             item["forwarded_by"] = request.forwarded_by
 
+        return item
+
+    @staticmethod
+    def to_dynamo_v2(request: DayOffRequest, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = DayOffMapper.to_dynamo(request)
+        item["PK"] = tenant_keys.user_pk(org_id, request.user_id)
+        if request.admin_id:
+            item["GSI1PK"] = tenant_keys.dayoff_admin_gsi1pk(org_id, request.admin_id)
+        if request.team_lead_id:
+            item["GSI2PK"] = tenant_keys.dayoff_lead_gsi2pk(org_id, request.team_lead_id)
+        item["org_id"] = org_id
         return item
 
     @staticmethod

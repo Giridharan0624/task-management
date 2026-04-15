@@ -1,5 +1,6 @@
 import json
 from contexts.activity.domain.entities import UserActivity, ActivityBucket, DailySummary
+from shared_kernel import tenant_keys
 
 
 class ActivityMapper:
@@ -44,6 +45,15 @@ class ActivityMapper:
         )
 
     @staticmethod
+    def to_dynamo_v2(activity: UserActivity, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = ActivityMapper.to_dynamo(activity)
+        item["PK"] = tenant_keys.user_pk(org_id, activity.user_id)
+        item["GSI1PK"] = tenant_keys.activity_date_gsi1pk(org_id, activity.date)
+        item["org_id"] = org_id
+        return item
+
+    @staticmethod
     def summary_to_dynamo(summary: DailySummary) -> dict:
         return {
             "PK": f"USER#{summary.user_id}",
@@ -60,6 +70,14 @@ class ActivityMapper:
             "generated_at": summary.generated_at,
             "user_name": summary.user_name,
         }
+
+    @staticmethod
+    def summary_to_dynamo_v2(summary: DailySummary, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = ActivityMapper.summary_to_dynamo(summary)
+        item["PK"] = tenant_keys.user_pk(org_id, summary.user_id)
+        item["org_id"] = org_id
+        return item
 
     @staticmethod
     def summary_to_domain(item: dict) -> DailySummary:

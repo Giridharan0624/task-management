@@ -1,6 +1,7 @@
 import json
 
 from contexts.attendance.domain.entities import Attendance, Session
+from shared_kernel import tenant_keys
 
 
 class AttendanceMapper:
@@ -74,3 +75,12 @@ class AttendanceMapper:
             "user_email": attendance.user_email,
             "system_role": attendance.system_role,
         }
+
+    @staticmethod
+    def to_dynamo_v2(attendance: Attendance, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = AttendanceMapper.to_dynamo(attendance)
+        item["PK"] = tenant_keys.user_pk(org_id, attendance.user_id)
+        item["GSI1PK"] = tenant_keys.attendance_date_gsi1pk(org_id, attendance.date)
+        item["org_id"] = org_id
+        return item

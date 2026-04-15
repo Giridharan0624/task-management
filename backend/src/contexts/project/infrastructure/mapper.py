@@ -1,5 +1,6 @@
 from contexts.project.domain.entities import Project, ProjectMember
 from contexts.project.domain.value_objects import ProjectRole
+from shared_kernel import tenant_keys
 
 
 class ProjectMapper:
@@ -58,4 +59,21 @@ class ProjectMapper:
         }
         if member.added_by:
             item["added_by"] = member.added_by
+        return item
+
+    @staticmethod
+    def project_to_dynamo_v2(project: Project, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = ProjectMapper.project_to_dynamo(project)
+        item["PK"] = tenant_keys.project_pk(org_id, project.project_id)
+        item["org_id"] = org_id
+        return item
+
+    @staticmethod
+    def member_to_dynamo_v2(member: ProjectMember, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write."""
+        item = ProjectMapper.member_to_dynamo(member)
+        item["PK"] = tenant_keys.project_pk(org_id, member.project_id)
+        item["GSI1PK"] = tenant_keys.user_projects_gsi1pk(org_id, member.user_id)
+        item["org_id"] = org_id
         return item

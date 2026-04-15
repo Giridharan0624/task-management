@@ -3,16 +3,19 @@ from boto3.dynamodb.conditions import Key
 from contexts.comment.domain.entities import ProgressComment
 from contexts.comment.domain.repository import ICommentRepository
 from shared_kernel.dynamo_client import get_table
+from shared_kernel.tenant_keys import DEFAULT_ORG_ID
+from shared_kernel import tenant_keys
 from contexts.comment.infrastructure.mapper import CommentMapper
 
 
 class CommentDynamoRepository(ICommentRepository):
-    def __init__(self):
+    def __init__(self, org_id: str = DEFAULT_ORG_ID):
         self._table = get_table()
+        self._org_id = org_id
 
     def save(self, comment: ProgressComment) -> None:
-        item = CommentMapper.to_dynamo(comment)
-        self._table.put_item(Item=item)
+        self._table.put_item(Item=CommentMapper.to_dynamo(comment))
+        self._table.put_item(Item=CommentMapper.to_dynamo_v2(comment, self._org_id))
 
     def find_by_task(self, task_id: str) -> list[ProgressComment]:
         response = self._table.query(
@@ -33,20 +36,24 @@ class CommentDynamoRepository(ICommentRepository):
         return comments
 
     def delete_all_by_task(self, task_id: str) -> None:
-        response = self._table.query(
-            KeyConditionExpression=Key("PK").eq(f"TASK#{task_id}")
-            & Key("SK").begins_with("COMMENT#"),
-        )
-        items = response.get("Items", [])
+        legacy_pk = f"TASK#{task_id}"
+        v2_pk = tenant_keys.comment_pk(self._org_id, task_id)
 
-        while "LastEvaluatedKey" in response:
+        all_items: list[dict] = []
+        for pk in (legacy_pk, v2_pk):
             response = self._table.query(
-                KeyConditionExpression=Key("PK").eq(f"TASK#{task_id}")
+                KeyConditionExpression=Key("PK").eq(pk)
                 & Key("SK").begins_with("COMMENT#"),
-                ExclusiveStartKey=response["LastEvaluatedKey"],
             )
-            items.extend(response.get("Items", []))
+            all_items.extend(response.get("Items", []))
+            while "LastEvaluatedKey" in response:
+                response = self._table.query(
+                    KeyConditionExpression=Key("PK").eq(pk)
+                    & Key("SK").begins_with("COMMENT#"),
+                    ExclusiveStartKey=response["LastEvaluatedKey"],
+                )
+                all_items.extend(response.get("Items", []))
 
         with self._table.batch_writer() as batch:
-            for item in items:
+            for item in all_items:
                 batch.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})

@@ -2,6 +2,7 @@ import json
 
 from contexts.user.domain.entities import User
 from contexts.user.domain.value_objects import SystemRole
+from shared_kernel import tenant_keys
 
 
 class UserMapper:
@@ -80,4 +81,14 @@ class UserMapper:
             item["hobby"] = user.hobby
         if user.company_prefix:
             item["company_prefix"] = user.company_prefix
+        return item
+
+    @staticmethod
+    def to_dynamo_v2(user: User, org_id: str) -> dict:
+        """Org-scoped copy for Phase 1 dual-write. Read flip in Step 10 makes this authoritative."""
+        item = UserMapper.to_dynamo(user)
+        item["PK"] = tenant_keys.user_pk(org_id, user.user_id)
+        if user.employee_id:
+            item["GSI2PK"] = tenant_keys.employee_gsi2pk(org_id, user.employee_id)
+        item["org_id"] = org_id
         return item

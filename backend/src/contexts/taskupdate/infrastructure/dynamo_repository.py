@@ -2,16 +2,18 @@ from boto3.dynamodb.conditions import Key
 
 from contexts.taskupdate.domain.entities import TaskUpdate
 from shared_kernel.dynamo_client import get_table
+from shared_kernel.tenant_keys import DEFAULT_ORG_ID
 from contexts.taskupdate.infrastructure.mapper import TaskUpdateMapper
 
 
 class TaskUpdateDynamoRepository:
-    def __init__(self):
+    def __init__(self, org_id: str = DEFAULT_ORG_ID):
         self._table = get_table()
+        self._org_id = org_id
 
     def save(self, update: TaskUpdate) -> None:
-        item = TaskUpdateMapper.to_dynamo(update)
-        self._table.put_item(Item=item)
+        self._table.put_item(Item=TaskUpdateMapper.to_dynamo(update))
+        self._table.put_item(Item=TaskUpdateMapper.to_dynamo_v2(update, self._org_id))
 
     def find_by_date(self, date: str) -> list[TaskUpdate]:
         """Get all task updates for a given date (for owner/admin view)."""

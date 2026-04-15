@@ -4,12 +4,14 @@ from boto3.dynamodb.conditions import Key, Attr
 from contexts.activity.domain.entities import UserActivity, DailySummary
 from contexts.activity.domain.repository import IActivityRepository
 from shared_kernel.dynamo_client import get_table
+from shared_kernel.tenant_keys import DEFAULT_ORG_ID
 from contexts.activity.infrastructure.mapper import ActivityMapper
 
 
 class ActivityDynamoRepository(IActivityRepository):
-    def __init__(self):
+    def __init__(self, org_id: str = DEFAULT_ORG_ID):
         self._table = get_table()
+        self._org_id = org_id
 
     def find_by_user_and_date(self, user_id: str, date: str) -> Optional[UserActivity]:
         response = self._table.get_item(
@@ -21,8 +23,8 @@ class ActivityDynamoRepository(IActivityRepository):
         return ActivityMapper.to_domain(item)
 
     def save(self, activity: UserActivity) -> None:
-        item = ActivityMapper.to_dynamo(activity)
-        self._table.put_item(Item=item)
+        self._table.put_item(Item=ActivityMapper.to_dynamo(activity))
+        self._table.put_item(Item=ActivityMapper.to_dynamo_v2(activity, self._org_id))
 
     def find_all_by_date(self, date: str) -> list[UserActivity]:
         response = self._table.query(
@@ -57,8 +59,8 @@ class ActivityDynamoRepository(IActivityRepository):
         return result
 
     def save_summary(self, summary: DailySummary) -> None:
-        item = ActivityMapper.summary_to_dynamo(summary)
-        self._table.put_item(Item=item)
+        self._table.put_item(Item=ActivityMapper.summary_to_dynamo(summary))
+        self._table.put_item(Item=ActivityMapper.summary_to_dynamo_v2(summary, self._org_id))
 
     def find_summary(self, user_id: str, date: str) -> Optional[DailySummary]:
         response = self._table.get_item(

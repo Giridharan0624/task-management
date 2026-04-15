@@ -5,12 +5,15 @@ from boto3.dynamodb.conditions import Attr, Key
 from contexts.user.domain.entities import User
 from contexts.user.domain.repository import IUserRepository
 from shared_kernel.dynamo_client import get_table
+from shared_kernel.tenant_keys import DEFAULT_ORG_ID
+from shared_kernel import tenant_keys
 from contexts.user.infrastructure.mapper import UserMapper
 
 
 class UserDynamoRepository(IUserRepository):
-    def __init__(self):
+    def __init__(self, org_id: str = DEFAULT_ORG_ID):
         self._table = get_table()
+        self._org_id = org_id
 
     def find_by_id(self, user_id: str) -> Optional[User]:
         response = self._table.get_item(
@@ -33,12 +36,12 @@ class UserDynamoRepository(IUserRepository):
         return UserMapper.to_domain(items[0])
 
     def save(self, user: User) -> None:
-        item = UserMapper.to_dynamo(user)
-        self._table.put_item(Item=item)
+        self._table.put_item(Item=UserMapper.to_dynamo(user))
+        self._table.put_item(Item=UserMapper.to_dynamo_v2(user, self._org_id))
 
     def update(self, user: User) -> None:
-        item = UserMapper.to_dynamo(user)
-        self._table.put_item(Item=item)
+        self._table.put_item(Item=UserMapper.to_dynamo(user))
+        self._table.put_item(Item=UserMapper.to_dynamo_v2(user, self._org_id))
 
     def find_all(self) -> list[User]:
         response = self._table.scan(
@@ -85,4 +88,7 @@ class UserDynamoRepository(IUserRepository):
     def delete(self, user_id: str) -> None:
         self._table.delete_item(
             Key={"PK": f"USER#{user_id}", "SK": "PROFILE"}
+        )
+        self._table.delete_item(
+            Key={"PK": tenant_keys.user_pk(self._org_id, user_id), "SK": "PROFILE"}
         )
