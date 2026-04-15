@@ -4,12 +4,13 @@ from shared_kernel import tenant_keys
 
 class DayOffMapper:
     @staticmethod
-    def to_dynamo(request: DayOffRequest) -> dict:
+    def to_dynamo(request: DayOffRequest, org_id: str) -> dict:
         item: dict = {
-            "PK": f"USER#{request.user_id}",
-            "SK": f"DAYOFF#{request.created_at}#{request.request_id}",
-            "GSI1PK": f"DAYOFF_ADMIN#{request.admin_id}",
+            "PK": tenant_keys.user_pk(org_id, request.user_id),
+            "SK": tenant_keys.dayoff_sk(request.created_at, request.request_id),
+            "GSI1PK": tenant_keys.dayoff_admin_gsi1pk(org_id, request.admin_id),
             "GSI1SK": f"DAYOFF#{request.created_at}#{request.request_id}",
+            "org_id": org_id,
             "request_id": request.request_id,
             "user_id": request.user_id,
             "user_name": request.user_name,
@@ -28,7 +29,7 @@ class DayOffMapper:
             item["employee_id"] = request.employee_id
         if request.team_lead_id:
             item["team_lead_id"] = request.team_lead_id
-            item["GSI2PK"] = f"DAYOFF_LEAD#{request.team_lead_id}"
+            item["GSI2PK"] = tenant_keys.dayoff_lead_gsi2pk(org_id, request.team_lead_id)
             item["GSI2SK"] = f"DAYOFF#{request.created_at}#{request.request_id}"
         if request.team_lead_name:
             item["team_lead_name"] = request.team_lead_name
@@ -41,18 +42,6 @@ class DayOffMapper:
         if request.forwarded_by:
             item["forwarded_by"] = request.forwarded_by
 
-        return item
-
-    @staticmethod
-    def to_dynamo_v2(request: DayOffRequest, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = DayOffMapper.to_dynamo(request)
-        item["PK"] = tenant_keys.user_pk(org_id, request.user_id)
-        if request.admin_id:
-            item["GSI1PK"] = tenant_keys.dayoff_admin_gsi1pk(org_id, request.admin_id)
-        if request.team_lead_id:
-            item["GSI2PK"] = tenant_keys.dayoff_lead_gsi2pk(org_id, request.team_lead_id)
-        item["org_id"] = org_id
         return item
 
     @staticmethod

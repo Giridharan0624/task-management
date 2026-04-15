@@ -47,12 +47,10 @@ class TaskDynamoRepository(ITaskRepository):
         return tasks
 
     def save(self, task: Task) -> None:
-        self._table.put_item(Item=TaskMapper.to_dynamo(task))
-        self._table.put_item(Item=TaskMapper.to_dynamo_v2(task, self._org_id))
+        self._table.put_item(Item=TaskMapper.to_dynamo(task, self._org_id))
 
     def update(self, task: Task) -> None:
-        self._table.put_item(Item=TaskMapper.to_dynamo(task))
-        self._table.put_item(Item=TaskMapper.to_dynamo_v2(task, self._org_id))
+        self._table.put_item(Item=TaskMapper.to_dynamo(task, self._org_id))
 
     def delete(self, task_id: str, project_id: str) -> None:
         self._table.delete_item(

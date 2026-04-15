@@ -48,12 +48,10 @@ class UserDynamoRepository(IUserRepository):
         return UserMapper.to_domain(items[0])
 
     def save(self, user: User) -> None:
-        self._table.put_item(Item=UserMapper.to_dynamo(user))
-        self._table.put_item(Item=UserMapper.to_dynamo_v2(user, self._org_id))
+        self._table.put_item(Item=UserMapper.to_dynamo(user, self._org_id))
 
     def update(self, user: User) -> None:
-        self._table.put_item(Item=UserMapper.to_dynamo(user))
-        self._table.put_item(Item=UserMapper.to_dynamo_v2(user, self._org_id))
+        self._table.put_item(Item=UserMapper.to_dynamo(user, self._org_id))
 
     def find_all(self) -> list[User]:
         org_prefix = f"ORG#{self._org_id}#USER#"

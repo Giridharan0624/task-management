@@ -18,10 +18,11 @@ class ProjectMapper:
         )
 
     @staticmethod
-    def project_to_dynamo(project: Project) -> dict:
+    def project_to_dynamo(project: Project, org_id: str) -> dict:
         item: dict = {
-            "PK": f"PROJECT#{project.project_id}",
-            "SK": "METADATA",
+            "PK": tenant_keys.project_pk(org_id, project.project_id),
+            "SK": tenant_keys.project_metadata_sk(),
+            "org_id": org_id,
             "project_id": project.project_id,
             "name": project.name,
             "created_by": project.created_by,
@@ -46,12 +47,13 @@ class ProjectMapper:
         )
 
     @staticmethod
-    def member_to_dynamo(member: ProjectMember) -> dict:
+    def member_to_dynamo(member: ProjectMember, org_id: str) -> dict:
         item = {
-            "PK": f"PROJECT#{member.project_id}",
-            "SK": f"MEMBER#{member.user_id}",
-            "GSI1PK": f"USER#{member.user_id}",
+            "PK": tenant_keys.project_pk(org_id, member.project_id),
+            "SK": tenant_keys.project_member_sk(member.user_id),
+            "GSI1PK": tenant_keys.user_projects_gsi1pk(org_id, member.user_id),
             "GSI1SK": f"PROJECT#{member.project_id}",
+            "org_id": org_id,
             "project_id": member.project_id,
             "user_id": member.user_id,
             "project_role": member.project_role.value,
@@ -59,21 +61,4 @@ class ProjectMapper:
         }
         if member.added_by:
             item["added_by"] = member.added_by
-        return item
-
-    @staticmethod
-    def project_to_dynamo_v2(project: Project, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = ProjectMapper.project_to_dynamo(project)
-        item["PK"] = tenant_keys.project_pk(org_id, project.project_id)
-        item["org_id"] = org_id
-        return item
-
-    @staticmethod
-    def member_to_dynamo_v2(member: ProjectMember, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = ProjectMapper.member_to_dynamo(member)
-        item["PK"] = tenant_keys.project_pk(org_id, member.project_id)
-        item["GSI1PK"] = tenant_keys.user_projects_gsi1pk(org_id, member.user_id)
-        item["org_id"] = org_id
         return item

@@ -15,8 +15,7 @@ class TaskUpdateDynamoRepository:
         self._org_id = org_id if org_id is not None else get_current_org_id()
 
     def save(self, update: TaskUpdate) -> None:
-        self._table.put_item(Item=TaskUpdateMapper.to_dynamo(update))
-        self._table.put_item(Item=TaskUpdateMapper.to_dynamo_v2(update, self._org_id))
+        self._table.put_item(Item=TaskUpdateMapper.to_dynamo(update, self._org_id))
 
     def find_by_date(self, date: str) -> list[TaskUpdate]:
         """Get all task updates for a given date (for owner/admin view)."""

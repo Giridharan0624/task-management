@@ -25,12 +25,13 @@ class TaskUpdateMapper:
         )
 
     @staticmethod
-    def to_dynamo(update: TaskUpdate) -> dict:
+    def to_dynamo(update: TaskUpdate, org_id: str) -> dict:
         return {
-            "PK": f"TASKUPDATE#{update.date}",
-            "SK": f"USER#{update.user_id}#{update.update_id}",
-            "GSI1PK": f"USER#{update.user_id}",
+            "PK": tenant_keys.taskupdate_pk(org_id, update.date),
+            "SK": tenant_keys.taskupdate_sk(update.user_id, update.update_id),
+            "GSI1PK": tenant_keys.taskupdate_user_gsi1pk(org_id, update.user_id),
             "GSI1SK": f"TASKUPDATE#{update.date}",
+            "org_id": org_id,
             "update_id": update.update_id,
             "user_id": update.user_id,
             "user_name": update.user_name,
@@ -44,12 +45,3 @@ class TaskUpdateMapper:
             "total_time": update.total_time,
             "created_at": update.created_at,
         }
-
-    @staticmethod
-    def to_dynamo_v2(update: TaskUpdate, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = TaskUpdateMapper.to_dynamo(update)
-        item["PK"] = tenant_keys.taskupdate_pk(org_id, update.date)
-        item["GSI1PK"] = tenant_keys.taskupdate_user_gsi1pk(org_id, update.user_id)
-        item["org_id"] = org_id
-        return item

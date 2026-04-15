@@ -32,13 +32,14 @@ class TaskMapper:
         )
 
     @staticmethod
-    def to_dynamo(task: Task) -> dict:
+    def to_dynamo(task: Task, org_id: str) -> dict:
         status_val = task.status if isinstance(task.status, str) else task.status.value if hasattr(task.status, 'value') else str(task.status)
         item: dict = {
-            "PK": f"PROJECT#{task.project_id}",
-            "SK": f"TASK#{task.task_id}",
-            "GSI1PK": f"TASK#{task.task_id}",
+            "PK": tenant_keys.project_pk(org_id, task.project_id),
+            "SK": tenant_keys.task_sk(task.task_id),
+            "GSI1PK": tenant_keys.task_lookup_gsi1pk(org_id, task.task_id),
             "GSI1SK": f"PROJECT#{task.project_id}",
+            "org_id": org_id,
             "task_id": task.task_id,
             "project_id": task.project_id,
             "title": task.title,
@@ -59,13 +60,4 @@ class TaskMapper:
             item["assigned_by"] = task.assigned_by
         if task.estimated_hours is not None:
             item["estimated_hours"] = str(task.estimated_hours)
-        return item
-
-    @staticmethod
-    def to_dynamo_v2(task: Task, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = TaskMapper.to_dynamo(task)
-        item["PK"] = tenant_keys.project_pk(org_id, task.project_id)
-        item["GSI1PK"] = tenant_keys.task_lookup_gsi1pk(org_id, task.task_id)
-        item["org_id"] = org_id
         return item

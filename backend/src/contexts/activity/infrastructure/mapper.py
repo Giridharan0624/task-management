@@ -5,12 +5,13 @@ from shared_kernel import tenant_keys
 
 class ActivityMapper:
     @staticmethod
-    def to_dynamo(activity: UserActivity) -> dict:
+    def to_dynamo(activity: UserActivity, org_id: str) -> dict:
         return {
-            "PK": f"USER#{activity.user_id}",
-            "SK": f"ACTIVITY#{activity.date}",
-            "GSI1PK": f"ACTIVITY_DATE#{activity.date}",
+            "PK": tenant_keys.user_pk(org_id, activity.user_id),
+            "SK": tenant_keys.activity_sk(activity.date),
+            "GSI1PK": tenant_keys.activity_date_gsi1pk(org_id, activity.date),
             "GSI1SK": f"USER#{activity.user_id}",
+            "org_id": org_id,
             "user_id": activity.user_id,
             "date": activity.date,
             "buckets": json.dumps([b.model_dump() for b in activity.buckets]),
@@ -45,19 +46,11 @@ class ActivityMapper:
         )
 
     @staticmethod
-    def to_dynamo_v2(activity: UserActivity, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = ActivityMapper.to_dynamo(activity)
-        item["PK"] = tenant_keys.user_pk(org_id, activity.user_id)
-        item["GSI1PK"] = tenant_keys.activity_date_gsi1pk(org_id, activity.date)
-        item["org_id"] = org_id
-        return item
-
-    @staticmethod
-    def summary_to_dynamo(summary: DailySummary) -> dict:
+    def summary_to_dynamo(summary: DailySummary, org_id: str) -> dict:
         return {
-            "PK": f"USER#{summary.user_id}",
-            "SK": f"SUMMARY#{summary.date}",
+            "PK": tenant_keys.user_pk(org_id, summary.user_id),
+            "SK": tenant_keys.activity_summary_sk(summary.date),
+            "org_id": org_id,
             "user_id": summary.user_id,
             "date": summary.date,
             "summary": summary.summary,
@@ -70,14 +63,6 @@ class ActivityMapper:
             "generated_at": summary.generated_at,
             "user_name": summary.user_name,
         }
-
-    @staticmethod
-    def summary_to_dynamo_v2(summary: DailySummary, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = ActivityMapper.summary_to_dynamo(summary)
-        item["PK"] = tenant_keys.user_pk(org_id, summary.user_id)
-        item["org_id"] = org_id
-        return item
 
     @staticmethod
     def summary_to_domain(item: dict) -> DailySummary:

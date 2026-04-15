@@ -16,8 +16,7 @@ class DayOffDynamoRepository(IDayOffRepository):
         self._org_id = org_id if org_id is not None else get_current_org_id()
 
     def save(self, request: DayOffRequest) -> None:
-        self._table.put_item(Item=DayOffMapper.to_dynamo(request))
-        self._table.put_item(Item=DayOffMapper.to_dynamo_v2(request, self._org_id))
+        self._table.put_item(Item=DayOffMapper.to_dynamo(request, self._org_id))
 
     def find_by_id(self, request_id: str) -> Optional[DayOffRequest]:
         # Scoped scan — look only inside this tenant's user namespace.

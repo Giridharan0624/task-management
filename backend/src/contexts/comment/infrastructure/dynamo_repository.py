@@ -16,8 +16,7 @@ class CommentDynamoRepository(ICommentRepository):
         self._org_id = org_id if org_id is not None else get_current_org_id()
 
     def save(self, comment: ProgressComment) -> None:
-        self._table.put_item(Item=CommentMapper.to_dynamo(comment))
-        self._table.put_item(Item=CommentMapper.to_dynamo_v2(comment, self._org_id))
+        self._table.put_item(Item=CommentMapper.to_dynamo(comment, self._org_id))
 
     def find_by_task(self, task_id: str) -> list[ProgressComment]:
         task_pk = tenant_keys.comment_pk(self._org_id, task_id)

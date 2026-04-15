@@ -28,8 +28,7 @@ class ProjectDynamoRepository(IProjectRepository):
         return ProjectMapper.project_to_domain(item)
 
     def save(self, project: Project) -> None:
-        self._table.put_item(Item=ProjectMapper.project_to_dynamo(project))
-        self._table.put_item(Item=ProjectMapper.project_to_dynamo_v2(project, self._org_id))
+        self._table.put_item(Item=ProjectMapper.project_to_dynamo(project, self._org_id))
 
     def delete(self, project_id: str) -> None:
         self._table.delete_item(
@@ -75,8 +74,7 @@ class ProjectDynamoRepository(IProjectRepository):
         return [ProjectMapper.project_to_domain(item) for item in items]
 
     def save_member(self, member: ProjectMember) -> None:
-        self._table.put_item(Item=ProjectMapper.member_to_dynamo(member))
-        self._table.put_item(Item=ProjectMapper.member_to_dynamo_v2(member, self._org_id))
+        self._table.put_item(Item=ProjectMapper.member_to_dynamo(member, self._org_id))
 
     def remove_member(self, project_id: str, user_id: str) -> None:
         self._table.delete_item(

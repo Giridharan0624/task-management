@@ -42,7 +42,7 @@ class AttendanceMapper:
         )
 
     @staticmethod
-    def to_dynamo(attendance: Attendance) -> dict:
+    def to_dynamo(attendance: Attendance, org_id: str) -> dict:
         sessions_data = []
         for s in attendance.sessions:
             sd: dict = {"sign_in_at": s.sign_in_at}
@@ -63,10 +63,11 @@ class AttendanceMapper:
             sessions_data.append(sd)
 
         return {
-            "PK": f"USER#{attendance.user_id}",
-            "SK": f"ATTENDANCE#{attendance.date}",
-            "GSI1PK": f"ATTENDANCE_DATE#{attendance.date}",
+            "PK": tenant_keys.user_pk(org_id, attendance.user_id),
+            "SK": tenant_keys.attendance_sk(attendance.date),
+            "GSI1PK": tenant_keys.attendance_date_gsi1pk(org_id, attendance.date),
             "GSI1SK": f"USER#{attendance.user_id}",
+            "org_id": org_id,
             "user_id": attendance.user_id,
             "date": attendance.date,
             "sessions": json.dumps(sessions_data),
@@ -75,12 +76,3 @@ class AttendanceMapper:
             "user_email": attendance.user_email,
             "system_role": attendance.system_role,
         }
-
-    @staticmethod
-    def to_dynamo_v2(attendance: Attendance, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write."""
-        item = AttendanceMapper.to_dynamo(attendance)
-        item["PK"] = tenant_keys.user_pk(org_id, attendance.user_id)
-        item["GSI1PK"] = tenant_keys.attendance_date_gsi1pk(org_id, attendance.date)
-        item["org_id"] = org_id
-        return item

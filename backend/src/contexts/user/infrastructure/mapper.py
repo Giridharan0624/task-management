@@ -38,12 +38,13 @@ class UserMapper:
         )
 
     @staticmethod
-    def to_dynamo(user: User) -> dict:
+    def to_dynamo(user: User, org_id: str) -> dict:
         item = {
-            "PK": f"USER#{user.user_id}",
-            "SK": "PROFILE",
-            "GSI1PK": f"USER_EMAIL#{user.email}",
-            "GSI1SK": "PROFILE",
+            "PK": tenant_keys.user_pk(org_id, user.user_id),
+            "SK": tenant_keys.user_sk(),
+            "GSI1PK": tenant_keys.user_email_gsi1pk(user.email),
+            "GSI1SK": tenant_keys.user_email_gsi1sk(),
+            "org_id": org_id,
             "user_id": user.user_id,
             "email": user.email,
             "name": user.name,
@@ -53,8 +54,8 @@ class UserMapper:
         }
         if user.employee_id:
             item["employee_id"] = user.employee_id
-            item["GSI2PK"] = f"EMPLOYEE#{user.employee_id}"
-            item["GSI2SK"] = "PROFILE"
+            item["GSI2PK"] = tenant_keys.employee_gsi2pk(org_id, user.employee_id)
+            item["GSI2SK"] = tenant_keys.employee_gsi2sk()
         if user.created_by:
             item["created_by"] = user.created_by
         if user.phone:
@@ -81,14 +82,4 @@ class UserMapper:
             item["hobby"] = user.hobby
         if user.company_prefix:
             item["company_prefix"] = user.company_prefix
-        return item
-
-    @staticmethod
-    def to_dynamo_v2(user: User, org_id: str) -> dict:
-        """Org-scoped copy for Phase 1 dual-write. Read flip in Step 10 makes this authoritative."""
-        item = UserMapper.to_dynamo(user)
-        item["PK"] = tenant_keys.user_pk(org_id, user.user_id)
-        if user.employee_id:
-            item["GSI2PK"] = tenant_keys.employee_gsi2pk(org_id, user.employee_id)
-        item["org_id"] = org_id
         return item

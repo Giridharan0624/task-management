@@ -32,15 +32,10 @@ class AttendanceDynamoRepository(IAttendanceRepository):
         return AttendanceMapper.to_domain(item)
 
     def save(self, attendance: Attendance) -> None:
-        legacy = AttendanceMapper.to_dynamo(attendance)
-        if "total_hours" in legacy and legacy["total_hours"] is not None:
-            legacy["total_hours"] = Decimal(legacy["total_hours"])
-        self._table.put_item(Item=legacy)
-
-        v2 = AttendanceMapper.to_dynamo_v2(attendance, self._org_id)
-        if "total_hours" in v2 and v2["total_hours"] is not None:
-            v2["total_hours"] = Decimal(v2["total_hours"])
-        self._table.put_item(Item=v2)
+        item = AttendanceMapper.to_dynamo(attendance, self._org_id)
+        if "total_hours" in item and item["total_hours"] is not None:
+            item["total_hours"] = Decimal(item["total_hours"])
+        self._table.put_item(Item=item)
 
     def find_all_by_date(self, date: str) -> list[Attendance]:
         gsi_pk = tenant_keys.attendance_date_gsi1pk(self._org_id, date)

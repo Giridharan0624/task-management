@@ -27,8 +27,7 @@ class ActivityDynamoRepository(IActivityRepository):
         return ActivityMapper.to_domain(item)
 
     def save(self, activity: UserActivity) -> None:
-        self._table.put_item(Item=ActivityMapper.to_dynamo(activity))
-        self._table.put_item(Item=ActivityMapper.to_dynamo_v2(activity, self._org_id))
+        self._table.put_item(Item=ActivityMapper.to_dynamo(activity, self._org_id))
 
     def find_all_by_date(self, date: str) -> list[UserActivity]:
         gsi_pk = tenant_keys.activity_date_gsi1pk(self._org_id, date)
@@ -67,8 +66,7 @@ class ActivityDynamoRepository(IActivityRepository):
         return result
 
     def save_summary(self, summary: DailySummary) -> None:
-        self._table.put_item(Item=ActivityMapper.summary_to_dynamo(summary))
-        self._table.put_item(Item=ActivityMapper.summary_to_dynamo_v2(summary, self._org_id))
+        self._table.put_item(Item=ActivityMapper.summary_to_dynamo(summary, self._org_id))
 
     def find_summary(self, user_id: str, date: str) -> Optional[DailySummary]:
         response = self._table.get_item(
