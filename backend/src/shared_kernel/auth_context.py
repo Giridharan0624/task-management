@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
-from shared_kernel.tenant_keys import DEFAULT_ORG_ID
+from shared_kernel.tenant_keys import DEFAULT_ORG_ID, set_current_org_id
 
 
 @dataclass
@@ -18,22 +17,33 @@ def extract_auth_context(event: dict) -> AuthContext:
     )
     user_id = claims.get("sub", "")
 
+    # org_id comes from the Cognito custom attribute (set by signup /
+    # backfill and injected into every ID token by the pre-token-generation
+    # trigger). Missing claim falls back to NEUROSTACK so that any existing
+    # legacy token without the claim still works during the Phase 1 window.
+    org_id = claims.get("custom:orgId") or DEFAULT_ORG_ID
+
+    # Propagate the org_id into the per-request ContextVar so that every
+    # repository instantiated during this request automatically scopes its
+    # reads/writes to the right tenant without handlers having to pass
+    # `org_id=auth.org_id` to 55 different constructor call sites.
+    set_current_org_id(org_id)
+
     # Read the authoritative role from DynamoDB (not JWT) so role changes
-    # take effect immediately without requiring re-login.
+    # take effect immediately without requiring re-login. Imported inside
+    # the function to avoid a circular import with UserDynamoRepository,
+    # which itself imports this module's set_current_org_id via its
+    # constructor.
     jwt_role = claims.get("custom:systemRole", "MEMBER")
     db_role = jwt_role
     try:
+        from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
         user_repo = UserDynamoRepository()
         user = user_repo.find_by_id(user_id)
         if user:
             db_role = user.system_role.value
     except Exception:
         pass  # Fall back to JWT role on any DB error
-
-    # org_id comes from the Cognito custom attribute (immutable after user
-    # creation, so a JWT read is authoritative). Pre-Phase-1 cutover the
-    # claim will not exist on existing tokens, so we default to NEUROSTACK.
-    org_id = claims.get("custom:orgId") or DEFAULT_ORG_ID
 
     return AuthContext(
         user_id=user_id,

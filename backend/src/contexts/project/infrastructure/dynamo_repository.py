@@ -5,19 +5,22 @@ from boto3.dynamodb.conditions import Attr, Key
 from contexts.project.domain.entities import Project, ProjectMember
 from contexts.project.domain.repository import IProjectRepository
 from shared_kernel.dynamo_client import get_table
-from shared_kernel.tenant_keys import DEFAULT_ORG_ID
+from shared_kernel.tenant_keys import get_current_org_id
 from shared_kernel import tenant_keys
 from contexts.project.infrastructure.mapper import ProjectMapper
 
 
 class ProjectDynamoRepository(IProjectRepository):
-    def __init__(self, org_id: str = DEFAULT_ORG_ID):
+    def __init__(self, org_id: Optional[str] = None):
         self._table = get_table()
-        self._org_id = org_id
+        self._org_id = org_id if org_id is not None else get_current_org_id()
 
     def find_by_id(self, project_id: str) -> Optional[Project]:
         response = self._table.get_item(
-            Key={"PK": f"PROJECT#{project_id}", "SK": "METADATA"}
+            Key={
+                "PK": tenant_keys.project_pk(self._org_id, project_id),
+                "SK": tenant_keys.project_metadata_sk(),
+            }
         )
         item = response.get("Item")
         if not item:
@@ -39,7 +42,9 @@ class ProjectDynamoRepository(IProjectRepository):
     def find_projects_for_user(self, user_id: str) -> list[Project]:
         response = self._table.query(
             IndexName="GSI1",
-            KeyConditionExpression=Key("GSI1PK").eq(f"USER#{user_id}")
+            KeyConditionExpression=Key("GSI1PK").eq(
+                tenant_keys.user_projects_gsi1pk(self._org_id, user_id)
+            )
             & Key("GSI1SK").begins_with("PROJECT#"),
         )
         items = response.get("Items", [])
@@ -54,15 +59,16 @@ class ProjectDynamoRepository(IProjectRepository):
         return projects
 
     def find_all(self) -> list[Project]:
+        org_prefix = f"ORG#{self._org_id}#PROJECT#"
         response = self._table.scan(
-            FilterExpression=Attr("SK").eq("METADATA")
-            & Attr("PK").begins_with("PROJECT#"),
+            FilterExpression=Attr("SK").eq(tenant_keys.project_metadata_sk())
+            & Attr("PK").begins_with(org_prefix),
         )
         items = response.get("Items", [])
         while "LastEvaluatedKey" in response:
             response = self._table.scan(
-                FilterExpression=Attr("SK").eq("METADATA")
-                & Attr("PK").begins_with("PROJECT#"),
+                FilterExpression=Attr("SK").eq(tenant_keys.project_metadata_sk())
+                & Attr("PK").begins_with(org_prefix),
                 ExclusiveStartKey=response["LastEvaluatedKey"],
             )
             items.extend(response.get("Items", []))
@@ -82,7 +88,10 @@ class ProjectDynamoRepository(IProjectRepository):
 
     def find_member(self, project_id: str, user_id: str) -> Optional[ProjectMember]:
         response = self._table.get_item(
-            Key={"PK": f"PROJECT#{project_id}", "SK": f"MEMBER#{user_id}"}
+            Key={
+                "PK": tenant_keys.project_pk(self._org_id, project_id),
+                "SK": tenant_keys.project_member_sk(user_id),
+            }
         )
         item = response.get("Item")
         if not item:
@@ -91,7 +100,9 @@ class ProjectDynamoRepository(IProjectRepository):
 
     def find_members(self, project_id: str) -> list[ProjectMember]:
         response = self._table.query(
-            KeyConditionExpression=Key("PK").eq(f"PROJECT#{project_id}")
+            KeyConditionExpression=Key("PK").eq(
+                tenant_keys.project_pk(self._org_id, project_id)
+            )
             & Key("SK").begins_with("MEMBER#"),
         )
         items = response.get("Items", [])

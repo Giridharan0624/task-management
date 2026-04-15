@@ -13,11 +13,41 @@ Convention: every multi-tenant key starts with `ORG#{org_id}#`. The only
 exceptions are:
   - `USER_EMAIL#{email}` — email is globally unique (enforced by Cognito alias)
   - `SLUG#{slug}` — the workspace-code -> org_id resolver (inherently global)
+
+## Per-request org_id propagation
+
+`extract_auth_context()` stamps the current request's org_id into a
+ContextVar. Repository constructors read from this ContextVar when no
+explicit `org_id` is passed, so handlers don't need to thread the value
+through every call site.
+
+Pre-auth handlers (signup, get_org_by_slug, resolve_employee) that run
+before the JWT exists can pass an explicit org_id to the repository
+constructor, typically `DEFAULT_ORG_ID`.
 """
+import contextvars
 from typing import Final
 
 
 DEFAULT_ORG_ID: Final[str] = "neurostack"
+
+
+_current_org_id: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "taskflow_current_org_id", default=DEFAULT_ORG_ID
+)
+
+
+def get_current_org_id() -> str:
+    """Return the org_id for the current request. Falls back to
+    DEFAULT_ORG_ID when called outside a request context (cold start,
+    pre-auth handlers) or before `extract_auth_context` ran."""
+    return _current_org_id.get()
+
+
+def set_current_org_id(org_id: str) -> None:
+    """Set the org_id for the current request. Called by
+    `extract_auth_context()` on every authenticated invocation."""
+    _current_org_id.set(org_id)
 
 
 # ---------------------------------------------------------------------------

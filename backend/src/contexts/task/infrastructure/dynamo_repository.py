@@ -5,20 +5,22 @@ from boto3.dynamodb.conditions import Key
 from contexts.task.domain.entities import Task
 from contexts.task.domain.repository import ITaskRepository
 from shared_kernel.dynamo_client import get_table
-from shared_kernel.tenant_keys import DEFAULT_ORG_ID
+from shared_kernel.tenant_keys import get_current_org_id
 from shared_kernel import tenant_keys
 from contexts.task.infrastructure.mapper import TaskMapper
 
 
 class TaskDynamoRepository(ITaskRepository):
-    def __init__(self, org_id: str = DEFAULT_ORG_ID):
+    def __init__(self, org_id: Optional[str] = None):
         self._table = get_table()
-        self._org_id = org_id
+        self._org_id = org_id if org_id is not None else get_current_org_id()
 
     def find_by_id(self, task_id: str) -> Optional[Task]:
         response = self._table.query(
             IndexName="GSI1",
-            KeyConditionExpression=Key("GSI1PK").eq(f"TASK#{task_id}"),
+            KeyConditionExpression=Key("GSI1PK").eq(
+                tenant_keys.task_lookup_gsi1pk(self._org_id, task_id)
+            ),
         )
         items = response.get("Items", [])
         if not items:
@@ -26,8 +28,9 @@ class TaskDynamoRepository(ITaskRepository):
         return TaskMapper.to_domain(items[0])
 
     def find_by_project(self, project_id: str) -> list[Task]:
+        project_pk = tenant_keys.project_pk(self._org_id, project_id)
         response = self._table.query(
-            KeyConditionExpression=Key("PK").eq(f"PROJECT#{project_id}")
+            KeyConditionExpression=Key("PK").eq(project_pk)
             & Key("SK").begins_with("TASK#"),
         )
         items = response.get("Items", [])
@@ -35,7 +38,7 @@ class TaskDynamoRepository(ITaskRepository):
 
         while "LastEvaluatedKey" in response:
             response = self._table.query(
-                KeyConditionExpression=Key("PK").eq(f"PROJECT#{project_id}")
+                KeyConditionExpression=Key("PK").eq(project_pk)
                 & Key("SK").begins_with("TASK#"),
                 ExclusiveStartKey=response["LastEvaluatedKey"],
             )

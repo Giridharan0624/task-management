@@ -1,11 +1,18 @@
 import json
 
 from shared_kernel.response import build_error, build_success
+from shared_kernel.tenant_keys import DEFAULT_ORG_ID
 from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
 
 
 def handler(event, context):
-    """Public endpoint (no auth) — resolves employee_id to email for login."""
+    """Public endpoint (no auth) — resolves employee_id to email for login.
+
+    Pre-auth: no JWT yet, so we pass org_id explicitly. Phase 1 hardcodes
+    DEFAULT_ORG_ID (neurostack). Phase 2 will add workspace-code awareness
+    via a `workspace` query param so acme users can resolve their employee
+    IDs to emails pre-login.
+    """
     try:
         params = event.get("queryStringParameters") or {}
         employee_id = params.get("employeeId") or params.get("employee_id") or ""
@@ -13,7 +20,7 @@ def handler(event, context):
         if not employee_id:
             return build_success(400, {"error": "employeeId is required"})
 
-        user_repo = UserDynamoRepository()
+        user_repo = UserDynamoRepository(org_id=DEFAULT_ORG_ID)
         user = user_repo.find_by_employee_id(employee_id.upper())
 
         if not user:
