@@ -79,6 +79,29 @@ If you skip this step, the backfill runs against whatever is currently in `TaskM
 
 ---
 
+## 1.5 One-time bootstrap: add `custom:orgId` to the existing Cognito pool
+
+**Why this step exists:** CloudFormation's `AWS::Cognito::UserPool.Schema` property cannot be updated after the pool is created. Adding `custom:orgId` to the CDK `custom_attributes` dict only applies to **new** pools. Our existing staging pool predates this attribute, so CDK silently drops the schema update during `cdk deploy` (and `cdk diff` does NOT flag it as a pending change — it just lies about there being no schema difference).
+
+The fix is a one-time direct API call that adds the attribute to the existing pool. It's additive, non-destructive, and takes 1 second.
+
+```bash
+aws cognito-idp add-custom-attributes \
+  --user-pool-id $STAGING_POOL_ID \
+  --custom-attributes Name=orgId,AttributeDataType=String,Mutable=true,StringAttributeConstraints='{MinLength=1,MaxLength=64}'
+
+# Verify it landed
+aws cognito-idp describe-user-pool --user-pool-id $STAGING_POOL_ID \
+  --query 'UserPool.SchemaAttributes[?Name==`custom:orgId`]'
+# expect: one entry with MinLength=1, MaxLength=64, Mutable=true
+```
+
+> **Note on `mutable`:** the SaaS migration docs originally said `mutable=false` for this attribute. I changed it to `mutable=true` because Cognito's immutable flag prevents retroactively setting the value on existing users, and the Step 9 backfill needs to set `custom:orgId=neurostack` on every NEUROSTACK user via `admin_update_user_attributes`. Application code (signup handler, backfill script) still treats it as immutable — only those two code paths ever write it.
+
+After this is done once per pool, the `cdk deploy` in Section 2 will find nothing to change about the schema (because it already matches) and will proceed to attach the pre-token trigger and create the new routes.
+
+---
+
 ## 2. CDK deploy
 
 This applies all the Phase 1 backend changes to the staging stack:
