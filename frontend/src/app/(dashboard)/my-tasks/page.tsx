@@ -110,8 +110,8 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Tasks</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Tasks</h1>
+          <p className="text-sm text-muted-foreground/70 mt-0.5">
             {isMember ? 'Tasks assigned to you' : 'View and manage all tasks'}
           </p>
         </div>
@@ -119,13 +119,13 @@ export default function TasksPage() {
 
       {/* Tabs — only for ADMIN and TOP_TIER */}
       {showTabs && (
-        <div className="flex gap-1 border-b border-gray-200">
+        <div className="flex gap-1 border-b border-border/80">
           <button
             onClick={() => { setActiveTab('my'); setFilter('ALL') }}
             className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
               activeTab === 'my'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
+                : 'border-transparent text-muted-foreground/70 hover:text-muted-foreground'
             }`}
           >
             My Tasks ({myAssignedTasks.length})
@@ -135,7 +135,7 @@ export default function TasksPage() {
             className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
               activeTab === 'all'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
+                : 'border-transparent text-muted-foreground/70 hover:text-muted-foreground'
             }`}
           >
             All Tasks ({allTasks.length})
@@ -152,9 +152,9 @@ export default function TasksPage() {
           { key: 'DONE' as FilterStatus, label: 'Done', value: doneCount, active: 'border-emerald-200 bg-emerald-50', text: 'text-emerald-700' },
         ] as { key: FilterStatus; label: string; value: number; active: string; text: string; isActive?: boolean }[]).map(({ key, label, value, active, text, isActive: isActiveCard }) => (
           <button key={label} onClick={() => { if (!isActiveCard) setFilter(filter === key && key !== 'ALL' ? 'ALL' : key) }}
-            className={`rounded-xl p-3 border text-left transition-all ${filter === key && !isActiveCard ? active : 'border-gray-100 bg-white hover:border-gray-200'} shadow-sm`}>
+            className={`rounded-xl p-3 border text-left transition-all ${filter === key && !isActiveCard ? active : 'border-border bg-card hover:border-border/80'} shadow-sm`}>
             <p className={`text-xl font-bold tracking-tight tabular-nums ${text}`}>{value}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{label}</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">{label}</p>
           </button>
         ))}
       </div>
@@ -162,10 +162,10 @@ export default function TasksPage() {
       {/* Search + Sort + Filters */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <div className="relative flex-1">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-[12px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white focus:border-indigo-400 transition-all" />
-          {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>}
+            className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-[12px] text-foreground/85 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-card focus:border-indigo-400 transition-all" />
+          {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>}
         </div>
         <FilterSelect value={sort} onChange={v => setSort(v as SortOption)} active={sort !== 'default'}
           options={[{ value: 'default', label: 'Sort by' }, { value: 'priority', label: 'Priority' }, { value: 'deadline', label: 'Deadline' }, { value: 'title', label: 'Title' }, { value: 'status', label: 'Status' }]} />
@@ -173,7 +173,7 @@ export default function TasksPage() {
           options={[{ value: 'ALL', label: 'All Priorities' }, { value: 'HIGH', label: 'High' }, { value: 'MEDIUM', label: 'Medium' }, { value: 'LOW', label: 'Low' }]} />
         {(search || sort !== 'default' || priorityFilter !== 'ALL' || filter !== 'ALL') && (
           <button onClick={() => { setSearch(''); setSort('default'); setPriorityFilter('ALL'); setFilter('ALL') }}
-            className="text-[11px] text-gray-400 hover:text-gray-600 font-medium whitespace-nowrap">Clear all</button>
+            className="text-[11px] text-muted-foreground/70 hover:text-muted-foreground font-medium whitespace-nowrap">Clear all</button>
         )}
         {overdueCount > 0 && (
           <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 px-2 py-1.5 rounded-lg tabular-nums">{overdueCount} overdue</span>
@@ -182,8 +182,8 @@ export default function TasksPage() {
 
       {/* Task Table — grouped by project */}
       {filteredTasks.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-12 text-center">
-          <p className="text-gray-400 text-sm">
+        <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 py-12 text-center">
+          <p className="text-muted-foreground/70 text-sm">
             {filter === 'ALL' ? 'No tasks found.' : `No ${filter.replace('_', ' ').toLowerCase()} tasks.`}
           </p>
         </div>
@@ -206,17 +206,17 @@ export default function TasksPage() {
               const groupPct = group.tasks.length > 0 ? Math.round((groupDone / group.tasks.length) * 100) : 0
 
               return (
-                <div key={group.projectId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div key={group.projectId} className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                   {/* Project group header */}
                   <Link href={group.projectId === 'DIRECT' ? '/my-tasks' : `/projects/${group.projectId}`}
-                    className="flex items-center justify-between px-5 py-3 bg-gray-50/60 border-b border-gray-100 hover:bg-gray-100/60 transition-colors">
+                    className="flex items-center justify-between px-5 py-3 bg-muted/40 border-b border-border hover:bg-muted/60 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg>
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900">{group.projectName}</h3>
-                        <p className="text-[10px] text-gray-400 font-medium">
+                        <h3 className="text-sm font-bold text-foreground">{group.projectName}</h3>
+                        <p className="text-[10px] text-muted-foreground/70 font-medium">
                           {group.tasks.length} task{group.tasks.length !== 1 ? 's' : ''}
                           {group.domain && ` · ${DOMAIN_LABELS[group.domain as TaskDomain] || group.domain}`}
                         </p>
@@ -224,11 +224,11 @@ export default function TasksPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 min-w-[80px]">
-                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all duration-500"
                             style={{ width: `${groupPct}%`, backgroundColor: groupPct >= 100 ? '#10b981' : groupPct >= 50 ? '#6366f1' : '#3b82f6' }} />
                         </div>
-                        <span className="text-[10px] font-bold text-gray-500 tabular-nums">{groupPct}%</span>
+                        <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{groupPct}%</span>
                       </div>
                     </div>
                   </Link>
@@ -237,28 +237,28 @@ export default function TasksPage() {
                   <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Task</th>
+                        <tr className="border-b border-border">
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Task</th>
                           {!isMember && (
-                            <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned To</th>
+                            <th className="text-left px-5 py-2.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Assigned To</th>
                           )}
-                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned By</th>
-                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Deadline</th>
-                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Progress</th>
-                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Priority</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Assigned By</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Deadline</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Status</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Progress</th>
+                          <th className="text-left px-5 py-2.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Priority</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-border/60">
                         {group.tasks.map((task) => {
                           const isOverdue = checkOverdue(task.deadline, task.status)
                           return (
-                            <tr key={task.taskId} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => setSelectedTask(task)}>
+                            <tr key={task.taskId} className="hover:bg-muted/40/50 transition-colors cursor-pointer" onClick={() => setSelectedTask(task)}>
                               <td className="px-5 py-3">
-                                <span className="text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                                <span className="text-sm font-medium text-foreground hover:text-indigo-600 transition-colors">
                                   {task.title}
                                 </span>
-                                {task.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{task.description}</p>}
+                                {task.description && <p className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1">{task.description}</p>}
                               </td>
                               {!isMember && (
                                 <td className="px-5 py-3">
@@ -271,17 +271,17 @@ export default function TasksPage() {
                                   </div>
                                 </td>
                               )}
-                              <td className="px-5 py-3 whitespace-nowrap text-sm text-gray-500">
+                              <td className="px-5 py-3 whitespace-nowrap text-sm text-muted-foreground">
                                 {task.assignedByName || (task.assignedBy ? resolveName(task.assignedBy) : '—')}
                               </td>
                               <td className="px-5 py-3 whitespace-nowrap">
-                                <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                                <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
                                   {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                                   {isOverdue && ' !'}
                                 </span>
                               </td>
                               <td className="px-5 py-3">
-                                <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-gray-50 text-gray-600'}`}>
+                                <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-muted/40 text-muted-foreground'}`}>
                                   {TASK_STATUS_LABEL[task.status] ?? task.status}
                                 </span>
                               </td>
@@ -291,7 +291,7 @@ export default function TasksPage() {
                                   const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
                                   return (
                                     <div className="flex items-center gap-2 min-w-[100px]">
-                                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
                                       </div>
                                       <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
@@ -310,14 +310,14 @@ export default function TasksPage() {
                   </div>
 
                   {/* Mobile card view */}
-                  <div className="sm:hidden divide-y divide-gray-50">
+                  <div className="sm:hidden divide-y divide-border/60">
                     {group.tasks.map((task) => {
                       const isOverdue = checkOverdue(task.deadline, task.status)
                       return (
                         <div key={task.taskId} onClick={() => setSelectedTask(task)}
-                          className="block px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                          className="block px-4 py-3 hover:bg-muted/40 cursor-pointer">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <p className="text-sm font-medium text-gray-900 line-clamp-1">{task.title}</p>
+                            <p className="text-sm font-medium text-foreground line-clamp-1">{task.title}</p>
                             <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
                           </div>
                           {(() => {
@@ -325,7 +325,7 @@ export default function TasksPage() {
                             const color = pct >= 100 ? '#10b981' : pct >= 50 ? '#6366f1' : pct > 0 ? '#3b82f6' : '#d1d5db'
                             return (
                               <div className="flex items-center gap-2 mb-1.5">
-                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                   <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
                                 </div>
                                 <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
@@ -333,10 +333,10 @@ export default function TasksPage() {
                             )
                           })()}
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-[10px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                            <span className={`text-[10px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-muted-foreground/70'}`}>
                               {task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                             </span>
-                            <span className={`inline-flex items-center rounded-lg px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-gray-50 text-gray-600'}`}>
+                            <span className={`inline-flex items-center rounded-lg px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[task.status] || 'bg-muted/40 text-muted-foreground'}`}>
                               {TASK_STATUS_LABEL[task.status] ?? task.status}
                             </span>
                           </div>

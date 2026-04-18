@@ -1,24 +1,43 @@
 'use client'
 
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface BreadcrumbItem {
   label: string
   href?: string
 }
 
-export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
+export function Breadcrumbs({
+  items,
+  className,
+}: {
+  items: BreadcrumbItem[]
+  className?: string
+}) {
   return (
-    <nav className="flex items-center gap-1.5 text-[12px] text-gray-400 mb-4">
+    <nav
+      aria-label="Breadcrumb"
+      className={cn(
+        'flex items-center gap-1 text-xs text-muted-foreground',
+        className
+      )}
+    >
       {items.map((item, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && (
-            <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-          )}
+        <span key={i} className="flex items-center gap-1">
+          {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground/60" />}
           {item.href ? (
-            <Link href={item.href} className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors font-medium">{item.label}</Link>
+            <Link
+              href={item.href}
+              className="rounded px-1 py-0.5 font-medium transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {item.label}
+            </Link>
           ) : (
-            <span className="text-gray-600 dark:text-gray-300 font-semibold">{item.label}</span>
+            <span className="px-1 py-0.5 font-semibold text-foreground">
+              {item.label}
+            </span>
           )}
         </span>
       ))}

@@ -69,14 +69,14 @@ export function UserSelect({ users, value, onChange, placeholder = 'Search and s
   const dropdown = open ? createPortal(
     <div
       ref={dropdownRef}
-      className="z-[10000] bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 overflow-hidden animate-fade-in-scale"
+      className="z-[10000] bg-card rounded-xl shadow-2xl ring-1 ring-border/60 overflow-hidden animate-fade-in-scale"
       style={{ ...dropdownStyle, animationDuration: '0.12s' }}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Search input */}
-      <div className="p-2 border-b border-gray-100">
+      <div className="p-2 border-b border-border">
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -85,7 +85,7 @@ export function UserSelect({ users, value, onChange, placeholder = 'Search and s
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or email..."
             autoFocus
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white outline-none transition-all"
+            className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-card outline-none transition-all"
           />
         </div>
       </div>
@@ -93,7 +93,7 @@ export function UserSelect({ users, value, onChange, placeholder = 'Search and s
       {/* User list */}
       <div className="max-h-48 overflow-y-auto">
         {filtered.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-gray-400 text-center">No users found</p>
+          <p className="px-4 py-6 text-sm text-muted-foreground/70 text-center">No users found</p>
         ) : (
           filtered.map((u) => {
             const isActive = u.userId === value
@@ -103,13 +103,13 @@ export function UserSelect({ users, value, onChange, placeholder = 'Search and s
                 type="button"
                 onClick={() => { onChange(u.userId); setOpen(false); setSearch('') }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
-                  isActive ? 'bg-indigo-50' : 'hover:bg-gray-50'
+                  isActive ? 'bg-indigo-50' : 'hover:bg-muted/40'
                 }`}
               >
                 <Avatar name={u.name} url={u.avatarUrl} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm truncate ${isActive ? 'font-semibold text-indigo-700' : 'font-medium text-gray-900'}`}>{u.name}</p>
-                  <p className="text-[11px] text-gray-400 truncate">{u.email}{u.extra ? ` · ${u.extra}` : ''}</p>
+                  <p className={`text-sm truncate ${isActive ? 'font-semibold text-indigo-700' : 'font-medium text-foreground'}`}>{u.name}</p>
+                  <p className="text-[11px] text-muted-foreground/70 truncate">{u.email}{u.extra ? ` · ${u.extra}` : ''}</p>
                 </div>
                 {isActive && (
                   <svg className="w-4 h-4 text-indigo-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -132,20 +132,20 @@ export function UserSelect({ users, value, onChange, placeholder = 'Search and s
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-left transition-all hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400"
+        className="w-full flex items-center gap-2.5 rounded-xl border border-border/80 bg-card px-3.5 py-2.5 text-sm text-left transition-all hover:border-border focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400"
       >
         {selected ? (
           <>
             <Avatar name={selected.name} url={selected.avatarUrl} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{selected.name}</p>
-              <p className="text-[11px] text-gray-400 truncate">{selected.email}</p>
+              <p className="text-sm font-medium text-foreground truncate">{selected.name}</p>
+              <p className="text-[11px] text-muted-foreground/70 truncate">{selected.email}</p>
             </div>
           </>
         ) : (
-          <span className="text-gray-400 flex-1">{placeholder}</span>
+          <span className="text-muted-foreground/70 flex-1">{placeholder}</span>
         )}
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -181,7 +181,7 @@ export function UserMultiSelect({ users, selected, onChange, placeholder = 'Sear
     <div className={className}>
       {/* Search */}
       <div className="relative mb-2">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
@@ -189,23 +189,23 @@ export function UserMultiSelect({ users, selected, onChange, placeholder = 'Sear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white outline-none transition-all"
+          className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-card outline-none transition-all"
         />
       </div>
 
       {/* User list */}
-      <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-50">
+      <div className="max-h-40 overflow-y-auto rounded-xl border border-border/80 divide-y divide-border/60">
         {filtered.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-gray-400 text-center">No users found</p>
+          <p className="px-4 py-6 text-sm text-muted-foreground/70 text-center">No users found</p>
         ) : (
           filtered.map((u) => {
             const isSelected = selected.includes(u.userId)
             return (
               <label
                 key={u.userId}
-                className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all ${isSelected ? 'bg-indigo-50/70' : 'hover:bg-gray-50'}`}
+                className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all ${isSelected ? 'bg-indigo-50/70' : 'hover:bg-muted/40'}`}
               >
-                <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 transition-all flex-shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
+                <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 transition-all flex-shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-border'}`}>
                   {isSelected && (
                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -215,8 +215,8 @@ export function UserMultiSelect({ users, selected, onChange, placeholder = 'Sear
                 <input type="checkbox" checked={isSelected} onChange={() => toggle(u.userId)} className="sr-only" />
                 <Avatar name={u.name} url={u.avatarUrl} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <span className={`text-sm truncate block ${isSelected ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{u.name}</span>
-                  <span className="text-[11px] text-gray-400 truncate block">{u.email}{u.extra ? ` · ${u.extra}` : ''}</span>
+                  <span className={`text-sm truncate block ${isSelected ? 'font-semibold text-foreground' : 'text-foreground/85'}`}>{u.name}</span>
+                  <span className="text-[11px] text-muted-foreground/70 truncate block">{u.email}{u.extra ? ` · ${u.extra}` : ''}</span>
                 </div>
               </label>
             )

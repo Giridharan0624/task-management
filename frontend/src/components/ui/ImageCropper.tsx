@@ -80,7 +80,7 @@ export function ImageCropper({ imageSrc, isOpen, onClose, onCropComplete, cropSh
 
         {/* Zoom slider */}
         <div className="flex items-center gap-3 px-1">
-          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
           </svg>
           <input
@@ -90,9 +90,9 @@ export function ImageCropper({ imageSrc, isOpen, onClose, onCropComplete, cropSh
             step={0.05}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-600"
+            className="flex-1 h-1.5 bg-muted dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-indigo-600"
           />
-          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
           </svg>
         </div>

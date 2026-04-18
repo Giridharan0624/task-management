@@ -55,7 +55,7 @@ export default function MembersPage() {
       <div className="flex items-center gap-3">
         <Link
           href={`/projects/${projectId}`}
-          className="rounded-lg p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+          className="rounded-lg p-2 text-muted-foreground/70 hover:text-foreground/85 hover:bg-muted transition-colors"
           aria-label="Back to project"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -63,8 +63,8 @@ export default function MembersPage() {
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Members</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{project.name}</p>
+          <h1 className="text-2xl font-bold text-foreground">Members</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{project.name}</p>
         </div>
       </div>
 

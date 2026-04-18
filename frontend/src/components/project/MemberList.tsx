@@ -127,9 +127,9 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
       {/* Role stat badges + search + add button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[13px] font-bold text-gray-800">{members.length} Members</span>
+          <span className="text-[13px] font-bold text-foreground/95">{members.length} Members</span>
           {Object.entries(roleCounts).map(([role, count]) => (
-            <span key={role} className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold border ${ROLE_BADGE[role as ProjectRole] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+            <span key={role} className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold border ${ROLE_BADGE[role as ProjectRole] || 'bg-muted text-muted-foreground border-border/80'}`}>
               {ROLE_LABEL[role as ProjectRole] || role}
               <span className="tabular-nums">{count}</span>
             </span>
@@ -137,9 +137,9 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
-              className="w-40 rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 py-1.5 text-[11px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all" />
+              className="w-40 rounded-lg border border-border/80 bg-muted/40 pl-8 pr-3 py-1.5 text-[11px] placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-card transition-all" />
           </div>
           {canManageMembers && (
             <button onClick={() => setShowAddModal(true)}
@@ -153,12 +153,12 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
 
       {/* Members list */}
       {members.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-14 text-center">
+        <div className="bg-card rounded-2xl border border-border shadow-sm px-8 py-14 text-center">
           <div className="w-14 h-14 rounded-2xl bg-indigo-50 mx-auto mb-4 flex items-center justify-center">
             <svg className="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           </div>
-          <p className="text-[14px] font-bold text-gray-800 mb-1">No members yet</p>
-          <p className="text-[12px] text-gray-400 mb-4">Add team members to start collaborating</p>
+          <p className="text-[14px] font-bold text-foreground/95 mb-1">No members yet</p>
+          <p className="text-[12px] text-muted-foreground/70 mb-4">Add team members to start collaborating</p>
           {canManageMembers && (
             <button onClick={() => setShowAddModal(true)}
               className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-gray-800 transition-all shadow-sm">
@@ -168,9 +168,9 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
           {/* Table header */}
-          <div className="grid grid-cols-[1fr_120px_90px_90px_80px] gap-2 px-5 py-2.5 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+          <div className="grid grid-cols-[1fr_120px_90px_90px_80px] gap-2 px-5 py-2.5 bg-muted/40 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider border-b border-border">
             <span>Member</span>
             <span>Role</span>
             <span className="text-center">Tasks</span>
@@ -179,19 +179,19 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
           </div>
 
           {/* Rows */}
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-border/60">
             {filteredMembers.map(member => {
               const tc = taskCounts.get(member.userId)
               const totalTasks = tc?.total ?? 0
               const doneTasks = tc?.done ?? 0
               return (
-                <div key={member.userId} className="grid grid-cols-[1fr_120px_90px_90px_80px] gap-2 items-center px-5 py-3 hover:bg-gray-50/50 transition-colors group">
+                <div key={member.userId} className="grid grid-cols-[1fr_120px_90px_90px_80px] gap-2 items-center px-5 py-3 hover:bg-muted/30 transition-colors group">
                   {/* Member info */}
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar url={member.user?.avatarUrl} name={member.user?.name || member.user?.email || member.userId} size="md" />
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-gray-800 truncate">{member.user?.name ?? member.userId}</p>
-                      {member.user?.email && <p className="text-[11px] text-gray-400 truncate">{member.user.email}</p>}
+                      <p className="text-[13px] font-medium text-foreground/95 truncate">{member.user?.name ?? member.userId}</p>
+                      {member.user?.email && <p className="text-[11px] text-muted-foreground/70 truncate">{member.user.email}</p>}
                     </div>
                   </div>
 
@@ -218,18 +218,18 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
                   <div className="text-center">
                     {totalTasks > 0 ? (
                       <div className="flex items-center justify-center gap-1.5">
-                        <span className="text-[12px] font-semibold text-gray-700 tabular-nums">{doneTasks}/{totalTasks}</span>
-                        <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <span className="text-[12px] font-semibold text-foreground/85 tabular-nums">{doneTasks}/{totalTasks}</span>
+                        <div className="w-8 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div className="h-full rounded-full bg-emerald-500" style={{ width: `${totalTasks > 0 ? (doneTasks / totalTasks) * 100 : 0}%` }} />
                         </div>
                       </div>
                     ) : (
-                      <span className="text-[11px] text-gray-300">—</span>
+                      <span className="text-[11px] text-muted-foreground/50">—</span>
                     )}
                   </div>
 
                   {/* Joined */}
-                  <span className="text-[11px] text-gray-400 tabular-nums">
+                  <span className="text-[11px] text-muted-foreground/70 tabular-nums">
                     {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
 
@@ -247,7 +247,7 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
             })}
             {filteredMembers.length === 0 && members.length > 0 && (
               <div className="px-5 py-8 text-center">
-                <p className="text-[12px] text-gray-400">No members match &ldquo;{search}&rdquo;</p>
+                <p className="text-[12px] text-muted-foreground/70">No members match &ldquo;{search}&rdquo;</p>
                 <button onClick={() => setSearch('')} className="text-[11px] text-indigo-600 font-semibold mt-1 hover:text-indigo-800">Clear search</button>
               </div>
             )}
@@ -262,10 +262,10 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{addError}</div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
-            {usersLoading ? <p className="text-sm text-gray-500 italic">Loading users...</p>
+            <label className="block text-sm font-medium text-foreground/85 mb-1">Select User</label>
+            {usersLoading ? <p className="text-sm text-muted-foreground italic">Loading users...</p>
               : usersError ? <p className="text-sm text-red-600 italic">Failed to load users.</p>
-              : availableUsers.length === 0 ? <p className="text-sm text-gray-500 italic">All users are already members.</p>
+              : availableUsers.length === 0 ? <p className="text-sm text-muted-foreground italic">All users are already members.</p>
               : (
                 <UserSelect
                   users={availableUsers.map(u => ({ userId: u.userId, name: u.name || u.email, email: u.email, avatarUrl: u.avatarUrl, extra: u.systemRole }))}
@@ -274,9 +274,9 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
               )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Role</label>
+            <label className="block text-sm font-medium text-foreground/85 mb-1">Project Role</label>
             {!isPrivileged ? (
-              <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">Member</p>
+              <p className="rounded-lg border border-border/80 bg-muted/40 px-3 py-2 text-sm text-foreground/85">Member</p>
             ) : (
               <Select value={selectedRole} onChange={v => setSelectedRole(v as ProjectRole)} options={roleOptions} />
             )}

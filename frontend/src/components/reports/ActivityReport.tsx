@@ -62,9 +62,9 @@ export function ActivityReport() {
       {/* Controls */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <button onClick={prevDate} className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">←</button>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{dateLabel}</span>
-          <button onClick={nextDate} disabled={date >= today} className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm disabled:opacity-30">→</button>
+          <button onClick={prevDate} className="px-2 py-1 rounded-lg border border-border/80 dark:border-gray-700 text-muted-foreground dark:text-muted-foreground/50 hover:bg-muted/40 dark:hover:bg-gray-800 text-sm">←</button>
+          <span className="text-sm font-medium text-foreground/85 dark:text-gray-200">{dateLabel}</span>
+          <button onClick={nextDate} disabled={date >= today} className="px-2 py-1 rounded-lg border border-border/80 dark:border-gray-700 text-muted-foreground dark:text-muted-foreground/50 hover:bg-muted/40 dark:hover:bg-gray-800 text-sm disabled:opacity-30">→</button>
         </div>
         <FilterSelect
           value={selectedUser}
@@ -80,7 +80,7 @@ export function ActivityReport() {
       )}
 
       {!isLoading && filteredActivities.length === 0 && (
-        <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
+        <div className="text-center py-12 text-muted-foreground/70 dark:text-muted-foreground text-sm">
           No activity data for this date
         </div>
       )}
@@ -120,14 +120,14 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[var(--color-surface)] shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-border dark:border-gray-800 bg-card dark:bg-[var(--color-surface)] shadow-sm overflow-hidden">
       {/* Header — click to expand/collapse */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors text-left"
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
-          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-4 h-4 text-muted-foreground/70 transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           {userInfo?.avatarUrl ? (
@@ -138,8 +138,8 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
             </div>
           )}
           <div>
-            <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{activity.userName || 'User'}</p>
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[14px] font-bold text-foreground dark:text-gray-100">{activity.userName || 'User'}</p>
+            <p className="text-[11px] text-muted-foreground/70">
               {userInfo?.employeeId && <span className="font-medium text-indigo-600 dark:text-indigo-400">{userInfo.employeeId}</span>}
               {userInfo?.employeeId && ' · '}
               {activity.userEmail}
@@ -160,10 +160,10 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
 
       {/* Expandable content */}
       {expanded && appData.length > 0 && (
-        <div className="px-5 py-4 grid grid-cols-2 gap-4 border-b border-gray-50 dark:border-gray-800">
+        <div className="px-5 py-4 grid grid-cols-2 gap-4 border-b border-border/50 dark:border-gray-800">
           {/* Bar chart — hours by app */}
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">App Usage (hours)</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">App Usage (hours)</p>
             <ResponsiveContainer width="100%" height={Math.max(160, appData.length * 36)}>
               <BarChart data={appData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
@@ -181,7 +181,7 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
 
           {/* Pie chart — active vs idle */}
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Active vs Idle</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">Active vs Idle</p>
             <ResponsiveContainer width="100%" height={160}>
               <PieChart>
                 <Pie
@@ -216,7 +216,7 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
       {/* AI Summary */}
       {expanded && <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">AI Work Summary</p>
+          <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">AI Work Summary</p>
           <button
             onClick={handleGenerate}
             disabled={generateMutation.isPending}
@@ -229,7 +229,7 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
         {summary ? (
           <SummaryDisplay summary={summary} />
         ) : (
-          <p className="text-[12px] text-gray-400 italic">
+          <p className="text-[12px] text-muted-foreground/70 italic">
             {generateMutation.isPending
               ? 'AI is analyzing activity data...'
               : 'Click "Generate Summary" to get an AI analysis of this work session.'}
@@ -250,7 +250,7 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
 function SummaryDisplay({ summary }: { summary: DailySummary }) {
   return (
     <div className="space-y-3">
-      <p className="text-[13px] text-gray-700 dark:text-gray-200 leading-relaxed">{summary.summary}</p>
+      <p className="text-[13px] text-foreground/85 dark:text-gray-200 leading-relaxed">{summary.summary}</p>
 
       {summary.keyActivities.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -264,7 +264,7 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
 
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-400">Productivity:</span>
+          <span className="text-[10px] text-muted-foreground/70">Productivity:</span>
           <div className="flex gap-0.5">
             {Array.from({ length: 10 }).map((_, i) => (
               <div
@@ -276,15 +276,15 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
                       : summary.productivityScore >= 4
                         ? 'bg-amber-500'
                         : 'bg-red-500'
-                    : 'bg-gray-200 dark:bg-gray-700'
+                    : 'bg-muted dark:bg-gray-700'
                 }`}
               />
             ))}
           </div>
-          <span className="text-[11px] font-bold text-gray-700 dark:text-gray-200">{summary.productivityScore}/10</span>
+          <span className="text-[11px] font-bold text-foreground/85 dark:text-gray-200">{summary.productivityScore}/10</span>
         </div>
 
-        <span className="text-[10px] text-gray-400">
+        <span className="text-[10px] text-muted-foreground/70">
           Generated {new Date(summary.generatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
@@ -308,15 +308,15 @@ function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timest
   const [collapsed, setCollapsed] = useState(true)
 
   return (
-    <div className="px-5 py-4 border-b border-gray-50 dark:border-gray-800">
+    <div className="px-5 py-4 border-b border-border/50 dark:border-gray-800">
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex items-center gap-2 w-full text-left mb-3 group"
       >
-        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${collapsed ? '' : 'rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform ${collapsed ? '' : 'rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-gray-600 transition-colors">
+        <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest group-hover:text-muted-foreground transition-colors">
           Screenshots ({screenshots.length})
         </span>
       </button>
@@ -325,7 +325,7 @@ function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timest
           <button
             key={i}
             onClick={() => setSelected(s.url)}
-            className="group relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-indigo-400 transition-all hover:shadow-md"
+            className="group relative rounded-lg overflow-hidden border border-border/80 dark:border-gray-700 hover:border-indigo-400 transition-all hover:shadow-md"
           >
             <img
               src={s.url}
@@ -390,8 +390,8 @@ function StatBadge({ label, value, color }: { label: string; value: string; colo
 
   return (
     <div className="text-center">
-      <p className={`text-[13px] font-bold tabular-nums ${colors[color]?.split(' ').filter(c => c.startsWith('text-')).join(' ') || 'text-gray-700'}`}>{value}</p>
-      <p className="text-[9px] text-gray-400 uppercase tracking-wider">{label}</p>
+      <p className={`text-[13px] font-bold tabular-nums ${colors[color]?.split(' ').filter(c => c.startsWith('text-')).join(' ') || 'text-foreground/85'}`}>{value}</p>
+      <p className="text-[9px] text-muted-foreground/70 uppercase tracking-wider">{label}</p>
     </div>
   )
 }

@@ -85,7 +85,7 @@ export function WorkspaceField({
   const statusHint = (() => {
     switch (status) {
       case 'checking':
-        return { text: 'Checking...', color: 'text-gray-400' }
+        return { text: 'Checking...', color: 'text-muted-foreground/70' }
       case 'invalid':
         return {
           text: 'Use 3–30 lowercase letters, numbers, or hyphens',

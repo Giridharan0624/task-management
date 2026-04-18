@@ -73,7 +73,7 @@ export default function UsersPage() {
   if (!systemPerms.canManageUsers) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">You don&apos;t have permission to view this page.</p>
+        <p className="text-muted-foreground">You don&apos;t have permission to view this page.</p>
       </div>
     )
   }
@@ -188,16 +188,16 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
             {isTopTier ? 'User Management' : 'Member Management'}
           </h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">
+          <p className="text-[13px] text-muted-foreground/70 mt-0.5">
             {displayedUsers.length} user{displayedUsers.length !== 1 ? 's' : ''}{onlineCount > 0 ? ` · ${onlineCount} online` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={exportUsersCSV}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:bg-muted/40 transition-all">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             CSV
           </button>
@@ -211,26 +211,26 @@ export default function UsersPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+        <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
           <p className="text-xl font-bold text-indigo-700 tabular-nums">{(users ?? []).filter(u => u.systemRole !== 'OWNER').length}</p>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Total</p>
+          <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Total</p>
         </div>
         {isTopTier && (
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <p className="text-xl font-bold text-violet-700 tabular-nums">{adminsOnly.length}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Management</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Management</p>
           </div>
         )}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+        <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
           <p className="text-xl font-bold text-blue-700 tabular-nums">{members.length}</p>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Members</p>
+          <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Members</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+        <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>
             <p className="text-xl font-bold text-emerald-700 tabular-nums">{onlineCount}</p>
           </div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Online Now</p>
+          <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Online Now</p>
         </div>
       </div>
 
@@ -238,29 +238,29 @@ export default function UsersPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[180px] max-w-[300px]">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-[12px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all" />
+              className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-[12px] text-foreground/85 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-card transition-all" />
           </div>
           <FilterSelect value={sortBy} onChange={v => setSortBy(v as SortOption)}
             options={[{ value: 'name', label: 'Sort: Name' }, { value: 'role', label: 'Sort: Role' }, { value: 'department', label: 'Sort: Department' }, { value: 'joined', label: 'Sort: Newest' }]} />
           <FilterSelect value={deptFilter} onChange={setDeptFilter} active={deptFilter !== 'ALL'}
             options={[{ value: 'ALL', label: 'All Departments' }, ...Array.from(deptCounts.entries()).sort().map(([dept, count]) => ({ value: dept, label: `${dept} (${count})` }))]} />
           {(searchQuery || deptFilter !== 'ALL') && (
-            <button onClick={() => { setSearchQuery(''); setDeptFilter('ALL') }} className="text-[11px] text-gray-400 hover:text-gray-600 font-medium">Clear</button>
+            <button onClick={() => { setSearchQuery(''); setDeptFilter('ALL') }} className="text-[11px] text-muted-foreground/70 hover:text-muted-foreground font-medium">Clear</button>
           )}
         </div>
       </div>
 
       {/* Tabs (Owner only) */}
       {isTopTier && (
-        <div className="flex gap-2 border-b border-gray-200 pb-0">
+        <div className="flex gap-2 border-b border-border/80 pb-0">
           <button
             onClick={() => setActiveTab('ADMIN')}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === 'ADMIN'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground/85 hover:border-border'
             }`}
           >
             Management ({adminsOnly.length})
@@ -270,7 +270,7 @@ export default function UsersPage() {
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === 'MEMBER'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground/85 hover:border-border'
             }`}
           >
             Members ({members.length})
@@ -279,21 +279,21 @@ export default function UsersPage() {
       )}
 
       {/* User Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50/60">
+      <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden overflow-x-auto">
+        <table className="min-w-full divide-y divide-border/80">
+          <thead className="bg-muted/40">
             <tr>
-              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">User</th>
-              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Department</th>
-              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Role</th>
-              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Created By</th>
-              <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Joined</th>
-              <th className="px-6 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-widest">Actions</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">User</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Department</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Role</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Created By</th>
+              <th className="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Joined</th>
+              <th className="px-6 py-3 text-right text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-50">
+          <tbody className="bg-card divide-y divide-border/60">
             {displayedUsers.map((u) => (
-              <tr key={u.userId} className="hover:bg-gray-50/50 transition-colors">
+              <tr key={u.userId} className="hover:bg-muted/30 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="relative">
@@ -304,13 +304,13 @@ export default function UsersPage() {
                     </div>
                     <div className="ml-3">
                       <button type="button" onClick={() => setViewUser(u)}
-                        className="text-[13px] font-semibold text-gray-800 hover:text-indigo-600 text-left transition-colors">
+                        className="text-[13px] font-semibold text-foreground/95 hover:text-indigo-600 text-left transition-colors">
                         {u.name || 'Unnamed'}
                       </button>
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-gray-400">{u.email}</span>
+                        <span className="text-[11px] text-muted-foreground/70">{u.email}</span>
                         {u.employeeId && (
-                          <span className="text-[9px] font-mono bg-gray-100 text-gray-500 px-1 py-0.5 rounded">{u.employeeId}</span>
+                          <span className="text-[9px] font-mono bg-muted text-muted-foreground px-1 py-0.5 rounded">{u.employeeId}</span>
                         )}
                       </div>
                     </div>
@@ -323,7 +323,7 @@ export default function UsersPage() {
                         {u.department}
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-400">-</span>
+                      <span className="text-xs text-muted-foreground/70">-</span>
                     )
                   })()}
                 </td>
@@ -332,10 +332,10 @@ export default function UsersPage() {
                     {u.systemRole}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {u.createdBy ? (userMap.get(u.createdBy) || '—') : '—'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -364,7 +364,7 @@ export default function UsersPage() {
             ))}
             {displayedUsers.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
 
                   {isTopTier && activeTab === 'ADMIN'
                     ? 'No admins found. Click "Add User" to create one.'
@@ -385,7 +385,7 @@ export default function UsersPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-foreground/85 mb-1">Email</label>
             <Input
               type="text"
               placeholder="user@example.com"
@@ -396,7 +396,7 @@ export default function UsersPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-foreground/85 mb-1">Name</label>
             <Input
               type="text"
               placeholder="Full name"
@@ -407,7 +407,7 @@ export default function UsersPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-foreground/85 mb-1">Role</label>
             <Select
               value={newRole}
               onChange={setNewRole}
@@ -415,7 +415,7 @@ export default function UsersPage() {
             />
           </div>
           <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <label className="block text-sm font-medium text-foreground/85 mb-1">Department</label>
               <Select
                 value={newDepartment}
                 onChange={setNewDepartment}
@@ -429,7 +429,7 @@ export default function UsersPage() {
               />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining</label>
+            <label className="block text-sm font-medium text-foreground/85 mb-1">Date of Joining</label>
             <DatePicker
               value={newDateOfJoining}
               onChange={setNewDateOfJoining}
@@ -459,7 +459,7 @@ export default function UsersPage() {
         title="Confirm Delete"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name || deleteTarget?.email}</span>?
             This will remove them from Cognito and all project memberships. This action cannot be undone.
           </p>
@@ -489,12 +489,12 @@ export default function UsersPage() {
           <div className="flex items-center gap-3">
             <Avatar url={selectedUser?.avatarUrl} name={selectedUser?.name || selectedUser?.email || ''} size="md" />
             <div>
-              <p className="text-sm font-semibold text-gray-900">{selectedUser?.name || selectedUser?.email}</p>
-              <p className="text-xs text-gray-400">Current: <Badge className={ROLE_COLORS[selectedUser?.systemRole ?? 'MEMBER']}>{selectedUser?.systemRole}</Badge></p>
+              <p className="text-sm font-semibold text-foreground">{selectedUser?.name || selectedUser?.email}</p>
+              <p className="text-xs text-muted-foreground/70">Current: <Badge className={ROLE_COLORS[selectedUser?.systemRole ?? 'MEMBER']}>{selectedUser?.systemRole}</Badge></p>
             </div>
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Select new role</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Select new role</p>
             <div className="grid grid-cols-2 gap-2">
               {['ADMIN', 'MEMBER'].map((role) => {
                 const isActive = selectedUser?.systemRole === role
@@ -506,7 +506,7 @@ export default function UsersPage() {
                     className={`py-3 rounded-xl text-sm font-semibold border-2 transition-all duration-200 ${
                       isActive
                         ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                        : 'border-border/80 text-muted-foreground hover:border-border hover:bg-muted/40'
                     }`}
                   >
                     {role}
@@ -535,17 +535,17 @@ export default function UsersPage() {
             <div className="flex items-center gap-4">
               <Avatar url={viewUser.avatarUrl} name={viewUser.name || viewUser.email} size="lg" />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{viewUser.name || 'Unnamed'}</h3>
-                <p className="text-sm text-gray-500">{viewUser.email}</p>
+                <h3 className="text-lg font-semibold text-foreground">{viewUser.name || 'Unnamed'}</h3>
+                <p className="text-sm text-muted-foreground">{viewUser.email}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className={ROLE_COLORS[viewUser.systemRole]}>{viewUser.systemRole}</Badge>
                   {viewUser.employeeId && (
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-mono font-medium text-gray-700">
+                    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-mono font-medium text-foreground/85">
                       {viewUser.employeeId}
                     </span>
                   )}
                   {viewUser.designation && (
-                    <span className="text-xs text-gray-500">{viewUser.designation}</span>
+                    <span className="text-xs text-muted-foreground">{viewUser.designation}</span>
                   )}
                 </div>
               </div>
@@ -554,8 +554,8 @@ export default function UsersPage() {
             {/* Bio */}
             {viewUser.bio && (
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">About</p>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewUser.bio}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70 mb-1">About</p>
+                <p className="text-sm text-foreground/85 whitespace-pre-wrap">{viewUser.bio}</p>
               </div>
             )}
 
@@ -584,14 +584,14 @@ export default function UsersPage() {
                 <div className={`rounded-xl border p-3.5 ${scoreBg}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Day-Off Score · {monthName}</p>
+                      <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Day-Off Score · {monthName}</p>
                       <div className="flex items-center gap-2">
                         <span className={`text-2xl font-bold tabular-nums ${scoreColor}`}>{score}</span>
                         <span className={`text-[11px] font-semibold ${scoreColor}`}>{scoreLabel}</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-[11px] text-gray-500">{daysOff} day{daysOff !== 1 ? 's' : ''} off</p>
+                      <p className="text-[11px] text-muted-foreground">{daysOff} day{daysOff !== 1 ? 's' : ''} off</p>
                     </div>
                   </div>
                 </div>
@@ -600,45 +600,45 @@ export default function UsersPage() {
 
             {/* Details */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-400 mb-0.5">Phone</p>
-                <p className="text-sm font-medium text-gray-900">{viewUser.phone || '-'}</p>
+              <div className="bg-muted/40 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground/70 mb-0.5">Phone</p>
+                <p className="text-sm font-medium text-foreground">{viewUser.phone || '-'}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-400 mb-0.5">Department</p>
-                <p className="text-sm font-medium text-gray-900">{viewUser.department || '-'}</p>
+              <div className="bg-muted/40 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground/70 mb-0.5">Department</p>
+                <p className="text-sm font-medium text-foreground">{viewUser.department || '-'}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-400 mb-0.5">Location</p>
-                <p className="text-sm font-medium text-gray-900">{viewUser.location || '-'}</p>
+              <div className="bg-muted/40 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground/70 mb-0.5">Location</p>
+                <p className="text-sm font-medium text-foreground">{viewUser.location || '-'}</p>
               </div>
               {viewUser.dateOfBirth && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-0.5">Date of Birth</p>
-                  <p className="text-sm font-medium text-gray-900">{new Date(viewUser.dateOfBirth + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                <div className="bg-muted/40 rounded-xl p-3">
+                  <p className="text-xs text-muted-foreground/70 mb-0.5">Date of Birth</p>
+                  <p className="text-sm font-medium text-foreground">{new Date(viewUser.dateOfBirth + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
               )}
               {viewUser.collegeName && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-0.5">College</p>
-                  <p className="text-sm font-medium text-gray-900">{viewUser.collegeName}</p>
+                <div className="bg-muted/40 rounded-xl p-3">
+                  <p className="text-xs text-muted-foreground/70 mb-0.5">College</p>
+                  <p className="text-sm font-medium text-foreground">{viewUser.collegeName}</p>
                 </div>
               )}
               {viewUser.areaOfInterest && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-0.5">Area of Interest</p>
-                  <p className="text-sm font-medium text-gray-900">{viewUser.areaOfInterest}</p>
+                <div className="bg-muted/40 rounded-xl p-3">
+                  <p className="text-xs text-muted-foreground/70 mb-0.5">Area of Interest</p>
+                  <p className="text-sm font-medium text-foreground">{viewUser.areaOfInterest}</p>
                 </div>
               )}
               {viewUser.hobby && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-0.5">Hobby</p>
-                  <p className="text-sm font-medium text-gray-900">{viewUser.hobby}</p>
+                <div className="bg-muted/40 rounded-xl p-3">
+                  <p className="text-xs text-muted-foreground/70 mb-0.5">Hobby</p>
+                  <p className="text-sm font-medium text-foreground">{viewUser.hobby}</p>
                 </div>
               )}
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-400 mb-0.5">Joined</p>
-                <p className="text-sm font-medium text-gray-900">
+              <div className="bg-muted/40 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground/70 mb-0.5">Joined</p>
+                <p className="text-sm font-medium text-foreground">
                   {viewUser.createdAt ? new Date(viewUser.createdAt).toLocaleDateString() : '-'}
                 </p>
               </div>
@@ -647,7 +647,7 @@ export default function UsersPage() {
             {/* Skills */}
             {viewUser.skills && viewUser.skills.length > 0 && (
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Skills</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70 mb-2">Skills</p>
                 <div className="flex flex-wrap gap-1.5">
                   {viewUser.skills.map((skill) => (
                     <span key={skill} className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
@@ -660,7 +660,7 @@ export default function UsersPage() {
 
             {/* Created By */}
             {viewUser.createdBy && (
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground/70">
                 Created by {userMap.get(viewUser.createdBy) || viewUser.createdBy}
               </div>
             )}
@@ -685,28 +685,28 @@ function UserProgressModal({ userId, onClose }: { userId: string; onClose: () =>
       ) : progress ? (
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-3">
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-gray-900">{progress.totalStats.total}</div>
-              <div className="text-xs text-gray-500">Total</div>
+            <div className="bg-muted/40 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-foreground">{progress.totalStats.total}</div>
+              <div className="text-xs text-muted-foreground">Total</div>
             </div>
             <div className="bg-yellow-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-yellow-600">{progress.totalStats.TODO}</div>
-              <div className="text-xs text-gray-500">To Do</div>
+              <div className="text-xs text-muted-foreground">To Do</div>
             </div>
             <div className="bg-blue-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-blue-600">{progress.totalStats.IN_PROGRESS}</div>
-              <div className="text-xs text-gray-500">In Progress</div>
+              <div className="text-xs text-muted-foreground">In Progress</div>
             </div>
             <div className="bg-green-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-green-600">{progress.totalStats.DONE}</div>
-              <div className="text-xs text-gray-500">Done</div>
+              <div className="text-xs text-muted-foreground">Done</div>
             </div>
           </div>
 
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {progress.projects.map((project) => (
               <div key={project.projectId} className="border rounded-lg p-3">
-                <h4 className="font-medium text-gray-900">{project.projectName}</h4>
+                <h4 className="font-medium text-foreground">{project.projectName}</h4>
                 <div className="flex gap-2 mt-2">
                   <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">{project.stats.TODO} To Do</span>
                   <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{project.stats.IN_PROGRESS} In Progress</span>
@@ -715,7 +715,7 @@ function UserProgressModal({ userId, onClose }: { userId: string; onClose: () =>
                 {project.tasks.length > 0 && (
                   <ul className="mt-2 space-y-1">
                     {project.tasks.map((task) => (
-                      <li key={task.taskId} className="text-sm text-gray-600 flex justify-between">
+                      <li key={task.taskId} className="text-sm text-muted-foreground flex justify-between">
                         <span>{task.title}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded ${
                           task.status === 'DONE' ? 'bg-green-100 text-green-700' :
@@ -729,7 +729,7 @@ function UserProgressModal({ userId, onClose }: { userId: string; onClose: () =>
               </div>
             ))}
             {progress.projects.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No tasks assigned to this user.</p>
+              <p className="text-muted-foreground text-center py-4">No tasks assigned to this user.</p>
             )}
           </div>
         </div>

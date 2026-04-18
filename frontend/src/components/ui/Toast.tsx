@@ -81,8 +81,8 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     <div className={`pointer-events-auto flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm animate-fade-in-scale min-w-[280px] max-w-[400px] ${bg[toast.type]}`}
       style={{ animationDuration: '0.2s' }}>
       {icons[toast.type]}
-      <p className="text-[13px] font-medium text-gray-800 dark:text-gray-200 flex-1">{toast.message}</p>
-      <button onClick={onDismiss} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">
+      <p className="text-[13px] font-medium text-foreground/95 dark:text-gray-200 flex-1">{toast.message}</p>
+      <button onClick={onDismiss} className="text-muted-foreground/70 hover:text-muted-foreground dark:hover:text-muted-foreground/50 flex-shrink-0">
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>

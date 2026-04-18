@@ -3,11 +3,14 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { AlertCircle } from 'lucide-react'
 
 import { orgsApi } from '@/lib/api/orgsApi'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { WorkspaceField } from '@/components/tenant/WorkspaceField'
 
 interface SignupFormValues {
@@ -51,7 +54,7 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <Input
         label="Company name"
         type="text"
@@ -93,49 +96,39 @@ export function SignupForm() {
           required: 'Password is required',
           minLength: { value: 8, message: 'At least 8 characters' },
           validate: {
-            upper: (v) => /[A-Z]/.test(v) || 'Must contain an uppercase letter',
-            lower: (v) => /[a-z]/.test(v) || 'Must contain a lowercase letter',
+            upper: (v) =>
+              /[A-Z]/.test(v) || 'Must contain an uppercase letter',
+            lower: (v) =>
+              /[a-z]/.test(v) || 'Must contain a lowercase letter',
             digit: (v) => /[0-9]/.test(v) || 'Must contain a number',
           },
         })}
       />
 
       {serverError && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
-          <svg
-            className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          {serverError}
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
       )}
 
       <Button
         type="submit"
         loading={isSubmitting}
-        className="w-full mt-1"
+        className="w-full"
         size="lg"
       >
         Create workspace
       </Button>
 
-      <p className="text-xs text-center text-gray-500">
+      <p className="text-center text-xs text-muted-foreground">
         Already have an account?{' '}
-        <a
+        <Link
           href="/login"
-          className="text-indigo-600 hover:text-indigo-800 font-semibold"
+          className="font-semibold text-primary hover:underline"
         >
           Sign in
-        </a>
+        </Link>
       </p>
     </form>
   )

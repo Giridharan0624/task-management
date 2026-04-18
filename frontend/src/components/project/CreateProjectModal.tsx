@@ -86,26 +86,26 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           })}
         />
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Description (optional)</label>
+          <label className="text-sm font-medium text-foreground/85">Description (optional)</label>
           <textarea
             rows={2}
             placeholder="What is this project about?"
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            className="block w-full rounded-md border border-border px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
             {...register('description')}
           />
         </div>
 
         {/* Domain Selection */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Domain</label>
+          <label className="text-sm font-medium text-foreground/85">Domain</label>
           <Select value={domain} onChange={v => setDomain(v as TaskDomain)}
             options={DOMAIN_OPTIONS.map(d => ({ value: d.value, label: d.label }))} />
-          <p className="text-[10px] text-gray-400">Determines the task pipeline steps for this project</p>
+          <p className="text-[10px] text-muted-foreground/70">Determines the task pipeline steps for this project</p>
         </div>
 
         {/* Team Lead Selection */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Team Lead</label>
+          <label className="text-sm font-medium text-foreground/85">Team Lead</label>
           <UserSelect
             users={availableUsers.map((u) => ({ userId: u.userId, name: u.name || u.email, email: u.email, avatarUrl: u.avatarUrl, extra: u.systemRole }))}
             value={teamLeadId}
@@ -116,7 +116,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
         {/* Project Manager Selection */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Project Manager</label>
+          <label className="text-sm font-medium text-foreground/85">Project Manager</label>
           <UserSelect
             users={availableUsers
               .filter((u) => u.userId !== teamLeadId)
@@ -129,13 +129,13 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
         {/* Team Members Selection */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-foreground/85">
             Team Members ({selectedMembers.length} selected)
           </label>
           {availableUsers.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">No users available. Create users first.</p>
+            <p className="text-sm text-muted-foreground italic">No users available. Create users first.</p>
           ) : (
-            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-border/80 divide-y divide-border/80">
               {availableUsers
                 .filter((u) => u.userId !== teamLeadId && u.userId !== projectManagerId)
                 .map((u) => {
@@ -143,7 +143,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                   return (
                     <label
                       key={u.userId}
-                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors ${
                         isSelected ? 'bg-indigo-50' : ''
                       }`}
                     >
@@ -151,12 +151,12 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleMember(u.userId)}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="h-4 w-4 rounded border-border text-indigo-600 focus:ring-indigo-500"
                       />
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Avatar url={u.avatarUrl} name={u.name || u.email} size="sm" />
-                        <span className="text-sm text-gray-900 truncate">{u.name || u.email}</span>
-                        <span className="text-xs text-gray-400 ml-auto flex-shrink-0">{u.systemRole}</span>
+                        <span className="text-sm text-foreground truncate">{u.name || u.email}</span>
+                        <span className="text-xs text-muted-foreground/70 ml-auto flex-shrink-0">{u.systemRole}</span>
                       </div>
                     </label>
                   )

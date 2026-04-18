@@ -114,10 +114,10 @@ export default function ProjectDetailPage() {
         { label: project.name },
       ]} />
       {/* Header Card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <Link href="/projects" className="rounded-xl p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <Link href="/projects" className="rounded-xl p-2 text-muted-foreground/70 hover:text-foreground/85 hover:bg-muted transition-colors">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
             </Link>
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
@@ -125,9 +125,9 @@ export default function ProjectDetailPage() {
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+                <h1 className="text-xl font-bold text-foreground">{project.name}</h1>
                 {project.domain && (
-                  <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                  <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground border border-border/80">
                     {DOMAIN_LABELS[project.domain as TaskDomain] || project.domain}
                   </span>
                 )}
@@ -139,14 +139,14 @@ export default function ProjectDetailPage() {
                 )}
               </div>
               {project.description && (
-                <p className="text-sm text-gray-400 mt-0.5">{project.description}</p>
+                <p className="text-sm text-muted-foreground/70 mt-0.5">{project.description}</p>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
             {permissions.canManageMembers && (
-              <button onClick={openEditModal} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all">
+              <button onClick={openEditModal} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground/85 hover:bg-muted transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 Edit
               </button>
@@ -162,26 +162,26 @@ export default function ProjectDetailPage() {
 
         {/* Stats + Progress row */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5">
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
+          <div className="bg-muted/40 rounded-xl p-3 text-center">
             <p className="text-xl font-bold text-indigo-700">{project.members?.length ?? 0}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Members</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Members</p>
           </div>
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-gray-700">{totalTasks}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Tasks</p>
+          <div className="bg-muted/40 rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-foreground/85">{totalTasks}</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Tasks</p>
           </div>
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
+          <div className="bg-muted/40 rounded-xl p-3 text-center">
             <p className="text-xl font-bold text-blue-700">{activeTasks}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Active</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Active</p>
           </div>
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
+          <div className="bg-muted/40 rounded-xl p-3 text-center">
             <p className="text-xl font-bold text-emerald-700">{doneTasks}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Done</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Done</p>
           </div>
           {projectStatus && projectStatus.totalTrackedHours > 0 && (
-            <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <div className="bg-muted/40 rounded-xl p-3 text-center">
               <p className="text-xl font-bold text-violet-700">{formatDuration(projectStatus.totalTrackedHours)}</p>
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Tracked</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Tracked</p>
             </div>
           )}
         </div>
@@ -190,10 +190,10 @@ export default function ProjectDetailPage() {
         {totalTasks > 0 && (
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-gray-500">Overall Progress</span>
-              <span className="font-semibold text-gray-700">{completionPct}%</span>
+              <span className="text-muted-foreground">Overall Progress</span>
+              <span className="font-semibold text-foreground/85">{completionPct}%</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   completionPct >= 100 ? 'bg-emerald-500' : completionPct >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
@@ -207,13 +207,13 @@ export default function ProjectDetailPage() {
 
       {/* Upcoming Deadlines */}
       {upcomingDeadlines.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-50 flex items-center gap-2">
+        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
             <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <h3 className="text-[13px] font-bold text-gray-800">Upcoming Deadlines</h3>
+            <h3 className="text-[13px] font-bold text-foreground/95">Upcoming Deadlines</h3>
             <span className="text-[11px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-md tabular-nums">{upcomingDeadlines.length}</span>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-border/60">
             {upcomingDeadlines.map(t => {
               const isOverdue = t.deadlineDate < now
               // Compare by calendar date to avoid time-of-day skew
@@ -228,12 +228,12 @@ export default function ProjectDetailPage() {
               return (
                 <div key={t.taskId} className={`flex items-center gap-3 px-5 py-2.5 ${isOverdue ? 'bg-red-50/40' : ''}`}>
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isOverdue ? 'bg-red-500' : diffDays <= 2 ? 'bg-amber-400' : 'bg-blue-400'}`} />
-                  <p className="text-[13px] font-medium text-gray-800 flex-1 truncate">{t.title}</p>
-                  <span className="text-[10px] font-semibold text-gray-400">{TASK_STATUS_LABEL[t.status]}</span>
-                  <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${isOverdue ? 'text-red-600' : diffDays <= 2 ? 'text-amber-600' : 'text-gray-500'}`}>
+                  <p className="text-[13px] font-medium text-foreground/95 flex-1 truncate">{t.title}</p>
+                  <span className="text-[10px] font-semibold text-muted-foreground/70">{TASK_STATUS_LABEL[t.status]}</span>
+                  <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${isOverdue ? 'text-red-600' : diffDays <= 2 ? 'text-amber-600' : 'text-muted-foreground'}`}>
                     {urgencyLabel}
                   </span>
-                  <span className="text-[10px] text-gray-400 tabular-nums flex-shrink-0">
+                  <span className="text-[10px] text-muted-foreground/70 tabular-nums flex-shrink-0">
                     {t.deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
                 </div>
@@ -244,13 +244,13 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex gap-1 border-b border-border/80">
         <button
           onClick={() => setActiveTab('tasks')}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
             activeTab === 'tasks'
               ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              : 'border-transparent text-muted-foreground hover:text-foreground/85 hover:border-border'
           }`}
         >
           Tasks ({tasks?.length ?? 0})
@@ -260,7 +260,7 @@ export default function ProjectDetailPage() {
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
             activeTab === 'members'
               ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              : 'border-transparent text-muted-foreground hover:text-foreground/85 hover:border-border'
           }`}
         >
           Members ({project.members?.length ?? 0})
@@ -271,7 +271,7 @@ export default function ProjectDetailPage() {
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === 'progress'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground/85 hover:border-border'
             }`}
           >
             Progress
@@ -283,7 +283,7 @@ export default function ProjectDetailPage() {
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === 'reports'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground/85 hover:border-border'
             }`}
           >
             Reports
@@ -338,7 +338,7 @@ export default function ProjectDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
             {/* Score + Progress card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
               <div className="flex items-center gap-5 mb-5">
                 {/* Circular score */}
                 <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
@@ -347,11 +347,11 @@ export default function ProjectDetailPage() {
                     <circle cx="18" cy="18" r="15.5" fill="none" stroke={projectStatus.overallScore >= 100 ? '#10b981' : '#6366f1'} strokeWidth="3" strokeDasharray={`${projectStatus.overallScore} ${100 - projectStatus.overallScore}`} strokeLinecap="round" />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-lg font-bold text-gray-900 tabular-nums">{projectStatus.overallScore}%</span>
+                    <span className="text-lg font-bold text-foreground tabular-nums">{projectStatus.overallScore}%</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-[13px] font-bold text-gray-800 mb-1">Overall Score</p>
+                  <p className="text-[13px] font-bold text-foreground/95 mb-1">Overall Score</p>
                   <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold border ${hc.bg} ${hc.text}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${hc.dot}`} />
                     {projectStatus.health.replace('_', ' ')}
@@ -362,13 +362,13 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
 
-              <div className="space-y-3 pt-4 border-t border-gray-100">
+              <div className="space-y-3 pt-4 border-t border-border">
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="font-medium text-gray-600">Completion</span>
-                    <span className="font-bold text-gray-700 tabular-nums">{projectStatus.completionPercent}%</span>
+                    <span className="font-medium text-muted-foreground">Completion</span>
+                    <span className="font-bold text-foreground/85 tabular-nums">{projectStatus.completionPercent}%</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div className={`h-full rounded-full transition-all ${projectStatus.completionPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                       style={{ width: `${Math.min(projectStatus.completionPercent, 100)}%` }} />
                   </div>
@@ -376,10 +376,10 @@ export default function ProjectDetailPage() {
                 {projectStatus.totalEstimatedHours > 0 && (
                   <div>
                     <div className="flex justify-between text-[11px] mb-1">
-                      <span className="font-medium text-gray-600">Time Budget</span>
-                      <span className="font-bold text-gray-700 tabular-nums">{projectStatus.timeBudgetPercent}%</span>
+                      <span className="font-medium text-muted-foreground">Time Budget</span>
+                      <span className="font-bold text-foreground/85 tabular-nums">{projectStatus.timeBudgetPercent}%</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div className={`h-full rounded-full transition-all ${projectStatus.timeBudgetPercent > 100 ? 'bg-red-500' : 'bg-amber-400'}`}
                         style={{ width: `${Math.min(projectStatus.timeBudgetPercent, 100)}%` }} />
                     </div>
@@ -387,16 +387,16 @@ export default function ProjectDetailPage() {
                 )}
                 {projectStatus.totalTrackedHours > 0 && (
                   <div className="flex items-center justify-between text-[11px] pt-1">
-                    <span className="text-gray-400">Time Tracked</span>
-                    <span className="font-semibold text-gray-600 tabular-nums">{formatDuration(projectStatus.totalTrackedHours)}{projectStatus.totalEstimatedHours > 0 ? ` / ${formatDuration(projectStatus.totalEstimatedHours)}` : ''}</span>
+                    <span className="text-muted-foreground/70">Time Tracked</span>
+                    <span className="font-semibold text-muted-foreground tabular-nums">{formatDuration(projectStatus.totalTrackedHours)}{projectStatus.totalEstimatedHours > 0 ? ` / ${formatDuration(projectStatus.totalEstimatedHours)}` : ''}</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Task Counts card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Task Counts</p>
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+              <p className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider mb-3">Task Counts</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3.5">
                   <p className="text-2xl font-bold text-amber-600 tabular-nums">{todoCount}</p>
@@ -419,38 +419,38 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* ── Task Breakdown ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
-              <h3 className="text-[13px] font-bold text-gray-800">Task Breakdown</h3>
-              <span className="text-[11px] text-gray-400 tabular-nums">{projectStatus.taskProgress.length} tasks</span>
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border/50 flex items-center justify-between">
+              <h3 className="text-[13px] font-bold text-foreground/95">Task Breakdown</h3>
+              <span className="text-[11px] text-muted-foreground/70 tabular-nums">{projectStatus.taskProgress.length} tasks</span>
             </div>
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_100px_80px_100px_60px] gap-2 px-5 py-2 bg-gray-50/70 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+            <div className="grid grid-cols-[1fr_100px_80px_100px_60px] gap-2 px-5 py-2 bg-muted/40 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider border-b border-border">
               <span>Task</span>
               <span>Status</span>
               <span>Priority</span>
               <span>Time</span>
               <span className="text-right">Progress</span>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-border/60">
               {projectStatus.taskProgress.map((t) => {
                 const color = t.statusProgress >= 100 ? '#10b981' : t.statusProgress >= 50 ? '#6366f1' : t.statusProgress >= 15 ? '#3b82f6' : '#d1d5db'
                 const statusLabel = TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL] ?? t.status.replace(/_/g, ' ')
                 return (
-                  <div key={t.taskId} className={`grid grid-cols-[1fr_100px_80px_100px_60px] gap-2 items-center px-5 py-2.5 ${t.isOverdue ? 'bg-red-50/30' : 'hover:bg-gray-50/50'} transition-colors`}>
+                  <div key={t.taskId} className={`grid grid-cols-[1fr_100px_80px_100px_60px] gap-2 items-center px-5 py-2.5 ${t.isOverdue ? 'bg-red-50/30' : 'hover:bg-muted/30'} transition-colors`}>
                     {/* Task name */}
                     <div className="min-w-0 flex items-center gap-2">
-                      <p className="text-[13px] font-medium text-gray-800 truncate">{t.title}</p>
+                      <p className="text-[13px] font-medium text-foreground/95 truncate">{t.title}</p>
                       {t.isOverdue && <span className="text-[8px] font-bold text-red-500 bg-red-50 border border-red-100 px-1 py-px rounded flex-shrink-0">OVERDUE</span>}
                     </div>
 
                     {/* Status */}
-                    <span className="text-[11px] font-medium text-gray-500">{statusLabel}</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">{statusLabel}</span>
 
                     {/* Priority */}
                     <div>
                       <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
-                        t.priority === 'HIGH' ? 'text-red-600' : t.priority === 'MEDIUM' ? 'text-amber-600' : 'text-gray-400'
+                        t.priority === 'HIGH' ? 'text-red-600' : t.priority === 'MEDIUM' ? 'text-amber-600' : 'text-muted-foreground/70'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
                           t.priority === 'HIGH' ? 'bg-red-500' : t.priority === 'MEDIUM' ? 'bg-amber-400' : 'bg-gray-300'
@@ -460,13 +460,13 @@ export default function ProjectDetailPage() {
                     </div>
 
                     {/* Time tracked */}
-                    <span className="text-[11px] text-gray-400 tabular-nums">
+                    <span className="text-[11px] text-muted-foreground/70 tabular-nums">
                       {t.trackedHours > 0 ? formatDuration(t.trackedHours) : '—'}
                     </span>
 
                     {/* Progress */}
                     <div className="flex items-center gap-1.5 justify-end">
-                      <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-8 h-1.5 bg-muted rounded-full overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${t.statusProgress}%`, backgroundColor: color }} />
                       </div>
                       <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{t.statusProgress}%</span>
@@ -475,46 +475,46 @@ export default function ProjectDetailPage() {
                 )
               })}
               {projectStatus.taskProgress.length === 0 && (
-                <div className="px-5 py-8 text-center text-[13px] text-gray-300">No tasks yet</div>
+                <div className="px-5 py-8 text-center text-[13px] text-muted-foreground/50">No tasks yet</div>
               )}
             </div>
           </div>
 
           {/* ── Team Contribution ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-50">
-              <h3 className="text-[13px] font-bold text-gray-800">Team Contribution</h3>
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-border/50">
+              <h3 className="text-[13px] font-bold text-foreground/95">Team Contribution</h3>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-border/60">
               {projectStatus.memberProgress.map((m) => (
-                <div key={m.userId} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
+                <div key={m.userId} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/30 transition-colors">
                   <Avatar name={m.name} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-[13px] font-semibold text-gray-800 truncate">{m.name}</p>
-                      <span className="text-[9px] font-bold text-gray-400 uppercase">{m.projectRole}</span>
+                      <p className="text-[13px] font-semibold text-foreground/95 truncate">{m.name}</p>
+                      <span className="text-[9px] font-bold text-muted-foreground/70 uppercase">{m.projectRole}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[200px]">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-[200px]">
                         <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${m.completionPercent}%` }} />
                       </div>
                       <span className="text-[10px] font-bold text-indigo-600 tabular-nums">{m.completionPercent}%</span>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-[12px] font-semibold text-gray-700 tabular-nums">{m.doneTasks}/{m.totalTasks}</p>
-                    <p className="text-[10px] text-gray-400">tasks done</p>
+                    <p className="text-[12px] font-semibold text-foreground/85 tabular-nums">{m.doneTasks}/{m.totalTasks}</p>
+                    <p className="text-[10px] text-muted-foreground/70">tasks done</p>
                   </div>
                   {m.trackedHours > 0 && (
                     <div className="text-right flex-shrink-0">
-                      <p className="text-[12px] font-semibold text-gray-700 tabular-nums">{formatDuration(m.trackedHours)}</p>
-                      <p className="text-[10px] text-gray-400">tracked</p>
+                      <p className="text-[12px] font-semibold text-foreground/85 tabular-nums">{formatDuration(m.trackedHours)}</p>
+                      <p className="text-[10px] text-muted-foreground/70">tracked</p>
                     </div>
                   )}
                 </div>
               ))}
               {projectStatus.memberProgress.length === 0 && (
-                <div className="px-5 py-8 text-center text-[13px] text-gray-300">No members yet</div>
+                <div className="px-5 py-8 text-center text-[13px] text-muted-foreground/50">No members yet</div>
               )}
             </div>
           </div>
@@ -532,18 +532,18 @@ export default function ProjectDetailPage() {
           {/* Left Column — Editable Fields */}
           <div className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Project Name</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Project Name</label>
               <input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all"
+                className="w-full rounded-xl border border-border/80 bg-muted/40 px-4 py-3 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-card transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Description</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Description</label>
               <textarea
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white resize-none transition-all"
+                className="w-full rounded-xl border border-border/80 bg-muted/40 px-4 py-3 text-sm text-foreground/85 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-card resize-none transition-all"
                 rows={4}
                 placeholder="What is this project about?"
                 value={editDesc}
@@ -552,7 +552,7 @@ export default function ProjectDetailPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Domain</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Domain</label>
               <div className="grid grid-cols-2 gap-2">
                 {DOMAIN_OPTIONS.map((opt) => (
                   <button
@@ -562,18 +562,18 @@ export default function ProjectDetailPage() {
                     className={`px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all duration-200 ${
                       editDomain === opt.value
                         ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                        : 'border-border/80 bg-card text-muted-foreground hover:border-border hover:bg-muted/40'
                     }`}
                   >
                     {opt.label}
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5">Changing the domain updates the task pipeline stages for this project.</p>
+              <p className="text-[10px] text-muted-foreground/70 mt-1.5">Changing the domain updates the task pipeline stages for this project.</p>
             </div>
 
             {/* Metadata */}
-            <div className="flex items-center gap-4 text-xs text-gray-400 pt-2">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground/70 pt-2">
               <div className="flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 Created {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -585,7 +585,7 @@ export default function ProjectDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border">
               <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
               <Button
                 variant="primary"
@@ -601,7 +601,7 @@ export default function ProjectDetailPage() {
           <div className="space-y-5">
             {/* Stats */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Overview</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Overview</label>
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-indigo-50 rounded-xl p-3 text-center border border-indigo-100">
                   <p className="text-xl font-bold text-indigo-700">{project.members?.length ?? 0}</p>
@@ -620,21 +620,21 @@ export default function ProjectDetailPage() {
 
             {/* Team */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Team</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Team</label>
               {(project.members ?? []).length === 0 ? (
-                <div className="rounded-xl border-2 border-dashed border-gray-200 py-6 text-center">
-                  <p className="text-sm text-gray-400">No members yet</p>
+                <div className="rounded-xl border-2 border-dashed border-border/80 py-6 text-center">
+                  <p className="text-sm text-muted-foreground/70">No members yet</p>
                 </div>
               ) : (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {(project.members ?? []).map((m) => (
-                    <div key={m.userId} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 border border-gray-100">
+                    <div key={m.userId} className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5 border border-border">
                       <div className="flex items-center gap-2.5">
                         <Avatar url={m.user?.avatarUrl} name={m.user?.name || m.user?.email || m.userId} size="md" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{m.user?.name || m.user?.email || m.userId}</p>
+                          <p className="text-sm font-medium text-foreground">{m.user?.name || m.user?.email || m.userId}</p>
                           {m.user?.email && m.user?.name && (
-                            <p className="text-xs text-gray-400">{m.user.email}</p>
+                            <p className="text-xs text-muted-foreground/70">{m.user.email}</p>
                           )}
                         </div>
                       </div>
@@ -648,7 +648,7 @@ export default function ProjectDetailPage() {
                   ))}
                 </div>
               )}
-              <p className="text-xs text-gray-400 mt-2">Manage team from the <strong>Members</strong> tab</p>
+              <p className="text-xs text-muted-foreground/70 mt-2">Manage team from the <strong>Members</strong> tab</p>
             </div>
           </div>
         </div>

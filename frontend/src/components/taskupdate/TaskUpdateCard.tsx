@@ -67,38 +67,38 @@ function SessionPreview({ sessions, isTimerActive, label }: { sessions: Attendan
   return (
     <div className="space-y-3">
       {label && (
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</p>
+        <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{label}</p>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Sign In</p>
-          <p className="text-sm font-semibold text-gray-900">{signIn}</p>
+        <div className="bg-muted/40 rounded-xl p-3">
+          <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Sign In</p>
+          <p className="text-sm font-semibold text-foreground">{signIn}</p>
         </div>
-        <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Sign Out</p>
-          <p className={`text-sm font-semibold ${isStillWorking ? 'text-emerald-600' : 'text-gray-900'}`}>{signOut}</p>
+        <div className="bg-muted/40 rounded-xl p-3">
+          <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Sign Out</p>
+          <p className={`text-sm font-semibold ${isStillWorking ? 'text-emerald-600' : 'text-foreground'}`}>{signOut}</p>
         </div>
       </div>
 
       <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Task Summary</p>
+        <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">Task Summary</p>
         {Array.from(projectMap.entries()).map(([project, tasks]) => (
           <div key={project} className="mb-2">
             {multipleProjects && (
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
                 {project}
               </p>
             )}
             <div className="space-y-1.5">
               {tasks.map((t, i) => (
-                <div key={i} className="bg-gray-50 rounded-lg px-3 py-2">
+                <div key={i} className="bg-muted/40 rounded-lg px-3 py-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">{t.name}</span>
+                    <span className="text-sm text-foreground/85">{t.name}</span>
                     <span className="text-xs font-semibold text-indigo-600 tabular-nums">{t.time}</span>
                   </div>
                   {t.descriptions.length > 0 && (
-                    <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">{t.descriptions.join(', ')}</p>
+                    <p className="text-[11px] text-muted-foreground/70 italic mt-0.5 truncate">{t.descriptions.join(', ')}</p>
                   )}
                 </div>
               ))}
@@ -107,9 +107,9 @@ function SessionPreview({ sessions, isTimerActive, label }: { sessions: Attendan
         ))}
       </div>
 
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Time</span>
-        <span className={`text-lg font-bold tabular-nums ${isStillWorking ? 'text-emerald-600' : 'text-gray-900'}`}>{formatDuration(totalHours)}</span>
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <span className="text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">Total Time</span>
+        <span className={`text-lg font-bold tabular-nums ${isStillWorking ? 'text-emerald-600' : 'text-foreground'}`}>{formatDuration(totalHours)}</span>
       </div>
     </div>
   )
@@ -124,7 +124,7 @@ export function TaskUpdateCard() {
   useTick(isTimerActive ?? false)
 
   if (attLoading || updateLoading) {
-    return <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex justify-center"><Spinner /></div>
+    return <div className="bg-card rounded-2xl border border-border shadow-sm p-6 flex justify-center"><Spinner /></div>
   }
 
   const pendingData = isPending(existingUpdate) ? existingUpdate : null
@@ -132,11 +132,11 @@ export function TaskUpdateCard() {
   // ═══ Already submitted ═══
   if (existingUpdate && !pendingData && 'updateId' in existingUpdate) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
           <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <p className="text-sm font-bold text-emerald-700">Task Update Submitted</p>
-          <span className="text-[10px] text-gray-400 ml-auto">
+          <span className="text-[10px] text-muted-foreground/70 ml-auto">
             {new Date(existingUpdate.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
             {' · '}
             {new Date(existingUpdate.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -145,43 +145,43 @@ export function TaskUpdateCard() {
 
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-gray-900">{existingUpdate.userName}</span>
+            <span className="font-semibold text-foreground">{existingUpdate.userName}</span>
             {existingUpdate.employeeId && (
-              <span className="text-[10px] font-mono text-gray-400">{existingUpdate.employeeId}</span>
+              <span className="text-[10px] font-mono text-muted-foreground/70">{existingUpdate.employeeId}</span>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Sign In</p>
-              <p className="text-sm font-semibold text-gray-900">{existingUpdate.signIn}</p>
+            <div className="bg-muted/40 rounded-xl p-3">
+              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Sign In</p>
+              <p className="text-sm font-semibold text-foreground">{existingUpdate.signIn}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Sign Out</p>
-              <p className="text-sm font-semibold text-gray-900">{existingUpdate.signOut}</p>
+            <div className="bg-muted/40 rounded-xl p-3">
+              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Sign Out</p>
+              <p className="text-sm font-semibold text-foreground">{existingUpdate.signOut}</p>
             </div>
           </div>
 
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Task Summary</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">Task Summary</p>
             <div className="space-y-1.5">
               {existingUpdate.taskSummary.map((t, i) => (
-                <div key={i} className="bg-gray-50 rounded-lg px-3 py-2">
+                <div key={i} className="bg-muted/40 rounded-lg px-3 py-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">{i + 1}. {t.taskName}</span>
+                    <span className="text-sm text-foreground/85">{i + 1}. {t.taskName}</span>
                     <span className="text-xs font-semibold text-indigo-600">{t.timeRecorded}</span>
                   </div>
                   {t.description && (
-                    <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">{t.description}</p>
+                    <p className="text-[11px] text-muted-foreground/70 italic mt-0.5 truncate">{t.description}</p>
                   )}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Time</span>
-            <span className="text-lg font-bold text-gray-900">{existingUpdate.totalTime}</span>
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">Total Time</span>
+            <span className="text-lg font-bold text-foreground">{existingUpdate.totalTime}</span>
           </div>
         </div>
       </div>
@@ -196,7 +196,7 @@ export function TaskUpdateCard() {
     const pendingStillWorking = hasSessions && !pendingSessions[pendingSessions.length - 1].signOutAt
 
     return (
-      <div className="bg-white rounded-2xl border-2 border-amber-200 shadow-sm p-6">
+      <div className="bg-card rounded-2xl border-2 border-amber-200 shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
           <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           <p className="text-sm font-bold text-amber-700">Pending Task Update</p>
@@ -215,7 +215,7 @@ export function TaskUpdateCard() {
             )}
           </>
         ) : (
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             You have unsubmitted work from <span className="font-semibold">{pendingData.pendingDate}</span>.
           </p>
         )}
@@ -237,8 +237,8 @@ export function TaskUpdateCard() {
   // ═══ No attendance ═══
   if (!attendance || !attendance.sessions || attendance.sessions.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
-        <p className="text-sm text-gray-400">Start the timer to track your work before submitting a task update.</p>
+      <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 p-6 text-center">
+        <p className="text-sm text-muted-foreground/70">Start the timer to track your work before submitting a task update.</p>
       </div>
     )
   }
@@ -251,15 +251,15 @@ export function TaskUpdateCard() {
   const isStillWorking = !sessions[sessions.length - 1].signOutAt
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-bold text-gray-900">Today&apos;s Task Update</p>
-        <span className="text-[10px] text-gray-400">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
+        <p className="text-sm font-bold text-foreground">Today&apos;s Task Update</p>
+        <span className="text-[10px] text-muted-foreground/70">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between text-sm">
-          <span className="font-semibold text-gray-900">{user?.name || user?.email}</span>
+          <span className="font-semibold text-foreground">{user?.name || user?.email}</span>
         </div>
 
         <SessionPreview sessions={sessions} isTimerActive={isTimerActive ?? false} />

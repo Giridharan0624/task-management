@@ -156,22 +156,22 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
     <div className="space-y-5">
       {/* Header controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
           {(['weekly', 'monthly', 'all'] as Period[]).map(p => (
             <button key={p} onClick={() => { setPeriod(p); setOffset(0) }}
-              className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${period === p ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${period === p ? 'bg-card text-indigo-700 shadow-sm' : 'text-muted-foreground hover:text-foreground/85'}`}>
               {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
         </div>
         {period !== 'all' && (
           <div className="flex items-center gap-3">
-            <button onClick={() => setOffset(o => o - 1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+            <button onClick={() => setOffset(o => o - 1)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <span className="text-[13px] font-semibold text-gray-700 min-w-[180px] text-center">{label}</span>
+            <span className="text-[13px] font-semibold text-foreground/85 min-w-[180px] text-center">{label}</span>
             <button onClick={() => setOffset(o => o + 1)} disabled={offset >= 0}
-              className={`p-1.5 rounded-lg ${offset >= 0 ? 'text-gray-200' : 'hover:bg-gray-100 text-gray-500'}`}>
+              className={`p-1.5 rounded-lg ${offset >= 0 ? 'text-gray-200' : 'hover:bg-muted text-muted-foreground'}`}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
@@ -182,42 +182,42 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
         <>
           {/* ── Stats Row ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tracked</p>
+                <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Tracked</p>
               </div>
               <p className="text-xl font-bold text-indigo-700 tabular-nums">{formatDuration(totalHours)}</p>
             </div>
             {totalEstimated > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+              <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-white ${budgetPct > 100 ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-amber-500 to-amber-600'}`}>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                   </div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Budget</p>
+                  <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Budget</p>
                 </div>
                 <p className={`text-xl font-bold tabular-nums ${budgetPct > 100 ? 'text-red-600' : 'text-amber-600'}`}>{budgetPct}%</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{formatDuration(totalHours)} / {formatDuration(totalEstimated)}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">{formatDuration(totalHours)} / {formatDuration(totalEstimated)}</p>
               </div>
             )}
-            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 </div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Members</p>
+                <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Members</p>
               </div>
               <p className="text-xl font-bold text-violet-700 tabular-nums">{totalMembers}</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sessions</p>
+                <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Sessions</p>
               </div>
               <p className="text-xl font-bold text-blue-700 tabular-nums">{totalSessions}</p>
             </div>
@@ -226,9 +226,9 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
           {/* ── Charts: Task Hours + Status Distribution ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Hours by Task — Bar */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <h3 className="text-[13px] font-bold text-gray-700 mb-4">Hours by Task</h3>
-              {taskHours.length === 0 ? <div className="flex items-center justify-center h-[250px] text-[13px] text-gray-300">No data</div> : (
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+              <h3 className="text-[13px] font-bold text-foreground/85 mb-4">Hours by Task</h3>
+              {taskHours.length === 0 ? <div className="flex items-center justify-center h-[250px] text-[13px] text-muted-foreground/50">No data</div> : (
                 <ResponsiveContainer width="100%" height={Math.max(180, taskHours.length * 36)}>
                   <BarChart data={taskHours} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
@@ -244,9 +244,9 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
             </div>
 
             {/* Status Distribution — Donut */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <h3 className="text-[13px] font-bold text-gray-700 mb-4">Status Distribution</h3>
-              {statusData.length === 0 ? <div className="flex items-center justify-center h-[250px] text-[13px] text-gray-300">No tasks</div> : (
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+              <h3 className="text-[13px] font-bold text-foreground/85 mb-4">Status Distribution</h3>
+              {statusData.length === 0 ? <div className="flex items-center justify-center h-[250px] text-[13px] text-muted-foreground/50">No tasks</div> : (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie data={statusData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value" stroke="none">
@@ -256,12 +256,12 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
                       if (!active || !payload?.length) return null
                       const e = payload[0]; const total = statusData.reduce((s, d) => s + d.value, 0)
                       const pct = total > 0 ? Math.round((Number(e.value) / total) * 100) : 0
-                      return <div className="bg-white rounded-xl border border-gray-200 shadow-lg p-3 text-sm">
-                        <div className="flex items-center gap-2 mb-1"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.payload?.fill }} /><span className="font-semibold text-gray-800">{e.name}</span></div>
-                        <p className="text-gray-600">{e.value} task{Number(e.value) !== 1 ? 's' : ''}</p><p className="text-indigo-600 font-bold">{pct}%</p>
+                      return <div className="bg-card rounded-xl border border-border/80 shadow-lg p-3 text-sm">
+                        <div className="flex items-center gap-2 mb-1"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.payload?.fill }} /><span className="font-semibold text-foreground/95">{e.name}</span></div>
+                        <p className="text-muted-foreground">{e.value} task{Number(e.value) !== 1 ? 's' : ''}</p><p className="text-indigo-600 font-bold">{pct}%</p>
                       </div>
                     }} />
-                    <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" iconSize={8} formatter={(v: string) => <span className="text-[11px] text-gray-600">{v}</span>} />
+                    <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" iconSize={8} formatter={(v: string) => <span className="text-[11px] text-muted-foreground">{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -270,8 +270,8 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
 
           {/* ── Estimated vs Actual ── */}
           {estVsActual.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <h3 className="text-[13px] font-bold text-gray-700 mb-4">Estimated vs Actual Hours</h3>
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+              <h3 className="text-[13px] font-bold text-foreground/85 mb-4">Estimated vs Actual Hours</h3>
               <ResponsiveContainer width="100%" height={Math.max(180, estVsActual.length * 40)}>
                 <BarChart data={estVsActual} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
@@ -282,31 +282,31 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
                   <Bar dataKey="tracked" name="Tracked" fill="#6366f1" radius={[0, 4, 4, 0]} maxBarSize={20} />
                 </BarChart>
               </ResponsiveContainer>
-              <div className="flex items-center gap-5 mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center gap-1.5"><div className="w-3 h-2 rounded-sm bg-[#c7d2fe]" /><span className="text-[11px] text-gray-500">Estimated</span></div>
-                <div className="flex items-center gap-1.5"><div className="w-3 h-2 rounded-sm bg-[#6366f1]" /><span className="text-[11px] text-gray-500">Tracked</span></div>
+              <div className="flex items-center gap-5 mt-3 pt-3 border-t border-border">
+                <div className="flex items-center gap-1.5"><div className="w-3 h-2 rounded-sm bg-[#c7d2fe]" /><span className="text-[11px] text-muted-foreground">Estimated</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-2 rounded-sm bg-[#6366f1]" /><span className="text-[11px] text-muted-foreground">Tracked</span></div>
               </div>
             </div>
           )}
 
           {/* ── Member Workload ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-50">
-              <h3 className="text-[13px] font-bold text-gray-800">Member Workload</h3>
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border/50">
+              <h3 className="text-[13px] font-bold text-foreground/95">Member Workload</h3>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-border/60">
               {memberHours.length === 0 ? (
-                <div className="px-5 py-8 text-center text-[13px] text-gray-300">No data</div>
+                <div className="px-5 py-8 text-center text-[13px] text-muted-foreground/50">No data</div>
               ) : memberHours.map((m, i) => (
                 <div key={i} className="px-5 py-3.5">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-[13px] font-semibold text-gray-800 flex-1">{m.name}</span>
-                    <span className="text-[12px] font-bold text-gray-700 tabular-nums">{formatDuration(m.hours)}</span>
-                    <span className="text-[10px] text-gray-400 tabular-nums w-10 text-right">{totalHours > 0 ? Math.round((m.hours / totalHours) * 100) : 0}%</span>
+                    <span className="text-[13px] font-semibold text-foreground/95 flex-1">{m.name}</span>
+                    <span className="text-[12px] font-bold text-foreground/85 tabular-nums">{formatDuration(m.hours)}</span>
+                    <span className="text-[10px] text-muted-foreground/70 tabular-nums w-10 text-right">{totalHours > 0 ? Math.round((m.hours / totalHours) * 100) : 0}%</span>
                   </div>
                   {/* Task breakdown bar */}
-                  <div className="flex rounded-full h-2 overflow-hidden bg-gray-100">
+                  <div className="flex rounded-full h-2 overflow-hidden bg-muted">
                     {Array.from(m.tasks.entries()).sort((a, b) => b[1] - a[1]).map(([task, hrs]) => (
                       <div key={task} className="h-full" title={`${task}: ${formatDuration(hrs)}`}
                         style={{ width: `${m.hours > 0 ? (hrs / m.hours) * 100 : 0}%`, backgroundColor: taskColorMap[task] || '#94a3b8' }} />
@@ -314,9 +314,9 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
                     {Array.from(m.tasks.entries()).sort((a, b) => b[1] - a[1]).map(([task, hrs]) => (
-                      <span key={task} className="text-[10px] text-gray-400">
+                      <span key={task} className="text-[10px] text-muted-foreground/70">
                         <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: taskColorMap[task] || '#94a3b8' }} />
-                        {task} <span className="tabular-nums font-medium text-gray-500">{formatDuration(hrs)}</span>
+                        {task} <span className="tabular-nums font-medium text-muted-foreground">{formatDuration(hrs)}</span>
                       </span>
                     ))}
                   </div>
@@ -326,13 +326,13 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
           </div>
 
           {/* ── Session Log (collapsible) ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
             <button onClick={() => setShowLog(!showLog)}
-              className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
+              className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors">
               <div className="flex items-center gap-3">
-                <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showLog ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                <h3 className="text-[13px] font-bold text-gray-800">Session Log</h3>
-                <span className="text-[11px] bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-md tabular-nums">{detailedRows.length}</span>
+                <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform ${showLog ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                <h3 className="text-[13px] font-bold text-foreground/95">Session Log</h3>
+                <span className="text-[11px] bg-muted text-muted-foreground font-semibold px-2 py-0.5 rounded-md tabular-nums">{detailedRows.length}</span>
               </div>
               <button onClick={(e) => { e.stopPropagation(); exportCSV() }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-gray-800 transition-all">
@@ -341,21 +341,21 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
               </button>
             </button>
             {showLog && (
-              <div className="border-t border-gray-50">
-                <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 px-5 py-2 bg-gray-50/70 text-[9px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+              <div className="border-t border-border/50">
+                <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 px-5 py-2 bg-muted/40 text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider border-b border-border">
                   <span>Date</span><span>Member</span><span>Task</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
                 </div>
-                <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50">
+                <div className="max-h-[400px] overflow-y-auto divide-y divide-border/60">
                   {detailedRows.length === 0 ? (
-                    <div className="px-5 py-8 text-center text-[13px] text-gray-300">No sessions</div>
+                    <div className="px-5 py-8 text-center text-[13px] text-muted-foreground/50">No sessions</div>
                   ) : detailedRows.map((r, i) => (
-                    <div key={i} className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 items-center px-5 py-2 hover:bg-gray-50/50 transition-colors text-[11px]">
-                      <span className="text-gray-500">{formatDateShort(r.date)}</span>
-                      <span className="font-medium text-gray-800 truncate">{r.member}</span>
-                      <span className="text-gray-600 truncate">{r.task}</span>
-                      <span className="text-gray-500 font-mono tabular-nums">{formatTime(r.signIn)}</span>
-                      <span className="text-gray-500 font-mono tabular-nums">{r.signOut ? formatTime(r.signOut) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                      <span className="text-right font-semibold text-gray-700 tabular-nums">{r.hours != null ? formatDuration(r.hours) : '—'}</span>
+                    <div key={i} className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 items-center px-5 py-2 hover:bg-muted/30 transition-colors text-[11px]">
+                      <span className="text-muted-foreground">{formatDateShort(r.date)}</span>
+                      <span className="font-medium text-foreground/95 truncate">{r.member}</span>
+                      <span className="text-muted-foreground truncate">{r.task}</span>
+                      <span className="text-muted-foreground font-mono tabular-nums">{formatTime(r.signIn)}</span>
+                      <span className="text-muted-foreground font-mono tabular-nums">{r.signOut ? formatTime(r.signOut) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
+                      <span className="text-right font-semibold text-foreground/85 tabular-nums">{r.hours != null ? formatDuration(r.hours) : '—'}</span>
                     </div>
                   ))}
                 </div>

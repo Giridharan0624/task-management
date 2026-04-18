@@ -22,13 +22,13 @@ const ROLE_COLORS: Record<string, string> = {
   MEMBER: 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200',
 }
 
-const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none transition-all placeholder:text-gray-400"
+const inputClass = "w-full rounded-lg border border-border/80 bg-card px-3.5 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none transition-all placeholder:text-muted-foreground/70"
 
 function Section({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="border-b border-gray-100 last:border-b-0">
-      <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
-        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">{title}</h3>
+    <div className="border-b border-border last:border-b-0">
+      <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{title}</h3>
         {action}
       </div>
       <div className="px-6 py-5">{children}</div>
@@ -39,8 +39,8 @@ function Section({ title, children, action }: { title: string; children: React.R
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-gray-400 mb-0.5">{label}</dt>
-      <dd className="text-sm text-gray-900 font-medium">{value || <span className="text-gray-300 font-normal">—</span>}</dd>
+      <dt className="text-xs font-medium text-muted-foreground/70 mb-0.5">{label}</dt>
+      <dd className="text-sm text-foreground font-medium">{value || <span className="text-muted-foreground/50 font-normal">—</span>}</dd>
     </div>
   )
 }
@@ -174,7 +174,7 @@ export default function ProfilePage() {
 
       {/* Page header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900 tracking-tight">Profile</h1>
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Profile</h1>
         {!editing && (isOwner || personalInfoSubmitted) && (
           <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
             {isOwner ? 'Edit Company Profile' : 'Edit Profile'}
@@ -199,21 +199,21 @@ export default function ProfilePage() {
       {/* Quick Stats + Profile Completeness */}
       {!isOwner && !editing && (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <p className="text-xl font-bold text-emerald-700 tabular-nums">{tasksDone}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Tasks Done</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Tasks Done</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <p className="text-xl font-bold text-blue-700 tabular-nums">{totalTasks - tasksDone}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Active</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Active</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <p className="text-xl font-bold text-indigo-700 tabular-nums">{projectCount}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Projects</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Projects</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <p className="text-xl font-bold text-cyan-700 tabular-nums">{formatDuration(todayHours)}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Today</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Today</p>
           </div>
           <div className={`rounded-xl border p-4 shadow-sm ${
             dayOffScore === 100 ? 'bg-emerald-50 border-emerald-200' :
@@ -227,10 +227,10 @@ export default function ProfilePage() {
               dayOffScore >= 50 ? 'text-amber-700' :
               'text-red-700'
             }`}>{dayOffScore}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Day-Off Score</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Day-Off Score</p>
           </div>
           {/* Profile completeness */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center gap-2">
               <div className="relative flex-shrink-0" style={{ width: 28, height: 28 }}>
                 <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
@@ -244,13 +244,13 @@ export default function ProfilePage() {
               </div>
               <p className="text-sm font-bold tabular-nums" style={{ color: completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b' }}>{filledCount}/{completenessFields.length}</p>
             </div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Profile</p>
+            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-1">Profile</p>
           </div>
         </div>
       )}
 
       {/* Main card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
 
         {/* Identity section */}
         <Section title="Identity">
@@ -269,24 +269,24 @@ export default function ProfilePage() {
               {editing ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-400 mb-1 block">{isOwner ? 'Company Name' : 'Full Name'}</label>
+                    <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">{isOwner ? 'Company Name' : 'Full Name'}</label>
                     <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
                   </div>
                   {isOwner && (
                     <div>
-                      <label className="text-xs font-medium text-gray-400 mb-1 block">Employee ID Prefix</label>
+                      <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Employee ID Prefix</label>
                       <div className="flex items-center gap-2">
                         <input value={companyPrefix} onChange={(e) => setCompanyPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
                           placeholder="NS" maxLength={6} className={`${inputClass} w-24 uppercase font-mono`} />
-                        <span className="text-[11px] text-gray-400">Format: {companyPrefix || 'NS'}-DEPT-YXXXX</span>
+                        <span className="text-[11px] text-muted-foreground/70">Format: {companyPrefix || 'NS'}-DEPT-YXXXX</span>
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
                 <>
-                  <h2 className="text-lg font-bold text-gray-900 truncate">{dp.name || dp.email}</h2>
-                  <p className="text-sm text-gray-500 truncate">{dp.email}</p>
+                  <h2 className="text-lg font-bold text-foreground truncate">{dp.name || dp.email}</h2>
+                  <p className="text-sm text-muted-foreground truncate">{dp.email}</p>
                 </>
               )}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -294,12 +294,12 @@ export default function ProfilePage() {
                   {dp.systemRole}
                 </span>
                 {!isOwner && profile?.employeeId && (
-                  <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-mono font-bold text-gray-500 ring-1 ring-inset ring-gray-200">
+                  <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[10px] font-mono font-bold text-muted-foreground ring-1 ring-inset ring-border/80">
                     {profile.employeeId}
                   </span>
                 )}
                 {dp.createdAt && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
+                  <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/70">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     Joined {new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
@@ -317,11 +317,11 @@ export default function ProfilePage() {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Write a short bio..."
-              className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none resize-none transition-all placeholder:text-gray-400"
+              className="w-full rounded-lg border border-border/80 bg-card px-3.5 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none resize-none transition-all placeholder:text-muted-foreground/70"
             />
           ) : (
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {profile?.bio || <span className="text-gray-300">No bio added yet.</span>}
+            <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-wrap">
+              {profile?.bio || <span className="text-muted-foreground/50">No bio added yet.</span>}
             </p>
           )}
         </Section>
@@ -332,35 +332,35 @@ export default function ProfilePage() {
             {editing ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Phone</label>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Phone</label>
                   <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={inputClass} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Date of Birth</label>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Date of Birth</label>
                   <DatePicker value={dateOfBirth} onChange={setDateOfBirth} max={new Date().toISOString().slice(0, 10)} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Designation</label>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Designation</label>
                   <input value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="Software Engineer" className={inputClass} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Department <span className="text-gray-300">(admin only)</span></label>
-                  <input value={profile?.department || ''} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm text-gray-400 cursor-not-allowed" />
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Department <span className="text-muted-foreground/50">(admin only)</span></label>
+                  <input value={profile?.department || ''} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Location</label>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Location</label>
                   <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chennai, India" className={inputClass} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">College Name</label>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">College Name</label>
                   <input value={collegeName} onChange={(e) => setCollegeName(e.target.value)} placeholder="University / College" className={inputClass} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Area of Interest</label>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Area of Interest</label>
                   <input value={areaOfInterest} onChange={(e) => setAreaOfInterest(e.target.value)} placeholder="Web Development, AI, etc." className={inputClass} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-400 mb-1 block">Hobby</label>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Hobby</label>
                   <input value={hobby} onChange={(e) => setHobby(e.target.value)} placeholder="Reading, Music, etc." className={inputClass} />
                 </div>
               </div>
@@ -385,7 +385,7 @@ export default function ProfilePage() {
           <Section title="Skills">
             {editing ? (
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Comma separated</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Comma separated</label>
                 <input value={skillsText} onChange={(e) => setSkillsText(e.target.value)} placeholder="React, Python, AWS" className={inputClass} />
               </div>
             ) : profile?.skills && profile.skills.length > 0 ? (
@@ -409,17 +409,17 @@ export default function ProfilePage() {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-gray-300">No skills added.</p>
+              <p className="text-sm text-muted-foreground/50">No skills added.</p>
             )}
           </Section>
         )}
 
         {/* Edit mode: checkbox + save/cancel at bottom */}
         {editing && (isOwner || personalInfoSubmitted) && (
-          <div className="border-t border-gray-100 px-6 py-5">
+          <div className="border-t border-border px-6 py-5">
             <label className="flex items-start gap-3 cursor-pointer mb-4">
               <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
-                editConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                editConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-border'
               }`}>
                 {editConfirmed && (
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -428,7 +428,7 @@ export default function ProfilePage() {
                 )}
               </div>
               <input type="checkbox" checked={editConfirmed} onChange={(e) => setEditConfirmed(e.target.checked)} className="sr-only" />
-              <span className="text-sm text-gray-600">I confirm that the above details are true and correct.</span>
+              <span className="text-sm text-muted-foreground">I confirm that the above details are true and correct.</span>
             </label>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" size="sm" onClick={handleCancel}>Cancel</Button>
@@ -441,9 +441,9 @@ export default function ProfilePage() {
 
       {/* Personal Info form — only shown once (before first submission), hidden for OWNER */}
       {!isOwner && !personalInfoSubmitted && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Personal Info</h3>
+        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Personal Info</h3>
           </div>
           <div className="px-6 py-5">
             {personalInfoSuccess && (
@@ -462,70 +462,70 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Name */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Full Name</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Full Name</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
               </div>
 
               {/* Date of Birth */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Date of Birth</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Date of Birth</label>
                 <DatePicker value={dateOfBirth} onChange={setDateOfBirth} max={new Date().toISOString().slice(0, 10)} />
               </div>
 
               {/* Phone */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Phone Number</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Phone Number</label>
                 <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={inputClass} />
               </div>
 
               {/* Email — read only */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Email ID</label>
-                <input value={dp.email} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm text-gray-400 cursor-not-allowed" />
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Email ID</label>
+                <input value={dp.email} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
               </div>
 
               {/* College Name */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">College Name</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">College Name</label>
                 <input value={collegeName} onChange={(e) => setCollegeName(e.target.value)} placeholder="University / College" className={inputClass} />
               </div>
 
               {/* Location */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Location</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Location</label>
                 <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chennai, India" className={inputClass} />
               </div>
 
               {/* Join Date — read only */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Join Date</label>
-                <input value={dp.createdAt ? new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm text-gray-400 cursor-not-allowed" />
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Join Date</label>
+                <input value={dp.createdAt ? new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
               </div>
 
               {/* Role — read only */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Role</label>
-                <input value={dp.systemRole} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm text-gray-400 cursor-not-allowed" />
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Role</label>
+                <input value={dp.systemRole} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
               </div>
 
               {/* Area of Interest */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Area of Interest</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Area of Interest</label>
                 <input value={areaOfInterest} onChange={(e) => setAreaOfInterest(e.target.value)} placeholder="Web Development, AI, etc." className={inputClass} />
               </div>
 
               {/* Hobby */}
               <div>
-                <label className="text-xs font-medium text-gray-400 mb-1 block">Hobby</label>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Hobby</label>
                 <input value={hobby} onChange={(e) => setHobby(e.target.value)} placeholder="Reading, Music, etc." className={inputClass} />
               </div>
             </div>
 
             {/* Confirmation checkbox + Submit */}
-            <div className="mt-5 pt-4 border-t border-gray-100">
+            <div className="mt-5 pt-4 border-t border-border">
               <label className="flex items-start gap-3 cursor-pointer mb-4">
                 <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
-                  personalInfoConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                  personalInfoConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-border'
                 }`}>
                   {personalInfoConfirmed && (
                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -539,7 +539,7 @@ export default function ProfilePage() {
                   onChange={(e) => setBioDataConfirmed(e.target.checked)}
                   className="sr-only"
                 />
-                <span className="text-sm text-gray-600">I confirm that the above details are true and correct.</span>
+                <span className="text-sm text-muted-foreground">I confirm that the above details are true and correct.</span>
               </label>
 
               <div className="flex justify-end">
@@ -592,23 +592,23 @@ function ThemeSection() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
-        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Appearance</h3>
+    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Appearance</h3>
       </div>
       <div className="px-6 py-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-900">Theme</p>
-            <p className="text-xs text-gray-400 mt-0.5">Choose your preferred appearance</p>
+            <p className="text-sm font-medium text-foreground">Theme</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">Choose your preferred appearance</p>
           </div>
-          <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1">
+          <div className="flex gap-1.5 bg-muted rounded-xl p-1">
             <button
               onClick={() => setTheme('light')}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                 theme === 'light'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground/85'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -618,8 +618,8 @@ function ThemeSection() {
               onClick={() => setTheme('dark')}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                 theme === 'dark'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground/85'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
@@ -758,9 +758,9 @@ function ChangePasswordSection() {
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Security</h3>
+      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Security</h3>
         </div>
         <div className="px-6 py-5">
           {success && (
@@ -771,8 +771,8 @@ function ChangePasswordSection() {
           )}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">Password</p>
-              <p className="text-xs text-gray-400 mt-0.5">Manage your account password</p>
+              <p className="text-sm font-medium text-foreground">Password</p>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">Manage your account password</p>
             </div>
             <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
               Change Password
@@ -785,22 +785,22 @@ function ChangePasswordSection() {
         {forgotSuccess ? (
           <div className="flex flex-col items-center gap-3 py-4">
             <svg className="w-12 h-12 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <p className="text-lg font-bold text-gray-900">Password Reset!</p>
-            <p className="text-sm text-gray-500">Please sign in again with your new password.</p>
+            <p className="text-lg font-bold text-foreground">Password Reset!</p>
+            <p className="text-sm text-muted-foreground">Please sign in again with your new password.</p>
           </div>
         ) : forgotMode === 'confirm' ? (
           <div className="space-y-4">
-            <p className="text-sm text-gray-500">A verification code has been sent to <span className="font-semibold text-gray-900">{user?.email}</span></p>
+            <p className="text-sm text-muted-foreground">A verification code has been sent to <span className="font-semibold text-foreground">{user?.email}</span></p>
             {forgotError && (
               <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{forgotError}</div>
             )}
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Verification Code</label>
+              <label className="text-sm font-semibold text-foreground/85 mb-1.5 block">Verification Code</label>
               <input type="text" placeholder="Enter 6-digit code" value={forgotCode} onChange={(e) => setForgotCode(e.target.value)} autoComplete="one-time-code" className={inputClass} />
             </div>
             <PasswordInput label="New Password" value={forgotNewPw} onChange={(e) => setForgotNewPw(e.target.value)} placeholder="Enter new password" />
             <PasswordInput label="Confirm Password" value={forgotConfirmPw} onChange={(e) => setForgotConfirmPw(e.target.value)} placeholder="Re-enter new password" />
-            <p className="text-[11px] text-gray-400">Min 8 characters with uppercase, lowercase, and a number.</p>
+            <p className="text-[11px] text-muted-foreground/70">Min 8 characters with uppercase, lowercase, and a number.</p>
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" size="sm" onClick={() => { setForgotMode('off'); setForgotError('') }}>Back</Button>
               <Button size="sm" onClick={handleForgotConfirm} loading={forgotLoading}>Reset Password</Button>
@@ -813,7 +813,7 @@ function ChangePasswordSection() {
             )}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-semibold text-gray-700">Current Password</label>
+                <label className="text-sm font-semibold text-foreground/85">Current Password</label>
                 <button type="button" onClick={handleForgotSendCode} disabled={forgotLoading} className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold">
                   {forgotLoading ? 'Sending...' : 'Forgot?'}
                 </button>
@@ -822,7 +822,7 @@ function ChangePasswordSection() {
             </div>
             <PasswordInput label="New Password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" />
             <PasswordInput label="Confirm New Password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Re-enter new password" />
-            <p className="text-[11px] text-gray-400">Min 8 characters with uppercase, lowercase, and a number.</p>
+            <p className="text-[11px] text-muted-foreground/70">Min 8 characters with uppercase, lowercase, and a number.</p>
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
               <Button size="sm" onClick={handleSubmit} loading={saving}>Change Password</Button>
@@ -875,16 +875,16 @@ function DesktopAppSection() {
   }
 
   return (
-    <div className="bg-white dark:bg-[var(--color-surface)] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 bg-gray-50/60 dark:bg-gray-800/30">
+    <div className="bg-card dark:bg-[var(--color-surface)] rounded-2xl border border-border dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 bg-muted/40 dark:bg-gray-800/30">
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Desktop App</h3>
+          <svg className="w-4 h-4 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Desktop App</h3>
         </div>
         <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-full">v{version}</span>
       </div>
       <div className="px-6 py-5">
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">
+        <p className="text-sm text-muted-foreground dark:text-muted-foreground/50 mb-5">
           Track time, monitor activity, and take screenshots with the desktop companion app.
         </p>
         <div className="grid grid-cols-3 gap-3">
@@ -900,32 +900,32 @@ function DesktopAppSection() {
                 className={`relative flex flex-col items-center gap-2.5 p-5 rounded-xl border transition-all group hover:shadow-md hover:-translate-y-0.5 ${
                   isUserOS
                     ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-500/5 ring-1 ring-indigo-100 dark:ring-indigo-500/20'
-                    : 'border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-500/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-500/5'
+                    : 'border-border dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-500/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-500/5'
                 }`}
               >
                 {isUserOS && (
                   <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white bg-indigo-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Recommended</span>
                 )}
-                <ProfilePlatformIcon platform={p.key} className={`w-8 h-8 ${isUserOS ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'} group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors`} />
+                <ProfilePlatformIcon platform={p.key} className={`w-8 h-8 ${isUserOS ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground/70 dark:text-muted-foreground'} group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors`} />
                 <div className="text-center">
-                  <p className={`text-[13px] font-bold ${isUserOS ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-200'} group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors`}>{p.label}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{p.ext} · {p.size}</p>
+                  <p className={`text-[13px] font-bold ${isUserOS ? 'text-indigo-700 dark:text-indigo-300' : 'text-foreground/85 dark:text-gray-200'} group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors`}>{p.label}</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">{p.ext} · {p.size}</p>
                 </div>
                 <div className={`flex items-center gap-1 text-[10px] font-medium px-3 py-1.5 rounded-lg transition-colors ${
                   isUserOS
                     ? 'bg-indigo-500 text-white group-hover:bg-indigo-600'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 group-hover:bg-indigo-500 group-hover:text-white'
+                    : 'bg-muted dark:bg-gray-700 text-muted-foreground dark:text-muted-foreground/50 group-hover:bg-indigo-500 group-hover:text-white'
                 }`}>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   Download
                 </div>
-                <p className="text-[9px] text-gray-400">{p.req}</p>
+                <p className="text-[9px] text-muted-foreground/70">{p.req}</p>
               </a>
             )
           })}
         </div>
         {releasedAt && (
-          <p className="text-[10px] text-gray-400 mt-4 text-center">
+          <p className="text-[10px] text-muted-foreground/70 mt-4 text-center">
             Released {releasedAt}
           </p>
         )}

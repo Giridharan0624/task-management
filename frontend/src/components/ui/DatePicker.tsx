@@ -134,15 +134,15 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
         type="button"
         onClick={() => setOpen(!open)}
         className={clsx(
-          'w-full flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-left transition-all hover:border-gray-300',
+          'w-full flex items-center justify-between rounded-xl border border-border/80 bg-card px-4 py-2.5 text-sm text-left transition-all hover:border-border',
           'focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400',
-          !value && 'text-gray-400',
-          value && 'text-gray-900',
+          !value && 'text-muted-foreground/70',
+          value && 'text-foreground',
           className,
         )}
       >
         <span>{value ? formatDisplay(value) : placeholder}</span>
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       </button>
@@ -154,12 +154,12 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
       {open && createPortal(
         <div
           data-datepicker-dropdown
-          className="fixed z-[9999] w-[280px] bg-white rounded-2xl shadow-2xl ring-1 ring-gray-200/50 p-4 animate-fade-in-scale"
+          className="fixed z-[9999] w-[280px] bg-card rounded-2xl shadow-2xl ring-1 ring-border/60 p-4 animate-fade-in-scale"
           style={{ animationDuration: '0.15s', top: pos.top, left: pos.left }}
         >
           {/* Month/Year header */}
           <div className="flex items-center justify-between mb-3">
-            <button type="button" onClick={prevMonth} className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <button type="button" onClick={prevMonth} className="p-1 rounded-lg text-muted-foreground/70 hover:text-foreground/85 hover:bg-muted transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
             <div className="flex items-center gap-1">
@@ -168,13 +168,13 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
                 <button
                   type="button"
                   onClick={() => { setShowMonthList(!showMonthList); setShowYearList(false) }}
-                  className="text-[13px] font-bold text-gray-900 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-2 py-1 transition-all"
+                  className="text-[13px] font-bold text-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-2 py-1 transition-all"
                 >
                   {MONTHS[viewMonth].slice(0, 3)}
-                  <svg className="w-3 h-3 ml-0.5 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  <svg className="w-3 h-3 ml-0.5 inline text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </button>
                 {showMonthList && (
-                  <div className="absolute top-full left-0 mt-1 w-32 bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 z-10 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full left-0 mt-1 w-32 bg-card rounded-xl shadow-2xl ring-1 ring-border/60 py-1 z-10 max-h-48 overflow-y-auto">
                     {MONTHS.map((m, i) => (
                       <button
                         key={m}
@@ -182,7 +182,7 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
                         onClick={() => { setViewMonth(i); setShowMonthList(false) }}
                         className={clsx(
                           'w-full text-left px-3 py-1.5 text-xs font-medium transition-colors',
-                          viewMonth === i ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-700 hover:bg-gray-50'
+                          viewMonth === i ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-foreground/85 hover:bg-muted/40'
                         )}
                       >
                         {m}
@@ -197,13 +197,13 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
                 <button
                   type="button"
                   onClick={() => { setShowYearList(!showYearList); setShowMonthList(false) }}
-                  className="text-[13px] font-bold text-gray-900 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-2 py-1 transition-all"
+                  className="text-[13px] font-bold text-foreground hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-2 py-1 transition-all"
                 >
                   {viewYear}
-                  <svg className="w-3 h-3 ml-0.5 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  <svg className="w-3 h-3 ml-0.5 inline text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </button>
                 {showYearList && (
-                  <div className="absolute top-full right-0 mt-1 w-24 bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 z-10 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full right-0 mt-1 w-24 bg-card rounded-xl shadow-2xl ring-1 ring-border/60 py-1 z-10 max-h-48 overflow-y-auto">
                     {Array.from({ length: 100 }, (_, i) => today.getFullYear() - i).map((y) => (
                       <button
                         key={y}
@@ -211,7 +211,7 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
                         onClick={() => { setViewYear(y); setShowYearList(false) }}
                         className={clsx(
                           'w-full text-left px-3 py-1.5 text-xs font-medium transition-colors',
-                          viewYear === y ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-700 hover:bg-gray-50'
+                          viewYear === y ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-foreground/85 hover:bg-muted/40'
                         )}
                       >
                         {y}
@@ -221,7 +221,7 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
                 )}
               </div>
             </div>
-            <button type="button" onClick={nextMonth} className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <button type="button" onClick={nextMonth} className="p-1 rounded-lg text-muted-foreground/70 hover:text-foreground/85 hover:bg-muted transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
@@ -229,7 +229,7 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
           {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
             {DAYS.map((d) => (
-              <div key={d} className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest py-1">
+              <div key={d} className="text-center text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest py-1">
                 {d}
               </div>
             ))}
@@ -258,7 +258,7 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
                   className={clsx(
                     'h-9 w-full rounded-lg text-sm font-medium transition-all duration-150',
                     disabled && 'text-gray-200 cursor-not-allowed',
-                    !disabled && !selected && 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700',
+                    !disabled && !selected && 'text-foreground/85 hover:bg-indigo-50 hover:text-indigo-700',
                     selected && 'bg-indigo-600 text-white shadow-sm',
                     todayMark && !selected && 'ring-1 ring-inset ring-indigo-300 font-bold text-indigo-600',
                   )}
@@ -270,11 +270,11 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
             <button
               type="button"
               onClick={() => { onChange(''); setOpen(false) }}
-              className="text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-xs font-semibold text-muted-foreground/70 hover:text-muted-foreground transition-colors"
             >
               Clear
             </button>
@@ -282,7 +282,7 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
               type="button"
               onClick={() => { selectDay(today.getDate()); setViewMonth(today.getMonth()); setViewYear(today.getFullYear()) }}
               disabled={max ? todayStr > max : false}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors disabled:text-gray-300"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors disabled:text-muted-foreground/50"
             >
               Today
             </button>

@@ -139,12 +139,12 @@ export function BirthdayCakeCut({ name, onComplete, onClose }: BirthdayCakeCutPr
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={phase === 'idle' ? onClose : undefined} />
 
       {/* Modal */}
-      <div className="relative bg-white dark:bg-gray-900 rounded-3xl p-8 shadow-2xl max-w-md w-[90%] mx-4 animate-modal-pop">
+      <div className="relative bg-card dark:bg-gray-900 rounded-3xl p-8 shadow-2xl max-w-md w-[90%] mx-4 animate-modal-pop">
         {/* Close button */}
         {phase === 'idle' && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            className="absolute top-4 right-4 text-muted-foreground/70 hover:text-muted-foreground dark:hover:text-gray-200 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -152,8 +152,8 @@ export function BirthdayCakeCut({ name, onComplete, onClose }: BirthdayCakeCutPr
 
         {/* Title */}
         <div className="text-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">🎉 It&apos;s Your Birthday!</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h2 className="text-2xl font-bold text-foreground dark:text-gray-100">🎉 It&apos;s Your Birthday!</h2>
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground/70 mt-1">
             {phase === 'celebration' ? 'Enjoy your special day!' : 'Drag the knife down to slice the cake'}
           </p>
         </div>
@@ -228,14 +228,14 @@ export function BirthdayCakeCut({ name, onComplete, onClose }: BirthdayCakeCutPr
             </p>
           )}
           {phase === 'split' && (
-            <p className="text-sm font-semibold text-gray-500">Cutting...</p>
+            <p className="text-sm font-semibold text-muted-foreground">Cutting...</p>
           )}
           {phase === 'celebration' && (
             <div className="animate-text-reveal">
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <p className="text-xl font-bold text-foreground dark:text-gray-100">
                 Happy Birthday, {name}! 🎂
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground/70 mt-1">
                 Wishing you a wonderful year ahead!
               </p>
               <button
@@ -403,7 +403,7 @@ function Knife() {
         }}
       >
         {/* Blade shine streak */}
-        <div className="absolute top-0 left-1/2 w-0.5 h-full bg-white/60" style={{
+        <div className="absolute top-0 left-1/2 w-0.5 h-full bg-card/60" style={{
           clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
         }} />
       </div>

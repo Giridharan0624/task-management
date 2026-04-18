@@ -82,7 +82,7 @@ export function BirthdayBanner() {
         {/* Dismiss button */}
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-3 right-3 text-muted-foreground/70 hover:text-muted-foreground transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
@@ -92,8 +92,8 @@ export function BirthdayBanner() {
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-4xl">🎂</span>
             <div className="flex-1 min-w-[200px]">
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Happy Birthday, {user?.name?.split(' ')[0]}! 🎉</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
+              <p className="text-lg font-bold text-foreground dark:text-gray-100">Happy Birthday, {user?.name?.split(' ')[0]}! 🎉</p>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground/50 mt-0.5">
                 Wishing you a wonderful day from the entire team!
               </p>
             </div>
@@ -113,17 +113,17 @@ export function BirthdayBanner() {
           <div className={isMyBirthday ? 'mt-3 pt-3 border-t border-pink-200/50' : ''}>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xl">🎂</span>
-              <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+              <p className="text-sm font-bold text-foreground/95 dark:text-gray-200">
                 {others.length === 1 ? "Today's Birthday" : "Today's Birthdays"}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               {others.map(person => (
-                <div key={person.userId} className="flex items-center gap-2.5 bg-white/60 dark:bg-white/10 rounded-xl px-3 py-2 border border-pink-100 dark:border-pink-500/20">
+                <div key={person.userId} className="flex items-center gap-2.5 bg-card/60 dark:bg-white/10 rounded-xl px-3 py-2 border border-pink-100 dark:border-pink-500/20">
                   <AvatarOrInitial name={person.name} avatarUrl={person.avatarUrl} />
                   <div>
-                    <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">{person.name}</p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    <p className="text-[13px] font-semibold text-foreground/95 dark:text-gray-200">{person.name}</p>
+                    <p className="text-[10px] text-muted-foreground dark:text-muted-foreground/70">
                       {person.designation || person.department || 'Team Member'}
                     </p>
                   </div>
@@ -161,12 +161,12 @@ export function UpcomingBirthdays() {
   if (upcoming.length === 0) return null
 
   return (
-    <div className="bg-white dark:bg-[var(--color-surface)] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50/60 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-800">
+    <div className="bg-card dark:bg-[var(--color-surface)] rounded-2xl border border-border dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 bg-muted/40 dark:bg-gray-800/30 border-b border-border dark:border-gray-800">
         <span className="text-sm">🎂</span>
-        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Upcoming Birthdays</h3>
+        <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Upcoming Birthdays</h3>
       </div>
-      <div className="divide-y divide-gray-50 dark:divide-gray-800">
+      <div className="divide-y divide-border/60 dark:divide-gray-800">
         {upcoming.slice(0, 5).map(person => {
           const dob = new Date(person.dateOfBirth)
           const monthDay = dob.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -174,12 +174,12 @@ export function UpcomingBirthdays() {
             <div key={person.userId} className="flex items-center gap-3 px-4 py-2.5">
               <AvatarOrInitial name={person.name} avatarUrl={person.avatarUrl} />
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold text-gray-800 dark:text-gray-200 truncate">{person.name}</p>
-                <p className="text-[10px] text-gray-400">{person.designation || person.department || 'Team Member'}</p>
+                <p className="text-[12px] font-semibold text-foreground/95 dark:text-gray-200 truncate">{person.name}</p>
+                <p className="text-[10px] text-muted-foreground/70">{person.designation || person.department || 'Team Member'}</p>
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">{monthDay}</p>
-                <p className="text-[9px] text-gray-400">
+                <p className="text-[9px] text-muted-foreground/70">
                   {person.daysUntil === 1 ? 'Tomorrow' : `In ${person.daysUntil} days`}
                 </p>
               </div>

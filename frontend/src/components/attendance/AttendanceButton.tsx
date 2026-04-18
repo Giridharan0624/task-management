@@ -44,15 +44,15 @@ function groupSessionsByTask(sessions: AttendanceSession[]): GroupedTask[] {
 
 function SessionRow({ task }: { task: GroupedTask }) {
   return (
-    <div className="px-4 py-3 hover:bg-gray-50/80 transition-colors">
+    <div className="px-4 py-3 hover:bg-muted/40 transition-colors">
       <div className="flex items-center gap-3">
         {/* Task info */}
         <div className="min-w-0 w-[140px] flex-shrink-0">
-          <p className="text-[13px] font-medium text-gray-800 truncate">{task.taskTitle}</p>
+          <p className="text-[13px] font-medium text-foreground/95 truncate">{task.taskTitle}</p>
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-gray-400 truncate">{task.projectName}</span>
+            <span className="text-[10px] text-muted-foreground/70 truncate">{task.projectName}</span>
             {task.description && task.taskTitle !== task.description && (
-              <span className="text-[10px] text-gray-400 italic truncate">— {task.description}</span>
+              <span className="text-[10px] text-muted-foreground/70 italic truncate">— {task.description}</span>
             )}
           </div>
         </div>
@@ -60,7 +60,7 @@ function SessionRow({ task }: { task: GroupedTask }) {
         {/* Session times */}
         <div className="flex-1 flex flex-wrap gap-x-3 gap-y-0.5">
           {task.sessions.map((s, i) => (
-            <span key={i} className={`text-[10px] tabular-nums font-mono ${s.signOutAt ? 'text-gray-400' : 'text-emerald-500'}`}>
+            <span key={i} className={`text-[10px] tabular-nums font-mono ${s.signOutAt ? 'text-muted-foreground/70' : 'text-emerald-500'}`}>
               {s.signInAt}{s.signOutAt ? ` – ${s.signOutAt}` : ' – now'}
             </span>
           ))}
@@ -88,7 +88,7 @@ export function AttendanceButton() {
     return () => clearInterval(i)
   }, [active])
 
-  if (isLoading) return <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex items-center justify-center"><Spinner /></div>
+  if (isLoading) return <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center justify-center"><Spinner /></div>
 
   const rawSessions = attendance?.sessions ?? []
   const sessions = (active && attendance?.currentSignInAt)
@@ -133,7 +133,7 @@ export function AttendanceButton() {
 
         {/* Session list (read-only) */}
         {groupedTasks.length > 0 && (
-          <div className="border-t border-emerald-200/50 bg-white/50 divide-y divide-gray-50">
+          <div className="border-t border-emerald-200/50 bg-card/50 divide-y divide-border/60">
             {groupedTasks.map((t, i) => (
               <SessionRow key={i} task={t} />
             ))}
@@ -141,7 +141,7 @@ export function AttendanceButton() {
         )}
 
         {/* Desktop app hint */}
-        <div className="px-5 py-2.5 border-t border-emerald-200/50 bg-white/50">
+        <div className="px-5 py-2.5 border-t border-emerald-200/50 bg-card/50">
           <p className="text-[10px] text-emerald-600 text-center">
             Managed from <span className="font-semibold">Desktop App</span>
           </p>
@@ -154,39 +154,39 @@ export function AttendanceButton() {
   const hasSessions = groupedTasks.length > 0
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       {hasSessions ? (
         <>
           {/* Header with total */}
-          <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
+          <div className="px-5 py-4 flex items-center justify-between border-b border-border/50">
             <div>
-              <p className="text-[13px] font-bold text-gray-900">Time Tracker</p>
-              <p className="text-[11px] text-gray-400">{sessions.length} session{sessions.length !== 1 ? 's' : ''} today</p>
+              <p className="text-[13px] font-bold text-foreground">Time Tracker</p>
+              <p className="text-[11px] text-muted-foreground/70">{sessions.length} session{sessions.length !== 1 ? 's' : ''} today</p>
             </div>
-            <span className="text-[20px] font-bold text-gray-700 font-mono tabular-nums">{formatDuration(totalHours)}</span>
+            <span className="text-[20px] font-bold text-foreground/85 font-mono tabular-nums">{formatDuration(totalHours)}</span>
           </div>
 
           {/* Sessions */}
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-border/60">
             {groupedTasks.map((t, i) => (
               <SessionRow key={i} task={t} />
             ))}
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2.5 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timer stopped</span>
-            <p className="text-[10px] text-gray-400">Use <span className="font-semibold text-indigo-500">Desktop App</span> to resume</p>
+          <div className="px-4 py-2.5 bg-muted/40 border-t border-border flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Timer stopped</span>
+            <p className="text-[10px] text-muted-foreground/70">Use <span className="font-semibold text-indigo-500">Desktop App</span> to resume</p>
           </div>
         </>
       ) : (
         <div className="flex items-center gap-4 p-5">
-          <div className="h-12 w-12 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
-            <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div className="h-12 w-12 rounded-xl bg-muted/40 flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div className="flex-1">
-            <p className="text-[13px] font-bold text-gray-800">No Activity Today</p>
-            <p className="text-[11px] text-gray-400">Start a timer from the Desktop App to begin tracking</p>
+            <p className="text-[13px] font-bold text-foreground/95">No Activity Today</p>
+            <p className="text-[11px] text-muted-foreground/70">Start a timer from the Desktop App to begin tracking</p>
           </div>
         </div>
       )}

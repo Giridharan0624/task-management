@@ -18,7 +18,7 @@ export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
     <span className={`inline-flex items-center justify-center ${box} ${className}`} role="status" aria-label="Loading">
       <svg className="w-full h-full" viewBox="0 0 48 48" fill="none">
         {/* Background track */}
-        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth={stroke} className="text-gray-200 dark:text-gray-700" />
+        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth={stroke} className="text-gray-200 dark:text-foreground/85" />
 
         {/* Spinning gradient arc */}
         <defs>

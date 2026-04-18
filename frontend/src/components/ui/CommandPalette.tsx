@@ -118,26 +118,26 @@ export function CommandPalette() {
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
       <div className="flex items-start justify-center pt-[15vh] px-4">
         <div onClick={e => e.stopPropagation()}
-          className="w-full max-w-lg bg-white dark:bg-[#1a1c25] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700/50 overflow-hidden animate-fade-in-scale"
+          className="w-full max-w-lg bg-card dark:bg-[#1a1c25] rounded-2xl shadow-2xl border border-border/80 dark:border-gray-700/50 overflow-hidden animate-fade-in-scale"
           style={{ animationDuration: '0.15s' }}>
           {/* Search input */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700/50">
-            <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-border dark:border-gray-700/50">
+            <svg className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search pages, projects, tasks..."
-              className="flex-1 bg-transparent text-[15px] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none" />
-            <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[10px] font-bold text-gray-500 dark:text-gray-400">ESC</kbd>
+              className="flex-1 bg-transparent text-[15px] text-foreground dark:text-gray-100 placeholder:text-muted-foreground/70 focus:outline-none" />
+            <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-muted dark:bg-gray-700 text-[10px] font-bold text-muted-foreground dark:text-muted-foreground/70">ESC</kbd>
           </div>
 
           {/* Results */}
           <div className="max-h-[50vh] overflow-y-auto py-2">
             {filtered.length === 0 ? (
               <div className="px-5 py-8 text-center">
-                <p className="text-[13px] text-gray-400">No results for &ldquo;{query}&rdquo;</p>
+                <p className="text-[13px] text-muted-foreground/70">No results for &ldquo;{query}&rdquo;</p>
               </div>
             ) : (
               Array.from(groups.entries()).map(([category, categoryItems]) => (
                 <div key={category}>
-                  <p className="px-5 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">{category}</p>
+                  <p className="px-5 py-1.5 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">{category}</p>
                   {categoryItems.map(item => {
                     const isSelected = flatIndex === selectedIndex
                     const idx = flatIndex
@@ -146,11 +146,11 @@ export function CommandPalette() {
                       <button key={item.id}
                         onMouseEnter={() => setSelectedIndex(idx)}
                         onClick={() => { item.action(); setOpen(false) }}
-                        className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors ${isSelected ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}>
-                        <span className={`flex-shrink-0 ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>{item.icon}</span>
+                        className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors ${isSelected ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-muted/40 dark:hover:bg-gray-700/30'}`}>
+                        <span className={`flex-shrink-0 ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground/70'}`}>{item.icon}</span>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-[13px] font-medium truncate ${isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-800 dark:text-gray-200'}`}>{item.label}</p>
-                          {item.description && <p className="text-[11px] text-gray-400 truncate">{item.description}</p>}
+                          <p className={`text-[13px] font-medium truncate ${isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-foreground/95 dark:text-gray-200'}`}>{item.label}</p>
+                          {item.description && <p className="text-[11px] text-muted-foreground/70 truncate">{item.description}</p>}
                         </div>
                         {isSelected && (
                           <kbd className="text-[10px] text-indigo-500 font-mono">↵</kbd>
@@ -164,10 +164,10 @@ export function CommandPalette() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-2.5 border-t border-gray-100 dark:border-gray-700/50 flex items-center gap-4 text-[10px] text-gray-400">
-            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 font-bold">↑↓</kbd> Navigate</span>
-            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 font-bold">↵</kbd> Open</span>
-            <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 font-bold">⌘K</kbd> Toggle</span>
+          <div className="px-5 py-2.5 border-t border-border dark:border-gray-700/50 flex items-center gap-4 text-[10px] text-muted-foreground/70">
+            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-muted dark:bg-gray-700 font-bold">↑↓</kbd> Navigate</span>
+            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-muted dark:bg-gray-700 font-bold">↵</kbd> Open</span>
+            <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-muted dark:bg-gray-700 font-bold">⌘K</kbd> Toggle</span>
           </div>
         </div>
       </div>

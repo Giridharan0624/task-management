@@ -42,24 +42,24 @@ function StatCard({ icon, label, value, color, gradient, href, sparkData, sparkC
         {sparkData && sparkData.length >= 2 && <Sparkline data={sparkData} color={sparkColor || '#6366f1'} height={28} width={56} />}
       </div>
       <p className={`text-2xl font-bold ${color} tracking-tight tabular-nums`}>{value}</p>
-      <p className="text-[10px] font-semibold text-gray-400 mt-1 uppercase tracking-widest">{label}</p>
+      <p className="text-[10px] font-semibold text-muted-foreground/70 mt-1 uppercase tracking-widest">{label}</p>
     </>
   )
-  const cls = "bg-white rounded-xl border border-gray-100 p-4 shadow-sm"
-  if (href) return <Link href={href} className={`${cls} hover:shadow-md hover:border-gray-200 transition-all block`}>{content}</Link>
+  const cls = "bg-card rounded-xl border border-border p-4 shadow-sm"
+  if (href) return <Link href={href} className={`${cls} hover:shadow-md hover:border-border/80 transition-all block`}>{content}</Link>
   return <div className={cls}>{content}</div>
 }
 
 
 function ActionCard({ href, icon, title, subtitle }: { href: string; icon: React.ReactNode; title: string; subtitle: string }) {
   return (
-    <Link href={href} className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group">
+    <Link href={href} className="flex items-center gap-4 bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md hover:border-border/80 transition-all group">
       <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors flex-shrink-0">{icon}</div>
       <div>
-        <p className="text-[13px] font-semibold text-gray-900">{title}</p>
-        <p className="text-[11px] text-gray-400">{subtitle}</p>
+        <p className="text-[13px] font-semibold text-foreground">{title}</p>
+        <p className="text-[11px] text-muted-foreground/70">{subtitle}</p>
       </div>
-      <svg className="h-4 w-4 text-gray-300 ml-auto group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg className="h-4 w-4 text-muted-foreground/50 ml-auto group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
       </svg>
     </Link>
@@ -69,7 +69,7 @@ function ActionCard({ href, icon, title, subtitle }: { href: string; icon: React
 function SectionHeader({ title, href, linkText }: { title: string; href?: string; linkText?: string }) {
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-[13px] font-bold text-gray-800">{title}</h2>
+      <h2 className="text-[13px] font-bold text-foreground/95">{title}</h2>
       {href && <Link href={href} className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">{linkText ?? 'View all →'}</Link>}
     </div>
   )
@@ -77,7 +77,7 @@ function SectionHeader({ title, href, linkText }: { title: string; href?: string
 
 function TaskRow({ task }: { task: { taskId: string; projectId: string; title: string; projectName?: string; status: string; priority: string } }) {
   return (
-    <Link href={`/projects/${task.projectId}`} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/80 transition-colors group">
+    <Link href={`/projects/${task.projectId}`} className="flex items-center justify-between px-5 py-3 hover:bg-muted/40 transition-colors group">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
           <svg className="h-3.5 w-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -85,8 +85,8 @@ function TaskRow({ task }: { task: { taskId: string; projectId: string; title: s
           </svg>
         </div>
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-gray-800 truncate group-hover:text-indigo-600 transition-colors">{task.title}</p>
-          {task.projectName && <p className="text-[11px] text-gray-400">{task.projectName}</p>}
+          <p className="text-[13px] font-medium text-foreground/95 truncate group-hover:text-indigo-600 transition-colors">{task.title}</p>
+          {task.projectName && <p className="text-[11px] text-muted-foreground/70">{task.projectName}</p>}
         </div>
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
@@ -171,24 +171,24 @@ function PendingUpdatesAlert() {
 function UpcomingDeadlines({ tasks }: { tasks: { taskId: string; projectId: string; title: string; deadline: string; status: string }[] }) {
   if (tasks.length === 0) return null
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-gray-50 flex items-center gap-2">
+    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
         <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <h3 className="text-[13px] font-bold text-gray-800">Due Soon</h3>
+        <h3 className="text-[13px] font-bold text-foreground/95">Due Soon</h3>
         <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-1.5 py-0.5 rounded-md">{tasks.length}</span>
       </div>
-      <div className="divide-y divide-gray-50">
+      <div className="divide-y divide-border/60">
         {tasks.map(t => {
           const _now = new Date()
           const _dl = parseDeadline(t.deadline)
           const diff = Math.round((new Date(_dl.getFullYear(), _dl.getMonth(), _dl.getDate()).getTime() - new Date(_now.getFullYear(), _now.getMonth(), _now.getDate()).getTime()) / (1000 * 60 * 60 * 24))
           const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `${diff} days`
           return (
-            <Link key={t.taskId} href={`/projects/${t.projectId}`} className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50/50 transition-colors group">
+            <Link key={t.taskId} href={`/projects/${t.projectId}`} className="flex items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors group">
               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${diff === 0 ? 'bg-red-400' : diff === 1 ? 'bg-amber-400' : 'bg-blue-400'}`} />
-              <p className="text-[13px] font-medium text-gray-800 flex-1 truncate group-hover:text-indigo-600 transition-colors">{t.title}</p>
-              <span className="text-[10px] text-gray-400">{TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL] ?? t.status}</span>
-              <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${diff === 0 ? 'text-red-600' : diff === 1 ? 'text-amber-600' : 'text-gray-500'}`}>{label}</span>
+              <p className="text-[13px] font-medium text-foreground/95 flex-1 truncate group-hover:text-indigo-600 transition-colors">{t.title}</p>
+              <span className="text-[10px] text-muted-foreground/70">{TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL] ?? t.status}</span>
+              <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${diff === 0 ? 'text-red-600' : diff === 1 ? 'text-amber-600' : 'text-muted-foreground'}`}>{label}</span>
             </Link>
           )
         })}
@@ -212,18 +212,18 @@ function ProjectProgressCards({ projects }: { projects: { projectId: string; nam
           const total = p.taskCount ?? 0
           const done = p.doneCount ?? 0
           return (
-            <Link key={p.projectId} href={`/projects/${p.projectId}`} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group">
+            <Link key={p.projectId} href={`/projects/${p.projectId}`} className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md hover:border-border/80 transition-all group">
               <div className="flex items-center gap-2.5 mb-3">
                 <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${getProjectColor(p.name)} flex items-center justify-center flex-shrink-0`}>
                   <span className="text-white text-[11px] font-bold">{p.name.charAt(0).toUpperCase()}</span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-gray-800 truncate group-hover:text-indigo-600 transition-colors">{p.name}</p>
-                  <p className="text-[10px] text-gray-400">{done}/{total} tasks done</p>
+                  <p className="text-[13px] font-semibold text-foreground/95 truncate group-hover:text-indigo-600 transition-colors">{p.name}</p>
+                  <p className="text-[10px] text-muted-foreground/70">{done}/{total} tasks done</p>
                 </div>
-                <span className={`text-[12px] font-bold tabular-nums ${pct >= 100 ? 'text-emerald-600' : pct >= 50 ? 'text-indigo-600' : 'text-gray-500'}`}>{pct}%</span>
+                <span className={`text-[12px] font-bold tabular-nums ${pct >= 100 ? 'text-emerald-600' : pct >= 50 ? 'text-indigo-600' : 'text-muted-foreground'}`}>{pct}%</span>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-indigo-500' : 'bg-amber-400'}`} style={{ width: `${Math.min(pct, 100)}%` }} />
               </div>
             </Link>
@@ -375,14 +375,14 @@ function AdminDashboard() {
       <div className="space-y-3">
         <SectionHeader title="My Tasks" href="/my-tasks" />
         {allTasks.length === 0 ? (
-          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-10 text-center">
-            <p className="text-[13px] text-gray-400">No tasks assigned to you yet</p>
+          <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 py-10 text-center">
+            <p className="text-[13px] text-muted-foreground/70">No tasks assigned to you yet</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden divide-y divide-border/60">
             {allTasks.slice(0, 5).map(task => <TaskRow key={task.taskId} task={task} />)}
             {allTasks.length > 5 && (
-              <div className="text-center py-3 bg-gray-50/60">
+              <div className="text-center py-3 bg-muted/40">
                 <Link href="/my-tasks" className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">View all {allTasks.length} tasks →</Link>
               </div>
             )}
@@ -437,15 +437,15 @@ function MemberDashboard() {
       <div className="space-y-3">
         <SectionHeader title="My Tasks" href="/my-tasks" />
         {allTasks.length === 0 ? (
-          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 py-10 text-center">
-            <p className="text-[13px] text-gray-400">No tasks assigned to you yet</p>
+          <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 py-10 text-center">
+            <p className="text-[13px] text-muted-foreground/70">No tasks assigned to you yet</p>
             <Link href="/projects" className="mt-2 inline-block text-[13px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">Go to Projects →</Link>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden divide-y divide-border/60">
             {allTasks.slice(0, 5).map(task => <TaskRow key={task.taskId} task={task} />)}
             {allTasks.length > 5 && (
-              <div className="text-center py-3 bg-gray-50/60">
+              <div className="text-center py-3 bg-muted/40">
                 <Link href="/my-tasks" className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">View all {allTasks.length} tasks →</Link>
               </div>
             )}
@@ -469,12 +469,12 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
             {user?.systemRole === 'OWNER'
               ? `Welcome, ${user?.name ?? 'there'}`
               : `Welcome back, ${user?.name?.split(' ')[0] ?? 'there'}`}
           </h1>
-          <p className="mt-0.5 text-[13px] text-gray-400">{dateStr}</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground/70">{dateStr}</p>
         </div>
         <Badge className={ROLE_COLORS[user?.systemRole ?? 'MEMBER']}>{user?.systemRole}</Badge>
       </div>

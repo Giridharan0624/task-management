@@ -97,15 +97,15 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
         type="button"
         onClick={() => setOpen(!open)}
         className={clsx(
-          'w-full flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-left transition-all hover:border-gray-300',
+          'w-full flex items-center justify-between rounded-xl border border-border/80 bg-card px-4 py-2.5 text-sm text-left transition-all hover:border-border',
           'focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400',
-          !value && 'text-gray-400',
-          value && 'text-gray-900',
+          !value && 'text-muted-foreground/70',
+          value && 'text-foreground',
           className,
         )}
       >
         <span>{value ? formatDisplay(value) : placeholder}</span>
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </button>
@@ -113,12 +113,12 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
       {open && createPortal(
         <div
           data-timepicker-dropdown
-          className="fixed z-[9999] w-[280px] bg-white rounded-2xl shadow-2xl ring-1 ring-gray-200/50 p-4 animate-fade-in-scale"
+          className="fixed z-[9999] w-[280px] bg-card rounded-2xl shadow-2xl ring-1 ring-border/60 p-4 animate-fade-in-scale"
           style={{ animationDuration: '0.12s', top: pos.top, left: pos.left }}
         >
           {/* Preview */}
           <div className="text-center mb-3">
-            <span className="text-2xl font-bold text-gray-900 tracking-tight">{previewStr}</span>
+            <span className="text-2xl font-bold text-foreground tracking-tight">{previewStr}</span>
             <span className={clsx('text-sm font-bold ml-1.5', selPeriod === 'AM' ? 'text-indigo-600' : 'text-violet-600')}>{selPeriod}</span>
           </div>
 
@@ -133,7 +133,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
                   'flex-1 py-2 rounded-lg text-xs font-bold tracking-wider transition-all',
                   selPeriod === p
                     ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
+                    : 'bg-muted/40 text-muted-foreground hover:bg-muted border border-border/80'
                 )}
               >
                 {p}
@@ -145,8 +145,8 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
           <div className="flex gap-2 mb-3">
             {/* Hours (1-12) */}
             <div className="flex-1">
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center mb-1">Hour</p>
-              <div className="h-40 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50/50">
+              <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest text-center mb-1">Hour</p>
+              <div className="h-40 overflow-y-auto rounded-lg border border-border bg-muted/30">
                 {hours12.map((h) => (
                   <button
                     key={h}
@@ -156,7 +156,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
                       'w-full px-2 py-1.5 text-xs font-medium text-center transition-all',
                       selHour12 === h
                         ? 'bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700',
+                        : 'text-foreground/85 hover:bg-indigo-50 hover:text-indigo-700',
                     )}
                   >
                     {h}
@@ -167,8 +167,8 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
 
             {/* Minutes (00-59) */}
             <div className="flex-1">
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center mb-1">Min</p>
-              <div className="h-40 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50/50">
+              <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest text-center mb-1">Min</p>
+              <div className="h-40 overflow-y-auto rounded-lg border border-border bg-muted/30">
                 {minutes.map((m) => (
                   <button
                     key={m}
@@ -178,7 +178,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
                       'w-full px-2 py-1.5 text-xs font-medium text-center transition-all',
                       selMin === m
                         ? 'bg-indigo-600 text-white'
-                        : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700',
+                        : 'text-foreground/85 hover:bg-indigo-50 hover:text-indigo-700',
                     )}
                   >
                     :{pad(m)}
@@ -190,7 +190,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
 
           {/* Actions */}
           <div className="flex items-center justify-between">
-            <button type="button" onClick={() => { onChange(''); setOpen(false) }} className="text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
+            <button type="button" onClick={() => { onChange(''); setOpen(false) }} className="text-xs font-semibold text-muted-foreground/70 hover:text-muted-foreground transition-colors">
               Clear
             </button>
             <button type="button" onClick={confirm} className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors">

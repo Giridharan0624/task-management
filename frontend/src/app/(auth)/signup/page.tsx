@@ -2,34 +2,33 @@
 
 import { SignupForm } from '@/components/auth/SignupForm'
 import { Logo } from '@/components/ui/Logo'
+import { Card } from '@/components/ui/Card'
 
 export default function SignupPage() {
   return (
-    <div className="flex min-h-screen bg-white dark:bg-[#0f1117]">
-      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
+    <div className="flex min-h-screen bg-background">
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm animate-fade-in">
-          <div className="flex justify-center mb-8">
+          <div className="mb-8 flex justify-center">
             <Logo size="lg" />
           </div>
 
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
               Create your workspace
             </h2>
-            <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               Start managing your team in minutes. No credit card required.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-[#1a1c25] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2a2d3a]">
+          <Card className="p-6 shadow-card">
             <SignupForm />
-          </div>
+          </Card>
 
-          <p className="mt-6 text-center text-[10px] text-gray-400 dark:text-gray-500">
+          <p className="mt-6 text-center text-[10px] text-muted-foreground">
             Powered by{' '}
-            <span className="font-semibold text-gray-500 dark:text-gray-400">
-              NEUROSTACK
-            </span>
+            <span className="font-semibold">NEUROSTACK</span>
           </p>
         </div>
       </div>

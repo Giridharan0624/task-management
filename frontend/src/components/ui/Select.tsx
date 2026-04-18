@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import clsx from 'clsx'
+import * as React from 'react'
+import * as SelectPrimitive from '@radix-ui/react-select'
+import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface SelectOption {
   value: string
@@ -18,93 +19,84 @@ interface SelectProps {
   disabled?: boolean
 }
 
-export function Select({ options, value, onChange, placeholder = 'Select...', className, disabled }: SelectProps) {
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
-  const ref = useRef<HTMLDivElement>(null)
-
-  const selected = options.find((o) => o.value === value)
-
-  const updatePos = () => {
-    if (!ref.current) return
-    const rect = ref.current.getBoundingClientRect()
-    const dropHeight = Math.min(options.length * 36 + 8, 240)
-    const spaceBelow = window.innerHeight - rect.bottom
-
-    setPos({
-      top: spaceBelow >= dropHeight ? rect.bottom + 4 : Math.max(4, rect.top - dropHeight - 4),
-      left: rect.left,
-      width: rect.width,
-    })
-  }
-
-  useEffect(() => {
-    if (!open) return
-    updatePos()
-
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Element
-      if (ref.current && !ref.current.contains(target) && !target.closest?.('[data-select-dropdown]')) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    window.addEventListener('scroll', updatePos, true)
-    window.addEventListener('resize', updatePos)
-    return () => {
-      document.removeEventListener('mousedown', handler)
-      window.removeEventListener('scroll', updatePos, true)
-      window.removeEventListener('resize', updatePos)
-    }
-  }, [open])
-
+/**
+ * Drop-in backwards-compatible Select component.
+ * Internally uses Radix Select for full keyboard + screen reader support.
+ * API matches the legacy component so no page-level changes are needed.
+ */
+export function Select({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select...',
+  className,
+  disabled,
+}: SelectProps) {
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setOpen(!open)}
-        className={clsx(
-          'w-full flex items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-sm text-left transition-all',
-          'focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400',
-          disabled
-            ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-            : 'border-gray-200 hover:border-gray-300 cursor-pointer',
-          !value && !disabled && 'text-gray-400',
-          value && !disabled && 'text-gray-900',
-          className,
+    <SelectPrimitive.Root
+      value={value}
+      onValueChange={onChange}
+      disabled={disabled}
+    >
+      <SelectPrimitive.Trigger
+        className={cn(
+          'flex h-10 w-full items-center justify-between rounded-xl border border-input bg-card px-4 py-2 text-sm text-left transition-all',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring',
+          'disabled:cursor-not-allowed disabled:opacity-60',
+          'data-[placeholder]:text-muted-foreground',
+          'hover:border-border/80',
+          className
         )}
       >
-        <span className="truncate">{selected ? selected.label : placeholder}</span>
-        <svg className={clsx('w-4 h-4 flex-shrink-0 transition-transform', open && 'rotate-180', disabled ? 'text-gray-300' : 'text-gray-400')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+        <SelectPrimitive.Value placeholder={placeholder} />
+        <SelectPrimitive.Icon asChild>
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
 
-      {open && createPortal(
-        <div
-          data-select-dropdown
-          className="fixed z-[9999] bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 animate-fade-in-scale overflow-y-auto"
-          style={{ animationDuration: '0.1s', top: pos.top, left: pos.left, minWidth: pos.width, maxHeight: 240 }}
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          position="popper"
+          sideOffset={4}
+          className={cn(
+            'relative z-[9999] max-h-[300px] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-elevated',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
+          )}
         >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => { onChange(opt.value); setOpen(false) }}
-              className={clsx(
-                'w-full text-left px-4 py-2 text-sm transition-colors',
-                value === opt.value
-                  ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                  : 'text-gray-700 hover:bg-gray-50',
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-    </div>
+          <SelectPrimitive.ScrollUpButton className="flex h-6 cursor-default items-center justify-center bg-popover">
+            <ChevronUp className="h-4 w-4" />
+          </SelectPrimitive.ScrollUpButton>
+          <SelectPrimitive.Viewport className="p-1">
+            {options.map((opt) => (
+              <SelectPrimitive.Item
+                key={opt.value}
+                value={opt.value}
+                className="relative flex w-full cursor-pointer select-none items-center rounded-lg py-2 pl-8 pr-2 text-sm text-foreground outline-none transition-colors focus:bg-muted focus:text-foreground data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary data-[state=checked]:font-semibold data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+              >
+                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                  <SelectPrimitive.ItemIndicator>
+                    <Check className="h-3.5 w-3.5" />
+                  </SelectPrimitive.ItemIndicator>
+                </span>
+                <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
+              </SelectPrimitive.Item>
+            ))}
+          </SelectPrimitive.Viewport>
+          <SelectPrimitive.ScrollDownButton className="flex h-6 cursor-default items-center justify-center bg-popover">
+            <ChevronDown className="h-4 w-4" />
+          </SelectPrimitive.ScrollDownButton>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   )
 }
+
+// Re-export the primitive in case pages want the full shadcn API.
+export const SelectRoot = SelectPrimitive.Root
+export const SelectTrigger = SelectPrimitive.Trigger
+export const SelectValue = SelectPrimitive.Value
+export const SelectContent = SelectPrimitive.Content
+export const SelectItem = SelectPrimitive.Item
+export const SelectGroup = SelectPrimitive.Group
+export const SelectLabel = SelectPrimitive.Label
+export const SelectSeparator = SelectPrimitive.Separator

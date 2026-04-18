@@ -158,13 +158,13 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
     <div className="flex flex-col gap-0">
 
       {/* ── Pipeline Header ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border shadow-sm mb-4 overflow-hidden">
         {/* Top bar */}
-        <div className="flex flex-col gap-3 px-5 py-4 border-b border-gray-50">
+        <div className="flex flex-col gap-3 px-5 py-4 border-b border-border/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h3 className="text-[13px] font-bold text-gray-800 tracking-tight">Pipeline</h3>
-              <span className="text-[11px] bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-md tabular-nums">{tasks.length}</span>
+              <h3 className="text-[13px] font-bold text-foreground/95 tracking-tight">Pipeline</h3>
+              <span className="text-[11px] bg-muted text-muted-foreground font-semibold px-2 py-0.5 rounded-md tabular-nums">{tasks.length}</span>
             </div>
             {permissions.canCreateTask && (
               <button onClick={() => setShowCreateModal(true)}
@@ -179,7 +179,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
           <div className="flex items-center gap-2 flex-wrap">
             {/* Search */}
             <div className="relative flex-1 min-w-[180px] max-w-[280px]">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -187,10 +187,10 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search tasks..."
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-1.5 text-[12px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white focus:border-indigo-400 transition-all"
+                className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-1.5 text-[12px] text-foreground/85 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-card focus:border-indigo-400 transition-all"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               )}
@@ -200,7 +200,7 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
             <FilterSelect value={sort} onChange={v => setSort(v as SortOption)} active={sort !== 'default'}
               options={[{ value: 'default', label: 'Sort by' }, { value: 'priority', label: 'Sort: Priority' }, { value: 'deadline', label: 'Sort: Deadline' }, { value: 'title', label: 'Sort: Title' }, { value: 'created', label: 'Sort: Created' }]} />
 
-            <div className="w-px h-5 bg-gray-100 flex-shrink-0" />
+            <div className="w-px h-5 bg-muted flex-shrink-0" />
 
             {/* Priority filter */}
             <FilterSelect value={priorityFilter} onChange={v => setPriorityFilter(v as 'ALL' | TaskPriority)} active={priorityFilter !== 'ALL'}
@@ -214,12 +214,12 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
 
             {/* Overdue toggle */}
             <button onClick={() => setShowOverdueOnly(!showOverdueOnly)}
-              className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-all ${showOverdueOnly ? 'border-red-300 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+              className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-all ${showOverdueOnly ? 'border-red-300 bg-red-50 text-red-600' : 'border-border/80 bg-card text-muted-foreground hover:text-foreground/85 hover:border-border'}`}>
               Overdue
             </button>
 
             {activeFilterCount > 0 && (
-              <button onClick={clearAll} className="text-[11px] text-gray-400 hover:text-gray-600 font-medium transition-colors">
+              <button onClick={clearAll} className="text-[11px] text-muted-foreground/70 hover:text-muted-foreground font-medium transition-colors">
                 Clear all
               </button>
             )}
@@ -229,20 +229,20 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
         {/* Status pills */}
         <div className="flex items-center gap-2 px-5 py-3 overflow-x-auto">
           <button onClick={() => setFilter('ALL')}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all flex-shrink-0 ${filter === 'ALL' ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}>
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all flex-shrink-0 ${filter === 'ALL' ? 'bg-gray-900 text-white shadow-sm' : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground/85'}`}>
             All
-            <span className={`tabular-nums ${filter === 'ALL' ? 'text-gray-300' : 'text-gray-400'}`}>{filteredTasks.length}{activeFilterCount > 0 ? `/${tasks.length}` : ''}</span>
+            <span className={`tabular-nums ${filter === 'ALL' ? 'text-muted-foreground/50' : 'text-muted-foreground/70'}`}>{filteredTasks.length}{activeFilterCount > 0 ? `/${tasks.length}` : ''}</span>
           </button>
-          <div className="w-px h-5 bg-gray-100 flex-shrink-0" />
+          <div className="w-px h-5 bg-muted flex-shrink-0" />
           {STAGES.map(stage => {
             const count = statusCounts[stage]; const isActive = filter === stage; const hasItems = count > 0
             return (
               <button key={stage} onClick={() => setFilter(isActive ? 'ALL' : stage)}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all flex-shrink-0 border ${isActive ? `${STAGE_BG[stage]} shadow-sm` : hasItems ? 'bg-white border-gray-200 text-gray-600 hover:border-gray-300' : 'bg-white border-gray-200 text-gray-400'}`}>
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all flex-shrink-0 border ${isActive ? `${STAGE_BG[stage]} shadow-sm` : hasItems ? 'bg-card border-border/80 text-muted-foreground hover:border-border' : 'bg-card border-border/80 text-muted-foreground/70'}`}>
                 <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: STAGE_COLORS[stage], opacity: hasItems || isActive ? 1 : 0.3 }} />
                 <span className="hidden sm:inline">{TASK_STATUS_LABEL[stage]}</span>
                 <span className="sm:hidden">{TASK_STATUS_LABEL[stage].slice(0, 3)}</span>
-                {hasItems && <span className={`tabular-nums ${isActive ? '' : 'text-gray-400'}`}>{count}</span>}
+                {hasItems && <span className={`tabular-nums ${isActive ? '' : 'text-muted-foreground/70'}`}>{count}</span>}
               </button>
             )
           })}
@@ -257,23 +257,23 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
           if (stageTasks.length === 0 && filter === 'ALL') return null
 
           return (
-            <div key={stage} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div key={stage} className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
               <button onClick={() => toggleCollapse(stage)}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
-                <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0 ${isCollapsed ? '' : 'rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
+                <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform flex-shrink-0 ${isCollapsed ? '' : 'rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STAGE_COLORS[stage] }} />
-                <span className="text-[13px] font-semibold text-gray-700">{TASK_STATUS_LABEL[stage]}</span>
+                <span className="text-[13px] font-semibold text-foreground/85">{TASK_STATUS_LABEL[stage]}</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${STAGE_BG[stage]}`}>{stageTasks.length}</span>
-                <span className="ml-auto text-[10px] text-gray-300 tabular-nums">Stage {STAGES.indexOf(stage) + 1}/{STAGES.length}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums">Stage {STAGES.indexOf(stage) + 1}/{STAGES.length}</span>
               </button>
 
               {!isCollapsed && (
-                <div className="border-t border-gray-50">
+                <div className="border-t border-border/50">
                   {stageTasks.length === 0 ? (
                     <div className="px-5 py-8 text-center">
-                      <p className="text-xs text-gray-300">No tasks in this stage</p>
+                      <p className="text-xs text-muted-foreground/50">No tasks in this stage</p>
                     </div>
                   ) : stageTasks.map((task, idx) => {
                     const isOverdue = checkOverdue(task.deadline, task.status)
@@ -283,14 +283,14 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
 
                     return (
                       <div key={task.taskId}
-                        className={`flex items-center gap-3 px-5 py-3 hover:bg-gray-50/70 transition-colors group ${idx < stageTasks.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                        className={`flex items-center gap-3 px-5 py-3 hover:bg-muted/40 transition-colors group ${idx < stageTasks.length - 1 ? 'border-b border-border/50' : ''}`}>
                         {/* Priority bar */}
                         <div className={`w-[3px] h-8 rounded-full flex-shrink-0 ${pri.color}`} title={pri.label} />
 
                         {/* Task info — clickable */}
                         <button onClick={() => setSelectedTaskId(task.taskId)} className="flex-1 min-w-0 text-left">
                           <div className="flex items-center gap-2">
-                            <p className="text-[13px] font-medium text-gray-800 truncate group-hover:text-gray-950 transition-colors">
+                            <p className="text-[13px] font-medium text-foreground/95 truncate group-hover:text-gray-950 transition-colors">
                               {task.title}
                             </p>
                             {isOverdue && (
@@ -304,11 +304,11 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
                                   style={{ backgroundColor: si <= stageIdx ? STAGE_COLORS[task.status] : '#e5e7eb' }} />
                               ))}
                             </div>
-                            <span className="text-[10px] text-gray-400 tabular-nums">{progressPct}%</span>
+                            <span className="text-[10px] text-muted-foreground/70 tabular-nums">{progressPct}%</span>
                             {task.deadline && (
                               <>
                                 <span className="text-gray-200">·</span>
-                                <span className={`text-[10px] tabular-nums ${isOverdue ? 'text-red-500' : 'text-gray-400'}`}>
+                                <span className={`text-[10px] tabular-nums ${isOverdue ? 'text-red-500' : 'text-muted-foreground/70'}`}>
                                   {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
                               </>
@@ -327,19 +327,19 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
                         {/* Assignees */}
                         <div className="flex items-center -space-x-1.5 flex-shrink-0">
                           {(task.assignedTo ?? []).slice(0, 3).map(uid => (
-                            <span key={uid} className="inline-flex items-center justify-center rounded-full bg-gray-100 ring-2 ring-white text-[8px] font-bold text-gray-500"
+                            <span key={uid} className="inline-flex items-center justify-center rounded-full bg-muted ring-2 ring-white text-[8px] font-bold text-muted-foreground"
                               style={{ width: 24, height: 24 }} title={resolveName(uid)}>
                               {resolveInitials(uid)}
                             </span>
                           ))}
                           {(task.assignedTo?.length ?? 0) > 3 && (
-                            <span className="text-[10px] text-gray-400 pl-1">+{task.assignedTo!.length - 3}</span>
+                            <span className="text-[10px] text-muted-foreground/70 pl-1">+{task.assignedTo!.length - 3}</span>
                           )}
                         </div>
 
                         {/* Arrow */}
                         <button onClick={() => setSelectedTaskId(task.taskId)} className="flex-shrink-0">
-                          <svg className="w-4 h-4 text-gray-200 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-gray-200 group-hover:text-muted-foreground/70 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
@@ -354,12 +354,12 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
 
         {/* Empty state */}
         {tasks.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-16 text-center">
+          <div className="bg-card rounded-2xl border border-border shadow-sm px-8 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-indigo-50 mx-auto mb-4 flex items-center justify-center">
               <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
             </div>
-            <h3 className="text-[15px] font-bold text-gray-800 mb-1">No tasks yet</h3>
-            <p className="text-[13px] text-gray-400 mb-5 max-w-xs mx-auto">Create your first task to start tracking work on this project</p>
+            <h3 className="text-[15px] font-bold text-foreground/95 mb-1">No tasks yet</h3>
+            <p className="text-[13px] text-muted-foreground/70 mb-5 max-w-xs mx-auto">Create your first task to start tracking work on this project</p>
             {permissions.canCreateTask && (
               <button onClick={() => setShowCreateModal(true)}
                 className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-[13px] font-semibold text-white hover:bg-gray-800 transition-all shadow-sm">
@@ -372,9 +372,9 @@ export function TaskKanban({ projectId, tasks, permissions, members = [], domain
 
         {/* No results from filters */}
         {tasks.length > 0 && filteredTasks.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-12 text-center">
+          <div className="bg-card rounded-2xl border border-border shadow-sm px-8 py-12 text-center">
             <svg className="w-10 h-10 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            <p className="text-[13px] text-gray-500 font-medium">No tasks match your filters</p>
+            <p className="text-[13px] text-muted-foreground font-medium">No tasks match your filters</p>
             <button onClick={clearAll} className="text-[12px] text-indigo-600 font-semibold mt-2 hover:text-indigo-800 transition-colors">Clear all filters</button>
           </div>
         )}

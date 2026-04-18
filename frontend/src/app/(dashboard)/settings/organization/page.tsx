@@ -81,16 +81,16 @@ export default function OrgSettingsPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-8">
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-foreground dark:text-white">
           Organization settings
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           These changes apply to everyone in your workspace.
         </p>
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex gap-1 mb-6 border-b border-border/80 dark:border-gray-700">
         {(['branding', 'terminology', 'features'] as const).map((t) => (
           <button
             key={t}
@@ -98,7 +98,7 @@ export default function OrgSettingsPage() {
             className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
               tab === t
                 ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-800'
+                : 'border-transparent text-muted-foreground hover:text-foreground/95'
             }`}
           >
             {t}
@@ -135,7 +135,7 @@ export default function OrgSettingsPage() {
           />
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
+              <label className="text-sm font-semibold text-foreground/85 mb-1.5 block">
                 Primary color
               </label>
               <div className="flex gap-2 items-center">
@@ -143,18 +143,18 @@ export default function OrgSettingsPage() {
                   type="color"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="h-10 w-14 rounded border border-gray-200 cursor-pointer"
+                  className="h-10 w-14 rounded border border-border/80 cursor-pointer"
                 />
                 <input
                   type="text"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                  className="flex-1 rounded-xl border border-border/80 px-3 py-2 text-sm"
                 />
               </div>
             </div>
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
+              <label className="text-sm font-semibold text-foreground/85 mb-1.5 block">
                 Accent color
               </label>
               <div className="flex gap-2 items-center">
@@ -162,19 +162,19 @@ export default function OrgSettingsPage() {
                   type="color"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="h-10 w-14 rounded border border-gray-200 cursor-pointer"
+                  className="h-10 w-14 rounded border border-border/80 cursor-pointer"
                 />
                 <input
                   type="text"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                  className="flex-1 rounded-xl border border-border/80 px-3 py-2 text-sm"
                 />
               </div>
             </div>
           </div>
           {/* Live preview swatch */}
-          <div className="rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+          <div className="rounded-xl border border-border/80 p-4 flex items-center gap-3">
             <div
               className="h-10 w-10 rounded-lg"
               style={{ backgroundColor: primaryColor }}
@@ -183,7 +183,7 @@ export default function OrgSettingsPage() {
               className="h-10 w-10 rounded-lg"
               style={{ backgroundColor: accentColor }}
             />
-            <span className="text-sm text-gray-500">Preview</span>
+            <span className="text-sm text-muted-foreground">Preview</span>
           </div>
           <Button
             onClick={() =>
@@ -204,16 +204,16 @@ export default function OrgSettingsPage() {
 
       {tab === 'terminology' && (
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Override how TaskFlow refers to things in your workspace.
             Leave any field blank to use the default.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(BASE_TERMINOLOGY).map(([key, defaultValue]) => (
               <div key={key}>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   {key}{' '}
-                  <span className="text-gray-400 font-normal">
+                  <span className="text-muted-foreground/70 font-normal">
                     (default: {defaultValue})
                   </span>
                 </label>
@@ -230,7 +230,7 @@ export default function OrgSettingsPage() {
                     })
                   }}
                   placeholder={defaultValue}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-border/80 px-3 py-2 text-sm"
                 />
               </div>
             ))}
@@ -247,15 +247,15 @@ export default function OrgSettingsPage() {
 
       {tab === 'features' && (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-gray-500 mb-2">
+          <p className="text-sm text-muted-foreground mb-2">
             Turn features on or off for everyone in your workspace.
           </p>
           {Object.entries(features).map(([key, enabled]) => (
             <label
               key={key}
-              className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50"
+              className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/80 cursor-pointer hover:bg-muted/40"
             >
-              <span className="text-sm font-medium text-gray-800 capitalize">
+              <span className="text-sm font-medium text-foreground/95 capitalize">
                 {key.replace(/_/g, ' ')}
               </span>
               <input
@@ -264,7 +264,7 @@ export default function OrgSettingsPage() {
                 onChange={(e) =>
                   setFeatures((prev) => ({ ...prev, [key]: e.target.checked }))
                 }
-                className="h-5 w-9 appearance-none bg-gray-300 rounded-full relative cursor-pointer checked:bg-primary transition-colors before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition-transform checked:before:translate-x-4"
+                className="h-5 w-9 appearance-none bg-gray-300 rounded-full relative cursor-pointer checked:bg-primary transition-colors before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:h-4 before:w-4 before:rounded-full before:bg-card before:transition-transform checked:before:translate-x-4"
               />
             </label>
           ))}

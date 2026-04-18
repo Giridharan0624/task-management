@@ -137,10 +137,10 @@ export default function AttendancePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
             {isPrivileged ? 'Team Attendance' : 'My Attendance'}
           </h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">{monthLabel}</p>
+          <p className="text-[13px] text-muted-foreground/70 mt-0.5">{monthLabel}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={String(selectedMonth)} onChange={v => setSelectedMonth(Number(v))} options={months} className="w-32" />
@@ -158,21 +158,21 @@ export default function AttendancePage() {
         <>
           {/* Stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <p className="text-xl font-bold text-indigo-700 tabular-nums">{formatDuration(totalHours)}</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Total Hours</p>
+              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Total Hours</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <p className="text-xl font-bold text-violet-700 tabular-nums">{uniqueMembers}</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Members</p>
+              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Members</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <p className="text-xl font-bold text-blue-700 tabular-nums">{totalSessions}</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Sessions</p>
+              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Sessions</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <p className="text-xl font-bold text-emerald-700 tabular-nums">{formatDuration(avgPerDay)}</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Avg / Day</p>
+              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Avg / Day</p>
             </div>
           </div>
 
@@ -180,28 +180,28 @@ export default function AttendancePage() {
           {isPrivileged && (
             <div className="flex items-center gap-2">
               <div className="relative flex-1 max-w-[280px]">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search member..."
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-[12px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-white transition-all" />
+                  className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-[12px] text-foreground/85 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-card transition-all" />
               </div>
               <FilterSelect value={memberFilter} onChange={setMemberFilter} active={memberFilter !== 'ALL'}
                 options={[{ value: 'ALL', label: 'All Members' }, ...memberOptions.map(m => ({ value: m.id, label: m.name }))]} />
               {(search || memberFilter !== 'ALL') && (
-                <button onClick={() => { setSearch(''); setMemberFilter('ALL') }} className="text-[11px] text-gray-400 hover:text-gray-600 font-medium">Clear</button>
+                <button onClick={() => { setSearch(''); setMemberFilter('ALL') }} className="text-[11px] text-muted-foreground/70 hover:text-muted-foreground font-medium">Clear</button>
               )}
             </div>
           )}
 
           {/* Monthly Summary */}
           {userStats.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-gray-50">
-                <h3 className="text-[13px] font-bold text-gray-800">Monthly Summary</h3>
+            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-border/50">
+                <h3 className="text-[13px] font-bold text-foreground/95">Monthly Summary</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="bg-gray-50/60 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <tr className="bg-muted/40 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
                       <th className="text-left px-5 py-2.5">Member</th>
                       <th className="text-left px-5 py-2.5">Role</th>
                       <th className="text-center px-5 py-2.5">Days</th>
@@ -211,24 +211,24 @@ export default function AttendancePage() {
                       <th className="text-left px-5 py-2.5 min-w-[120px]">Distribution</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-border/60">
                     {userStats.map((s, i) => (
-                      <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                      <tr key={i} className="hover:bg-muted/30 transition-colors">
                         <td className="px-5 py-3">
-                          <p className="font-semibold text-gray-800">{s.name}</p>
-                          <p className="text-[10px] text-gray-400">{s.email}</p>
+                          <p className="font-semibold text-foreground/95">{s.name}</p>
+                          <p className="text-[10px] text-muted-foreground/70">{s.email}</p>
                         </td>
-                        <td className="px-5 py-3 text-gray-500">{s.role}</td>
-                        <td className="px-5 py-3 text-center font-semibold text-gray-700 tabular-nums">{s.days}</td>
-                        <td className="px-5 py-3 text-center text-gray-500 tabular-nums">{s.sessions}</td>
+                        <td className="px-5 py-3 text-muted-foreground">{s.role}</td>
+                        <td className="px-5 py-3 text-center font-semibold text-foreground/85 tabular-nums">{s.days}</td>
+                        <td className="px-5 py-3 text-center text-muted-foreground tabular-nums">{s.sessions}</td>
                         <td className="px-5 py-3 text-right font-bold text-indigo-600 tabular-nums">{formatDuration(s.totalHours)}</td>
-                        <td className="px-5 py-3 text-right text-gray-500 tabular-nums">{formatDuration(s.days > 0 ? s.totalHours / s.days : 0)}</td>
+                        <td className="px-5 py-3 text-right text-muted-foreground tabular-nums">{formatDuration(s.days > 0 ? s.totalHours / s.days : 0)}</td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                               <div className="h-full rounded-full bg-indigo-500" style={{ width: `${totalHours > 0 ? (s.totalHours / totalHours) * 100 : 0}%` }} />
                             </div>
-                            <span className="text-[10px] text-gray-400 tabular-nums w-8 text-right">{totalHours > 0 ? Math.round((s.totalHours / totalHours) * 100) : 0}%</span>
+                            <span className="text-[10px] text-muted-foreground/70 tabular-nums w-8 text-right">{totalHours > 0 ? Math.round((s.totalHours / totalHours) * 100) : 0}%</span>
                           </div>
                         </td>
                       </tr>
@@ -241,15 +241,15 @@ export default function AttendancePage() {
 
           {/* Per-Task Breakdown */}
           {taskStats.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
-                <h3 className="text-[13px] font-bold text-gray-800">Task Breakdown</h3>
-                <span className="text-[11px] text-gray-400 tabular-nums">{taskStats.length} entries</span>
+            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-border/50 flex items-center justify-between">
+                <h3 className="text-[13px] font-bold text-foreground/95">Task Breakdown</h3>
+                <span className="text-[11px] text-muted-foreground/70 tabular-nums">{taskStats.length} entries</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="bg-gray-50/60 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <tr className="bg-muted/40 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
                       <th className="text-left px-5 py-2.5">Member</th>
                       <th className="text-left px-5 py-2.5">Project</th>
                       <th className="text-left px-5 py-2.5">Task</th>
@@ -257,13 +257,13 @@ export default function AttendancePage() {
                       <th className="text-right px-5 py-2.5">Hours</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-border/60">
                     {taskStats.slice(0, 20).map((s, i) => (
-                      <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-2.5 text-gray-700">{s.userName}</td>
-                        <td className="px-5 py-2.5 text-gray-500">{s.projectName}</td>
-                        <td className="px-5 py-2.5 font-medium text-gray-800">{s.taskTitle}</td>
-                        <td className="px-5 py-2.5 text-center text-gray-500 tabular-nums">{s.sessions}</td>
+                      <tr key={i} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-2.5 text-foreground/85">{s.userName}</td>
+                        <td className="px-5 py-2.5 text-muted-foreground">{s.projectName}</td>
+                        <td className="px-5 py-2.5 font-medium text-foreground/95">{s.taskTitle}</td>
+                        <td className="px-5 py-2.5 text-center text-muted-foreground tabular-nums">{s.sessions}</td>
                         <td className="px-5 py-2.5 text-right font-bold text-indigo-600 tabular-nums">{formatDuration(s.totalHours)}</td>
                       </tr>
                     ))}
@@ -274,46 +274,46 @@ export default function AttendancePage() {
           )}
 
           {/* Daily Records — expandable */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
-              <h3 className="text-[13px] font-bold text-gray-800">Daily Records</h3>
-              <span className="text-[11px] text-gray-400 tabular-nums">{records.length} entries</span>
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border/50 flex items-center justify-between">
+              <h3 className="text-[13px] font-bold text-foreground/95">Daily Records</h3>
+              <span className="text-[11px] text-muted-foreground/70 tabular-nums">{records.length} entries</span>
             </div>
             {records.length === 0 ? (
-              <div className="px-5 py-10 text-center text-[13px] text-gray-300">No attendance records for {monthLabel}</div>
+              <div className="px-5 py-10 text-center text-[13px] text-muted-foreground/50">No attendance records for {monthLabel}</div>
             ) : (
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-border/60">
                 {[...records].sort((a, b) => b.date.localeCompare(a.date)).map((r, idx) => {
                   const key = `${r.userId}-${r.date}-${idx}`
                   const isOpen = expandedRows.has(key)
                   return (
                     <div key={key}>
                       <button onClick={() => toggleRow(key)}
-                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors text-left">
-                        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors text-left">
+                        <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
-                        <span className="text-[12px] text-gray-500 tabular-nums min-w-[110px]">{formatDateLabel(r.date)}</span>
-                        <span className="text-[12px] font-medium text-gray-800 flex-1 truncate">{r.userName}</span>
-                        <span className="text-[11px] text-gray-400 tabular-nums">{r.sessions.length} session{r.sessions.length !== 1 ? 's' : ''}</span>
+                        <span className="text-[12px] text-muted-foreground tabular-nums min-w-[110px]">{formatDateLabel(r.date)}</span>
+                        <span className="text-[12px] font-medium text-foreground/95 flex-1 truncate">{r.userName}</span>
+                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">{r.sessions.length} session{r.sessions.length !== 1 ? 's' : ''}</span>
                         <span className="text-[12px] font-bold text-indigo-600 tabular-nums min-w-[70px] text-right">{formatDuration(getRecordHours(r))}</span>
                       </button>
                       {isOpen && (
-                        <div className="bg-gray-50/60 px-5 pb-3">
-                          <div className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                        <div className="bg-muted/40 px-5 pb-3">
+                          <div className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">
                             <span>Task</span><span>Project</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
                           </div>
-                          <div className="divide-y divide-gray-100">
+                          <div className="divide-y divide-border/80">
                             {r.sessions.map((s, j) => (
                               <div key={j} className="py-2 text-[11px]">
                                 <div className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2">
-                                  <span className="text-gray-700 font-medium truncate">{s.taskTitle || 'General'}</span>
-                                  <span className="text-gray-500 truncate">{s.projectName || '-'}</span>
-                                  <span className="text-gray-500 font-mono tabular-nums">{formatTime(s.signInAt)}</span>
-                                  <span className="text-gray-500 font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                                  <span className="text-right font-semibold text-gray-700 tabular-nums">{formatDuration(getSessionHours(s))}</span>
+                                  <span className="text-foreground/85 font-medium truncate">{s.taskTitle || 'General'}</span>
+                                  <span className="text-muted-foreground truncate">{s.projectName || '-'}</span>
+                                  <span className="text-muted-foreground font-mono tabular-nums">{formatTime(s.signInAt)}</span>
+                                  <span className="text-muted-foreground font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
+                                  <span className="text-right font-semibold text-foreground/85 tabular-nums">{formatDuration(getSessionHours(s))}</span>
                                 </div>
-                                {s.description && <p className="text-[10px] text-gray-400 italic mt-0.5 pl-0.5">— {s.description}</p>}
+                                {s.description && <p className="text-[10px] text-muted-foreground/70 italic mt-0.5 pl-0.5">— {s.description}</p>}
                               </div>
                             ))}
                           </div>

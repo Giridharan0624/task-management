@@ -231,18 +231,18 @@ export function TimeReportCharts({
     if (items.length === 0) return null
     const total = items.reduce((s, p) => s + p.value, 0)
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-lg p-3 text-sm">
-        <p className="font-semibold text-gray-800 mb-1.5">{tipLabel}</p>
+      <div className="bg-card rounded-xl border border-border/80 shadow-lg p-3 text-sm">
+        <p className="font-semibold text-foreground/95 mb-1.5">{tipLabel}</p>
         {items.map((p) => (
           <div key={p.name} className="flex items-center gap-2 py-0.5">
             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
-            <span className="text-gray-600 flex-1">{p.name}</span>
-            <span className="font-medium text-gray-800 tabular-nums">{formatDuration(p.value)}</span>
+            <span className="text-muted-foreground flex-1">{p.name}</span>
+            <span className="font-medium text-foreground/95 tabular-nums">{formatDuration(p.value)}</span>
           </div>
         ))}
         {items.length > 1 && (
-          <div className="border-t border-gray-100 mt-1.5 pt-1.5 flex justify-between">
-            <span className="font-semibold text-gray-700">Total</span>
+          <div className="border-t border-border mt-1.5 pt-1.5 flex justify-between">
+            <span className="font-semibold text-foreground/85">Total</span>
             <span className="font-bold text-indigo-700 tabular-nums">{formatDuration(total)}</span>
           </div>
         )}
@@ -255,16 +255,16 @@ export function TimeReportCharts({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+          <h2 className="text-xl font-bold text-foreground">{title}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
           {(['daily', 'weekly', 'monthly'] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => { setPeriod(p); setOffset(0) }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                period === p ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                period === p ? 'bg-card text-indigo-700 shadow-sm' : 'text-muted-foreground hover:text-foreground/85'
               }`}
             >
               {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -274,18 +274,18 @@ export function TimeReportCharts({
       </div>
 
       {/* Date Navigator */}
-      <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 px-5 py-3 shadow-sm">
-        <button onClick={() => setOffset((o) => o - 1)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors">
+      <div className="flex items-center justify-between bg-card rounded-2xl border border-border px-5 py-3 shadow-sm">
+        <button onClick={() => setOffset((o) => o - 1)} className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground/85 transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div className="text-center">
-          <p className="text-sm font-semibold text-gray-900">{label}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">{start === end ? start : `${start} to ${end}`}</p>
+          <p className="text-sm font-semibold text-foreground">{label}</p>
+          <p className="text-[11px] text-muted-foreground/70 mt-0.5">{start === end ? start : `${start} to ${end}`}</p>
         </div>
         <button
           onClick={() => setOffset((o) => o + 1)}
           disabled={offset >= 0}
-          className={`p-2 rounded-xl transition-colors ${offset >= 0 ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'}`}
+          className={`p-2 rounded-xl transition-colors ${offset >= 0 ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-muted text-muted-foreground hover:text-foreground/85'}`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
         </button>
@@ -294,9 +294,9 @@ export function TimeReportCharts({
       {isLoading ? (
         <div className="flex items-center justify-center h-64"><Spinner size="lg" /></div>
       ) : !hasData ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl border border-gray-100">
+        <div className="flex flex-col items-center justify-center h-64 bg-card rounded-2xl border border-border">
           <svg className="w-12 h-12 text-gray-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-          <p className="text-sm text-gray-400">No time data for this period</p>
+          <p className="text-sm text-muted-foreground/70">No time data for this period</p>
         </div>
       ) : (
         <>
@@ -309,8 +309,8 @@ export function TimeReportCharts({
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Stacked Bar Chart — Hours per day, split by project/task */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-700 mb-4">
+            <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+              <h3 className="text-sm font-bold text-foreground/85 mb-4">
                 {categoryKey === 'project' ? 'Hours by Project' : 'Hours by Task'} — {period === 'daily' ? 'Per Member' : 'Per Day'}
               </h3>
               <ResponsiveContainer width="100%" height={320}>
@@ -325,22 +325,22 @@ export function TimeReportCharts({
                 </BarChart>
               </ResponsiveContainer>
               {/* Legend */}
-              <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-gray-100">
+              <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-border">
                 {allCategories.map((cat) => (
                   <div key={cat} className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colorMap[cat] }} />
-                    <span className="text-xs text-gray-600">{cat}</span>
+                    <span className="text-xs text-muted-foreground">{cat}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Pie Chart */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-700 mb-4">{pieLabel}</h3>
+            <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+              <h3 className="text-sm font-bold text-foreground/85 mb-4">{pieLabel}</h3>
               {pieData.length === 0 ? (
                 <div className="flex items-center justify-center h-[320px]">
-                  <p className="text-sm text-gray-300">No data available</p>
+                  <p className="text-sm text-muted-foreground/50">No data available</p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
@@ -366,12 +366,12 @@ export function TimeReportCharts({
                         const val = Number(entry.value)
                         const pct = totalHours > 0 ? Math.round((val / totalHours) * 100) : 0
                         return (
-                          <div className="bg-white rounded-xl border border-gray-200 shadow-lg p-3 text-sm">
+                          <div className="bg-card rounded-xl border border-border/80 shadow-lg p-3 text-sm">
                             <div className="flex items-center gap-2 mb-1">
                               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.payload?.fill }} />
-                              <span className="font-semibold text-gray-800">{entry.name}</span>
+                              <span className="font-semibold text-foreground/95">{entry.name}</span>
                             </div>
-                            <p className="text-gray-600">{formatDuration(val)}</p>
+                            <p className="text-muted-foreground">{formatDuration(val)}</p>
                             <p className="text-indigo-600 font-bold">{pct}%</p>
                           </div>
                         )
@@ -383,7 +383,7 @@ export function TimeReportCharts({
                       verticalAlign="middle"
                       iconType="circle"
                       iconSize={8}
-                      formatter={(value: string) => <span className="text-xs text-gray-600">{value}</span>}
+                      formatter={(value: string) => <span className="text-xs text-muted-foreground">{value}</span>}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -456,11 +456,11 @@ function MemberBreakdown({ records, totalHours }: { records: Attendance[]; total
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h3 className="text-sm font-bold text-gray-700">Member Breakdown</h3>
+    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-border">
+        <h3 className="text-sm font-bold text-foreground/85">Member Breakdown</h3>
       </div>
-      <div className="divide-y divide-gray-50">
+      <div className="divide-y divide-border/60">
         {rows.map((row, i) => {
           const isOpen = expanded.has(row.userId)
           const pct = totalHours > 0 ? Math.round((row.hours / totalHours) * 100) : 0
@@ -469,33 +469,33 @@ function MemberBreakdown({ records, totalHours }: { records: Attendance[]; total
               {/* Summary row */}
               <button
                 onClick={() => toggle(row.userId)}
-                className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50/50 transition-colors text-left"
+                className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-muted/30 transition-colors text-left"
               >
-                <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 text-muted-foreground/70 flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
                 <div className="flex items-center gap-2 min-w-[140px]">
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  <span className="text-sm font-medium text-gray-800">{row.name}</span>
+                  <span className="text-sm font-medium text-foreground/95">{row.name}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-700 tabular-nums min-w-[80px] text-right">{formatDuration(row.hours)}</span>
+                <span className="text-sm font-semibold text-foreground/85 tabular-nums min-w-[80px] text-right">{formatDuration(row.hours)}</span>
                 <div className="flex-1 flex items-center gap-2">
-                  <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
                     />
                   </div>
-                  <span className="text-[11px] text-gray-400 tabular-nums w-10 text-right">{pct}%</span>
+                  <span className="text-[11px] text-muted-foreground/70 tabular-nums w-10 text-right">{pct}%</span>
                 </div>
               </button>
 
               {/* Expanded session details */}
               {isOpen && (
-                <div className="bg-gray-50/70 px-6 pb-4">
+                <div className="bg-muted/40 px-6 pb-4">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
+                      <tr className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold">
                         <th className="text-left py-2 pr-3">Date</th>
                         <th className="text-left py-2 pr-3">Project</th>
                         <th className="text-left py-2 pr-3">Task</th>
@@ -504,22 +504,22 @@ function MemberBreakdown({ records, totalHours }: { records: Attendance[]; total
                         <th className="text-right py-2">Duration</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-border/80">
                       {row.sessions
                         .sort((a, b) => new Date(a.signInAt).getTime() - new Date(b.signInAt).getTime())
                         .map((s, j) => (
-                        <tr key={j} className="hover:bg-white/60 transition-colors">
-                          <td className="py-2 pr-3 text-gray-600 whitespace-nowrap">{formatDate(s.date)}</td>
+                        <tr key={j} className="hover:bg-card/60 transition-colors">
+                          <td className="py-2 pr-3 text-muted-foreground whitespace-nowrap">{formatDate(s.date)}</td>
                           <td className="py-2 pr-3">
                             <span className="inline-flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
-                              <span className="text-gray-700 font-medium">{s.projectName}</span>
+                              <span className="text-foreground/85 font-medium">{s.projectName}</span>
                             </span>
                           </td>
-                          <td className="py-2 pr-3 text-gray-600">{s.taskTitle}</td>
-                          <td className="py-2 pr-3 text-gray-500 font-mono tabular-nums">{formatTime(s.signInAt)}</td>
-                          <td className="py-2 pr-3 text-gray-500 font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-medium">Active</span>}</td>
-                          <td className="py-2 text-right font-semibold text-gray-700 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</td>
+                          <td className="py-2 pr-3 text-muted-foreground">{s.taskTitle}</td>
+                          <td className="py-2 pr-3 text-muted-foreground font-mono tabular-nums">{formatTime(s.signInAt)}</td>
+                          <td className="py-2 pr-3 text-muted-foreground font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-medium">Active</span>}</td>
+                          <td className="py-2 text-right font-semibold text-foreground/85 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -546,12 +546,12 @@ function SummaryCard({ label, value, icon, color }: { label: string; value: stri
     violet: 'text-violet-700',
   }
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
       <div className="flex items-center gap-3 mb-3">
         <div className={`h-9 w-9 rounded-xl ${gradients[color]} flex items-center justify-center shadow-sm text-white`}>
           {icon}
         </div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">{label}</p>
       </div>
       <p className={`text-2xl font-bold ${textColors[color]} tracking-tight`}>{value}</p>
     </div>

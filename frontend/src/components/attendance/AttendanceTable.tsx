@@ -62,11 +62,11 @@ export function AttendanceTable() {
           </div>
           <div className="flex flex-wrap gap-2">
             {onDayOff.map((d) => (
-              <div key={d.requestId} className="inline-flex items-center gap-2 bg-white rounded-xl border border-amber-200 px-3 py-1.5">
+              <div key={d.requestId} className="inline-flex items-center gap-2 bg-card rounded-xl border border-amber-200 px-3 py-1.5">
                 <Avatar url={getAvatar(d.userId)} name={d.userName} size="sm" />
                 <div>
-                  <span className="text-sm font-semibold text-gray-900">{d.userName}</span>
-                  {d.employeeId && <span className="text-xs text-gray-400 ml-1">({d.employeeId})</span>}
+                  <span className="text-sm font-semibold text-foreground">{d.userName}</span>
+                  {d.employeeId && <span className="text-xs text-muted-foreground/70 ml-1">({d.employeeId})</span>}
                 </div>
                 <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-lg uppercase tracking-wider">Day Off</span>
               </div>
@@ -81,9 +81,9 @@ export function AttendanceTable() {
           <p className="text-xl font-bold text-emerald-700">{signedIn.length}</p>
           <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Working Now</p>
         </div>
-        <div className="bg-gray-50 rounded-2xl p-3.5 text-center border border-gray-100">
-          <p className="text-xl font-bold text-gray-700">{signedOut.length}</p>
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Done</p>
+        <div className="bg-muted/40 rounded-2xl p-3.5 text-center border border-border">
+          <p className="text-xl font-bold text-foreground/85">{signedOut.length}</p>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Done</p>
         </div>
         <div className="bg-amber-50 rounded-2xl p-3.5 text-center border border-amber-100">
           <p className="text-xl font-bold text-amber-700">{onDayOff.length}</p>
@@ -96,29 +96,29 @@ export function AttendanceTable() {
       </div>
 
       {attendance.length === 0 && onDayOff.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-gray-200 py-8 text-center">
-          <p className="text-gray-400 text-sm">No one has started tracking today yet.</p>
+        <div className="rounded-2xl border-2 border-dashed border-border/80 py-8 text-center">
+          <p className="text-muted-foreground/70 text-sm">No one has started tracking today yet.</p>
         </div>
       ) : attendance.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/60">
+        <div className="bg-card rounded-2xl shadow-sm border border-border overflow-x-auto">
+          <table className="min-w-full divide-y divide-border/80">
+            <thead className="bg-muted/40">
               <tr>
-                <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">User</th>
-                <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Current Task</th>
-                <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sessions</th>
-                <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest">Hours</th>
+                <th className="px-5 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">User</th>
+                <th className="px-5 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Current Task</th>
+                <th className="px-5 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sessions</th>
+                <th className="px-5 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Hours</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-50">
+            <tbody className="bg-card divide-y divide-border/60">
               {attendance.map((record) => (
-                <tr key={record.userId} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={record.userId} className="hover:bg-muted/30 transition-colors">
                   <td className="px-5 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2.5">
                       <Avatar url={getAvatar(record.userId)} name={record.userName} size="sm" />
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{record.userName}</p>
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{record.systemRole}</p>
+                        <p className="text-sm font-semibold text-foreground">{record.userName}</p>
+                        <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider">{record.systemRole}</p>
                       </div>
                     </div>
                   </td>
@@ -126,8 +126,8 @@ export function AttendanceTable() {
                     {record.status === 'SIGNED_IN' && record.currentTask ? (
                       <div>
                         <p className="text-sm font-semibold text-emerald-700">{record.currentTask.taskTitle}</p>
-                        <p className="text-xs text-gray-400">{record.currentTask.projectName}</p>
-                        {(() => { const active = record.sessions.find(s => !s.signOutAt); return active?.description ? <p className="text-[10px] text-gray-400 italic mt-0.5">— {active.description}</p> : null })()}
+                        <p className="text-xs text-muted-foreground/70">{record.currentTask.projectName}</p>
+                        {(() => { const active = record.sessions.find(s => !s.signOutAt); return active?.description ? <p className="text-[10px] text-muted-foreground/70 italic mt-0.5">— {active.description}</p> : null })()}
                       </div>
                     ) : record.status === 'SIGNED_IN' ? (
                       <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-700 uppercase tracking-wide">
@@ -135,14 +135,14 @@ export function AttendanceTable() {
                         Working
                       </span>
                     ) : (
-                      <Badge className="bg-gray-100 text-gray-600">Done</Badge>
+                      <Badge className="bg-muted text-muted-foreground">Done</Badge>
                     )}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-1">
                       {record.sessions.map((s, i) => (
                         <span key={i} className={`text-[11px] px-2 py-0.5 rounded-lg font-medium ${
-                          s.signOutAt ? 'bg-gray-50 text-gray-600 border border-gray-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          s.signOutAt ? 'bg-muted/40 text-muted-foreground border border-border' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                         }`}>
                           {s.taskTitle ? `${s.taskTitle}: ` : ''}
                           {new Date(s.signInAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -156,11 +156,11 @@ export function AttendanceTable() {
                   <td className="px-5 py-3 whitespace-nowrap text-sm font-semibold">
                     {record.status === 'SIGNED_IN' && record.currentSignInAt ? (
                       <div className="flex items-center gap-1">
-                        <span className="text-gray-500">{formatDuration(record.totalHours)} +</span>
+                        <span className="text-muted-foreground">{formatDuration(record.totalHours)} +</span>
                         <LiveTimer startTime={record.currentSignInAt} className="text-emerald-700 font-mono" />
                       </div>
                     ) : (
-                      <span className="text-gray-900">{formatDuration(record.totalHours)}</span>
+                      <span className="text-foreground">{formatDuration(record.totalHours)}</span>
                     )}
                   </td>
                 </tr>

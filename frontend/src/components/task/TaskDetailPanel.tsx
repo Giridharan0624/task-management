@@ -54,21 +54,21 @@ function StatusDropdown({ value, onChange, disabled, domain }: { value: string; 
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen(!open)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-gray-700 hover:border-gray-300 transition-all disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-2.5 py-1.5 text-[12px] font-semibold text-foreground/85 hover:border-border transition-all disabled:opacity-50"
       >
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
         {selected?.label || value}
-        <svg className={`w-3 h-3 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        <svg className={`w-3 h-3 text-muted-foreground/70 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 z-[99999] bg-white rounded-xl shadow-2xl ring-1 ring-gray-200/50 py-1 min-w-[160px] max-h-[240px] overflow-y-auto animate-fade-in-scale" style={{ animationDuration: '0.1s' }}>
+        <div className="absolute top-full left-0 mt-1 z-[99999] bg-card rounded-xl shadow-2xl ring-1 ring-border/60 py-1 min-w-[160px] max-h-[240px] overflow-y-auto animate-fade-in-scale" style={{ animationDuration: '0.1s' }}>
           {options.map((opt) => (
             <button
               key={opt.value}
               type="button"
               onClick={() => { onChange(opt.value); setOpen(false) }}
               className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left transition-colors ${
-                value === opt.value ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'
+                value === opt.value ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-muted-foreground hover:bg-muted/40'
               }`}
             >
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_DOT_COLORS[opt.value] || '#9ca3af' }} />
@@ -242,22 +242,22 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
       {/* Panel */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-[0_25px_60px_-12px_rgba(0,0,0,0.15),0_10px_30px_-8px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.04)] flex flex-col max-h-[90vh] animate-fade-in-scale"
+        className="relative w-full max-w-2xl bg-card rounded-2xl shadow-[0_25px_60px_-12px_rgba(0,0,0,0.15),0_10px_30px_-8px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.04)] flex flex-col max-h-[90vh] animate-fade-in-scale"
       >
 
         {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-3.5 border-b flex-shrink-0 transition-colors ${isEditing ? 'bg-amber-50 border-amber-100' : 'border-gray-100'}`}>
+        <div className={`flex items-center justify-between px-6 py-3.5 border-b flex-shrink-0 transition-colors ${isEditing ? 'bg-amber-50 border-amber-100' : 'border-border'}`}>
           <div className="flex items-center gap-2">
             {isEditing && (
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             )}
-            <h2 className={`text-[13px] font-bold ${isEditing ? 'text-amber-800' : 'text-gray-900'}`}>
+            <h2 className={`text-[13px] font-bold ${isEditing ? 'text-amber-800' : 'text-foreground'}`}>
               {isEditing ? 'Editing Task' : 'Task Details'}
             </h2>
           </div>
           <div className="flex items-center gap-1.5">
             {permissions.canUpdateTask && !isEditing && (
-              <button onClick={() => setIsEditing(true)} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all">
+              <button onClick={() => setIsEditing(true)} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground/85 hover:bg-muted transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 Edit
               </button>
@@ -268,7 +268,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 Delete
               </button>
             )}
-            <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+            <button onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted transition-all">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -279,25 +279,25 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
           {isEditing ? (
             <form onSubmit={handleSubmit(handleSave)} className="flex flex-col gap-5">
               <div>
-                <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Title</label>
+                <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Title</label>
                 <input
                   {...register('title', { required: 'Title is required' })}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-[14px] font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-all"
+                  className="w-full rounded-lg border border-border/80 bg-card px-3.5 py-2.5 text-[14px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-all"
                 />
                 {errors.title && <p className="text-[11px] text-red-500 mt-1">{errors.title.message}</p>}
               </div>
               <div>
-                <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Description</label>
+                <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Description</label>
                 <textarea
                   rows={3}
                   {...register('description')}
                   placeholder="Add a description..."
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition-all"
+                  className="w-full rounded-lg border border-border/80 bg-card px-3.5 py-2.5 text-[13px] text-foreground/85 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition-all"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Priority</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Priority</label>
                   <Select
                     value={watch('priority')}
                     onChange={(v) => setValue('priority', v as TaskPriority)}
@@ -305,7 +305,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Domain</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Domain</label>
                   <Select
                     value={watch('domain')}
                     onChange={(v) => {
@@ -322,7 +322,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 </div>
               </div>
               <div>
-                <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Deadline</label>
+                <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Deadline</label>
                 <DateTimePicker
                   value={watch('deadline') || ''}
                   onChange={(v) => setValue('deadline', v)}
@@ -333,8 +333,8 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   {updateTask.error instanceof Error ? updateTask.error.message : 'Update failed'}
                 </p>
               )}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                <button type="button" onClick={() => setIsEditing(false)} className="text-[12px] font-medium text-gray-500 hover:text-gray-700 transition-colors">
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <button type="button" onClick={() => setIsEditing(false)} className="text-[12px] font-medium text-muted-foreground hover:text-foreground/85 transition-colors">
                   Cancel
                 </button>
                 <Button type="submit" loading={isSubmitting}>Save Changes</Button>
@@ -345,7 +345,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
 
               {/* ── Title + Badges ── */}
               <div className="mb-4">
-                <h3 className="text-xl font-bold text-gray-900 leading-snug mb-2">{task.title}</h3>
+                <h3 className="text-xl font-bold text-foreground leading-snug mb-2">{task.title}</h3>
                 <div className="flex items-center gap-2 flex-wrap">
                   {isAssigned ? (
                     <StatusDropdown
@@ -376,7 +376,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                     <div className="flex items-center gap-3 mb-1.5">
                       <div className="flex items-center gap-1 flex-1">
                         {STAGES.map((s, i) => (
-                          <div key={s} className="flex-1 h-1.5 rounded-full overflow-hidden bg-gray-100">
+                          <div key={s} className="flex-1 h-1.5 rounded-full overflow-hidden bg-muted">
                             {i <= currentIdx && (
                               <div className="h-full w-full rounded-full" style={{ backgroundColor: STAGE_CLR[task.status] }} />
                             )}
@@ -386,9 +386,9 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                       <span className="text-[11px] font-bold tabular-nums flex-shrink-0" style={{ color: STAGE_CLR[task.status] }}>{pct}%</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-300">{TASK_STATUS_LABEL[STAGES[0]]}</span>
+                      <span className="text-[10px] text-muted-foreground/50">{TASK_STATUS_LABEL[STAGES[0]]}</span>
                       <span className="text-[10px] font-medium" style={{ color: STAGE_CLR[task.status] }}>Stage {currentIdx + 1}/{STAGES.length}</span>
-                      <span className="text-[10px] text-gray-300">{TASK_STATUS_LABEL[STAGES[STAGES.length - 1]]}</span>
+                      <span className="text-[10px] text-muted-foreground/50">{TASK_STATUS_LABEL[STAGES[STAGES.length - 1]]}</span>
                     </div>
                   </div>
                 )
@@ -396,51 +396,51 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
 
               {/* ── Description ── */}
               {task.description && (
-                <p className="text-[13px] text-gray-500 leading-relaxed mb-5 whitespace-pre-wrap">{task.description}</p>
+                <p className="text-[13px] text-muted-foreground leading-relaxed mb-5 whitespace-pre-wrap">{task.description}</p>
               )}
 
               {/* ── Metadata Grid ── */}
               <div className="grid grid-cols-2 gap-2 mb-5">
-                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Deadline</p>
-                  <p className={`text-[12px] font-semibold mt-0.5 ${isOverdue ? 'text-red-600' : 'text-gray-800'}`}>
+                <div className="bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Deadline</p>
+                  <p className={`text-[12px] font-semibold mt-0.5 ${isOverdue ? 'text-red-600' : 'text-foreground/95'}`}>
                     {task.deadline
                       ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                       : '—'}
                   </p>
                 </div>
-                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Created</p>
-                  <p className="text-[12px] font-semibold text-gray-800 mt-0.5">{new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                <div className="bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Created</p>
+                  <p className="text-[12px] font-semibold text-foreground/95 mt-0.5">{new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Created by</p>
-                  <p className="text-[12px] font-semibold text-gray-800 mt-0.5 truncate">{resolveName(task.createdBy)}</p>
+                <div className="bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Created by</p>
+                  <p className="text-[12px] font-semibold text-foreground/95 mt-0.5 truncate">{resolveName(task.createdBy)}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Assigned by</p>
-                  <p className="text-[12px] font-semibold text-gray-800 mt-0.5 truncate">{task.assignedBy ? resolveName(task.assignedBy) : '—'}</p>
+                <div className="bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Assigned by</p>
+                  <p className="text-[12px] font-semibold text-foreground/95 mt-0.5 truncate">{task.assignedBy ? resolveName(task.assignedBy) : '—'}</p>
                 </div>
               </div>
 
               {/* ── Assignees ── */}
-              <div className="mb-5 pb-5 border-b border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Assigned To</p>
+              <div className="mb-5 pb-5 border-b border-border">
+                <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2.5">Assigned To</p>
                 <div className="flex items-center flex-wrap gap-2">
                   {task.assignedTo && task.assignedTo.length > 0 ? (
                     task.assignedTo.map((userId) => (
-                      <div key={userId} className="inline-flex items-center gap-2 bg-gray-50 rounded-full pl-1 pr-2.5 py-1 border border-gray-100">
+                      <div key={userId} className="inline-flex items-center gap-2 bg-muted/40 rounded-full pl-1 pr-2.5 py-1 border border-border">
                         <Avatar url={resolveAvatar(userId)} name={resolveName(userId)} size="sm" />
-                        <span className="text-[12px] font-medium text-gray-800">{resolveName(userId)}</span>
+                        <span className="text-[12px] font-medium text-foreground/95">{resolveName(userId)}</span>
                         {permissions.canAssignTask && (
-                          <button onClick={() => handleUnassign(userId)} className="text-gray-300 hover:text-red-500 transition-colors ml-0.5" title="Remove">
+                          <button onClick={() => handleUnassign(userId)} className="text-muted-foreground/50 hover:text-red-500 transition-colors ml-0.5" title="Remove">
                             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         )}
                       </div>
                     ))
                   ) : (
-                    <p className="text-[12px] text-gray-300 italic">No one assigned</p>
+                    <p className="text-[12px] text-muted-foreground/50 italic">No one assigned</p>
                   )}
                   {permissions.canAssignTask && !showAssignInput && (
                     <button onClick={() => setShowAssignInput(true)} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1.5 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-100 transition-all border border-indigo-100">
@@ -452,7 +452,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                 {permissions.canAssignTask && showAssignInput && (
                   <div className="mt-3 space-y-2">
                     {availableMembers.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">All members assigned.</p>
+                      <p className="text-xs text-muted-foreground/70 italic">All members assigned.</p>
                     ) : (
                       <UserSelect
                         users={availableMembers.map((m) => ({ userId: m.userId, name: m.user?.name || m.user?.email || m.userId, email: m.user?.email || '', avatarUrl: m.user?.avatarUrl, extra: m.projectRole }))}
@@ -463,7 +463,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                     )}
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleAssign} loading={assignTask.isPending} disabled={!selectedAssignee}>Add</Button>
-                      <button onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                      <button onClick={() => { setShowAssignInput(false); setSelectedAssignee('') }} className="text-xs text-muted-foreground/70 hover:text-muted-foreground">Cancel</button>
                     </div>
                   </div>
                 )}
@@ -471,7 +471,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
 
               {/* ── Updates / Comments ── */}
               <div className="flex-1 flex flex-col">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-3">
                   Updates {comments && comments.length > 0 && <span className="text-indigo-500">({comments.length})</span>}
                 </p>
 
@@ -482,28 +482,28 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                         <Avatar url={resolveAvatar(comment.authorId)} name={resolveName(comment.authorId)} size="sm" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[12px] font-bold text-gray-800">{resolveName(comment.authorId)}</span>
-                            <span className="text-[10px] text-gray-400">
+                            <span className="text-[12px] font-bold text-foreground/95">{resolveName(comment.authorId)}</span>
+                            <span className="text-[10px] text-muted-foreground/70">
                               {new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <p className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{comment.message}</p>
+                          <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-wrap">{comment.message}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[13px] text-gray-300 mb-4 flex-1">No updates yet.</p>
+                  <p className="text-[13px] text-muted-foreground/50 mb-4 flex-1">No updates yet.</p>
                 )}
 
                 {canComment && (
-                  <div className="flex gap-2 items-start pt-3 border-t border-gray-100">
+                  <div className="flex gap-2 items-start pt-3 border-t border-border">
                     <textarea
                       rows={1}
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
                       placeholder="Write an update..."
-                      className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-[13px] placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500/40 focus:bg-white resize-none transition-all"
+                      className="flex-1 rounded-xl border border-border/80 bg-muted/40 px-3.5 py-2.5 text-[13px] placeholder:text-muted-foreground/70 focus:ring-2 focus:ring-indigo-500/40 focus:bg-card resize-none transition-all"
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
                     />
                     <Button size="sm" onClick={handlePostComment} loading={createComment.isPending} disabled={!commentText.trim()}>Post</Button>
