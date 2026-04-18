@@ -1,9 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { Users, Clock } from 'lucide-react'
 import type { Project } from '@/types/project'
-import { Button } from '@/components/ui/Button'
 import { getProjectColor } from '@/lib/utils/projectColor'
+import { Progress } from '@/components/ui/Progress'
+import { ProjectActionsMenu } from './ProjectActionsMenu'
+import { cn } from '@/lib/utils'
 
 interface ProjectCardProps {
   project: Project
@@ -17,7 +20,34 @@ function getGradient(name: string): string {
   return getProjectColor(name)
 }
 
-export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting, creatorName }: ProjectCardProps) {
+function relativeTime(iso?: string): string {
+  if (!iso) return ''
+  const ms = Date.now() - new Date(iso).getTime()
+  const days = Math.floor(ms / 86400000)
+  if (days < 1) return 'today'
+  if (days === 1) return '1 day ago'
+  if (days < 7) return `${days} days ago`
+  const weeks = Math.floor(days / 7)
+  if (weeks === 1) return '1 week ago'
+  if (weeks < 5) return `${weeks} weeks ago`
+  const months = Math.floor(days / 30)
+  if (months === 1) return '1 month ago'
+  return `${months} months ago`
+}
+
+const DOMAIN_PILL: Record<string, string> = {
+  DEVELOPMENT: 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200',
+  DESIGNING: 'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200',
+  MANAGEMENT: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
+  RESEARCH: 'bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200',
+}
+
+export function ProjectCard({
+  project,
+  canDeleteProject,
+  onDelete,
+  creatorName,
+}: ProjectCardProps) {
   const router = useRouter()
 
   const memberCount = project.memberCount ?? project.members?.length ?? 0
@@ -26,103 +56,134 @@ export function ProjectCard({ project, canDeleteProject, onDelete, isDeleting, c
   const inProgressCount = project.inProgressCount ?? 0
   const todoCount = taskCount - doneCount - inProgressCount
   const completionPercent = project.completionPercent ?? 0
-
-  const createdDate = new Date(project.createdAt).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  const lastActivity = project.updatedAt || project.createdAt
+  const domain = (project.domain || 'DEVELOPMENT').toUpperCase()
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement
-    if (target.closest('button')) return
+    // Don't navigate if click happened on an interactive child (button, link, etc.)
+    if (target.closest('button, a, [role="menuitem"]')) return
     router.push(`/projects/${project.projectId}`)
   }
 
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex cursor-pointer flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/80 hover-lift"
+      className="group hover-lift relative flex cursor-pointer flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:border-border/80 hover:shadow-md"
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${getGradient(project.name)} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-            <span className="text-white font-bold text-sm drop-shadow-sm">{project.name.charAt(0).toUpperCase()}</span>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ${getGradient(project.name)}`}
+          >
+            <span className="text-sm font-bold text-white drop-shadow-sm">
+              {project.name.charAt(0).toUpperCase()}
+            </span>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-foreground group-hover:text-indigo-600 transition-colors line-clamp-1">
+          <div className="min-w-0">
+            <h3 className="line-clamp-1 text-sm font-bold text-foreground transition-colors group-hover:text-primary">
               {project.name}
             </h3>
-            {project.description && (
-              <p className="text-xs text-muted-foreground/70 line-clamp-1 mt-0.5">{project.description}</p>
+            {project.description ? (
+              <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                {project.description}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-muted-foreground/60 italic">
+                No description
+              </p>
             )}
           </div>
         </div>
-        {canDeleteProject && (
-          <Button
-            variant="danger"
-            size="sm"
-            loading={isDeleting}
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(project.projectId)
-            }}
-            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            Delete
-          </Button>
-        )}
+        <ProjectActionsMenu
+          projectId={project.projectId}
+          onDelete={
+            canDeleteProject ? () => onDelete(project.projectId) : undefined
+          }
+        />
       </div>
 
-      {/* Progress bar */}
-      {taskCount > 0 && (
+      {/* Domain pill */}
+      {domain && (
         <div className="mb-3">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-muted-foreground font-medium">Progress</span>
-            <span className="font-bold text-foreground/85">{completionPercent}%</span>
+          <span
+            className={cn(
+              'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+              DOMAIN_PILL[domain] || 'bg-muted text-muted-foreground'
+            )}
+          >
+            {domain.toLowerCase()}
+          </span>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {taskCount > 0 ? (
+        <div className="mb-3">
+          <div className="mb-1.5 flex items-center justify-between text-xs">
+            <span className="font-medium text-muted-foreground">Progress</span>
+            <span
+              className={cn(
+                'font-bold tabular-nums',
+                completionPercent >= 100
+                  ? 'text-emerald-600'
+                  : completionPercent >= 50
+                    ? 'text-primary'
+                    : 'text-amber-600'
+              )}
+            >
+              {completionPercent}%
+            </span>
           </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                completionPercent >= 100 ? 'bg-emerald-500' : completionPercent >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
-              }`}
-              style={{ width: `${Math.min(completionPercent, 100)}%` }}
-            />
-          </div>
+          <Progress value={completionPercent} className="h-1.5" />
+        </div>
+      ) : (
+        <div className="mb-3">
+          <span className="text-xs italic text-muted-foreground/70">
+            No tasks yet
+          </span>
         </div>
       )}
 
       {/* Task stats */}
-      <div className="flex items-center gap-3 mb-3">
-        {taskCount > 0 ? (
-          <>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-400"></span>
-              <span className="text-[11px] font-medium text-muted-foreground">{todoCount} todo</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-blue-500"></span>
-              <span className="text-[11px] font-medium text-muted-foreground">{inProgressCount} active</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span className="text-[11px] font-medium text-muted-foreground">{doneCount} done</span>
-            </div>
-          </>
-        ) : (
-          <span className="text-xs text-muted-foreground/70 italic">No tasks yet</span>
-        )}
-      </div>
+      {taskCount > 0 && (
+        <div className="mb-3 flex items-center gap-3">
+          <StatDot color="bg-amber-400" label={`${todoCount} todo`} />
+          <StatDot color="bg-blue-500" label={`${inProgressCount} active`} />
+          <StatDot color="bg-emerald-500" label={`${doneCount} done`} />
+        </div>
+      )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground/70 pt-3 border-t border-border/50">
-        <div className="flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-          <span>{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
-        </div>
-        <span>{creatorName ? `${creatorName} · ` : ''}{createdDate}</span>
+      <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-3 text-[11px] font-medium text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Users className="h-3 w-3" />
+          {memberCount} member{memberCount !== 1 ? 's' : ''}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Clock className="h-3 w-3" />
+          {relativeTime(lastActivity)}
+        </span>
       </div>
+      {creatorName && (
+        <p className="mt-1 text-[10px] text-muted-foreground/60">
+          Created by {creatorName}
+        </p>
+      )}
     </div>
   )
 }
+
+function StatDot({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={cn('h-2 w-2 rounded-full', color)} />
+      <span className="text-[11px] font-medium text-muted-foreground">
+        {label}
+      </span>
+    </div>
+  )
+}
+
+export { relativeTime, DOMAIN_PILL }

@@ -1,50 +1,129 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  User,
+  Users,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useAttendanceReport } from '@/lib/hooks/useAttendance'
-import { useUsers } from '@/lib/hooks/useUsers'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Progress } from '@/components/ui/Progress'
+import { EmptyState } from '@/components/ui/EmptyState'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/Tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
+import {
+  ReportsPeriodNav,
+  type Period,
+} from '@/components/reports/ReportsPeriodNav'
+import { ReportsStatStrip } from '@/components/reports/ReportsStatStrip'
+import { ActivityReport } from '@/components/reports/ActivityReport'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import type { Attendance } from '@/types/attendance'
-import { FilterSelect } from '@/components/ui/FilterSelect'
-import { ActivityReport } from '@/components/reports/ActivityReport'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
-} from 'recharts'
+import { cn } from '@/lib/utils'
 
 type ReportView = 'summary' | 'detailed' | 'weekly' | 'activity'
-type Period = 'daily' | 'weekly' | 'monthly'
 
 const COLORS = [
-  '#6366f1', '#8b5cf6', '#a78bfa', '#c084fc',
-  '#f472b6', '#fb7185', '#f97316', '#facc15',
-  '#34d399', '#2dd4bf', '#38bdf8', '#818cf8',
+  '#6366f1',
+  '#8b5cf6',
+  '#a78bfa',
+  '#c084fc',
+  '#f472b6',
+  '#fb7185',
+  '#f97316',
+  '#facc15',
+  '#34d399',
+  '#2dd4bf',
+  '#38bdf8',
+  '#818cf8',
 ]
 
-function pad(n: number) { return String(n).padStart(2, '0') }
+function pad(n: number) {
+  return String(n).padStart(2, '0')
+}
 
 function getDateRange(period: Period, offset: number) {
   const now = new Date()
   if (period === 'daily') {
-    const d = new Date(now); d.setDate(d.getDate() + offset)
+    const d = new Date(now)
+    d.setDate(d.getDate() + offset)
     const iso = d.toISOString().slice(0, 10)
-    return { start: iso, end: iso, label: d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) }
+    return {
+      start: iso,
+      end: iso,
+      label: d.toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+    }
   }
   if (period === 'weekly') {
     const d = new Date(now)
     const day = d.getDay()
     d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day) + offset * 7)
-    const mon = new Date(d), sun = new Date(d); sun.setDate(sun.getDate() + 6)
+    const mon = new Date(d)
+    const sun = new Date(d)
+    sun.setDate(sun.getDate() + 6)
     return {
-      start: mon.toISOString().slice(0, 10), end: sun.toISOString().slice(0, 10),
+      start: mon.toISOString().slice(0, 10),
+      end: sun.toISOString().slice(0, 10),
       label: `${mon.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} — ${sun.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`,
     }
   }
   const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-  return { start: d.toISOString().slice(0, 10), end: last.toISOString().slice(0, 10), label: d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) }
+  return {
+    start: d.toISOString().slice(0, 10),
+    end: last.toISOString().slice(0, 10),
+    label: d.toLocaleDateString('en-IN', {
+      month: 'long',
+      year: 'numeric',
+    }),
+  }
 }
 
 function getWeekDates(offset: number) {
@@ -54,89 +133,321 @@ function getWeekDates(offset: number) {
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day) + offset * 7)
   const dates: string[] = []
   for (let i = 0; i < 7; i++) {
-    const dd = new Date(d); dd.setDate(dd.getDate() + i)
+    const dd = new Date(d)
+    dd.setDate(dd.getDate() + i)
     dates.push(dd.toISOString().slice(0, 10))
   }
-  const mon = new Date(d), sun = new Date(d); sun.setDate(sun.getDate() + 6)
+  const mon = new Date(d)
+  const sun = new Date(d)
+  sun.setDate(sun.getDate() + 6)
   return {
     dates,
-    start: dates[0], end: dates[6],
+    start: dates[0],
+    end: dates[6],
     label: `${mon.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} — ${sun.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`,
   }
 }
 
 function getDatesBetween(start: string, end: string) {
   const dates: string[] = []
-  const d = new Date(start + 'T00:00:00'), last = new Date(end + 'T00:00:00')
-  while (d <= last) { dates.push(d.toISOString().slice(0, 10)); d.setDate(d.getDate() + 1) }
+  const d = new Date(start + 'T00:00:00')
+  const last = new Date(end + 'T00:00:00')
+  while (d <= last) {
+    dates.push(d.toISOString().slice(0, 10))
+    d.setDate(d.getDate() + 1)
+  }
   return dates
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return new Date(iso).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 }
 
 function formatDateShort(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
 }
 
 function formatDayLabel(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' })
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+  })
+}
+
+function todayISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 export default function ReportsPage() {
   const { user } = useAuth()
-  const { data: allUsers } = useUsers()
   const [view, setView] = useState<ReportView>('summary')
-  const [period, setPeriod] = useState<Period>('weekly')
-  const [offset, setOffset] = useState(0)
+
+  // Separate state for each view — switching views no longer pollutes the other
+  const [summaryPeriod, setSummaryPeriod] = useState<Period>('weekly')
+  const [summaryOffset, setSummaryOffset] = useState(0)
+  const [detailedPeriod, setDetailedPeriod] = useState<Period>('weekly')
+  const [detailedOffset, setDetailedOffset] = useState(0)
   const [weekOffset, setWeekOffset] = useState(0)
+
   const [memberFilter, setMemberFilter] = useState<string>('ALL')
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const isPrivileged =
+    user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
 
-  // Summary/Detailed data
-  const { start, end, label } = useMemo(() => getDateRange(period, offset), [period, offset])
-  const { data: rawRecords, isLoading } = useAttendanceReport(start, end)
+  // Summary view data
+  const summaryRange = useMemo(
+    () => getDateRange(summaryPeriod, summaryOffset),
+    [summaryPeriod, summaryOffset]
+  )
+  const { data: summaryRaw, isLoading: summaryLoading } = useAttendanceReport(
+    summaryRange.start,
+    summaryRange.end
+  )
 
-  // Weekly data
+  // Detailed view data
+  const detailedRange = useMemo(
+    () => getDateRange(detailedPeriod, detailedOffset),
+    [detailedPeriod, detailedOffset]
+  )
+  const { data: detailedRaw, isLoading: detailedLoading } = useAttendanceReport(
+    detailedRange.start,
+    detailedRange.end
+  )
+
+  // Weekly view data
   const weekData = useMemo(() => getWeekDates(weekOffset), [weekOffset])
-  const { data: weekRecords, isLoading: weekLoading } = useAttendanceReport(weekData.start, weekData.end)
+  const { data: weekRecords, isLoading: weekLoading } = useAttendanceReport(
+    weekData.start,
+    weekData.end
+  )
 
-  // Filter by member
-  const records = useMemo(() => {
-    if (!rawRecords) return []
-    if (memberFilter === 'ALL') return rawRecords
-    return rawRecords.filter(r => r.userId === memberFilter)
-  }, [rawRecords, memberFilter])
+  const summaryRecords = useMemo(() => {
+    if (!summaryRaw) return []
+    return memberFilter === 'ALL'
+      ? summaryRaw
+      : summaryRaw.filter((r) => r.userId === memberFilter)
+  }, [summaryRaw, memberFilter])
+
+  const detailedRecords = useMemo(() => {
+    if (!detailedRaw) return []
+    return memberFilter === 'ALL'
+      ? detailedRaw
+      : detailedRaw.filter((r) => r.userId === memberFilter)
+  }, [detailedRaw, memberFilter])
 
   const filteredWeekRecords = useMemo(() => {
     if (!weekRecords) return []
-    if (memberFilter === 'ALL') return weekRecords
-    return weekRecords.filter(r => r.userId === memberFilter)
+    return memberFilter === 'ALL'
+      ? weekRecords
+      : weekRecords.filter((r) => r.userId === memberFilter)
   }, [weekRecords, memberFilter])
 
-  // Unique members from data
   const memberOptions = useMemo(() => {
     const map = new Map<string, string>()
-    for (const r of rawRecords ?? []) map.set(r.userId, r.userName || r.userEmail)
+    // Aggregate member names from whichever dataset is loaded
+    for (const r of summaryRaw ?? []) map.set(r.userId, r.userName || r.userEmail)
+    for (const r of detailedRaw ?? []) map.set(r.userId, r.userName || r.userEmail)
+    for (const r of weekRecords ?? []) map.set(r.userId, r.userName || r.userEmail)
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
-  }, [rawRecords])
+  }, [summaryRaw, detailedRaw, weekRecords])
 
-  // ──── Summary data ────
+  if (!isPrivileged) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          You don&apos;t have permission to view reports.
+        </p>
+      </div>
+    )
+  }
+
+  const memberFilterLabel =
+    memberFilter === 'ALL'
+      ? 'All members'
+      : memberOptions.find((m) => m.id === memberFilter)?.name ?? 'Member'
+
+  return (
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 animate-fade-in">
+      <PageHeader
+        title="Time Reports"
+        description="Track hours, analyze productivity, and export data"
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="sm" className="gap-1.5">
+                {memberFilter === 'ALL' ? (
+                  <Users className="h-3.5 w-3.5" />
+                ) : (
+                  <User className="h-3.5 w-3.5" />
+                )}
+                <span className="max-w-[140px] truncate font-semibold">
+                  {memberFilterLabel}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel>Filter by member</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value={memberFilter}
+                onValueChange={setMemberFilter}
+              >
+                <DropdownMenuRadioItem value="ALL">
+                  All members
+                </DropdownMenuRadioItem>
+                {memberOptions.map((m) => (
+                  <DropdownMenuRadioItem key={m.id} value={m.id}>
+                    {m.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+
+      <Tabs
+        value={view}
+        onValueChange={(v) => setView(v as ReportView)}
+        className="w-full"
+      >
+        <TabsList>
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="detailed">Detailed</TabsTrigger>
+          <TabsTrigger value="weekly">Weekly</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+        </TabsList>
+
+        {/* ═══ Summary ═══ */}
+        <TabsContent value="summary" className="flex flex-col gap-5">
+          <ReportsPeriodNav
+            period={summaryPeriod}
+            onPeriodChange={setSummaryPeriod}
+            offset={summaryOffset}
+            onOffsetChange={setSummaryOffset}
+            label={summaryRange.label}
+          />
+          <SummaryView
+            records={summaryRecords}
+            isLoading={summaryLoading}
+            period={summaryPeriod}
+            start={summaryRange.start}
+            end={summaryRange.end}
+          />
+        </TabsContent>
+
+        {/* ═══ Detailed ═══ */}
+        <TabsContent value="detailed" className="flex flex-col gap-5">
+          <ReportsPeriodNav
+            period={detailedPeriod}
+            onPeriodChange={setDetailedPeriod}
+            offset={detailedOffset}
+            onOffsetChange={setDetailedOffset}
+            label={detailedRange.label}
+          />
+          <DetailedView
+            records={detailedRecords}
+            isLoading={detailedLoading}
+            rangeStart={detailedRange.start}
+            rangeEnd={detailedRange.end}
+          />
+        </TabsContent>
+
+        {/* ═══ Weekly ═══ */}
+        <TabsContent value="weekly" className="flex flex-col gap-5">
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setWeekOffset((o) => o - 1)}
+              className="h-8 w-8"
+              aria-label="Previous week"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="min-w-[220px] text-center text-sm font-semibold text-foreground">
+              {weekData.label}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setWeekOffset((o) => o + 1)}
+              disabled={weekOffset >= 0}
+              className="h-8 w-8"
+              aria-label="Next week"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            {weekOffset !== 0 && (
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => setWeekOffset(0)}
+                className="h-auto"
+              >
+                This week
+              </Button>
+            )}
+          </div>
+          <WeeklyView
+            records={filteredWeekRecords}
+            dates={weekData.dates}
+            isLoading={weekLoading}
+          />
+        </TabsContent>
+
+        {/* ═══ Activity ═══ */}
+        <TabsContent value="activity">
+          <ActivityReport />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+/* ═════════════════ Summary View ═════════════════ */
+
+function SummaryView({
+  records,
+  isLoading,
+  period,
+  start,
+  end,
+}: {
+  records: Attendance[]
+  isLoading: boolean
+  period: Period
+  start: string
+  end: string
+}) {
   const projectHoursMap = useMemo(() => {
     const map = new Map<string, number>()
-    for (const r of records) for (const s of r.sessions) {
-      const p = s.projectName || 'No Project'
-      map.set(p, (map.get(p) ?? 0) + (s.hours ?? 0))
-    }
+    for (const r of records)
+      for (const s of r.sessions) {
+        const p = s.projectName || 'No Project'
+        map.set(p, (map.get(p) ?? 0) + (s.hours ?? 0))
+      }
     return map
   }, [records])
 
-  const allProjects = useMemo(() => Array.from(projectHoursMap.keys()).sort(), [projectHoursMap])
+  const allProjects = useMemo(
+    () => Array.from(projectHoursMap.keys()).sort(),
+    [projectHoursMap]
+  )
   const colorMap = useMemo(() => {
     const m: Record<string, string> = {}
-    allProjects.forEach((p, i) => { m[p] = COLORS[i % COLORS.length] })
+    allProjects.forEach((p, i) => {
+      m[p] = COLORS[i % COLORS.length]
+    })
     return m
   }, [allProjects])
 
@@ -153,7 +464,8 @@ export default function ReportsPage() {
       }
       return Array.from(memberMap.entries()).map(([name, cats]) => {
         const entry: Record<string, string | number> = { date: name }
-        for (const p of allProjects) entry[p] = Math.round((cats[p] ?? 0) * 100) / 100
+        for (const p of allProjects)
+          entry[p] = Math.round((cats[p] ?? 0) * 100) / 100
         return entry
       })
     }
@@ -161,428 +473,713 @@ export default function ReportsPage() {
     const dateMap = new Map<string, Record<string, number>>()
     for (const d of dates) dateMap.set(d, {})
     for (const r of records) {
-      const de = dateMap.get(r.date); if (!de) continue
-      for (const s of r.sessions) { const p = s.projectName || 'No Project'; de[p] = (de[p] ?? 0) + (s.hours ?? 0) }
+      const de = dateMap.get(r.date)
+      if (!de) continue
+      for (const s of r.sessions) {
+        const p = s.projectName || 'No Project'
+        de[p] = (de[p] ?? 0) + (s.hours ?? 0)
+      }
     }
-    return dates.map(d => {
+    return dates.map((d) => {
       const entry: Record<string, string | number> = { date: formatDayLabel(d) }
-      for (const p of allProjects) entry[p] = Math.round((dateMap.get(d)![p] ?? 0) * 100) / 100
+      for (const p of allProjects)
+        entry[p] = Math.round((dateMap.get(d)![p] ?? 0) * 100) / 100
       return entry
     })
   }, [records, start, end, period, allProjects])
 
-  const pieData = useMemo(() =>
-    Array.from(projectHoursMap.entries())
-      .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
-      .filter(d => d.value > 0).sort((a, b) => b.value - a.value),
-    [projectHoursMap])
+  const pieData = useMemo(
+    () =>
+      Array.from(projectHoursMap.entries())
+        .map(([name, value]) => ({
+          name,
+          value: Math.round(value * 100) / 100,
+        }))
+        .filter((d) => d.value > 0)
+        .sort((a, b) => b.value - a.value),
+    [projectHoursMap]
+  )
 
-  const totalHours = useMemo(() => records.reduce((s, r) => s + (r.sessions?.reduce((ss, se) => ss + (se.hours ?? 0), 0) ?? 0), 0), [records])
-  const totalMembers = useMemo(() => new Set(records.map(r => r.userId)).size, [records])
-  const totalSessions = useMemo(() => records.reduce((s, r) => s + (r.sessions?.length ?? 0), 0), [records])
+  const totalHours = useMemo(
+    () =>
+      records.reduce(
+        (s, r) =>
+          s + (r.sessions?.reduce((ss, se) => ss + (se.hours ?? 0), 0) ?? 0),
+        0
+      ),
+    [records]
+  )
+  const totalMembers = useMemo(
+    () => new Set(records.map((r) => r.userId)).size,
+    [records]
+  )
+  const totalSessions = useMemo(
+    () => records.reduce((s, r) => s + (r.sessions?.length ?? 0), 0),
+    [records]
+  )
 
-  // Top tasks
   const topTasks = useMemo(() => {
-    const map = new Map<string, { name: string; project: string; hours: number }>()
-    for (const r of records) for (const s of r.sessions) {
-      const key = `${s.taskTitle || 'General'}::${s.projectName || ''}`
-      const ex = map.get(key)
-      if (ex) ex.hours += s.hours ?? 0
-      else map.set(key, { name: s.taskTitle || 'General', project: s.projectName || 'No Project', hours: s.hours ?? 0 })
-    }
-    return Array.from(map.values()).sort((a, b) => b.hours - a.hours).slice(0, 5)
+    const map = new Map<
+      string,
+      { name: string; project: string; hours: number }
+    >()
+    for (const r of records)
+      for (const s of r.sessions) {
+        const key = `${s.taskTitle || 'General'}::${s.projectName || ''}`
+        const ex = map.get(key)
+        if (ex) ex.hours += s.hours ?? 0
+        else
+          map.set(key, {
+            name: s.taskTitle || 'General',
+            project: s.projectName || 'No Project',
+            hours: s.hours ?? 0,
+          })
+      }
+    return Array.from(map.values())
+      .sort((a, b) => b.hours - a.hours)
+      .slice(0, 5)
   }, [records])
 
-  // ──── Detailed data ────
-  const detailedRows = useMemo(() => {
-    const rows: { date: string; member: string; project: string; task: string; description: string; signIn: string; signOut: string | null; hours: number | null }[] = []
-    for (const r of records) for (const s of r.sessions) {
-      rows.push({ date: r.date, member: r.userName || r.userEmail, project: s.projectName || 'No Project', task: s.taskTitle || 'General', description: s.description || '', signIn: s.signInAt, signOut: s.signOutAt, hours: s.hours })
-    }
-    return rows.sort((a, b) => new Date(b.signIn).getTime() - new Date(a.signIn).getTime())
-  }, [records])
-
-  // ──── Weekly grid data ────
-  const weeklyGrid = useMemo(() => {
-    const memberMap = new Map<string, { name: string; days: Record<string, number> }>()
-    for (const r of filteredWeekRecords) {
-      if (!memberMap.has(r.userId)) memberMap.set(r.userId, { name: r.userName || r.userEmail, days: {} })
-      const entry = memberMap.get(r.userId)!
-      const hrs = r.sessions.reduce((s, se) => s + (se.hours ?? 0), 0)
-      entry.days[r.date] = (entry.days[r.date] ?? 0) + hrs
-    }
-    return Array.from(memberMap.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [filteredWeekRecords])
-
-  const weekTotals = useMemo(() => {
-    const totals: Record<string, number> = {}
-    for (const d of weekData.dates) totals[d] = 0
-    for (const m of weeklyGrid) for (const [d, h] of Object.entries(m.days)) totals[d] = (totals[d] ?? 0) + h
-    return totals
-  }, [weeklyGrid, weekData.dates])
-
-  // CSV export
-  const exportCSV = () => {
-    const header = ['Date', 'Member', 'Project', 'Task', 'Start', 'End', 'Duration']
-    const rows = detailedRows.map(r => [
-      r.date, r.member, r.project, r.task,
-      formatTime(r.signIn), r.signOut ? formatTime(r.signOut) : 'Active',
-      r.hours != null ? formatDuration(r.hours) : '—',
-    ])
-    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `time-report-${start}-${end}.csv`; a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  if (!isPrivileged) {
-    return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground/70 text-sm">You don&apos;t have permission to view reports.</p></div>
-  }
-
-  const CustomBarTooltip = ({ active, payload, label: tipLabel }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
-    if (!active || !payload?.length) return null
-    const items = payload.filter(p => p.value > 0)
-    if (!items.length) return null
-    const total = items.reduce((s, p) => s + p.value, 0)
+  if (isLoading) {
     return (
-      <div className="bg-card rounded-xl border border-border/80 shadow-lg p-3 text-sm">
-        <p className="font-semibold text-foreground/95 mb-1.5">{tipLabel}</p>
-        {items.map(p => (
-          <div key={p.name} className="flex items-center gap-2 py-0.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-            <span className="text-muted-foreground flex-1">{p.name}</span>
-            <span className="font-medium text-foreground/95 tabular-nums">{formatDuration(p.value)}</span>
-          </div>
-        ))}
-        {items.length > 1 && (
-          <div className="border-t border-border mt-1.5 pt-1.5 flex justify-between">
-            <span className="font-semibold text-foreground/85">Total</span>
-            <span className="font-bold text-indigo-700 tabular-nums">{formatDuration(total)}</span>
-          </div>
-        )}
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
       </div>
     )
   }
 
+  if (records.length === 0) {
+    return (
+      <EmptyState
+        title="No time data"
+        description="Nothing was logged in the selected period."
+      />
+    )
+  }
+
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Time Reports</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Track hours, analyze productivity, and export data</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Member filter */}
-          <FilterSelect value={memberFilter} onChange={setMemberFilter} active={memberFilter !== 'ALL'}
-            options={[{ value: 'ALL', label: 'All Members' }, ...memberOptions.map(m => ({ value: m.id, label: m.name }))]} />
-        </div>
-      </div>
+    <div className="flex flex-col gap-5">
+      <ReportsStatStrip
+        totalHoursLabel={formatDuration(totalHours)}
+        members={totalMembers}
+        sessions={totalSessions}
+        projects={allProjects.length}
+      />
 
-      {/* View tabs */}
-      <div className="flex items-center gap-1 bg-muted rounded-xl p-1 w-fit">
-        {([['summary', 'Summary'], ['detailed', 'Detailed'], ['weekly', 'Weekly'], ['activity', 'Activity']] as [ReportView, string][]).map(([v, l]) => (
-          <button key={v} onClick={() => setView(v)}
-            className={`px-4 py-2 rounded-lg text-[12px] font-semibold transition-all ${view === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground/85'}`}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {/* ════════════════ SUMMARY VIEW ════════════════ */}
-      {view === 'summary' && (
-        <div className="space-y-5">
-          {/* Period + nav */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-              {(['daily', 'weekly', 'monthly'] as Period[]).map(p => (
-                <button key={p} onClick={() => { setPeriod(p); setOffset(0) }}
-                  className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${period === p ? 'bg-card text-indigo-700 shadow-sm' : 'text-muted-foreground hover:text-foreground/85'}`}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Bar chart */}
+        <Card className="p-5">
+          <h3 className="mb-4 text-sm font-bold text-foreground">
+            Hours by project —{' '}
+            {period === 'daily' ? 'per member' : 'per day'}
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={stackedBarData}
+              margin={{ left: 0, right: 10, top: 5, bottom: 5 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="hsl(var(--border))"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                interval={period === 'monthly' ? 2 : 0}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tickFormatter={(v: number) =>
+                  v > 0 ? formatDuration(v) : '0'
+                }
+              />
+              <Tooltip content={<CustomBarTooltip />} />
+              {allProjects.map((p) => (
+                <Bar
+                  key={p}
+                  dataKey={p}
+                  stackId="h"
+                  fill={colorMap[p]}
+                  maxBarSize={40}
+                />
               ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setOffset(o => o - 1)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <span className="text-[13px] font-semibold text-foreground/85 min-w-[180px] text-center">{label}</span>
-              <button onClick={() => setOffset(o => o + 1)} disabled={offset >= 0}
-                className={`p-1.5 rounded-lg ${offset >= 0 ? 'text-gray-200' : 'hover:bg-muted text-muted-foreground'}`}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </div>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3">
+            {allProjects.map((p) => (
+              <div key={p} className="flex items-center gap-1.5">
+                <div
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: colorMap[p] }}
+                />
+                <span className="text-[11px] text-muted-foreground">{p}</span>
+              </div>
+            ))}
           </div>
+        </Card>
 
-          {isLoading ? <div className="flex justify-center py-20"><Spinner size="lg" /></div> : records.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 bg-card rounded-2xl border border-border">
-              <p className="text-sm text-muted-foreground/70">No time data for this period</p>
+        {/* Pie chart */}
+        <Card className="p-5">
+          <h3 className="mb-4 text-sm font-bold text-foreground">
+            Distribution
+          </h3>
+          {pieData.length === 0 ? (
+            <div className="flex h-[300px] items-center justify-center">
+              <p className="text-sm text-muted-foreground">No data</p>
             </div>
           ) : (
-            <>
-              {/* Stats row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatCard label="Total Hours" value={formatDuration(totalHours)} color="indigo"
-                  icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-                <StatCard label="Members" value={String(totalMembers)} color="violet"
-                  icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} />
-                <StatCard label="Sessions" value={String(totalSessions)} color="blue"
-                  icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
-                <StatCard label="Projects" value={String(allProjects.length)} color="emerald"
-                  icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>} />
-              </div>
-
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-                  <h3 className="text-[13px] font-bold text-foreground/85 mb-4">Hours by Project — {period === 'daily' ? 'Per Member' : 'Per Day'}</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={stackedBarData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} interval={period === 'monthly' ? 2 : 0} />
-                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v: number) => v > 0 ? formatDuration(v) : '0'} />
-                      <Tooltip content={<CustomBarTooltip />} />
-                      {allProjects.map(p => <Bar key={p} dataKey={p} stackId="h" fill={colorMap[p]} maxBarSize={40} />)}
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border">
-                    {allProjects.map(p => (
-                      <div key={p} className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colorMap[p] }} />
-                        <span className="text-[11px] text-muted-foreground">{p}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-                  <h3 className="text-[13px] font-bold text-foreground/85 mb-4">Distribution</h3>
-                  {pieData.length === 0 ? <div className="flex items-center justify-center h-[300px]"><p className="text-sm text-muted-foreground/50">No data</p></div> : (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={100} paddingAngle={3} dataKey="value" stroke="none">
-                          {pieData.map(e => <Cell key={e.name} fill={colorMap[e.name] || COLORS[0]} />)}
-                        </Pie>
-                        <Tooltip content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null
-                          const e = payload[0]; const v = Number(e.value); const pct = totalHours > 0 ? Math.round((v / totalHours) * 100) : 0
-                          return <div className="bg-card rounded-xl border border-border/80 shadow-lg p-3 text-sm">
-                            <div className="flex items-center gap-2 mb-1"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.payload?.fill }} /><span className="font-semibold text-foreground/95">{e.name}</span></div>
-                            <p className="text-muted-foreground">{formatDuration(v)}</p><p className="text-indigo-600 font-bold">{pct}%</p>
-                          </div>
-                        }} />
-                        <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" iconSize={8} formatter={(v: string) => <span className="text-[11px] text-muted-foreground">{v}</span>} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </div>
-
-              {/* Top Tasks */}
-              {topTasks.length > 0 && (
-                <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-                  <div className="px-5 py-3.5 border-b border-border/50 flex items-center justify-between">
-                    <h3 className="text-[13px] font-bold text-foreground/95">Top Tasks by Time</h3>
-                  </div>
-                  <div className="divide-y divide-border/60">
-                    {topTasks.map((t, i) => (
-                      <div key={i} className="flex items-center gap-3 px-5 py-2.5">
-                        <span className="text-[11px] font-bold text-muted-foreground/50 w-5 tabular-nums">{i + 1}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-foreground/95 truncate">{t.name}</p>
-                          <p className="text-[10px] text-muted-foreground/70">{t.project}</p>
-                        </div>
-                        <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden flex-shrink-0">
-                          <div className="h-full rounded-full bg-indigo-500" style={{ width: `${totalHours > 0 ? (t.hours / totalHours) * 100 : 0}%` }} />
-                        </div>
-                        <span className="text-[12px] font-semibold text-foreground/85 tabular-nums w-16 text-right">{formatDuration(t.hours)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Member Breakdown */}
-              <MemberBreakdown records={records} totalHours={totalHours} />
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ════════════════ DETAILED VIEW ════════════════ */}
-      {view === 'detailed' && (
-        <div className="space-y-5">
-          {/* Period + nav */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-              {(['daily', 'weekly', 'monthly'] as Period[]).map(p => (
-                <button key={p} onClick={() => { setPeriod(p); setOffset(0) }}
-                  className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${period === p ? 'bg-card text-indigo-700 shadow-sm' : 'text-muted-foreground hover:text-foreground/85'}`}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setOffset(o => o - 1)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <span className="text-[13px] font-semibold text-foreground/85 min-w-[180px] text-center">{label}</span>
-              <button onClick={() => setOffset(o => o + 1)} disabled={offset >= 0}
-                className={`p-1.5 rounded-lg ${offset >= 0 ? 'text-gray-200' : 'hover:bg-muted text-muted-foreground'}`}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </div>
-          </div>
-
-          {isLoading ? <div className="flex justify-center py-20"><Spinner size="lg" /></div> : (() => {
-            // Group by member
-            const memberGroups = new Map<string, { member: string; totalHours: number; sessions: typeof detailedRows }>()
-            for (const r of detailedRows) {
-              const ex = memberGroups.get(r.member)
-              if (ex) { ex.totalHours += (r.hours ?? 0); ex.sessions.push(r) }
-              else memberGroups.set(r.member, { member: r.member, totalHours: r.hours ?? 0, sessions: [r] })
-            }
-            const groups = Array.from(memberGroups.values()).sort((a, b) => b.totalHours - a.totalHours)
-
-            return (
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-[13px] font-bold text-foreground/95">Time Log</h3>
-                  <span className="text-[11px] bg-muted text-muted-foreground font-semibold px-2 py-0.5 rounded-md tabular-nums">{detailedRows.length} entries</span>
-                  <span className="text-[11px] text-muted-foreground/70">Total: <strong className="text-foreground/85">{formatDuration(totalHours)}</strong></span>
-                </div>
-                <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-gray-800 transition-all">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                  Export CSV
-                </button>
-              </div>
-
-              {groups.length === 0 ? (
-                <div className="px-5 py-12 text-center text-[13px] text-muted-foreground/50">No sessions in this period</div>
-              ) : (
-                <div className="divide-y divide-border/80">
-                  {groups.map(g => (
-                    <DetailedMemberGroup key={g.member} group={g} />
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={100}
+                  paddingAngle={3}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {pieData.map((e) => (
+                    <Cell
+                      key={e.name}
+                      fill={colorMap[e.name] || COLORS[0]}
+                    />
                   ))}
-                </div>
-              )}
-            </div>
-            )
-          })()}
-        </div>
-      )}
-
-      {/* ════════════════ WEEKLY VIEW ════════════════ */}
-      {view === 'weekly' && (
-        <div className="space-y-5">
-          {/* Week navigator */}
-          <div className="flex items-center justify-center gap-4">
-            <button onClick={() => setWeekOffset(o => o - 1)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <span className="text-[13px] font-semibold text-foreground/85 min-w-[220px] text-center">{weekData.label}</span>
-            <button onClick={() => setWeekOffset(o => o + 1)} disabled={weekOffset >= 0}
-              className={`p-1.5 rounded-lg ${weekOffset >= 0 ? 'text-gray-200' : 'hover:bg-muted text-muted-foreground'}`}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </button>
-          </div>
-
-          {weekLoading ? <div className="flex justify-center py-20"><Spinner size="lg" /></div> : (
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-x-auto">
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40">
-                    <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider w-40">Member</th>
-                    {weekData.dates.map(d => {
-                      const isToday = d === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
-                      return <th key={d} className={`text-center px-3 py-3 text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-indigo-600 bg-indigo-50/50' : 'text-muted-foreground/70'}`}>
-                        {new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}<br/>
-                        <span className="text-[9px] font-semibold">{new Date(d + 'T00:00:00').getDate()}</span>
-                      </th>
-                    })}
-                    <th className="text-center px-4 py-3 text-[10px] font-bold text-foreground/85 uppercase tracking-wider bg-muted/40">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {weeklyGrid.length === 0 ? (
-                    <tr><td colSpan={9} className="px-5 py-12 text-center text-[13px] text-muted-foreground/50">No data this week</td></tr>
-                  ) : weeklyGrid.map(m => {
-                    const memberTotal = Object.values(m.days).reduce((s, h) => s + h, 0)
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const e = payload[0]
+                    const v = Number(e.value)
+                    const pct =
+                      totalHours > 0
+                        ? Math.round((v / totalHours) * 100)
+                        : 0
                     return (
-                      <tr key={m.name} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-5 py-3 font-medium text-foreground/95">{m.name}</td>
-                        {weekData.dates.map(d => {
-                          const hrs = m.days[d] ?? 0
-                          const isToday = d === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
-                          return <td key={d} className={`text-center px-3 py-3 tabular-nums ${isToday ? 'bg-indigo-50/30' : ''} ${hrs > 0 ? 'text-foreground/85 font-medium' : 'text-gray-200'}`}>
-                            {hrs > 0 ? formatDuration(hrs) : '—'}
-                          </td>
-                        })}
-                        <td className="text-center px-4 py-3 font-bold text-indigo-700 tabular-nums bg-muted/30">{formatDuration(memberTotal)}</td>
-                      </tr>
+                      <div className="rounded-xl border border-border bg-popover p-3 text-sm shadow-lg">
+                        <div className="mb-1 flex items-center gap-2">
+                          <div
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: e.payload?.fill }}
+                          />
+                          <span className="font-semibold text-foreground">
+                            {e.name}
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground">
+                          {formatDuration(v)}
+                        </p>
+                        <p className="font-bold text-primary">{pct}%</p>
+                      </div>
                     )
-                  })}
-                </tbody>
-                {weeklyGrid.length > 0 && (
-                  <tfoot>
-                    <tr className="border-t-2 border-border/80 bg-muted/40">
-                      <td className="px-5 py-3 font-bold text-foreground/85">Total</td>
-                      {weekData.dates.map(d => {
-                        const t = weekTotals[d] ?? 0
-                        return <td key={d} className="text-center px-3 py-3 font-bold text-foreground/85 tabular-nums">{t > 0 ? formatDuration(t) : '—'}</td>
-                      })}
-                      <td className="text-center px-4 py-3 font-black text-indigo-700 tabular-nums bg-muted/50">
-                        {formatDuration(Object.values(weekTotals).reduce((s, h) => s + h, 0))}
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
+                  }}
+                />
+                <Legend
+                  layout="vertical"
+                  align="right"
+                  verticalAlign="middle"
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(v: string) => (
+                    <span className="text-[11px] text-muted-foreground">
+                      {v}
+                    </span>
+                  )}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           )}
-        </div>
+        </Card>
+      </div>
+
+      {topTasks.length > 0 && (
+        <Card className="overflow-hidden p-0">
+          <div className="border-b border-border px-5 py-3.5">
+            <h3 className="text-sm font-bold text-foreground">
+              Top tasks by time
+            </h3>
+          </div>
+          <ul className="divide-y divide-border/60">
+            {topTasks.map((t, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-3 px-5 py-2.5"
+              >
+                <span className="w-5 shrink-0 text-[11px] font-bold tabular-nums text-muted-foreground">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {t.name}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t.project}
+                  </p>
+                </div>
+                <Progress
+                  value={totalHours > 0 ? (t.hours / totalHours) * 100 : 0}
+                  className="h-1.5 w-24 shrink-0"
+                />
+                <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                  {formatDuration(t.hours)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
 
-      {view === 'activity' && (
-        <ActivityReport />
+      <MemberBreakdown records={records} totalHours={totalHours} />
+    </div>
+  )
+}
+
+function CustomBarTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{ name: string; value: number; color: string }>
+  label?: string
+}) {
+  if (!active || !payload?.length) return null
+  const items = payload.filter((p) => p.value > 0)
+  if (!items.length) return null
+  const total = items.reduce((s, p) => s + p.value, 0)
+  return (
+    <div className="rounded-xl border border-border bg-popover p-3 text-sm shadow-lg">
+      <p className="mb-1.5 font-semibold text-foreground">{label}</p>
+      {items.map((p) => (
+        <div key={p.name} className="flex items-center gap-2 py-0.5">
+          <div
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: p.color }}
+          />
+          <span className="flex-1 text-muted-foreground">{p.name}</span>
+          <span className="font-medium tabular-nums text-foreground">
+            {formatDuration(p.value)}
+          </span>
+        </div>
+      ))}
+      {items.length > 1 && (
+        <div className="mt-1.5 flex justify-between border-t border-border pt-1.5">
+          <span className="font-semibold text-foreground/85">Total</span>
+          <span className="font-bold tabular-nums text-primary">
+            {formatDuration(total)}
+          </span>
+        </div>
       )}
     </div>
   )
 }
 
-/* ─── Sub-components ─── */
+function MemberBreakdown({
+  records,
+  totalHours,
+}: {
+  records: Attendance[]
+  totalHours: number
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const rows = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        userId: string
+        name: string
+        hours: number
+        sessions: {
+          date: string
+          signInAt: string
+          signOutAt: string | null
+          hours: number | null
+          taskTitle: string
+          projectName: string
+          description: string
+        }[]
+      }
+    >()
+    for (const r of records) {
+      const sessions = r.sessions.map((s) => ({
+        date: r.date,
+        signInAt: s.signInAt,
+        signOutAt: s.signOutAt,
+        hours: s.hours,
+        taskTitle: s.taskTitle || 'General',
+        projectName: s.projectName || 'No Project',
+        description: s.description || '',
+      }))
+      const ex = map.get(r.userId)
+      if (ex) {
+        ex.hours += sessions.reduce((s, se) => s + (se.hours ?? 0), 0)
+        ex.sessions.push(...sessions)
+      } else
+        map.set(r.userId, {
+          userId: r.userId,
+          name: r.userName || r.userEmail || r.userId,
+          hours: sessions.reduce((s, se) => s + (se.hours ?? 0), 0),
+          sessions,
+        })
+    }
+    return Array.from(map.values()).sort((a, b) => b.hours - a.hours)
+  }, [records])
 
-function DetailedMemberGroup({ group }: { group: { member: string; totalHours: number; sessions: { date: string; project: string; task: string; description: string; signIn: string; signOut: string | null; hours: number | null }[] } }) {
+  if (rows.length === 0) return null
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <div className="border-b border-border px-5 py-3.5">
+        <h3 className="text-sm font-bold text-foreground">
+          Member breakdown
+        </h3>
+      </div>
+      <div className="divide-y divide-border/60">
+        {rows.map((row, i) => {
+          const isOpen = expanded.has(row.userId)
+          const pct =
+            totalHours > 0 ? Math.round((row.hours / totalHours) * 100) : 0
+          return (
+            <div key={row.userId}>
+              <button
+                type="button"
+                onClick={() =>
+                  setExpanded((prev) => {
+                    const n = new Set(prev)
+                    if (n.has(row.userId)) n.delete(row.userId)
+                    else n.add(row.userId)
+                    return n
+                  })
+                }
+                className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/30"
+              >
+                <ChevronRight
+                  className={cn(
+                    'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform',
+                    isOpen && 'rotate-90'
+                  )}
+                />
+                <div className="flex min-w-[120px] items-center gap-2">
+                  <div
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    {row.name}
+                  </span>
+                </div>
+                <span className="min-w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">
+                  {formatDuration(row.hours)}
+                </span>
+                <div className="flex flex-1 items-center gap-2">
+                  <Progress value={pct} className="h-1.5 flex-1" />
+                  <span className="w-8 text-right text-[10px] tabular-nums text-muted-foreground">
+                    {pct}%
+                  </span>
+                </div>
+              </button>
+              {isOpen && (
+                <div className="bg-muted/30 px-5 pb-3">
+                  <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span>Date</span>
+                    <span>Project</span>
+                    <span>Task</span>
+                    <span>Start</span>
+                    <span>End</span>
+                    <span className="text-right">Duration</span>
+                  </div>
+                  <div className="divide-y divide-border/80">
+                    {row.sessions
+                      .sort(
+                        (a, b) =>
+                          new Date(a.signInAt).getTime() -
+                          new Date(b.signInAt).getTime()
+                      )
+                      .map((s, j) => (
+                        <div
+                          key={j}
+                          className="py-2 text-[11px] transition-colors hover:bg-card/60"
+                        >
+                          <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2">
+                            <span className="text-muted-foreground">
+                              {formatDateShort(s.date)}
+                            </span>
+                            <span className="truncate font-medium text-foreground">
+                              {s.projectName}
+                            </span>
+                            <span className="truncate text-muted-foreground">
+                              {s.taskTitle}
+                            </span>
+                            <span className="font-mono tabular-nums text-muted-foreground">
+                              {formatTime(s.signInAt)}
+                            </span>
+                            <span className="font-mono tabular-nums text-muted-foreground">
+                              {s.signOutAt ? (
+                                formatTime(s.signOutAt)
+                              ) : (
+                                <span className="font-sans font-medium text-emerald-600">
+                                  Active
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-right font-semibold tabular-nums text-foreground">
+                              {s.hours != null ? formatDuration(s.hours) : '—'}
+                            </span>
+                          </div>
+                          {s.description && (
+                            <p className="ml-[90px] mt-0.5 text-[10px] italic text-muted-foreground">
+                              — {s.description}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
+/* ═════════════════ Detailed View ═════════════════ */
+
+function DetailedView({
+  records,
+  isLoading,
+  rangeStart,
+  rangeEnd,
+}: {
+  records: Attendance[]
+  isLoading: boolean
+  rangeStart: string
+  rangeEnd: string
+}) {
+  const detailedRows = useMemo(() => {
+    const rows: {
+      date: string
+      member: string
+      project: string
+      task: string
+      description: string
+      signIn: string
+      signOut: string | null
+      hours: number | null
+    }[] = []
+    for (const r of records)
+      for (const s of r.sessions) {
+        rows.push({
+          date: r.date,
+          member: r.userName || r.userEmail,
+          project: s.projectName || 'No Project',
+          task: s.taskTitle || 'General',
+          description: s.description || '',
+          signIn: s.signInAt,
+          signOut: s.signOutAt,
+          hours: s.hours,
+        })
+      }
+    return rows.sort(
+      (a, b) => new Date(b.signIn).getTime() - new Date(a.signIn).getTime()
+    )
+  }, [records])
+
+  const totalHours = useMemo(
+    () => detailedRows.reduce((s, r) => s + (r.hours ?? 0), 0),
+    [detailedRows]
+  )
+
+  const memberGroups = useMemo(() => {
+    const map = new Map<
+      string,
+      { member: string; totalHours: number; sessions: typeof detailedRows }
+    >()
+    for (const r of detailedRows) {
+      const ex = map.get(r.member)
+      if (ex) {
+        ex.totalHours += r.hours ?? 0
+        ex.sessions.push(r)
+      } else
+        map.set(r.member, {
+          member: r.member,
+          totalHours: r.hours ?? 0,
+          sessions: [r],
+        })
+    }
+    return Array.from(map.values()).sort(
+      (a, b) => b.totalHours - a.totalHours
+    )
+  }, [detailedRows])
+
+  const exportCSV = () => {
+    const header = ['Date', 'Member', 'Project', 'Task', 'Start', 'End', 'Duration']
+    const rows = detailedRows.map((r) => [
+      r.date,
+      r.member,
+      r.project,
+      r.task,
+      formatTime(r.signIn),
+      r.signOut ? formatTime(r.signOut) : 'Active',
+      r.hours != null ? formatDuration(r.hours) : '—',
+    ])
+    const csv = [header, ...rows]
+      .map((r) =>
+        r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
+      )
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `time-report-${rangeStart}-${rangeEnd}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-bold text-foreground">Time log</h3>
+          <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+            {detailedRows.length} entries
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Total:{' '}
+            <strong className="text-foreground">
+              {formatDuration(totalHours)}
+            </strong>
+          </span>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={exportCSV}
+          disabled={detailedRows.length === 0}
+          className="gap-1.5"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export CSV
+        </Button>
+      </div>
+
+      {memberGroups.length === 0 ? (
+        <div className="p-4">
+          <EmptyState
+            title="No sessions"
+            description="Nothing was logged in this period."
+            className="border-0 py-6"
+          />
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {memberGroups.map((g) => (
+            <DetailedMemberGroup key={g.member} group={g} />
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function DetailedMemberGroup({
+  group,
+}: {
+  group: {
+    member: string
+    totalHours: number
+    sessions: {
+      date: string
+      project: string
+      task: string
+      description: string
+      signIn: string
+      signOut: string | null
+      hours: number | null
+    }[]
+  }
+}) {
   const [open, setOpen] = useState(false)
   return (
     <div>
-      <button onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors text-left">
-        <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform flex-shrink-0 ${open ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="text-[13px] font-semibold text-foreground/95 flex-1">{group.member}</span>
-        <span className="text-[11px] text-muted-foreground/70 tabular-nums">{group.sessions.length} session{group.sessions.length !== 1 ? 's' : ''}</span>
-        <span className="text-[13px] font-bold text-indigo-600 tabular-nums min-w-[80px] text-right">{formatDuration(group.totalHours)}</span>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/30"
+      >
+        <ChevronRight
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform',
+            open && 'rotate-90'
+          )}
+        />
+        <span className="flex-1 text-sm font-semibold text-foreground">
+          {group.member}
+        </span>
+        <span className="text-[11px] tabular-nums text-muted-foreground">
+          {group.sessions.length} session
+          {group.sessions.length !== 1 ? 's' : ''}
+        </span>
+        <span className="min-w-[80px] text-right text-sm font-bold tabular-nums text-primary">
+          {formatDuration(group.totalHours)}
+        </span>
       </button>
       {open && (
-        <div className="bg-muted/40 px-5 pb-3">
-          <div className="grid grid-cols-[80px_1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-            <span>Date</span><span>Project</span><span>Task</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
+        <div className="bg-muted/30 px-5 pb-3">
+          <div className="grid grid-cols-[80px_1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+            <span>Date</span>
+            <span>Project</span>
+            <span>Task</span>
+            <span>Start</span>
+            <span>End</span>
+            <span className="text-right">Duration</span>
           </div>
           <div className="divide-y divide-border/80">
             {group.sessions.map((s, i) => (
               <div key={i} className="py-2 text-[11px]">
                 <div className="grid grid-cols-[80px_1fr_1fr_80px_80px_70px] gap-2">
-                  <span className="text-muted-foreground">{formatDateShort(s.date)}</span>
-                  <span className="text-muted-foreground truncate">{s.project}</span>
-                  <span className="text-foreground/85 font-medium truncate">{s.task}</span>
-                  <span className="text-muted-foreground font-mono tabular-nums">{formatTime(s.signIn)}</span>
-                  <span className="text-muted-foreground font-mono tabular-nums">{s.signOut ? formatTime(s.signOut) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                  <span className="text-right font-semibold text-foreground/85 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</span>
+                  <span className="text-muted-foreground">
+                    {formatDateShort(s.date)}
+                  </span>
+                  <span className="truncate text-muted-foreground">
+                    {s.project}
+                  </span>
+                  <span className="truncate font-medium text-foreground">
+                    {s.task}
+                  </span>
+                  <span className="font-mono tabular-nums text-muted-foreground">
+                    {formatTime(s.signIn)}
+                  </span>
+                  <span className="font-mono tabular-nums text-muted-foreground">
+                    {s.signOut ? (
+                      formatTime(s.signOut)
+                    ) : (
+                      <span className="font-sans font-medium text-emerald-600">
+                        Active
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-right font-semibold tabular-nums text-foreground">
+                    {s.hours != null ? formatDuration(s.hours) : '—'}
+                  </span>
                 </div>
-                {s.description && <p className="text-[10px] text-muted-foreground/70 italic mt-0.5">— {s.description}</p>}
+                {s.description && (
+                  <p className="mt-0.5 text-[10px] italic text-muted-foreground">
+                    — {s.description}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -592,90 +1189,158 @@ function DetailedMemberGroup({ group }: { group: { member: string; totalHours: n
   )
 }
 
-function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon?: React.ReactNode }) {
-  const gradients: Record<string, string> = {
-    indigo: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
-    violet: 'bg-gradient-to-br from-violet-500 to-violet-600',
-    blue: 'bg-gradient-to-br from-blue-500 to-blue-600',
-    emerald: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-  }
-  const textColors: Record<string, string> = { indigo: 'text-indigo-700', violet: 'text-violet-700', blue: 'text-blue-700', emerald: 'text-emerald-700' }
-  return (
-    <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-      <div className="flex items-center gap-2.5 mb-2">
-        <div className={`h-7 w-7 rounded-lg ${gradients[color]} flex items-center justify-center shadow-sm text-white`}>
-          {icon}
-        </div>
-        <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">{label}</p>
-      </div>
-      <p className={`text-xl font-bold ${textColors[color]} tracking-tight tabular-nums`}>{value}</p>
-    </div>
-  )
-}
+/* ═════════════════ Weekly View ═════════════════ */
 
-function MemberBreakdown({ records, totalHours }: { records: Attendance[]; totalHours: number }) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const rows = useMemo(() => {
-    const map = new Map<string, { userId: string; name: string; hours: number; sessions: { date: string; signInAt: string; signOutAt: string | null; hours: number | null; taskTitle: string; projectName: string; description: string }[] }>()
+function WeeklyView({
+  records,
+  dates,
+  isLoading,
+}: {
+  records: Attendance[]
+  dates: string[]
+  isLoading: boolean
+}) {
+  const weeklyGrid = useMemo(() => {
+    const memberMap = new Map<
+      string,
+      { name: string; days: Record<string, number> }
+    >()
     for (const r of records) {
-      const sessions = r.sessions.map(s => ({ date: r.date, signInAt: s.signInAt, signOutAt: s.signOutAt, hours: s.hours, taskTitle: s.taskTitle || 'General', projectName: s.projectName || 'No Project', description: s.description || '' }))
-      const ex = map.get(r.userId)
-      if (ex) { ex.hours += sessions.reduce((s, se) => s + (se.hours ?? 0), 0); ex.sessions.push(...sessions) }
-      else map.set(r.userId, { userId: r.userId, name: r.userName || r.userEmail || r.userId, hours: sessions.reduce((s, se) => s + (se.hours ?? 0), 0), sessions })
+      if (!memberMap.has(r.userId))
+        memberMap.set(r.userId, {
+          name: r.userName || r.userEmail,
+          days: {},
+        })
+      const entry = memberMap.get(r.userId)!
+      const hrs = r.sessions.reduce((s, se) => s + (se.hours ?? 0), 0)
+      entry.days[r.date] = (entry.days[r.date] ?? 0) + hrs
     }
-    return Array.from(map.values()).sort((a, b) => b.hours - a.hours)
+    return Array.from(memberMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )
   }, [records])
 
-  return (
-    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-border/50"><h3 className="text-[13px] font-bold text-foreground/95">Member Breakdown</h3></div>
-      <div className="divide-y divide-border/60">
-        {rows.map((row, i) => {
-          const isOpen = expanded.has(row.userId)
-          const pct = totalHours > 0 ? Math.round((row.hours / totalHours) * 100) : 0
-          return (
-            <div key={row.userId}>
-              <button onClick={() => setExpanded(prev => { const n = new Set(prev); n.has(row.userId) ? n.delete(row.userId) : n.add(row.userId); return n })}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors text-left">
-                <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                <div className="flex items-center gap-2 min-w-[120px]">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  <span className="text-[13px] font-medium text-foreground/95">{row.name}</span>
-                </div>
-                <span className="text-[12px] font-semibold text-foreground/85 tabular-nums min-w-[70px] text-right">{formatDuration(row.hours)}</span>
-                <div className="flex-1 flex items-center gap-2">
-                  <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }} />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground/70 tabular-nums w-8 text-right">{pct}%</span>
-                </div>
-              </button>
-              {isOpen && (
-                <div className="bg-muted/40 px-5 pb-3">
-                  <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                    <span>Date</span><span>Project</span><span>Task</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
-                  </div>
-                  <div className="divide-y divide-border/80">
-                    {row.sessions.sort((a, b) => new Date(a.signInAt).getTime() - new Date(b.signInAt).getTime()).map((s, j) => (
-                      <div key={j} className="py-2 text-[11px] hover:bg-card/60 transition-colors">
-                        <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2">
-                          <span className="text-muted-foreground">{formatDateShort(s.date)}</span>
-                          <span className="text-foreground/85 font-medium truncate">{s.projectName}</span>
-                          <span className="text-muted-foreground truncate">{s.taskTitle}</span>
-                          <span className="text-muted-foreground font-mono tabular-nums">{formatTime(s.signInAt)}</span>
-                          <span className="text-muted-foreground font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                          <span className="text-right font-semibold text-foreground/85 tabular-nums">{s.hours != null ? formatDuration(s.hours) : '—'}</span>
-                        </div>
-                        {s.description && <p className="text-[10px] text-muted-foreground/70 italic mt-0.5 ml-[90px]">— {s.description}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
+  const weekTotals = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const d of dates) totals[d] = 0
+    for (const m of weeklyGrid)
+      for (const [d, h] of Object.entries(m.days))
+        totals[d] = (totals[d] ?? 0) + h
+    return totals
+  }, [weeklyGrid, dates])
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
       </div>
-    </div>
+    )
+  }
+
+  const today = todayISO()
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-40">Member</TableHead>
+            {dates.map((d) => {
+              const isToday = d === today
+              return (
+                <TableHead
+                  key={d}
+                  className={cn(
+                    'text-center',
+                    isToday && 'bg-primary/10 text-primary'
+                  )}
+                >
+                  {new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
+                    weekday: 'short',
+                  })}
+                  <br />
+                  <span className="text-[9px] font-semibold">
+                    {new Date(d + 'T00:00:00').getDate()}
+                  </span>
+                </TableHead>
+              )
+            })}
+            <TableHead className="bg-muted/40 text-center text-foreground">
+              Total
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {weeklyGrid.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={9}
+                className="py-10 text-center text-sm text-muted-foreground"
+              >
+                No data this week
+              </TableCell>
+            </TableRow>
+          ) : (
+            weeklyGrid.map((m) => {
+              const memberTotal = Object.values(m.days).reduce(
+                (s, h) => s + h,
+                0
+              )
+              return (
+                <TableRow key={m.name}>
+                  <TableCell className="font-medium text-foreground">
+                    {m.name}
+                  </TableCell>
+                  {dates.map((d) => {
+                    const hrs = m.days[d] ?? 0
+                    const isToday = d === today
+                    return (
+                      <TableCell
+                        key={d}
+                        className={cn(
+                          'text-center tabular-nums',
+                          isToday && 'bg-primary/5',
+                          hrs > 0
+                            ? 'font-medium text-foreground'
+                            : 'text-muted-foreground/50'
+                        )}
+                      >
+                        {hrs > 0 ? formatDuration(hrs) : '—'}
+                      </TableCell>
+                    )
+                  })}
+                  <TableCell className="bg-muted/30 text-center font-bold tabular-nums text-primary">
+                    {formatDuration(memberTotal)}
+                  </TableCell>
+                </TableRow>
+              )
+            })
+          )}
+        </TableBody>
+        {weeklyGrid.length > 0 && (
+          <TableFooter>
+            <TableRow>
+              <TableCell className="font-bold text-foreground">Total</TableCell>
+              {dates.map((d) => {
+                const t = weekTotals[d] ?? 0
+                return (
+                  <TableCell
+                    key={d}
+                    className="text-center font-bold tabular-nums text-foreground"
+                  >
+                    {t > 0 ? formatDuration(t) : '—'}
+                  </TableCell>
+                )
+              })}
+              <TableCell className="bg-muted/50 text-center font-black tabular-nums text-primary">
+                {formatDuration(
+                  Object.values(weekTotals).reduce((s, h) => s + h, 0)
+                )}
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        )}
+      </Table>
+    </Card>
   )
 }

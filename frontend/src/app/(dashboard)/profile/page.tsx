@@ -1,935 +1,545 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  Pencil,
+  Calendar,
+  Briefcase,
+  MapPin,
+  Phone,
+  GraduationCap,
+  Sparkles,
+  Heart,
+  Sun,
+  Moon,
+  KeyRound,
+  CheckCircle2,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
-import { updateProfile, getProfile } from '@/lib/api/userApi'
-import { AvatarUpload } from '@/components/ui/AvatarUpload'
-import { DatePicker } from '@/components/ui/DatePicker'
-import { PasswordInput } from '@/components/ui/PasswordInput'
 import { useTheme } from '@/lib/theme/ThemeProvider'
 import { useMyTasks } from '@/lib/hooks/useUsers'
 import { useLiveHours } from '@/lib/hooks/useLiveHours'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { useMyDayOffs } from '@/lib/hooks/useDayOffs'
+import { getProfile, updateProfile } from '@/lib/api/userApi'
+import { useToast } from '@/components/ui/Toast'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Progress } from '@/components/ui/Progress'
+import { AvatarUpload } from '@/components/ui/AvatarUpload'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
+import {
+  StatCardsGrid,
+  type StatCardItem,
+} from '@/components/ui/StatCardsGrid'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { ProfileEditDialog } from '@/components/profile/ProfileEditDialog'
+import { ChangePasswordDialog } from '@/components/profile/ChangePasswordDialog'
+import { DesktopAppCard } from '@/components/profile/DesktopAppCard'
 import type { User } from '@/types/user'
+import { cn } from '@/lib/utils'
 
-const ROLE_COLORS: Record<string, string> = {
+const ROLE_PILL: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-700 ring-1 ring-inset ring-purple-200',
   ADMIN: 'bg-red-100 text-red-700 ring-1 ring-inset ring-red-200',
   MEMBER: 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200',
 }
 
-const inputClass = "w-full rounded-lg border border-border/80 bg-card px-3.5 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none transition-all placeholder:text-muted-foreground/70"
-
-function Section({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
-  return (
-    <div className="border-b border-border last:border-b-0">
-      <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
-        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{title}</h3>
-        {action}
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </div>
-  )
+function fmtDate(iso?: string | null) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso + (iso.length <= 10 ? 'T00:00:00' : '')).toLocaleDateString(
+      'en-US',
+      { month: 'short', day: 'numeric', year: 'numeric' }
+    )
+  } catch {
+    return '—'
+  }
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium text-muted-foreground/70 mb-0.5">{label}</dt>
-      <dd className="text-sm text-foreground font-medium">{value || <span className="text-muted-foreground/50 font-normal">—</span>}</dd>
-    </div>
-  )
+function getDayOffScore(approvedDates: { startDate: string; endDate: string }[]) {
+  const now = new Date()
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
+  let daysOff = 0
+  for (const d of approvedDates) {
+    const start = d.startDate.slice(0, 10)
+    const end = d.endDate.slice(0, 10)
+    if (start > monthEnd || end < monthStart) continue
+    const from = new Date(
+      Math.max(new Date(start).getTime(), new Date(monthStart).getTime())
+    )
+    const to = new Date(
+      Math.min(new Date(end).getTime(), new Date(monthEnd).getTime())
+    )
+    daysOff +=
+      Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  }
+  return daysOff === 0 ? 100 : daysOff <= 2 ? 75 : daysOff <= 5 ? 50 : 25
 }
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth()
+  const toast = useToast()
   const [profile, setProfile] = useState<User | null>(null)
-  const [editing, setEditing] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [pwOpen, setPwOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [saveError, setSaveError] = useState('')
-
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [designation, setDesignation] = useState('')
-  const [location, setLocation] = useState('')
-  const [bio, setBio] = useState('')
-  const [skillsText, setSkillsText] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
-  const [collegeName, setCollegeName] = useState('')
-  const [areaOfInterest, setAreaOfInterest] = useState('')
-  const [hobby, setHobby] = useState('')
-  const [companyPrefix, setCompanyPrefix] = useState('')
-  const [editConfirmed, setEditConfirmed] = useState(false)
-  const [personalInfoConfirmed, setBioDataConfirmed] = useState(false)
-  const [personalInfoSaving, setBioDataSaving] = useState(false)
-  const [personalInfoSuccess, setBioDataSuccess] = useState(false)
-  const [personalInfoError, setBioDataError] = useState('')
 
   useEffect(() => {
-    getProfile().then((p) => {
-      setProfile(p)
-      setName(p.name || '')
-      setPhone(p.phone || '')
-      setDesignation(p.designation || '')
-      setLocation(p.location || '')
-      setBio(p.bio || '')
-      setSkillsText((p.skills ?? []).join(', '))
-      setDateOfBirth(p.dateOfBirth || '')
-      setCollegeName(p.collegeName || '')
-      setAreaOfInterest(p.areaOfInterest || '')
-      setHobby(p.hobby || '')
-      setCompanyPrefix(p.companyPrefix || 'NS')
-    })
-  }, [])
-
-  // Stats data
-  const { data: myTasks } = useMyTasks()
-  const { totalHours: liveTodayHours } = useLiveHours()
-  const { data: projects } = useProjects()
-
-  const { data: myDayOffs } = useMyDayOffs()
-
-  const tasksDone = (myTasks ?? []).filter(t => t.status === 'DONE').length
-  const totalTasks = (myTasks ?? []).length
-  const todayHours = liveTodayHours
-  const projectCount = (projects ?? []).length
-
-  // Day-off score (same logic as day-offs page)
-  const dayOffScore = (() => {
-    const now = new Date()
-    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-    const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
-    let daysOff = 0
-    for (const d of (myDayOffs ?? [])) {
-      if (d.status !== 'APPROVED') continue
-      const start = d.startDate.slice(0, 10)
-      const end = d.endDate.slice(0, 10)
-      if (start > monthEnd || end < monthStart) continue
-      const from = new Date(Math.max(new Date(start).getTime(), new Date(monthStart).getTime()))
-      const to = new Date(Math.min(new Date(end).getTime(), new Date(monthEnd).getTime()))
-      daysOff += Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    }
-    return daysOff === 0 ? 100 : daysOff <= 2 ? 75 : daysOff <= 5 ? 50 : 25
-  })()
-
-  // Profile completeness
-  const completenessFields = [
-    profile?.name, profile?.bio, profile?.phone, profile?.designation,
-    profile?.location, profile?.dateOfBirth, profile?.collegeName,
-    profile?.areaOfInterest, profile?.hobby, profile?.avatarUrl,
-    profile?.skills && profile.skills.length > 0 ? 'yes' : null,
-  ]
-  const filledCount = completenessFields.filter(Boolean).length
-  const completeness = Math.round((filledCount / completenessFields.length) * 100)
-
-  const handleSave = async () => {
-    setSaving(true)
-    setSuccess(false)
-    setSaveError('')
-    try {
-      const skills = skillsText.split(',').map((s) => s.trim()).filter(Boolean)
-      const updated = await updateProfile({
-        name, phone, designation, location, bio, skills,
-        dateOfBirth, collegeName, areaOfInterest, hobby,
-        ...(user?.systemRole === 'OWNER' && companyPrefix ? { companyPrefix } : {}),
-      })
-      setProfile(updated)
-      updateUser({ name })
-      setEditing(false)
-      setEditConfirmed(false)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
-    } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to update profile')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleCancel = () => {
-    if (profile) {
-      setName(profile.name || '')
-      setPhone(profile.phone || '')
-      setDesignation(profile.designation || '')
-      setLocation(profile.location || '')
-      setBio(profile.bio || '')
-      setSkillsText((profile.skills ?? []).join(', '))
-    }
-    setEditing(false)
-    setEditConfirmed(false)
-  }
-
-  if (!user) return null
-  const dp = profile || user
-  const isOwner = dp.systemRole === 'OWNER'
-  const personalInfoSubmitted = !!(profile?.dateOfBirth)
-
-  return (
-    <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in">
-
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground tracking-tight">Profile</h1>
-        {!editing && (isOwner || personalInfoSubmitted) && (
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            {isOwner ? 'Edit Company Profile' : 'Edit Profile'}
-          </Button>
-        )}
-      </div>
-
-      {/* Success/Error banner */}
-      {success && (
-        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 animate-fade-in">
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          Profile updated successfully.
-        </div>
-      )}
-      {saveError && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          {saveError}
-        </div>
-      )}
-
-      {/* Quick Stats + Profile Completeness */}
-      {!isOwner && !editing && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-xl font-bold text-emerald-700 tabular-nums">{tasksDone}</p>
-            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Tasks Done</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-xl font-bold text-blue-700 tabular-nums">{totalTasks - tasksDone}</p>
-            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Active</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-xl font-bold text-indigo-700 tabular-nums">{projectCount}</p>
-            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Projects</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <p className="text-xl font-bold text-cyan-700 tabular-nums">{formatDuration(todayHours)}</p>
-            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Today</p>
-          </div>
-          <div className={`rounded-xl border p-4 shadow-sm ${
-            dayOffScore === 100 ? 'bg-emerald-50 border-emerald-200' :
-            dayOffScore >= 75 ? 'bg-blue-50 border-blue-200' :
-            dayOffScore >= 50 ? 'bg-amber-50 border-amber-200' :
-            'bg-red-50 border-red-200'
-          }`}>
-            <p className={`text-xl font-bold tabular-nums ${
-              dayOffScore === 100 ? 'text-emerald-700' :
-              dayOffScore >= 75 ? 'text-blue-700' :
-              dayOffScore >= 50 ? 'text-amber-700' :
-              'text-red-700'
-            }`}>{dayOffScore}</p>
-            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Day-Off Score</p>
-          </div>
-          {/* Profile completeness */}
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-shrink-0" style={{ width: 28, height: 28 }}>
-                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3.5" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke={completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b'}
-                    strokeWidth="3.5" strokeDasharray={`${completeness} ${100 - completeness}`} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-[7px] font-bold tabular-nums" style={{ color: completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b' }}>{completeness}%</span>
-                </div>
-              </div>
-              <p className="text-sm font-bold tabular-nums" style={{ color: completeness >= 100 ? '#10b981' : completeness >= 60 ? '#6366f1' : '#f59e0b' }}>{filledCount}/{completenessFields.length}</p>
-            </div>
-            <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-1">Profile</p>
-          </div>
-        </div>
-      )}
-
-      {/* Main card */}
-      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-
-        {/* Identity section */}
-        <Section title="Identity">
-          <div className="flex items-center gap-5">
-            <AvatarUpload
-              currentUrl={profile?.avatarUrl}
-              name={dp.name || dp.email}
-              size="lg"
-              editable={!editing}
-              onUpload={async (url) => {
-                const updated = await updateProfile({ avatarUrl: url })
-                setProfile(updated)
-              }}
-            />
-            <div className="flex-1 min-w-0">
-              {editing ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">{isOwner ? 'Company Name' : 'Full Name'}</label>
-                    <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-                  </div>
-                  {isOwner && (
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Employee ID Prefix</label>
-                      <div className="flex items-center gap-2">
-                        <input value={companyPrefix} onChange={(e) => setCompanyPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
-                          placeholder="NS" maxLength={6} className={`${inputClass} w-24 uppercase font-mono`} />
-                        <span className="text-[11px] text-muted-foreground/70">Format: {companyPrefix || 'NS'}-DEPT-YXXXX</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-lg font-bold text-foreground truncate">{dp.name || dp.email}</h2>
-                  <p className="text-sm text-muted-foreground truncate">{dp.email}</p>
-                </>
-              )}
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ROLE_COLORS[dp.systemRole] || ROLE_COLORS.MEMBER}`}>
-                  {dp.systemRole}
-                </span>
-                {!isOwner && profile?.employeeId && (
-                  <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[10px] font-mono font-bold text-muted-foreground ring-1 ring-inset ring-border/80">
-                    {profile.employeeId}
-                  </span>
-                )}
-                {dp.createdAt && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/70">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    Joined {new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        {/* About section */}
-        <Section title="About">
-          {editing ? (
-            <textarea
-              rows={3}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Write a short bio..."
-              className="w-full rounded-lg border border-border/80 bg-card px-3.5 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none resize-none transition-all placeholder:text-muted-foreground/70"
-            />
-          ) : (
-            <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-wrap">
-              {profile?.bio || <span className="text-muted-foreground/50">No bio added yet.</span>}
-            </p>
-          )}
-        </Section>
-
-        {/* Contact & Work section — hidden for OWNER (company account) */}
-        {!isOwner && personalInfoSubmitted && (
-          <Section title="Contact & Work">
-            {editing ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Phone</label>
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={inputClass} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Date of Birth</label>
-                  <DatePicker value={dateOfBirth} onChange={setDateOfBirth} max={new Date().toISOString().slice(0, 10)} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Designation</label>
-                  <input value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="Software Engineer" className={inputClass} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Department <span className="text-muted-foreground/50">(admin only)</span></label>
-                  <input value={profile?.department || ''} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Location</label>
-                  <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chennai, India" className={inputClass} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">College Name</label>
-                  <input value={collegeName} onChange={(e) => setCollegeName(e.target.value)} placeholder="University / College" className={inputClass} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Area of Interest</label>
-                  <input value={areaOfInterest} onChange={(e) => setAreaOfInterest(e.target.value)} placeholder="Web Development, AI, etc." className={inputClass} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Hobby</label>
-                  <input value={hobby} onChange={(e) => setHobby(e.target.value)} placeholder="Reading, Music, etc." className={inputClass} />
-                </div>
-              </div>
-            ) : (
-              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6">
-                <Field label="Phone" value={profile?.phone} />
-                <Field label="Date of Birth" value={profile?.dateOfBirth ? new Date(profile.dateOfBirth + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined} />
-                <Field label="Designation" value={profile?.designation} />
-                <Field label="Department" value={profile?.department} />
-                <Field label="Location" value={profile?.location} />
-                <Field label="College" value={profile?.collegeName} />
-                <Field label="Area of Interest" value={profile?.areaOfInterest} />
-                <Field label="Hobby" value={profile?.hobby} />
-                <Field label="Joined" value={dp.createdAt ? new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined} />
-              </dl>
-            )}
-          </Section>
-        )}
-
-        {/* Skills section — hidden for OWNER, shown after personal info submitted */}
-        {!isOwner && personalInfoSubmitted && (
-          <Section title="Skills">
-            {editing ? (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Comma separated</label>
-                <input value={skillsText} onChange={(e) => setSkillsText(e.target.value)} placeholder="React, Python, AWS" className={inputClass} />
-              </div>
-            ) : profile?.skills && profile.skills.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {profile.skills.map((skill, i) => {
-                  const colors = [
-                    'bg-indigo-50 text-indigo-700 border-indigo-200',
-                    'bg-emerald-50 text-emerald-700 border-emerald-200',
-                    'bg-violet-50 text-violet-700 border-violet-200',
-                    'bg-amber-50 text-amber-700 border-amber-200',
-                    'bg-blue-50 text-blue-700 border-blue-200',
-                    'bg-teal-50 text-teal-700 border-teal-200',
-                    'bg-pink-50 text-pink-700 border-pink-200',
-                    'bg-orange-50 text-orange-700 border-orange-200',
-                  ]
-                  return (
-                    <span key={skill} className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${colors[i % colors.length]}`}>
-                      {skill}
-                    </span>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground/50">No skills added.</p>
-            )}
-          </Section>
-        )}
-
-        {/* Edit mode: checkbox + save/cancel at bottom */}
-        {editing && (isOwner || personalInfoSubmitted) && (
-          <div className="border-t border-border px-6 py-5">
-            <label className="flex items-start gap-3 cursor-pointer mb-4">
-              <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
-                editConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-border'
-              }`}>
-                {editConfirmed && (
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </div>
-              <input type="checkbox" checked={editConfirmed} onChange={(e) => setEditConfirmed(e.target.checked)} className="sr-only" />
-              <span className="text-sm text-muted-foreground">I confirm that the above details are true and correct.</span>
-            </label>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" size="sm" onClick={handleCancel}>Cancel</Button>
-              <Button size="sm" onClick={handleSave} loading={saving} disabled={!editConfirmed}>Save Changes</Button>
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* Personal Info form — only shown once (before first submission), hidden for OWNER */}
-      {!isOwner && !personalInfoSubmitted && (
-        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Personal Info</h3>
-          </div>
-          <div className="px-6 py-5">
-            {personalInfoSuccess && (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 mb-4 animate-fade-in">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Bio data saved successfully.
-              </div>
-            )}
-            {personalInfoError && (
-              <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 mb-4">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                {personalInfoError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Name */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Full Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-              </div>
-
-              {/* Date of Birth */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Date of Birth</label>
-                <DatePicker value={dateOfBirth} onChange={setDateOfBirth} max={new Date().toISOString().slice(0, 10)} />
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Phone Number</label>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={inputClass} />
-              </div>
-
-              {/* Email — read only */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Email ID</label>
-                <input value={dp.email} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
-              </div>
-
-              {/* College Name */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">College Name</label>
-                <input value={collegeName} onChange={(e) => setCollegeName(e.target.value)} placeholder="University / College" className={inputClass} />
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Location</label>
-                <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Chennai, India" className={inputClass} />
-              </div>
-
-              {/* Join Date — read only */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Join Date</label>
-                <input value={dp.createdAt ? new Date(dp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
-              </div>
-
-              {/* Role — read only */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Role</label>
-                <input value={dp.systemRole} disabled className="w-full rounded-lg border border-border/80 bg-muted/40 px-3.5 py-2 text-sm text-muted-foreground/70 cursor-not-allowed" />
-              </div>
-
-              {/* Area of Interest */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Area of Interest</label>
-                <input value={areaOfInterest} onChange={(e) => setAreaOfInterest(e.target.value)} placeholder="Web Development, AI, etc." className={inputClass} />
-              </div>
-
-              {/* Hobby */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground/70 mb-1 block">Hobby</label>
-                <input value={hobby} onChange={(e) => setHobby(e.target.value)} placeholder="Reading, Music, etc." className={inputClass} />
-              </div>
-            </div>
-
-            {/* Confirmation checkbox + Submit */}
-            <div className="mt-5 pt-4 border-t border-border">
-              <label className="flex items-start gap-3 cursor-pointer mb-4">
-                <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 mt-0.5 transition-all flex-shrink-0 ${
-                  personalInfoConfirmed ? 'bg-indigo-600 border-indigo-600' : 'border-border'
-                }`}>
-                  {personalInfoConfirmed && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <input
-                  type="checkbox"
-                  checked={personalInfoConfirmed}
-                  onChange={(e) => setBioDataConfirmed(e.target.checked)}
-                  className="sr-only"
-                />
-                <span className="text-sm text-muted-foreground">I confirm that the above details are true and correct.</span>
-              </label>
-
-              <div className="flex justify-end">
-                <Button
-                  disabled={!personalInfoConfirmed || personalInfoSaving}
-                  loading={personalInfoSaving}
-                  onClick={async () => {
-                    setBioDataSaving(true)
-                    setBioDataSuccess(false)
-                    setBioDataError('')
-                    try {
-                      const skills = skillsText.split(',').map((s) => s.trim()).filter(Boolean)
-                      const updated = await updateProfile({
-                        name, phone, location, bio, skills, designation,
-                        dateOfBirth, collegeName, areaOfInterest, hobby,
-                      })
-                      setProfile(updated)
-                      updateUser({ name })
-                      setBioDataSuccess(true)
-                      setBioDataConfirmed(false)
-                      setTimeout(() => setBioDataSuccess(false), 4000)
-                    } catch (err: unknown) {
-                      setBioDataError(err instanceof Error ? err.message : 'Failed to save personal info')
-                    } finally {
-                      setBioDataSaving(false)
-                    }
-                  }}
-                >
-                  Submit Personal Info
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Appearance */}
-      <ThemeSection />
-
-      {/* Security — Change Password */}
-      <ChangePasswordSection />
-
-      {/* Desktop App Download */}
-      <DesktopAppSection />
-    </div>
-  )
-}
-
-function ThemeSection() {
-  const { theme, setTheme } = useTheme()
-
-  return (
-    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
-        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Appearance</h3>
-      </div>
-      <div className="px-6 py-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-foreground">Theme</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5">Choose your preferred appearance</p>
-          </div>
-          <div className="flex gap-1.5 bg-muted rounded-xl p-1">
-            <button
-              onClick={() => setTheme('light')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                theme === 'light'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground/85'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              Light
-            </button>
-            <button
-              onClick={() => setTheme('dark')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                theme === 'dark'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground/85'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-              Dark
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ChangePasswordSection() {
-  const { changePassword, user } = useAuth()
-  const [open, setOpen] = useState(false)
-  const [currentPw, setCurrentPw] = useState('')
-  const [newPw, setNewPw] = useState('')
-  const [confirmPw, setConfirmPw] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-
-  // Forgot password flow
-  const [forgotMode, setForgotMode] = useState<'off' | 'sent' | 'confirm'>('off')
-  const [forgotCode, setForgotCode] = useState('')
-  const [forgotNewPw, setForgotNewPw] = useState('')
-  const [forgotConfirmPw, setForgotConfirmPw] = useState('')
-  const [forgotLoading, setForgotLoading] = useState(false)
-  const [forgotError, setForgotError] = useState('')
-  const [forgotSuccess, setForgotSuccess] = useState(false)
-
-  const handleSubmit = async () => {
-    setError('')
-    setSuccess(false)
-
-    if (!currentPw || !newPw || !confirmPw) {
-      setError('All fields are required')
-      return
-    }
-    if (newPw.length < 8) {
-      setError('New password must be at least 8 characters')
-      return
-    }
-    if (newPw !== confirmPw) {
-      setError('New passwords do not match')
-      return
-    }
-    if (currentPw === newPw) {
-      setError('New password must be different from current password')
-      return
-    }
-
-    setSaving(true)
-    try {
-      await changePassword(currentPw, newPw)
-      setSuccess(true)
-      setCurrentPw('')
-      setNewPw('')
-      setConfirmPw('')
-      setOpen(false)
-      setTimeout(() => setSuccess(false), 4000)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to change password'
-      if (msg.includes('Incorrect')) {
-        setError('Current password is incorrect')
-      } else if (msg.includes('policy') || msg.includes('Password')) {
-        setError('Password must have 8+ characters with uppercase, lowercase, and a number')
-      } else {
-        setError(msg)
-      }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleForgotSendCode = async () => {
-    if (!user?.email) return
-    setForgotError('')
-    setForgotLoading(true)
-    try {
-      const { forgotPassword } = await import('@/lib/auth/cognitoClient')
-      await forgotPassword(user.email)
-      setForgotMode('confirm')
-    } catch (err: unknown) {
-      setForgotError(err instanceof Error ? err.message : 'Failed to send code')
-    } finally {
-      setForgotLoading(false)
-    }
-  }
-
-  const handleForgotConfirm = async () => {
-    setForgotError('')
-    if (!forgotCode.trim()) { setForgotError('Code is required'); return }
-    if (forgotNewPw.length < 8) { setForgotError('Min 8 characters'); return }
-    if (!/[A-Z]/.test(forgotNewPw)) { setForgotError('Need an uppercase letter'); return }
-    if (!/[a-z]/.test(forgotNewPw)) { setForgotError('Need a lowercase letter'); return }
-    if (!/[0-9]/.test(forgotNewPw)) { setForgotError('Need a number'); return }
-    if (forgotNewPw !== forgotConfirmPw) { setForgotError('Passwords do not match'); return }
-
-    setForgotLoading(true)
-    try {
-      const { confirmForgotPassword } = await import('@/lib/auth/cognitoClient')
-      await confirmForgotPassword(user!.email, forgotCode.trim(), forgotNewPw)
-      setForgotSuccess(true)
-      setTimeout(() => {
-        setOpen(false)
-        setForgotMode('off')
-        setForgotSuccess(false)
-        setForgotCode('')
-        setForgotNewPw('')
-        setForgotConfirmPw('')
-      }, 2000)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to reset'
-      if (msg.includes('CodeMismatch') || msg.includes('code')) setForgotError('Invalid code')
-      else if (msg.includes('Expired')) setForgotError('Code expired. Request a new one.')
-      else setForgotError(msg)
-    } finally {
-      setForgotLoading(false)
-    }
-  }
-
-  const handleClose = () => {
-    setOpen(false)
-    setForgotMode('off')
-    setForgotError('')
-    setForgotCode('')
-    setForgotNewPw('')
-    setForgotConfirmPw('')
-    setForgotSuccess(false)
-    setCurrentPw('')
-    setNewPw('')
-    setConfirmPw('')
-    setError('')
-  }
-
-  return (
-    <>
-      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Security</h3>
-        </div>
-        <div className="px-6 py-5">
-          {success && (
-            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700 mb-4 animate-fade-in">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Password changed successfully.
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">Password</p>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">Manage your account password</p>
-            </div>
-            <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-              Change Password
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <Modal isOpen={open} onClose={handleClose} title={forgotMode === 'off' ? 'Change Password' : 'Reset Password'} size="sm">
-        {forgotSuccess ? (
-          <div className="flex flex-col items-center gap-3 py-4">
-            <svg className="w-12 h-12 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <p className="text-lg font-bold text-foreground">Password Reset!</p>
-            <p className="text-sm text-muted-foreground">Please sign in again with your new password.</p>
-          </div>
-        ) : forgotMode === 'confirm' ? (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">A verification code has been sent to <span className="font-semibold text-foreground">{user?.email}</span></p>
-            {forgotError && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{forgotError}</div>
-            )}
-            <div>
-              <label className="text-sm font-semibold text-foreground/85 mb-1.5 block">Verification Code</label>
-              <input type="text" placeholder="Enter 6-digit code" value={forgotCode} onChange={(e) => setForgotCode(e.target.value)} autoComplete="one-time-code" className={inputClass} />
-            </div>
-            <PasswordInput label="New Password" value={forgotNewPw} onChange={(e) => setForgotNewPw(e.target.value)} placeholder="Enter new password" />
-            <PasswordInput label="Confirm Password" value={forgotConfirmPw} onChange={(e) => setForgotConfirmPw(e.target.value)} placeholder="Re-enter new password" />
-            <p className="text-[11px] text-muted-foreground/70">Min 8 characters with uppercase, lowercase, and a number.</p>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="secondary" size="sm" onClick={() => { setForgotMode('off'); setForgotError('') }}>Back</Button>
-              <Button size="sm" onClick={handleForgotConfirm} loading={forgotLoading}>Reset Password</Button>
-            </div>
-          </div>
-        ) : forgotMode === 'sent' ? null : (
-          <div className="space-y-4">
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</div>
-            )}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-semibold text-foreground/85">Current Password</label>
-                <button type="button" onClick={handleForgotSendCode} disabled={forgotLoading} className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold">
-                  {forgotLoading ? 'Sending...' : 'Forgot?'}
-                </button>
-              </div>
-              <PasswordInput value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Enter current password" />
-            </div>
-            <PasswordInput label="New Password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" />
-            <PasswordInput label="Confirm New Password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Re-enter new password" />
-            <p className="text-[11px] text-muted-foreground/70">Min 8 characters with uppercase, lowercase, and a number.</p>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
-              <Button size="sm" onClick={handleSubmit} loading={saving}>Change Password</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </>
-  )
-}
-
-function ProfilePlatformIcon({ platform, className }: { platform: string; className?: string }) {
-  const cls = className || 'w-7 h-7'
-  switch (platform) {
-    case 'windows':
-      return <svg className={cls} viewBox="0 0 24 24" fill="currentColor"><path d="M3 12.5L3 5.5L10.5 4.5V12.5H3ZM11.5 4.35L21 3V12.5H11.5V4.35ZM21 13.5V23L11.5 21.65V13.5H21ZM10.5 13.5V21.5L3 20.5V13.5H10.5Z" /></svg>
-    case 'linux':
-      return <svg className={cls} viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 2C10.148 2 8.838 4.56 8.838 6.804c0 1.157.267 2.078.59 3.074.163.503.334.98.425 1.498.09.52.07 1.072-.277 1.63-.488.784-1.14 1.267-1.46 1.865-.322.6-.39 1.37.212 2.04.328.367.774.654 1.293.87.28.593.825 1.067 1.534 1.382.708.314 1.548.465 2.355.465.808 0 1.647-.15 2.355-.465.71-.315 1.254-.79 1.535-1.383.519-.216.965-.503 1.293-.87.602-.67.534-1.44.212-2.04-.32-.598-.972-1.08-1.46-1.865-.347-.558-.368-1.11-.277-1.63.09-.518.262-.995.425-1.498.323-.996.59-1.917.59-3.074C16.17 4.56 14.86 2 12.504 2zm-.01 1.245c1.675 0 2.422 2.006 2.422 3.56 0 .954-.22 1.73-.525 2.67-.168.518-.37 1.073-.49 1.76-.12.686-.12 1.49.38 2.293.442.71.987 1.118 1.222 1.556.235.438.186.632-.108.96-.216.243-.6.44-1.058.592a1.5 1.5 0 0 0-.077-.138c-.36-.56-.986-.89-1.756-.89-.77 0-1.397.33-1.757.89a1.5 1.5 0 0 0-.077.138c-.457-.153-.842-.35-1.058-.592-.294-.328-.343-.522-.108-.96.235-.438.78-.845 1.222-1.556.5-.803.5-1.607.38-2.294-.12-.686-.322-1.24-.49-1.758-.305-.94-.525-1.716-.525-2.67 0-1.554.747-3.56 2.422-3.56z" /></svg>
-    case 'macos':
-      return <svg className={cls} viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" /></svg>
-    default:
-      return null
-  }
-}
-
-function DesktopAppSection() {
-  const [latest, setLatest] = useState<{ version: string; released_at?: string; downloads: Record<string, string> } | null>(null)
-
-  useEffect(() => {
-    fetch('https://dp2uotzxlo5a5.cloudfront.net/releases/latest.json')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setLatest(data) })
+    getProfile()
+      .then(setProfile)
       .catch(() => {})
   }, [])
 
-  const version = latest?.version || '1.0.0'
-  const releasedAt = latest?.released_at ? new Date(latest.released_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+  const { data: myTasks } = useMyTasks()
+  const { totalHours: liveTodayHours } = useLiveHours()
+  const { data: projects } = useProjects()
+  const { data: myDayOffs } = useMyDayOffs()
 
-  const platforms = [
-    { key: 'windows', label: 'Windows', ext: '.exe', size: '~5 MB', req: 'Windows 10+' },
-    { key: 'linux', label: 'Linux', ext: '.AppImage', size: '~6 MB', req: 'Ubuntu 22.04+' },
-    { key: 'macos', label: 'macOS', ext: '.dmg', size: '~11 MB', req: 'macOS 13+' },
+  if (!user) return null
+  const dp = profile ?? user
+  const isOwner = dp.systemRole === 'OWNER'
+
+  const tasksDone = (myTasks ?? []).filter((t) => t.status === 'DONE').length
+  const tasksActive = (myTasks ?? []).length - tasksDone
+  const projectCount = (projects ?? []).length
+
+  const approvedDayOffs = (myDayOffs ?? [])
+    .filter((d) => d.status === 'APPROVED')
+    .map((d) => ({ startDate: d.startDate, endDate: d.endDate }))
+  const dayOffScore = getDayOffScore(approvedDayOffs)
+
+  const completenessFields = [
+    profile?.name,
+    profile?.bio,
+    profile?.phone,
+    profile?.designation,
+    profile?.location,
+    profile?.dateOfBirth,
+    profile?.collegeName,
+    profile?.areaOfInterest,
+    profile?.hobby,
+    profile?.avatarUrl,
+    profile?.skills && profile.skills.length > 0 ? 'yes' : null,
   ]
+  const filledCount = completenessFields.filter(Boolean).length
+  const completeness = Math.round(
+    (filledCount / completenessFields.length) * 100
+  )
+  const missingInfo = !profile?.dateOfBirth
 
-  let userOS = 'windows'
-  if (typeof navigator !== 'undefined') {
-    const ua = navigator.userAgent.toLowerCase()
-    if (ua.includes('mac')) userOS = 'macos'
-    else if (ua.includes('linux')) userOS = 'linux'
+  const stats: StatCardItem[] = isOwner
+    ? []
+    : [
+        {
+          key: 'tasks-done',
+          label: 'Tasks done',
+          value: tasksDone,
+          accent: 'text-emerald-700',
+        },
+        {
+          key: 'active',
+          label: 'Active',
+          value: tasksActive,
+          accent: 'text-blue-700',
+        },
+        {
+          key: 'projects',
+          label: 'Projects',
+          value: projectCount,
+          accent: 'text-indigo-700',
+        },
+        {
+          key: 'today',
+          label: 'Today',
+          value: formatDuration(liveTodayHours),
+          accent: 'text-cyan-700',
+        },
+      ]
+
+  const handleSaveProfile = async (
+    data: Parameters<typeof updateProfile>[0]
+  ) => {
+    setSaving(true)
+    try {
+      const updated = await updateProfile(data)
+      setProfile(updated)
+      if (data.name) updateUser({ name: data.name })
+      setEditOpen(false)
+      toast.success('Profile updated')
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to update profile'
+      )
+      throw err
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <div className="bg-card dark:bg-[var(--color-surface)] rounded-2xl border border-border dark:border-gray-800 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 bg-muted/40 dark:bg-gray-800/30">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Desktop App</h3>
-        </div>
-        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-full">v{version}</span>
-      </div>
-      <div className="px-6 py-5">
-        <p className="text-sm text-muted-foreground dark:text-muted-foreground/50 mb-5">
-          Track time, monitor activity, and take screenshots with the desktop companion app.
-        </p>
-        <div className="grid grid-cols-3 gap-3">
-          {platforms.map(p => {
-            const url = latest?.downloads?.[p.key] || `https://github.com/Giridharan0624/taskflow-desktop/releases/latest`
-            const isUserOS = p.key === userOS
-            return (
-              <a
-                key={p.key}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`relative flex flex-col items-center gap-2.5 p-5 rounded-xl border transition-all group hover:shadow-md hover:-translate-y-0.5 ${
-                  isUserOS
-                    ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-500/5 ring-1 ring-indigo-100 dark:ring-indigo-500/20'
-                    : 'border-border dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-500/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-500/5'
-                }`}
-              >
-                {isUserOS && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white bg-indigo-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Recommended</span>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 animate-fade-in">
+      <PageHeader
+        title={isOwner ? 'Company Profile' : 'My Profile'}
+        description={
+          isOwner
+            ? 'Manage your company details and preferences'
+            : 'Your personal information and account settings'
+        }
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="gap-1.5"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Edit profile
+          </Button>
+        }
+      />
+
+      {!isOwner && missingInfo && (
+        <Alert variant="warning">
+          <Sparkles className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>
+              Your profile is incomplete. Add your personal details so the team
+              can get to know you.
+            </span>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setEditOpen(true)}
+            >
+              Complete profile
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Card className="p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+          <AvatarUpload
+            currentUrl={profile?.avatarUrl}
+            name={dp.name || dp.email}
+            size="xl"
+            onUpload={async (url) => {
+              const updated = await updateProfile({ avatarUrl: url })
+              setProfile(updated)
+              toast.success('Avatar updated')
+            }}
+          />
+
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-2xl font-bold tracking-tight text-foreground">
+              {dp.name || dp.email}
+            </h2>
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              {dp.email}
+            </p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                  ROLE_PILL[dp.systemRole] || ROLE_PILL.MEMBER
                 )}
-                <ProfilePlatformIcon platform={p.key} className={`w-8 h-8 ${isUserOS ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground/70 dark:text-muted-foreground'} group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors`} />
-                <div className="text-center">
-                  <p className={`text-[13px] font-bold ${isUserOS ? 'text-indigo-700 dark:text-indigo-300' : 'text-foreground/85 dark:text-gray-200'} group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors`}>{p.label}</p>
-                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">{p.ext} · {p.size}</p>
+              >
+                {dp.systemRole}
+              </span>
+              {!isOwner && profile?.employeeId && (
+                <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 font-mono text-[10px] font-bold text-muted-foreground ring-1 ring-inset ring-border">
+                  {profile.employeeId}
+                </span>
+              )}
+              {dp.createdAt && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  Joined {fmtDate(dp.createdAt)}
+                </span>
+              )}
+            </div>
+
+            {!isOwner && (
+              <div className="mt-4">
+                <div className="mb-1 flex items-center justify-between text-[11px]">
+                  <span className="font-semibold uppercase tracking-widest text-muted-foreground">
+                    Profile completeness
+                  </span>
+                  <span
+                    className={cn(
+                      'font-bold tabular-nums',
+                      completeness >= 100
+                        ? 'text-emerald-600'
+                        : completeness >= 60
+                          ? 'text-primary'
+                          : 'text-amber-600'
+                    )}
+                  >
+                    {filledCount}/{completenessFields.length} · {completeness}%
+                  </span>
                 </div>
-                <div className={`flex items-center gap-1 text-[10px] font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                  isUserOS
-                    ? 'bg-indigo-500 text-white group-hover:bg-indigo-600'
-                    : 'bg-muted dark:bg-gray-700 text-muted-foreground dark:text-muted-foreground/50 group-hover:bg-indigo-500 group-hover:text-white'
-                }`}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Download
-                </div>
-                <p className="text-[9px] text-muted-foreground/70">{p.req}</p>
-              </a>
-            )
-          })}
+                <Progress value={completeness} className="h-1.5" />
+              </div>
+            )}
+          </div>
+
+          {!isOwner && (
+            <div
+              className={cn(
+                'hidden shrink-0 flex-col items-center justify-center rounded-xl border px-4 py-3 sm:flex',
+                dayOffScore === 100
+                  ? 'border-emerald-200 bg-emerald-50'
+                  : dayOffScore >= 75
+                    ? 'border-blue-200 bg-blue-50'
+                    : dayOffScore >= 50
+                      ? 'border-amber-200 bg-amber-50'
+                      : 'border-red-200 bg-red-50'
+              )}
+            >
+              <span
+                className={cn(
+                  'text-2xl font-bold tabular-nums',
+                  dayOffScore === 100
+                    ? 'text-emerald-700'
+                    : dayOffScore >= 75
+                      ? 'text-blue-700'
+                      : dayOffScore >= 50
+                        ? 'text-amber-700'
+                        : 'text-red-700'
+                )}
+              >
+                {dayOffScore}
+              </span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                Day-off score
+              </span>
+            </div>
+          )}
         </div>
-        {releasedAt && (
-          <p className="text-[10px] text-muted-foreground/70 mt-4 text-center">
-            Released {releasedAt}
-          </p>
+
+        {profile?.bio && (
+          <div className="mt-5 border-t border-border/60 pt-4">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              About
+            </p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+              {profile.bio}
+            </p>
+          </div>
         )}
+      </Card>
+
+      {!isOwner && stats.length > 0 && (
+        <StatCardsGrid items={stats} columns={4} />
+      )}
+
+      {!isOwner && profile && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-bold text-foreground">
+                Contact & work
+              </h3>
+            </div>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DetailField
+                icon={<Phone className="h-3 w-3" />}
+                label="Phone"
+                value={profile.phone}
+              />
+              <DetailField
+                icon={<Briefcase className="h-3 w-3" />}
+                label="Designation"
+                value={profile.designation}
+              />
+              <DetailField
+                icon={<Briefcase className="h-3 w-3" />}
+                label="Department"
+                value={profile.department}
+              />
+              <DetailField
+                icon={<MapPin className="h-3 w-3" />}
+                label="Location"
+                value={profile.location}
+              />
+            </dl>
+          </Card>
+
+          <Card className="p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-bold text-foreground">Personal</h3>
+            </div>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DetailField
+                icon={<Calendar className="h-3 w-3" />}
+                label="Date of birth"
+                value={profile.dateOfBirth ? fmtDate(profile.dateOfBirth) : undefined}
+              />
+              <DetailField
+                icon={<GraduationCap className="h-3 w-3" />}
+                label="College"
+                value={profile.collegeName}
+              />
+              <DetailField
+                icon={<Sparkles className="h-3 w-3" />}
+                label="Area of interest"
+                value={profile.areaOfInterest}
+              />
+              <DetailField
+                icon={<Heart className="h-3 w-3" />}
+                label="Hobby"
+                value={profile.hobby}
+              />
+            </dl>
+          </Card>
+        </div>
+      )}
+
+      {!isOwner && profile?.skills && profile.skills.length > 0 && (
+        <Card className="p-5">
+          <h3 className="mb-3 text-sm font-bold text-foreground">Skills</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {profile.skills.map((skill) => (
+              <span
+                key={skill}
+                className="inline-flex items-center rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ThemeCard />
+        <SecurityCard onChangePassword={() => setPwOpen(true)} />
       </div>
+
+      <DesktopAppCard />
+
+      {profile && (
+        <ProfileEditDialog
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          profile={profile}
+          isOwner={isOwner}
+          onSave={handleSaveProfile}
+          isSaving={saving}
+        />
+      )}
+
+      <ChangePasswordDialog
+        open={pwOpen}
+        onClose={() => setPwOpen(false)}
+      />
     </div>
+  )
+}
+
+function DetailField({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode
+  label: string
+  value?: string | null
+}) {
+  return (
+    <div>
+      <dt className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {icon}
+        {label}
+      </dt>
+      <dd className="text-sm font-medium text-foreground">
+        {value || <span className="text-muted-foreground/60">—</span>}
+      </dd>
+    </div>
+  )
+}
+
+function ThemeCard() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <Card className="p-5">
+      <h3 className="mb-1 text-sm font-bold text-foreground">Appearance</h3>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Choose your preferred appearance for this device.
+      </p>
+      <div className="inline-flex rounded-lg border border-border bg-card p-0.5">
+        <ThemeButton
+          active={theme === 'light'}
+          onClick={() => setTheme('light')}
+          icon={<Sun className="h-3.5 w-3.5" />}
+          label="Light"
+        />
+        <ThemeButton
+          active={theme === 'dark'}
+          onClick={() => setTheme('dark')}
+          icon={<Moon className="h-3.5 w-3.5" />}
+          label="Dark"
+        />
+      </div>
+    </Card>
+  )
+}
+
+function ThemeButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-all',
+        active
+          ? 'bg-primary text-primary-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground'
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
+function SecurityCard({
+  onChangePassword,
+}: {
+  onChangePassword: () => void
+}) {
+  return (
+    <Card className="p-5">
+      <h3 className="mb-1 text-sm font-bold text-foreground">Security</h3>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Keep your account secure by changing your password regularly.
+      </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">Password</span>
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+        </div>
+        <Button variant="secondary" size="sm" onClick={onChangePassword}>
+          Change password
+        </Button>
+      </div>
+    </Card>
   )
 }

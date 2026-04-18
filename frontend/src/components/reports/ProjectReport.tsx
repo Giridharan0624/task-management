@@ -327,19 +327,25 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
 
           {/* ── Session Log (collapsible) ── */}
           <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-            <button onClick={() => setShowLog(!showLog)}
-              className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between px-5 py-3.5">
+              <button
+                type="button"
+                onClick={() => setShowLog(!showLog)}
+                className="flex flex-1 items-center gap-3 text-left transition-colors hover:opacity-80"
+              >
                 <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform ${showLog ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 <h3 className="text-[13px] font-bold text-foreground/95">Session Log</h3>
                 <span className="text-[11px] bg-muted text-muted-foreground font-semibold px-2 py-0.5 rounded-md tabular-nums">{detailedRows.length}</span>
-              </div>
-              <button onClick={(e) => { e.stopPropagation(); exportCSV() }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-gray-800 transition-all">
+              </button>
+              <button
+                type="button"
+                onClick={exportCSV}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-gray-800 transition-all"
+              >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 CSV
               </button>
-            </button>
+            </div>
             {showLog && (
               <div className="border-t border-border/50">
                 <div className="grid grid-cols-[90px_1fr_1fr_80px_80px_70px] gap-2 px-5 py-2 bg-muted/40 text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider border-b border-border">

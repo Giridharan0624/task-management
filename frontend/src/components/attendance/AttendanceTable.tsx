@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { LiveDot } from '@/components/ui/LiveDot'
 
 function getToday() {
   const d = new Date()
@@ -131,7 +132,7 @@ export function AttendanceTable() {
                       </div>
                     ) : record.status === 'SIGNED_IN' ? (
                       <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-700 uppercase tracking-wide">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <LiveDot size="xs" />
                         Working
                       </span>
                     ) : (

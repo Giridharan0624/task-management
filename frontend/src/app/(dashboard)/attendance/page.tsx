@@ -1,17 +1,53 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import {
+  Search,
+  X,
+  Download,
+  User,
+  Users,
+  ArrowDownUp,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { useAttendanceReport, useMyAttendance } from '@/lib/hooks/useAttendance'
+import {
+  useAttendanceReport,
+  useMyAttendance,
+} from '@/lib/hooks/useAttendance'
+import { useUsers } from '@/lib/hooks/useUsers'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
-import { Select } from '@/components/ui/Select'
+import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
-import type { Attendance } from '@/types/attendance'
-import { FilterSelect } from '@/components/ui/FilterSelect'
+import { EmptyState } from '@/components/ui/EmptyState'
+import {
+  StatCardsGrid,
+  type StatCardItem,
+} from '@/components/ui/StatCardsGrid'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
+import { AttendanceMonthNav } from '@/components/attendance/AttendanceMonthNav'
+import {
+  MemberAttendanceCard,
+  type MemberAttendanceSummary,
+} from '@/components/attendance/MemberAttendanceCard'
+import { MemberAttendanceDrawer } from '@/components/attendance/MemberAttendanceDrawer'
+import {
+  WeeklyLeaderboard,
+  type WeekLeaderboard,
+  type WeeklyLeaderboardEntry,
+} from '@/components/attendance/WeeklyLeaderboard'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { getSessionHours } from '@/lib/utils/liveSession'
+import type { Attendance } from '@/types/attendance'
 
-/** Calculate total hours for an attendance record, using live elapsed for active sessions */
 function getRecordHours(r: Attendance): number {
   return r.sessions.reduce((sum, s) => sum + getSessionHours(s), 0)
 }
@@ -20,26 +56,65 @@ function getMonthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
   const lastDay = new Date(year, month, 0).getDate()
   const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-  return { start, end }
+  return { start, end, daysInMonth: lastDay }
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-
-function formatDateLabel(dateStr: string) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 }
 
 function generateCSV(records: Attendance[]): string {
-  const rows: string[][] = [['Name', 'Email', 'Role', 'Date', 'Session #', 'Task', 'Project', 'Description', 'Start', 'End', 'Duration']]
+  const rows: string[][] = [
+    [
+      'Name',
+      'Email',
+      'Role',
+      'Date',
+      'Session #',
+      'Task',
+      'Project',
+      'Description',
+      'Start',
+      'End',
+      'Duration',
+    ],
+  ]
   for (const r of records) {
     for (let i = 0; i < r.sessions.length; i++) {
       const s = r.sessions[i]
-      rows.push([r.userName, r.userEmail, r.systemRole, r.date, String(i + 1), s.taskTitle || 'General', s.projectName || '-', s.description || '', formatTime(s.signInAt), s.signOutAt ? formatTime(s.signOutAt) : 'Active', formatDuration(getSessionHours(s))])
+      rows.push([
+        r.userName,
+        r.userEmail,
+        r.systemRole,
+        r.date,
+        String(i + 1),
+        s.taskTitle || 'General',
+        s.projectName || '-',
+        s.description || '',
+        formatTime(s.signInAt),
+        s.signOutAt ? formatTime(s.signOutAt) : 'Active',
+        formatDuration(getSessionHours(s)),
+      ])
     }
   }
-  return rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
+  return rows
+    .map((row) =>
+      row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')
+    )
+    .join('\n')
+}
+
+type SortKey = 'hours' | 'name' | 'days' | 'sessions'
+
+const SORT_LABELS: Record<SortKey, string> = {
+  hours: 'Hours',
+  name: 'Name',
+  days: 'Days',
+  sessions: 'Sessions',
 }
 
 export default function AttendancePage() {
@@ -49,284 +124,495 @@ export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
   const [memberFilter, setMemberFilter] = useState('ALL')
   const [search, setSearch] = useState('')
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [sort, setSort] = useState<SortKey>('hours')
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
-  const { start, end } = getMonthRange(selectedYear, selectedMonth)
+  const { start, end, daysInMonth } = getMonthRange(
+    selectedYear,
+    selectedMonth
+  )
   const { data: rawRecords, isLoading } = useAttendanceReport(start, end)
+  const { data: allUsers } = useUsers()
   const { data: myAttendance } = useMyAttendance()
   const hasActiveSession = myAttendance?.status === 'SIGNED_IN'
 
-  // Tick every second when there's an active session so live times update
+  // Live tick when any session in scope is open
   const [, setTick] = useState(0)
   useEffect(() => {
-    if (!hasActiveSession) return
-    const i = setInterval(() => setTick(t => t + 1), 1000)
+    const anyActive =
+      hasActiveSession ||
+      (rawRecords ?? []).some((r) => r.sessions.some((s) => !s.signOutAt))
+    if (!anyActive) return
+    const i = setInterval(() => setTick((t) => t + 1), 1000)
     return () => clearInterval(i)
-  }, [hasActiveSession])
+  }, [hasActiveSession, rawRecords])
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
-  const monthLabel = new Date(selectedYear, selectedMonth - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  const isPrivileged =
+    user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const monthLabel = new Date(selectedYear, selectedMonth - 1).toLocaleString(
+    'en-US',
+    { month: 'long', year: 'numeric' }
+  )
 
-  // Filter records
-  const records = useMemo(() => {
-    let r = rawRecords ?? []
-    if (memberFilter !== 'ALL') r = r.filter(rec => rec.userId === memberFilter)
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      r = r.filter(rec => rec.userName.toLowerCase().includes(q) || rec.userEmail.toLowerCase().includes(q))
-    }
-    return r
-  }, [rawRecords, memberFilter, search])
+  const userLookup = useMemo(() => {
+    const m = new Map<string, { avatarUrl?: string }>()
+    for (const u of allUsers ?? [])
+      m.set(u.userId, { avatarUrl: u.avatarUrl })
+    return m
+  }, [allUsers])
 
-  // Member options
+  const scopedRecords = useMemo(() => {
+    if (memberFilter === 'ALL') return rawRecords ?? []
+    return (rawRecords ?? []).filter((r) => r.userId === memberFilter)
+  }, [rawRecords, memberFilter])
+
   const memberOptions = useMemo(() => {
     const map = new Map<string, string>()
-    for (const r of rawRecords ?? []) map.set(r.userId, r.userName || r.userEmail)
+    for (const r of rawRecords ?? [])
+      map.set(r.userId, r.userName || r.userEmail)
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
   }, [rawRecords])
 
-  // Stats — use getRecordHours so active sessions show live elapsed time
-  const totalHours = useMemo(() => records.reduce((s, r) => s + getRecordHours(r), 0), [records])
-  const totalSessions = useMemo(() => records.reduce((s, r) => s + r.sessions.length, 0), [records])
-  const uniqueMembers = useMemo(() => new Set(records.map(r => r.userId)).size, [records])
-  const uniqueDays = useMemo(() => new Set(records.map(r => r.date)).size, [records])
+  const totalHours = useMemo(
+    () => scopedRecords.reduce((s, r) => s + getRecordHours(r), 0),
+    [scopedRecords]
+  )
+  const totalSessions = useMemo(
+    () => scopedRecords.reduce((s, r) => s + r.sessions.length, 0),
+    [scopedRecords]
+  )
+  const uniqueMembers = useMemo(
+    () => new Set(scopedRecords.map((r) => r.userId)).size,
+    [scopedRecords]
+  )
+  const uniqueDays = useMemo(
+    () => new Set(scopedRecords.map((r) => r.date)).size,
+    [scopedRecords]
+  )
   const avgPerDay = uniqueDays > 0 ? totalHours / uniqueDays : 0
 
-  // User summary
-  const userStats = useMemo(() => {
-    const map = new Map<string, { name: string; email: string; role: string; days: number; totalHours: number; sessions: number }>()
-    for (const r of records) {
-      const ex = map.get(r.userId)
-      const sessCount = r.sessions.length
-      const hrs = getRecordHours(r)
-      if (ex) { ex.days += 1; ex.totalHours += hrs; ex.sessions += sessCount }
-      else map.set(r.userId, { name: r.userName, email: r.userEmail, role: r.systemRole, days: 1, totalHours: hrs, sessions: sessCount })
+  /**
+   * Per-member weekly leaderboard data — for each Mon–Sun week that
+   * overlaps the selected month, compute each member's hours/days/sessions
+   * so the leaderboard can rank them week by week.
+   */
+  const weeklyLeaderboard = useMemo((): WeekLeaderboard[] => {
+    type WeekBucket = {
+      weekStart: string
+      weekEnd: string
+      members: Map<
+        string,
+        { entry: WeeklyLeaderboardEntry; days: Set<string> }
+      >
     }
-    return Array.from(map.values()).sort((a, b) => b.totalHours - a.totalHours)
-  }, [records])
+    const weeks = new Map<string, WeekBucket>()
 
-  // Task stats
-  const taskStats = useMemo(() => {
-    const map = new Map<string, { userName: string; taskTitle: string; projectName: string; totalHours: number; sessions: number }>()
-    for (const r of records) for (const s of r.sessions) {
-      if (!s.taskId) continue
-      const key = `${r.userId}::${s.taskId}`
-      const ex = map.get(key)
-      const hrs = getSessionHours(s)
-      if (ex) { ex.totalHours += hrs; ex.sessions += 1 }
-      else map.set(key, { userName: r.userName, taskTitle: s.taskTitle || 'Unknown', projectName: s.projectName || '-', totalHours: hrs, sessions: 1 })
+    for (const r of scopedRecords) {
+      const d = new Date(r.date + 'T00:00:00')
+      const dow = d.getDay()
+      const mon = new Date(d)
+      mon.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow))
+      const sun = new Date(mon)
+      sun.setDate(mon.getDate() + 6)
+      const weekKey = mon.toISOString().slice(0, 10)
+
+      let bucket = weeks.get(weekKey)
+      if (!bucket) {
+        bucket = {
+          weekStart: weekKey,
+          weekEnd: sun.toISOString().slice(0, 10),
+          members: new Map(),
+        }
+        weeks.set(weekKey, bucket)
+      }
+
+      let member = bucket.members.get(r.userId)
+      if (!member) {
+        member = {
+          entry: {
+            userId: r.userId,
+            name: r.userName || r.userEmail,
+            email: r.userEmail,
+            avatarUrl: userLookup.get(r.userId)?.avatarUrl,
+            role: r.systemRole,
+            hours: 0,
+            days: 0,
+            sessions: 0,
+            isActive: false,
+          },
+          days: new Set(),
+        }
+        bucket.members.set(r.userId, member)
+      }
+      member.days.add(r.date)
+      member.entry.sessions += r.sessions.length
+      member.entry.hours += getRecordHours(r)
+      if (r.sessions.some((s) => !s.signOutAt)) member.entry.isActive = true
     }
-    return Array.from(map.values()).sort((a, b) => b.totalHours - a.totalHours)
-  }, [records])
 
-  const toggleRow = (key: string) => {
-    setExpandedRows(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n })
-  }
+    const result: WeekLeaderboard[] = []
+    for (const bucket of weeks.values()) {
+      const entries: WeeklyLeaderboardEntry[] = []
+      for (const m of bucket.members.values()) {
+        m.entry.days = m.days.size
+        entries.push(m.entry)
+      }
+      result.push({
+        weekStart: bucket.weekStart,
+        weekEnd: bucket.weekEnd,
+        entries,
+      })
+    }
+    return result.sort((a, b) => a.weekStart.localeCompare(b.weekStart))
+  }, [scopedRecords, userLookup])
+
+  const memberSummaries = useMemo((): MemberAttendanceSummary[] => {
+    const bucket = new Map<
+      string,
+      {
+        summary: MemberAttendanceSummary
+        records: Attendance[]
+        taskHours: Map<
+          string,
+          { name: string; hours: number; project: string }
+        >
+      }
+    >()
+
+    for (const r of scopedRecords) {
+      let entry = bucket.get(r.userId)
+      if (!entry) {
+        entry = {
+          summary: {
+            userId: r.userId,
+            name: r.userName || r.userEmail,
+            email: r.userEmail,
+            role: r.systemRole,
+            avatarUrl: userLookup.get(r.userId)?.avatarUrl,
+            totalHours: 0,
+            daysWorked: 0,
+            sessionsCount: 0,
+            avgPerDay: 0,
+            dailyHours: new Array(daysInMonth).fill(0),
+            isActive: false,
+          },
+          records: [],
+          taskHours: new Map(),
+        }
+        bucket.set(r.userId, entry)
+      }
+      entry.records.push(r)
+      entry.summary.daysWorked += 1
+      entry.summary.sessionsCount += r.sessions.length
+
+      const dayIdx = new Date(r.date + 'T00:00:00').getDate() - 1
+      if (dayIdx >= 0 && dayIdx < daysInMonth) {
+        const dayHours = r.sessions.reduce(
+          (s, se) => s + getSessionHours(se),
+          0
+        )
+        entry.summary.dailyHours[dayIdx] += dayHours
+        entry.summary.totalHours += dayHours
+      }
+
+      for (const s of r.sessions) {
+        if (!s.signOutAt) entry.summary.isActive = true
+        const key = `${s.taskTitle || 'General'}::${s.projectName || '-'}`
+        const hrs = getSessionHours(s)
+        const existing = entry.taskHours.get(key)
+        if (existing) {
+          existing.hours += hrs
+        } else {
+          entry.taskHours.set(key, {
+            name: s.taskTitle || 'General',
+            project: s.projectName || '-',
+            hours: hrs,
+          })
+        }
+      }
+    }
+
+    const out: MemberAttendanceSummary[] = []
+    for (const entry of bucket.values()) {
+      entry.summary.avgPerDay =
+        entry.summary.daysWorked > 0
+          ? entry.summary.totalHours / entry.summary.daysWorked
+          : 0
+      const topTasks = Array.from(entry.taskHours.values()).sort(
+        (a, b) => b.hours - a.hours
+      )
+      if (topTasks.length > 0) entry.summary.topTask = topTasks[0]
+      out.push(entry.summary)
+    }
+    return out
+  }, [scopedRecords, userLookup, daysInMonth])
+
+  const visibleSummaries = useMemo(() => {
+    let list = memberSummaries
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      list = list.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          m.email.toLowerCase().includes(q)
+      )
+    }
+    return [...list].sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name)
+      if (sort === 'days') return b.daysWorked - a.daysWorked
+      if (sort === 'sessions') return b.sessionsCount - a.sessionsCount
+      return b.totalHours - a.totalHours
+    })
+  }, [memberSummaries, search, sort])
+
+  const canClear = !!search || memberFilter !== 'ALL' || sort !== 'hours'
+
+  const selectedMember = useMemo(
+    () =>
+      selectedUserId
+        ? memberSummaries.find((m) => m.userId === selectedUserId) ?? null
+        : null,
+    [selectedUserId, memberSummaries]
+  )
+  const selectedMemberRecords = useMemo(
+    () =>
+      selectedUserId
+        ? scopedRecords.filter((r) => r.userId === selectedUserId)
+        : [],
+    [selectedUserId, scopedRecords]
+  )
 
   const handleDownload = () => {
-    if (!records.length) return
-    const csv = generateCSV(records)
+    if (!scopedRecords.length) return
+    const csv = generateCSV(scopedRecords)
     const blob = new Blob([csv], { type: 'text/csv' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `attendance-${start}-to-${end}.csv`; a.click()
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `attendance-${start}-to-${end}.csv`
+    a.click()
   }
 
-  const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: new Date(2026, i).toLocaleString('en-US', { month: 'long' }) }))
+  const statItems: StatCardItem[] = [
+    {
+      key: 'total-hours',
+      label: 'Total hours',
+      value: formatDuration(totalHours),
+      accent: 'text-indigo-700',
+    },
+    {
+      key: 'members',
+      label: 'Members',
+      value: uniqueMembers,
+      accent: 'text-violet-700',
+    },
+    {
+      key: 'sessions',
+      label: 'Sessions',
+      value: totalSessions,
+      accent: 'text-blue-700',
+    },
+    {
+      key: 'avg',
+      label: 'Avg / day',
+      value: formatDuration(avgPerDay),
+      accent: 'text-emerald-700',
+    },
+  ]
+
+  const memberFilterLabel =
+    memberFilter === 'ALL'
+      ? 'All members'
+      : memberOptions.find((m) => m.id === memberFilter)?.name ?? 'Member'
 
   return (
-    <div className="space-y-5 animate-fade-in max-w-6xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">
-            {isPrivileged ? 'Team Attendance' : 'My Attendance'}
-          </h1>
-          <p className="text-[13px] text-muted-foreground/70 mt-0.5">{monthLabel}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Select value={String(selectedMonth)} onChange={v => setSelectedMonth(Number(v))} options={months} className="w-32" />
-          <Select value={String(selectedYear)} onChange={v => setSelectedYear(Number(v))}
-            options={[2025, 2026, 2027].map(y => ({ value: String(y), label: String(y) }))} className="w-20" />
-          <button onClick={handleDownload} disabled={!records.length}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-[11px] font-semibold text-white hover:bg-gray-800 disabled:opacity-40 transition-all shadow-sm">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            CSV
-          </button>
-        </div>
-      </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 animate-fade-in">
+      <PageHeader
+        title={isPrivileged ? 'Team Attendance' : 'My Attendance'}
+        description={monthLabel}
+        actions={
+          <AttendanceMonthNav
+            year={selectedYear}
+            month={selectedMonth}
+            onChange={(y, m) => {
+              setSelectedYear(y)
+              setSelectedMonth(m)
+            }}
+          />
+        }
+      />
 
-      {isLoading ? <div className="flex justify-center py-16"><Spinner size="lg" /></div> : (
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Spinner size="lg" />
+        </div>
+      ) : (
         <>
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-              <p className="text-xl font-bold text-indigo-700 tabular-nums">{formatDuration(totalHours)}</p>
-              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Total Hours</p>
-            </div>
-            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-              <p className="text-xl font-bold text-violet-700 tabular-nums">{uniqueMembers}</p>
-              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Members</p>
-            </div>
-            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-              <p className="text-xl font-bold text-blue-700 tabular-nums">{totalSessions}</p>
-              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Sessions</p>
-            </div>
-            <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-              <p className="text-xl font-bold text-emerald-700 tabular-nums">{formatDuration(avgPerDay)}</p>
-              <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mt-0.5">Avg / Day</p>
-            </div>
-          </div>
+          <StatCardsGrid items={statItems} columns={4} />
 
-          {/* Search + Member filter */}
           {isPrivileged && (
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 max-w-[280px]">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search member..."
-                  className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-[12px] text-foreground/85 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:bg-card transition-all" />
-              </div>
-              <FilterSelect value={memberFilter} onChange={setMemberFilter} active={memberFilter !== 'ALL'}
-                options={[{ value: 'ALL', label: 'All Members' }, ...memberOptions.map(m => ({ value: m.id, label: m.name }))]} />
-              {(search || memberFilter !== 'ALL') && (
-                <button onClick={() => { setSearch(''); setMemberFilter('ALL') }} className="text-[11px] text-muted-foreground/70 hover:text-muted-foreground font-medium">Clear</button>
-              )}
-            </div>
-          )}
-
-          {/* Monthly Summary */}
-          {userStats.length > 0 && (
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border/50">
-                <h3 className="text-[13px] font-bold text-foreground/95">Monthly Summary</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="bg-muted/40 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                      <th className="text-left px-5 py-2.5">Member</th>
-                      <th className="text-left px-5 py-2.5">Role</th>
-                      <th className="text-center px-5 py-2.5">Days</th>
-                      <th className="text-center px-5 py-2.5">Sessions</th>
-                      <th className="text-right px-5 py-2.5">Total</th>
-                      <th className="text-right px-5 py-2.5">Avg/Day</th>
-                      <th className="text-left px-5 py-2.5 min-w-[120px]">Distribution</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {userStats.map((s, i) => (
-                      <tr key={i} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-5 py-3">
-                          <p className="font-semibold text-foreground/95">{s.name}</p>
-                          <p className="text-[10px] text-muted-foreground/70">{s.email}</p>
-                        </td>
-                        <td className="px-5 py-3 text-muted-foreground">{s.role}</td>
-                        <td className="px-5 py-3 text-center font-semibold text-foreground/85 tabular-nums">{s.days}</td>
-                        <td className="px-5 py-3 text-center text-muted-foreground tabular-nums">{s.sessions}</td>
-                        <td className="px-5 py-3 text-right font-bold text-indigo-600 tabular-nums">{formatDuration(s.totalHours)}</td>
-                        <td className="px-5 py-3 text-right text-muted-foreground tabular-nums">{formatDuration(s.days > 0 ? s.totalHours / s.days : 0)}</td>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-indigo-500" style={{ width: `${totalHours > 0 ? (s.totalHours / totalHours) * 100 : 0}%` }} />
-                            </div>
-                            <span className="text-[10px] text-muted-foreground/70 tabular-nums w-8 text-right">{totalHours > 0 ? Math.round((s.totalHours / totalHours) * 100) : 0}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Per-Task Breakdown */}
-          {taskStats.length > 0 && (
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-border/50 flex items-center justify-between">
-                <h3 className="text-[13px] font-bold text-foreground/95">Task Breakdown</h3>
-                <span className="text-[11px] text-muted-foreground/70 tabular-nums">{taskStats.length} entries</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="bg-muted/40 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                      <th className="text-left px-5 py-2.5">Member</th>
-                      <th className="text-left px-5 py-2.5">Project</th>
-                      <th className="text-left px-5 py-2.5">Task</th>
-                      <th className="text-center px-5 py-2.5">Sessions</th>
-                      <th className="text-right px-5 py-2.5">Hours</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {taskStats.slice(0, 20).map((s, i) => (
-                      <tr key={i} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-5 py-2.5 text-foreground/85">{s.userName}</td>
-                        <td className="px-5 py-2.5 text-muted-foreground">{s.projectName}</td>
-                        <td className="px-5 py-2.5 font-medium text-foreground/95">{s.taskTitle}</td>
-                        <td className="px-5 py-2.5 text-center text-muted-foreground tabular-nums">{s.sessions}</td>
-                        <td className="px-5 py-2.5 text-right font-bold text-indigo-600 tabular-nums">{formatDuration(s.totalHours)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Daily Records — expandable */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-border/50 flex items-center justify-between">
-              <h3 className="text-[13px] font-bold text-foreground/95">Daily Records</h3>
-              <span className="text-[11px] text-muted-foreground/70 tabular-nums">{records.length} entries</span>
-            </div>
-            {records.length === 0 ? (
-              <div className="px-5 py-10 text-center text-[13px] text-muted-foreground/50">No attendance records for {monthLabel}</div>
-            ) : (
-              <div className="divide-y divide-border/60">
-                {[...records].sort((a, b) => b.date.localeCompare(a.date)).map((r, idx) => {
-                  const key = `${r.userId}-${r.date}-${idx}`
-                  const isOpen = expandedRows.has(key)
-                  return (
-                    <div key={key}>
-                      <button onClick={() => toggleRow(key)}
-                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors text-left">
-                        <svg className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                        <span className="text-[12px] text-muted-foreground tabular-nums min-w-[110px]">{formatDateLabel(r.date)}</span>
-                        <span className="text-[12px] font-medium text-foreground/95 flex-1 truncate">{r.userName}</span>
-                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">{r.sessions.length} session{r.sessions.length !== 1 ? 's' : ''}</span>
-                        <span className="text-[12px] font-bold text-indigo-600 tabular-nums min-w-[70px] text-right">{formatDuration(getRecordHours(r))}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-[220px] flex-1">
+                <Input
+                  type="text"
+                  placeholder="Search member..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  leftIcon={<Search />}
+                  rightIcon={
+                    search ? (
+                      <button
+                        type="button"
+                        onClick={() => setSearch('')}
+                        className="pointer-events-auto rounded p-0.5 text-muted-foreground/70 hover:text-foreground"
+                        aria-label="Clear search"
+                      >
+                        <X className="h-3.5 w-3.5" />
                       </button>
-                      {isOpen && (
-                        <div className="bg-muted/40 px-5 pb-3">
-                          <div className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2 py-1.5 text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                            <span>Task</span><span>Project</span><span>Start</span><span>End</span><span className="text-right">Duration</span>
-                          </div>
-                          <div className="divide-y divide-border/80">
-                            {r.sessions.map((s, j) => (
-                              <div key={j} className="py-2 text-[11px]">
-                                <div className="grid grid-cols-[1fr_1fr_80px_80px_70px] gap-2">
-                                  <span className="text-foreground/85 font-medium truncate">{s.taskTitle || 'General'}</span>
-                                  <span className="text-muted-foreground truncate">{s.projectName || '-'}</span>
-                                  <span className="text-muted-foreground font-mono tabular-nums">{formatTime(s.signInAt)}</span>
-                                  <span className="text-muted-foreground font-mono tabular-nums">{s.signOutAt ? formatTime(s.signOutAt) : <span className="text-emerald-600 font-sans font-medium">Active</span>}</span>
-                                  <span className="text-right font-semibold text-foreground/85 tabular-nums">{formatDuration(getSessionHours(s))}</span>
-                                </div>
-                                {s.description && <p className="text-[10px] text-muted-foreground/70 italic mt-0.5 pl-0.5">— {s.description}</p>}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                    ) : undefined
+                  }
+                  className="h-9"
+                />
               </div>
-            )}
-          </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 gap-1.5 text-xs"
+                  >
+                    {memberFilter === 'ALL' ? (
+                      <Users className="h-3.5 w-3.5" />
+                    ) : (
+                      <User className="h-3.5 w-3.5" />
+                    )}
+                    <span className="max-w-[140px] truncate font-semibold">
+                      {memberFilterLabel}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel>Filter by member</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={memberFilter}
+                    onValueChange={setMemberFilter}
+                  >
+                    <DropdownMenuRadioItem value="ALL">
+                      All members
+                    </DropdownMenuRadioItem>
+                    {memberOptions.map((m) => (
+                      <DropdownMenuRadioItem key={m.id} value={m.id}>
+                        {m.name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 gap-1.5 text-xs"
+                  >
+                    <ArrowDownUp className="h-3.5 w-3.5" />
+                    <span className="font-semibold">{SORT_LABELS[sort]}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={sort}
+                    onValueChange={(v) => setSort(v as SortKey)}
+                  >
+                    {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+                      <DropdownMenuRadioItem key={k} value={k}>
+                        {SORT_LABELS[k]}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {canClear && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearch('')
+                    setMemberFilter('ALL')
+                    setSort('hours')
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear
+                </Button>
+              )}
+
+              <div className="ml-auto">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDownload}
+                  disabled={!scopedRecords.length}
+                  className="h-9 gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <WeeklyLeaderboard
+            weeks={weeklyLeaderboard}
+            onMemberClick={(uid) => setSelectedUserId(uid)}
+          />
+
+          {visibleSummaries.length === 0 ? (
+            <EmptyState
+              title={
+                memberSummaries.length === 0
+                  ? 'No attendance records'
+                  : 'No members match your search'
+              }
+              description={
+                memberSummaries.length === 0
+                  ? `No one was clocked in during ${monthLabel}.`
+                  : 'Try clearing your filters to see more members.'
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleSummaries.map((member) => {
+                const share =
+                  totalHours > 0
+                    ? Math.round((member.totalHours / totalHours) * 100)
+                    : 0
+                return (
+                  <MemberAttendanceCard
+                    key={member.userId}
+                    member={member}
+                    sharePercent={isPrivileged ? share : undefined}
+                    onClick={() => setSelectedUserId(member.userId)}
+                  />
+                )
+              })}
+            </div>
+          )}
         </>
       )}
+
+      <MemberAttendanceDrawer
+        open={!!selectedMember}
+        onClose={() => setSelectedUserId(null)}
+        member={selectedMember}
+        records={selectedMemberRecords}
+        monthLabel={monthLabel}
+      />
     </div>
   )
 }

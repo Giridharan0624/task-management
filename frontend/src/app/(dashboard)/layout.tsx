@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { Spinner } from '@/components/ui/Spinner'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { LiveDot } from '@/components/ui/LiveDot'
 import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -193,10 +194,7 @@ function SidebarTimer() {
         className="mx-3 mb-2 block rounded-xl border border-emerald-200 bg-emerald-50 p-3 transition-colors hover:bg-emerald-100"
       >
         <div className="mb-1 flex items-center gap-2">
-          <span className="relative flex h-2 w-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
+          <LiveDot size="sm" />
           <p className="truncate text-[11px] font-semibold text-emerald-800">
             {task?.taskTitle || 'Working'}
           </p>

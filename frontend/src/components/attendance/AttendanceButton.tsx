@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { getSessionHours } from '@/lib/utils/liveSession'
 import type { AttendanceSession } from '@/types/attendance'
+import { LiveDot } from '@/components/ui/LiveDot'
 
 /* ═══ Grouped Task — merges multiple sessions of same task ═══ */
 interface GroupedTask {
@@ -88,16 +89,27 @@ export function AttendanceButton() {
     return () => clearInterval(i)
   }, [active])
 
+  // All hooks must run unconditionally before any early return to satisfy
+  // the Rules of Hooks. `sessions` is memoized so `groupedTasks`'s dep
+  // array is stable across renders with identical source data.
+  const sessions = useMemo<AttendanceSession[]>(() => {
+    const raw = attendance?.sessions ?? []
+    if (active && attendance?.currentSignInAt) {
+      return raw.map(s =>
+        !s.signOutAt ? { ...s, signInAt: attendance.currentSignInAt! } : s
+      )
+    }
+    return raw
+  }, [attendance, active])
+
+  const totalHours = useMemo(
+    () => sessions.reduce((s, se) => s + getSessionHours(se), 0),
+    [sessions]
+  )
+
+  const groupedTasks = useMemo(() => groupSessionsByTask(sessions), [sessions])
+
   if (isLoading) return <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center justify-center"><Spinner /></div>
-
-  const rawSessions = attendance?.sessions ?? []
-  const sessions = (active && attendance?.currentSignInAt)
-    ? rawSessions.map(s => (!s.signOutAt ? { ...s, signInAt: attendance.currentSignInAt! } : s))
-    : rawSessions
-  const totalHours = sessions.reduce((s, se) => s + getSessionHours(se), 0)
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const groupedTasks = useMemo(() => groupSessionsByTask(sessions), [sessions, totalHours])
 
   /* ─── ACTIVE (timer running from desktop) ─── */
   if (active && attendance) {
@@ -109,10 +121,7 @@ export function AttendanceButton() {
         {/* Running timer display */}
         <div className="px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="relative flex h-3 w-3 flex-shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-            </span>
+            <LiveDot size="lg" />
             <div className="min-w-0">
               <p className="text-[14px] font-bold text-emerald-800 truncate">{cur?.taskTitle || 'Working'}</p>
               <p className="text-[11px] text-emerald-600 truncate">

@@ -56,13 +56,17 @@ export function useUpdateProject(projectId: string) {
   })
 }
 
-export function useProjectStatus(projectId: string) {
+export function useProjectStatus(
+  projectId: string,
+  options: { enabled?: boolean } = {}
+) {
+  const enabled = options.enabled ?? true
   return useQuery({
     queryKey: projectKeys.status(projectId),
     queryFn: () => getProjectStatus(projectId),
-    enabled: !!projectId,
+    enabled: enabled && !!projectId,
     staleTime: 30000,
-    refetchInterval: 30000,
+    refetchInterval: enabled ? 30000 : false,
   })
 }
 

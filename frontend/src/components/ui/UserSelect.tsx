@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { Check, ChevronDown, Search } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from './Popover'
 import { Avatar } from './AvatarUpload'
+import { cn } from '@/lib/utils'
 
 interface UserOption {
   userId: string
@@ -20,141 +22,161 @@ interface UserSelectProps {
   className?: string
 }
 
-export function UserSelect({ users, value, onChange, placeholder = 'Search and select user...', className }: UserSelectProps) {
-  const [search, setSearch] = useState('')
+/**
+ * User picker built on Radix Popover so it nests correctly inside Radix
+ * Dialog — clicks inside the popover don't dismiss the parent dialog.
+ * Previously used a hand-rolled createPortal which Dialog treated as an
+ * outside interaction and closed the modal before onClick could run.
+ */
+export function UserSelect({
+  users,
+  value,
+  onChange,
+  placeholder = 'Search and select user...',
+  className,
+}: UserSelectProps) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const [triggerWidth, setTriggerWidth] = useState<number>(0)
 
   const selected = users.find((u) => u.userId === value)
 
   const filtered = search.trim()
     ? users.filter((u) => {
         const q = search.toLowerCase()
-        return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.extra || '').toLowerCase().includes(q)
+        return (
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          (u.extra || '').toLowerCase().includes(q)
+        )
       })
     : users
 
-  // Position the portal dropdown beneath the trigger
+  // Size the popover to match the trigger.
   useEffect(() => {
-    if (!open || !triggerRef.current) return
-    const rect = triggerRef.current.getBoundingClientRect()
-    setDropdownStyle({
-      position: 'fixed',
-      top: rect.bottom + 6,
-      left: rect.left,
-      width: rect.width,
-    })
-  }, [open])
-
-  // Close on outside click (check both trigger and dropdown)
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (
-        containerRef.current && !containerRef.current.contains(target) &&
-        dropdownRef.current && !dropdownRef.current.contains(target)
-      ) {
-        setOpen(false)
-        setSearch('')
-      }
+    if (open && triggerRef.current) {
+      setTriggerWidth(triggerRef.current.offsetWidth)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const dropdown = open ? createPortal(
-    <div
-      ref={dropdownRef}
-      className="z-[10000] bg-card rounded-xl shadow-2xl ring-1 ring-border/60 overflow-hidden animate-fade-in-scale"
-      style={{ ...dropdownStyle, animationDuration: '0.12s' }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* Search input */}
-      <div className="p-2 border-b border-border">
-        <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or email..."
-            autoFocus
-            className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-card outline-none transition-all"
-          />
-        </div>
-      </div>
-
-      {/* User list */}
-      <div className="max-h-48 overflow-y-auto">
-        {filtered.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-muted-foreground/70 text-center">No users found</p>
-        ) : (
-          filtered.map((u) => {
-            const isActive = u.userId === value
-            return (
-              <button
-                key={u.userId}
-                type="button"
-                onClick={() => { onChange(u.userId); setOpen(false); setSearch('') }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
-                  isActive ? 'bg-indigo-50' : 'hover:bg-muted/40'
-                }`}
-              >
-                <Avatar name={u.name} url={u.avatarUrl} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm truncate ${isActive ? 'font-semibold text-indigo-700' : 'font-medium text-foreground'}`}>{u.name}</p>
-                  <p className="text-[11px] text-muted-foreground/70 truncate">{u.email}{u.extra ? ` · ${u.extra}` : ''}</p>
-                </div>
-                {isActive && (
-                  <svg className="w-4 h-4 text-indigo-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            )
-          })
-        )}
-      </div>
-    </div>,
-    document.body
-  ) : null
+  // Reset search each time the popover opens.
+  useEffect(() => {
+    if (!open) setSearch('')
+  }, [open])
 
   return (
-    <div className={`relative ${className || ''}`} ref={containerRef}>
-      {/* Trigger */}
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2.5 rounded-xl border border-border/80 bg-card px-3.5 py-2.5 text-sm text-left transition-all hover:border-border focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          ref={triggerRef}
+          type="button"
+          className={cn(
+            'flex w-full items-center gap-2.5 rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm text-left transition-all',
+            'hover:border-border/80',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring',
+            className
+          )}
+        >
+          {selected ? (
+            <>
+              <Avatar
+                name={selected.name}
+                url={selected.avatarUrl}
+                size="sm"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {selected.name}
+                </p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {selected.email}
+                </p>
+              </div>
+            </>
+          ) : (
+            <span className="flex-1 text-muted-foreground">{placeholder}</span>
+          )}
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="start"
+        sideOffset={6}
+        className="p-0 overflow-hidden"
+        style={{ width: triggerWidth || undefined }}
       >
-        {selected ? (
-          <>
-            <Avatar name={selected.name} url={selected.avatarUrl} size="sm" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{selected.name}</p>
-              <p className="text-[11px] text-muted-foreground/70 truncate">{selected.email}</p>
-            </div>
-          </>
-        ) : (
-          <span className="text-muted-foreground/70 flex-1">{placeholder}</span>
-        )}
-        <svg className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {dropdown}
-    </div>
+        {/* Search */}
+        <div className="border-b border-border p-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email..."
+              autoFocus
+              className="w-full rounded-lg border border-input bg-muted/40 py-2 pl-9 pr-3 text-sm outline-none transition-all focus:border-ring focus:bg-card focus:ring-2 focus:ring-ring/30"
+            />
+          </div>
+        </div>
+
+        {/* User list */}
+        <div className="max-h-64 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+              No users found
+            </p>
+          ) : (
+            filtered.map((u) => {
+              const isActive = u.userId === value
+              return (
+                <button
+                  key={u.userId}
+                  type="button"
+                  onClick={() => {
+                    onChange(u.userId)
+                    setOpen(false)
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors',
+                    isActive
+                      ? 'bg-primary/10'
+                      : 'hover:bg-muted/60'
+                  )}
+                >
+                  <Avatar name={u.name} url={u.avatarUrl} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={cn(
+                        'truncate text-sm',
+                        isActive
+                          ? 'font-semibold text-primary'
+                          : 'font-medium text-foreground'
+                      )}
+                    >
+                      {u.name}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {u.email}
+                      {u.extra ? ` · ${u.extra}` : ''}
+                    </p>
+                  </div>
+                  {isActive && (
+                    <Check className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} />
+                  )}
+                </button>
+              )
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 
-/** Multi-select variant with checkboxes and search */
+/** Multi-select variant with checkboxes and search — unchanged, already inline (no portal). */
 interface UserMultiSelectProps {
   users: UserOption[]
   selected: string[]
@@ -163,60 +185,102 @@ interface UserMultiSelectProps {
   className?: string
 }
 
-export function UserMultiSelect({ users, selected, onChange, placeholder = 'Search and select users...', className }: UserMultiSelectProps) {
+export function UserMultiSelect({
+  users,
+  selected,
+  onChange,
+  placeholder = 'Search and select users...',
+  className,
+}: UserMultiSelectProps) {
   const [search, setSearch] = useState('')
 
   const filtered = search.trim()
     ? users.filter((u) => {
         const q = search.toLowerCase()
-        return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.extra || '').toLowerCase().includes(q)
+        return (
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          (u.extra || '').toLowerCase().includes(q)
+        )
       })
     : users
 
   const toggle = (userId: string) => {
-    onChange(selected.includes(userId) ? selected.filter((id) => id !== userId) : [...selected, userId])
+    onChange(
+      selected.includes(userId)
+        ? selected.filter((id) => id !== userId)
+        : [...selected, userId]
+    )
   }
 
   return (
     <div className={className}>
       {/* Search */}
       <div className="relative mb-2">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-border/80 bg-muted/40 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-card outline-none transition-all"
+          className="w-full rounded-lg border border-input bg-muted/40 py-2 pl-9 pr-3 text-sm outline-none transition-all focus:border-ring focus:bg-card focus:ring-2 focus:ring-ring/30"
         />
       </div>
 
       {/* User list */}
-      <div className="max-h-40 overflow-y-auto rounded-xl border border-border/80 divide-y divide-border/60">
+      <div className="max-h-40 divide-y divide-border/60 overflow-y-auto rounded-xl border border-input">
         {filtered.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-muted-foreground/70 text-center">No users found</p>
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            No users found
+          </p>
         ) : (
           filtered.map((u) => {
             const isSelected = selected.includes(u.userId)
             return (
               <label
                 key={u.userId}
-                className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all ${isSelected ? 'bg-indigo-50/70' : 'hover:bg-muted/40'}`}
+                className={cn(
+                  'flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-all',
+                  isSelected ? 'bg-primary/10' : 'hover:bg-muted/40'
+                )}
               >
-                <div className={`flex items-center justify-center h-5 w-5 rounded-md border-2 transition-all flex-shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-border'}`}>
+                <div
+                  className={cn(
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all',
+                    isSelected
+                      ? 'border-primary bg-primary'
+                      : 'border-input'
+                  )}
+                >
                   {isSelected && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                    <Check
+                      className="h-3 w-3 text-primary-foreground"
+                      strokeWidth={3}
+                    />
                   )}
                 </div>
-                <input type="checkbox" checked={isSelected} onChange={() => toggle(u.userId)} className="sr-only" />
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggle(u.userId)}
+                  className="sr-only"
+                />
                 <Avatar name={u.name} url={u.avatarUrl} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <span className={`text-sm truncate block ${isSelected ? 'font-semibold text-foreground' : 'text-foreground/85'}`}>{u.name}</span>
-                  <span className="text-[11px] text-muted-foreground/70 truncate block">{u.email}{u.extra ? ` · ${u.extra}` : ''}</span>
+                <div className="min-w-0 flex-1">
+                  <span
+                    className={cn(
+                      'block truncate text-sm',
+                      isSelected
+                        ? 'font-semibold text-foreground'
+                        : 'text-foreground/85'
+                    )}
+                  >
+                    {u.name}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {u.email}
+                    {u.extra ? ` · ${u.extra}` : ''}
+                  </span>
                 </div>
               </label>
             )

@@ -1,6 +1,15 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import {
+  Search,
+  X,
+  Plus,
+  Check,
+  XCircle,
+  Filter,
+  ArrowDownUp,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import {
   useMyDayOffs,
@@ -11,32 +20,69 @@ import {
   useRejectDayOff,
   useCancelDayOff,
 } from '@/lib/hooks/useDayOffs'
-import type { DayOffRequest, DayOffStatus, ApprovalStatus } from '@/types/dayoff'
 import { useUsers } from '@/lib/hooks/useUsers'
-import { Spinner } from '@/components/ui/Spinner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { useToast } from '@/components/ui/Toast'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
-import { DatePicker } from '@/components/ui/DatePicker'
-import { TimePicker } from '@/components/ui/TimePicker'
+import { Input } from '@/components/ui/Input'
+import { Spinner } from '@/components/ui/Spinner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Card } from '@/components/ui/Card'
+import { Avatar } from '@/components/ui/AvatarUpload'
+import {
+  StatCardsGrid,
+  type StatCardItem,
+} from '@/components/ui/StatCardsGrid'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
+import { DayOffCreateDialog } from '@/components/dayoff/DayOffCreateDialog'
+import type { DayOffRequest, DayOffStatus } from '@/types/dayoff'
+import { cn } from '@/lib/utils'
 
-/* ─── Status Badge ─── */
-function StatusBadge({ status }: { status: DayOffStatus | ApprovalStatus }) {
-  const styles: Record<string, string> = {
-    PENDING: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-    APPROVED: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
-    REJECTED: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
-    CANCELLED: 'bg-muted text-muted-foreground ring-1 ring-inset ring-border/80',
-    'N/A': 'bg-muted/40 text-muted-foreground ring-1 ring-inset ring-border/80',
+/* ═══ Helpers ═══ */
+
+function fmtDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  } catch {
+    return iso
   }
+}
+
+function formatRange(start: string, end: string) {
+  if (start.slice(0, 10) === end.slice(0, 10)) return fmtDate(start)
+  return `${fmtDate(start)} – ${fmtDate(end)}`
+}
+
+function isThisMonth(iso: string): boolean {
+  const d = new Date(iso)
+  const now = new Date()
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-lg ${styles[status] ?? styles['N/A']}`}>
-      {status}
-    </span>
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
   )
 }
 
-/* ─── Day-Off Score ─── */
 function getDayOffScore(userId: string, dayOffs: DayOffRequest[]) {
   const now = new Date()
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
@@ -47,285 +93,133 @@ function getDayOffScore(userId: string, dayOffs: DayOffRequest[]) {
     const start = d.startDate.slice(0, 10)
     const end = d.endDate.slice(0, 10)
     if (start > monthEnd || end < monthStart) continue
-    const from = new Date(Math.max(new Date(start).getTime(), new Date(monthStart).getTime()))
-    const to = new Date(Math.min(new Date(end).getTime(), new Date(monthEnd).getTime()))
-    daysOff += Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const from = new Date(
+      Math.max(new Date(start).getTime(), new Date(monthStart).getTime())
+    )
+    const to = new Date(
+      Math.min(new Date(end).getTime(), new Date(monthEnd).getTime())
+    )
+    daysOff +=
+      Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
   }
   const score = daysOff === 0 ? 100 : daysOff <= 2 ? 75 : daysOff <= 5 ? 50 : 25
   return { score, daysOff }
 }
 
-function DayOffScoreCard({ userId, dayOffs }: { userId: string; dayOffs: DayOffRequest[] }) {
-  const { score, daysOff } = getDayOffScore(userId, dayOffs)
-  const scoreColor = score === 100 ? 'text-emerald-600' : score >= 75 ? 'text-blue-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'
-  const scoreBg = score === 100 ? 'bg-emerald-50 border-emerald-200' : score >= 75 ? 'bg-blue-50 border-blue-200' : score >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
-  const scoreLabel = score === 100 ? 'Excellent' : score >= 75 ? 'Good' : score >= 50 ? 'Average' : 'Low'
-  const monthName = new Date().toLocaleDateString('en-US', { month: 'long' })
+/* ═══ Status Badge ═══ */
 
+const STATUS_STYLES: Record<string, string> = {
+  PENDING: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
+  APPROVED: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+  REJECTED: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
+  CANCELLED: 'bg-muted text-muted-foreground ring-1 ring-inset ring-border',
+}
+
+function StatusBadge({ status }: { status: DayOffStatus }) {
   return (
-    <div className={`rounded-2xl border p-3.5 ${scoreBg}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Day-Off Score · {monthName}</p>
-          <div className="flex items-center gap-2">
-            <span className={`text-2xl font-bold tabular-nums ${scoreColor}`}>{score}</span>
-            <span className={`text-[11px] font-semibold ${scoreColor}`}>{scoreLabel}</span>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-[11px] text-muted-foreground">{daysOff} day{daysOff !== 1 ? 's' : ''} off</p>
-        </div>
-      </div>
-    </div>
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+        STATUS_STYLES[status] ||
+          'bg-muted text-muted-foreground ring-1 ring-inset ring-border'
+      )}
+    >
+      {status}
+    </span>
   )
 }
 
-function DayOffScoreBadge({ userId, dayOffs }: { userId: string; dayOffs: DayOffRequest[] }) {
-  const { score } = getDayOffScore(userId, dayOffs)
-  const color = score === 100 ? 'bg-emerald-100 text-emerald-700' : score >= 75 ? 'bg-blue-100 text-blue-700' : score >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+/* ═══ Score Chip ═══ */
+
+function ScoreChip({ score }: { score: number }) {
+  const color =
+    score === 100
+      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+      : score >= 75
+        ? 'bg-blue-50 text-blue-700 ring-blue-200'
+        : score >= 50
+          ? 'bg-amber-50 text-amber-700 ring-amber-200'
+          : 'bg-red-50 text-red-700 ring-red-200'
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold tabular-nums ${color}`}>
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ring-1 ring-inset',
+        color
+      )}
+    >
       {score}
     </span>
   )
 }
 
-/* ─── Format date helper ─── */
-function fmtDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  } catch {
-    return iso
-  }
+/* ═══ Main Page ═══ */
+
+type Role = 'OWNER' | 'ADMIN' | 'MEMBER'
+type TabKey = 'pending' | 'all' | 'mine' | 'team'
+type StatusFilter = 'ALL' | DayOffStatus
+
+const STATUS_LABELS: Record<StatusFilter, string> = {
+  ALL: 'All statuses',
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  CANCELLED: 'Cancelled',
 }
 
-/* ─── Request Card ─── */
-function RequestCard({
-  req,
-  showActions,
-  showCancel,
-  onApprove,
-  onReject,
-  onCancel,
-  isActing,
-}: {
-  req: DayOffRequest
-  showActions: boolean
-  showCancel?: boolean
-  onApprove: () => void
-  onReject: () => void
-  onCancel?: () => void
-  isActing: boolean
-}) {
-  return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-all duration-200 hover-lift">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <p className="text-sm font-bold text-foreground">
-            {req.userName}
-            {req.employeeId && <span className="ml-2 text-[10px] font-mono font-semibold text-muted-foreground/70">({req.employeeId})</span>}
-          </p>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">
-            {req.startDate.slice(0, 10) === req.endDate.slice(0, 10)
-              ? fmtDate(req.startDate)
-              : <>{fmtDate(req.startDate)} &ndash; {fmtDate(req.endDate)}</>}
-          </p>
-        </div>
-        <StatusBadge status={req.status} />
-      </div>
+/* ═══ Sort keys per tab ═══ */
 
-      {/* Reason */}
-      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-        <span className="font-semibold text-foreground/85">Reason:</span> {req.reason}
-      </p>
+type AllSortKey =
+  | 'recent'
+  | 'oldest'
+  | 'name-asc'
+  | 'start-date'
+  | 'status'
+  | 'score-high'
 
-      {/* Approval */}
-      <div className="text-xs text-muted-foreground mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground/70">Decision:</span>
-          <span className="font-semibold text-foreground/85">
-            {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED'
-              ? req.adminName
-              : req.adminStatus === 'CANCELLED' ? 'Cancelled by member'
-              : 'Awaiting Admin'}
-          </span>
-          <StatusBadge status={req.adminStatus} />
-        </div>
-      </div>
-
-      {/* Admin Actions */}
-      {showActions && req.status === 'PENDING' && (
-        <div className="flex items-center gap-2 pt-3 border-t border-border">
-          <Button size="sm" onClick={onApprove} disabled={isActing}>Approve</Button>
-          <Button size="sm" variant="danger" onClick={onReject} disabled={isActing}>Reject</Button>
-        </div>
-      )}
-
-      {/* Member Cancel */}
-      {showCancel && req.status !== 'CANCELLED' && req.status !== 'REJECTED' && onCancel && (
-        <div className="flex items-center gap-2 pt-3 border-t border-border">
-          <button onClick={onCancel}
-            disabled={isActing}
-            className="text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors disabled:opacity-50">
-            Cancel Request
-          </button>
-        </div>
-      )}
-    </div>
-  )
+const ALL_SORT_LABELS: Record<AllSortKey, string> = {
+  recent: 'Newest first',
+  oldest: 'Oldest first',
+  'name-asc': 'Employee (A–Z)',
+  'start-date': 'Start date',
+  status: 'Status',
+  'score-high': 'Score (high to low)',
 }
 
-/* ─── Create Request Modal ─── */
-function CreateModal({
-  onClose,
-  onCreate,
-  isPending,
-}: {
-  onClose: () => void
-  onCreate: (data: { startDate: string; endDate: string; reason: string }) => void
-  isPending: boolean
-}) {
-  const [mode, setMode] = useState<'single' | 'multiple'>('single')
-  const [singleDate, setSingleDate] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [reason, setReason] = useState('')
+type MineSortKey = 'recent' | 'oldest' | 'start-date' | 'status'
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!reason.trim()) return
-
-    if (mode === 'single') {
-      if (!singleDate) return
-      const start = startTime ? `${singleDate}T${startTime}` : singleDate
-      const end = endTime ? `${singleDate}T${endTime}` : singleDate
-      onCreate({ startDate: start, endDate: end, reason: reason.trim() })
-    } else {
-      if (!startDate || !endDate) return
-      onCreate({ startDate, endDate, reason: reason.trim() })
-    }
-  }
-
-  const inputClass = "w-full rounded-xl border border-border/80 bg-card px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none transition-all hover:border-border"
-
-  return (
-    <Modal isOpen onClose={onClose} title="Request Day Off" size="lg">
-      <p className="text-xs text-muted-foreground/70 mb-5">Your request will be sent to an admin for approval</p>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Duration type toggle */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Duration</label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setMode('single')}
-              className={`px-4 py-2.5 text-sm font-semibold rounded-xl border-2 transition-all ${
-                mode === 'single'
-                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                  : 'border-border/80 text-muted-foreground hover:border-border'
-              }`}
-            >
-              Single Day
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('multiple')}
-              className={`px-4 py-2.5 text-sm font-semibold rounded-xl border-2 transition-all ${
-                mode === 'multiple'
-                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                  : 'border-border/80 text-muted-foreground hover:border-border'
-              }`}
-            >
-              Multiple Days
-            </button>
-          </div>
-        </div>
-
-        {/* Single day mode */}
-        {mode === 'single' && (
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Date</label>
-              <DatePicker value={singleDate} onChange={setSingleDate} min={(() => {
-                const now = new Date()
-                const istHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
-                // Before 5 PM IST → can request for today; After 5 PM → tomorrow onwards
-                if (istHour < 17) return now.toISOString().slice(0, 10)
-                const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10)
-              })()} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Time Range <span className="text-muted-foreground/70">(optional — leave blank for full day)</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <TimePicker value={startTime} onChange={setStartTime} placeholder="From" />
-                <TimePicker value={endTime} onChange={setEndTime} placeholder="To" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Multiple days mode */}
-        {mode === 'multiple' && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Start Date</label>
-              <DatePicker value={startDate} onChange={setStartDate} min={(() => {
-                const now = new Date()
-                const istHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
-                if (istHour < 17) return now.toISOString().slice(0, 10)
-                const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10)
-              })()} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">End Date</label>
-              <DatePicker value={endDate} onChange={setEndDate} min={startDate || (() => {
-                const now = new Date()
-                const istHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
-                if (istHour < 17) return now.toISOString().slice(0, 10)
-                const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10)
-              })()} />
-            </div>
-          </div>
-        )}
-
-        {/* Reason */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Reason</label>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            required
-            rows={3}
-            placeholder="Why do you need time off?"
-            className="w-full rounded-xl border border-border/80 bg-card px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 outline-none resize-none transition-all hover:border-border"
-          />
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={isPending}>Submit Request</Button>
-        </div>
-      </form>
-    </Modal>
-  )
+const MINE_SORT_LABELS: Record<MineSortKey, string> = {
+  recent: 'Newest first',
+  oldest: 'Oldest first',
+  'start-date': 'Start date',
+  status: 'Status',
 }
 
-/* ─── Main Page ─── */
+type TeamSortKey = 'name-asc' | 'days-desc' | 'score-high' | 'requests-desc'
+
+const TEAM_SORT_LABELS: Record<TeamSortKey, string> = {
+  'name-asc': 'Name (A–Z)',
+  'days-desc': 'Days off (most first)',
+  'score-high': 'Score (high to low)',
+  'requests-desc': 'Requests (most first)',
+}
+
+const STATUS_ORDER: Record<DayOffStatus, number> = {
+  PENDING: 0,
+  APPROVED: 1,
+  REJECTED: 2,
+  CANCELLED: 3,
+}
+
 export default function DayOffsPage() {
   const { user } = useAuth()
-  const role = user?.systemRole
-  const isTopTier = role === 'OWNER'
+  const role = (user?.systemRole ?? 'MEMBER') as Role
   const isOwner = role === 'OWNER'
-  const isAdminOrOwner = isTopTier || role === 'ADMIN'
+  const isAdmin = role === 'ADMIN'
+  const isPrivileged = isOwner || isAdmin
 
   const { data: myDayOffs, isLoading: myLoading } = useMyDayOffs()
-  const { data: pendingDayOffs, isLoading: pendingLoading } = usePendingDayOffs()
+  const { data: pendingDayOffs, isLoading: pendingLoading } =
+    usePendingDayOffs()
   const { data: allDayOffs, isLoading: allLoading } = useAllDayOffs()
   const { data: allUsers } = useUsers()
 
@@ -334,213 +228,903 @@ export default function DayOffsPage() {
   const rejectMutation = useRejectDayOff()
   const cancelMutation = useCancelDayOff()
   const confirmDialog = useConfirm()
+  const toast = useToast()
 
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [allFilter, setAllFilter] = useState<'ALL' | DayOffStatus>('ALL')
+  // Default tab per role — admins/owners land on Pending (most common task)
+  const [tab, setTab] = useState<TabKey>(
+    isPrivileged ? 'pending' : 'mine'
+  )
+
+  const [showCreate, setShowCreate] = useState(false)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [allSort, setAllSort] = useState<AllSortKey>('recent')
+  const [mineSort, setMineSort] = useState<MineSortKey>('recent')
+  const [teamSort, setTeamSort] = useState<TeamSortKey>('name-asc')
+
+  /* ─── Derived data ─── */
+
+  const pendingCount = pendingDayOffs?.length ?? 0
+
+  const stats = useMemo((): StatCardItem[] => {
+    if (isPrivileged) {
+      const all = allDayOffs ?? []
+      const approvedThisMonth = all.filter(
+        (r) => r.status === 'APPROVED' && isThisMonth(r.updatedAt)
+      ).length
+      const rejectedThisMonth = all.filter(
+        (r) => r.status === 'REJECTED' && isThisMonth(r.updatedAt)
+      ).length
+      const approvedDaysThisMonth = all
+        .filter((r) => r.status === 'APPROVED')
+        .reduce((sum, r) => {
+          const now = new Date()
+          const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+          const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`
+          const s = r.startDate.slice(0, 10)
+          const e = r.endDate.slice(0, 10)
+          if (s > monthEnd || e < monthStart) return sum
+          const from = new Date(
+            Math.max(
+              new Date(s).getTime(),
+              new Date(monthStart).getTime()
+            )
+          )
+          const to = new Date(
+            Math.min(new Date(e).getTime(), new Date(monthEnd).getTime())
+          )
+          return (
+            sum +
+            Math.round(
+              (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)
+            ) +
+            1
+          )
+        }, 0)
+      return [
+        {
+          key: 'pending',
+          label: 'Pending',
+          value: pendingCount,
+          accent:
+            pendingCount > 0 ? 'text-amber-700' : 'text-muted-foreground',
+        },
+        {
+          key: 'approved',
+          label: 'Approved this month',
+          value: approvedThisMonth,
+          accent: 'text-emerald-700',
+        },
+        {
+          key: 'rejected',
+          label: 'Rejected this month',
+          value: rejectedThisMonth,
+          accent: 'text-red-700',
+        },
+        {
+          key: 'days',
+          label: 'Team days off',
+          value: approvedDaysThisMonth,
+          accent: 'text-indigo-700',
+        },
+      ]
+    }
+
+    // MEMBER view
+    const mine = myDayOffs ?? []
+    const pending = mine.filter((r) => r.status === 'PENDING').length
+    const approved = mine.filter((r) => r.status === 'APPROVED').length
+    const daysTaken = mine
+      .filter((r) => r.status === 'APPROVED' && isThisMonth(r.startDate))
+      .reduce((sum, r) => {
+        const start = new Date(r.startDate.slice(0, 10))
+        const end = new Date(r.endDate.slice(0, 10))
+        return (
+          sum +
+          Math.round(
+            (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+          ) +
+          1
+        )
+      }, 0)
+    const scoreData = user
+      ? getDayOffScore(user.userId, allDayOffs ?? [])
+      : { score: 100 }
+    return [
+      {
+        key: 'pending',
+        label: 'Pending',
+        value: pending,
+        accent:
+          pending > 0 ? 'text-amber-700' : 'text-muted-foreground',
+      },
+      {
+        key: 'approved',
+        label: 'Approved',
+        value: approved,
+        accent: 'text-emerald-700',
+      },
+      {
+        key: 'days',
+        label: 'Days taken',
+        value: daysTaken,
+        accent: 'text-indigo-700',
+      },
+      {
+        key: 'score',
+        label: 'Score this month',
+        value: scoreData.score,
+        accent:
+          scoreData.score === 100
+            ? 'text-emerald-700'
+            : scoreData.score >= 75
+              ? 'text-blue-700'
+              : scoreData.score >= 50
+                ? 'text-amber-700'
+                : 'text-red-700',
+      },
+    ]
+  }, [isPrivileged, pendingCount, allDayOffs, myDayOffs, user])
+
+  const availableTabs: { key: TabKey; label: string; count?: number }[] =
+    useMemo(() => {
+      const tabs: { key: TabKey; label: string; count?: number }[] = []
+      if (isPrivileged) {
+        tabs.push({
+          key: 'pending',
+          label: 'Pending approvals',
+          count: pendingCount,
+        })
+        tabs.push({ key: 'all', label: 'All requests' })
+      }
+      if (isAdmin || role === 'MEMBER') {
+        tabs.push({ key: 'mine', label: 'My requests' })
+      }
+      if (isOwner) {
+        tabs.push({ key: 'team', label: 'Team overview' })
+      }
+      return tabs
+    }, [isPrivileged, isAdmin, isOwner, role, pendingCount])
+
+  /* ─── Actions ─── */
+
+  const handleApprove = async (req: DayOffRequest) => {
+    try {
+      await approveMutation.mutateAsync(req.requestId)
+      toast.success(`Approved ${req.userName}'s request`)
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to approve request'
+      )
+    }
+  }
+
+  const handleReject = async (req: DayOffRequest) => {
+    const ok = await confirmDialog({
+      title: `Reject ${req.userName}'s request?`,
+      description:
+        "This will reject the day-off request. The member will be notified.",
+      confirmLabel: 'Reject',
+      variant: 'danger',
+    })
+    if (!ok) return
+    try {
+      await rejectMutation.mutateAsync(req.requestId)
+      toast.success('Request rejected')
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to reject request'
+      )
+    }
+  }
+
+  const handleCancel = async (req: DayOffRequest) => {
+    const ok = await confirmDialog({
+      title: 'Cancel your day-off request?',
+      description:
+        'This removes the request from the approval queue. This cannot be undone.',
+      confirmLabel: 'Cancel request',
+      variant: 'danger',
+    })
+    if (!ok) return
+    try {
+      await cancelMutation.mutateAsync(req.requestId)
+      toast.success('Request cancelled')
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to cancel request'
+      )
+    }
+  }
+
+  /* ─── Filters (for All Requests tab) ─── */
 
   const filteredAll = useMemo(() => {
-    if (!allDayOffs) return []
-    if (allFilter === 'ALL') return allDayOffs
-    return allDayOffs.filter((r: DayOffRequest) => r.status === allFilter)
-  }, [allDayOffs, allFilter])
+    let list = allDayOffs ?? []
+    if (statusFilter !== 'ALL')
+      list = list.filter((r) => r.status === statusFilter)
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      list = list.filter(
+        (r) =>
+          r.userName.toLowerCase().includes(q) ||
+          (r.employeeId || '').toLowerCase().includes(q) ||
+          r.reason.toLowerCase().includes(q)
+      )
+    }
+    const sorted = [...list]
+    sorted.sort((a, b) => {
+      switch (allSort) {
+        case 'oldest':
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          )
+        case 'name-asc':
+          return a.userName.localeCompare(b.userName)
+        case 'start-date':
+          return (
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          )
+        case 'status':
+          return (
+            (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
+          )
+        case 'score-high': {
+          const aScore = getDayOffScore(a.userId, allDayOffs ?? []).score
+          const bScore = getDayOffScore(b.userId, allDayOffs ?? []).score
+          return bScore - aScore
+        }
+        case 'recent':
+        default:
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+      }
+    })
+    return sorted
+  }, [allDayOffs, statusFilter, search, allSort])
 
-  const isActing = approveMutation.isPending || rejectMutation.isPending
+  const sortedMyDayOffs = useMemo(() => {
+    const list = [...(myDayOffs ?? [])]
+    list.sort((a, b) => {
+      switch (mineSort) {
+        case 'oldest':
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          )
+        case 'start-date':
+          return (
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          )
+        case 'status':
+          return (
+            (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
+          )
+        case 'recent':
+        default:
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+      }
+    })
+    return list
+  }, [myDayOffs, mineSort])
+
+  const sortedTeam = useMemo(() => {
+    if (!allUsers || !allDayOffs) return []
+    const rows = allUsers
+      .filter((u) => u.systemRole !== 'OWNER')
+      .map((u) => {
+        const { score, daysOff } = getDayOffScore(u.userId, allDayOffs)
+        const requestsThisMonth = allDayOffs.filter(
+          (r) => r.userId === u.userId && isThisMonth(r.createdAt)
+        ).length
+        return { user: u, score, daysOff, requestsThisMonth }
+      })
+    rows.sort((a, b) => {
+      switch (teamSort) {
+        case 'days-desc':
+          return b.daysOff - a.daysOff
+        case 'score-high':
+          return b.score - a.score
+        case 'requests-desc':
+          return b.requestsThisMonth - a.requestsThisMonth
+        case 'name-asc':
+        default:
+          return (a.user.name || a.user.email).localeCompare(
+            b.user.name || b.user.email
+          )
+      }
+    })
+    return rows
+  }, [allUsers, allDayOffs, teamSort])
+
+  /* ─── Render ─── */
+
+  const pageTitle = isOwner
+    ? 'Day Off Requests'
+    : isAdmin
+      ? 'Day Off Requests'
+      : 'My Day Offs'
+  const pageDescription = isPrivileged
+    ? 'Review and manage employee time-off requests'
+    : 'Track and request your time off'
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 animate-fade-in">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Day Off Requests</h1>
-          <p className="text-sm text-muted-foreground/70 mt-0.5">
-            {isOwner ? 'Review and manage employee time-off requests' : 'Manage your time-off requests'}
-          </p>
-        </div>
-        {!isOwner && (
-          <Button onClick={() => setShowCreateModal(true)}>
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Request Day Off
-          </Button>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 animate-fade-in">
+      <PageHeader
+        title={pageTitle}
+        description={pageDescription}
+        actions={
+          !isOwner ? (
+            <Button onClick={() => setShowCreate(true)} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              Request day off
+            </Button>
+          ) : undefined
+        }
+      />
+
+      <StatCardsGrid items={stats} columns={4} />
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+        <TabsList>
+          {availableTabs.map((t) => (
+            <TabsTrigger key={t.key} value={t.key} className="gap-2">
+              {t.label}
+              {typeof t.count === 'number' && t.count > 0 && (
+                <span
+                  className={cn(
+                    'inline-flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums',
+                    t.key === 'pending'
+                      ? 'bg-destructive/15 text-destructive'
+                      : 'bg-muted-foreground/20 text-muted-foreground'
+                  )}
+                >
+                  {t.count}
+                </span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {/* Pending Approvals tab */}
+        {isPrivileged && (
+          <TabsContent value="pending" className="mt-4">
+            {pendingLoading ? (
+              <div className="flex justify-center py-12">
+                <Spinner />
+              </div>
+            ) : !pendingDayOffs?.length ? (
+              <EmptyState
+                title="No pending approvals"
+                description="All requests have been reviewed. You're all caught up."
+              />
+            ) : (
+              <div className="space-y-3">
+                {pendingDayOffs.map((req) => (
+                  <PendingRequestRow
+                    key={req.requestId}
+                    req={req}
+                    avatarUrl={
+                      allUsers?.find((u) => u.userId === req.userId)?.avatarUrl
+                    }
+                    onApprove={() => handleApprove(req)}
+                    onReject={() => handleReject(req)}
+                    isActing={
+                      approveMutation.isPending || rejectMutation.isPending
+                    }
+                    disableActions={req.userId === user?.userId}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
         )}
-      </div>
 
-      {/* ── Team Day-Off Scores (OWNER) ── */}
-      {isOwner && allDayOffs && allUsers && (
-        <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">Team Day-Off Scores · {new Date().toLocaleDateString('en-US', { month: 'long' })}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {allUsers.filter(u => u.systemRole !== 'OWNER').map(u => {
-              const { score, daysOff } = getDayOffScore(u.userId, allDayOffs)
-              const color = score === 100 ? 'text-emerald-600' : score >= 75 ? 'text-blue-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'
-              const bg = score === 100 ? 'border-emerald-100' : score >= 75 ? 'border-blue-100' : score >= 50 ? 'border-amber-100' : 'border-red-100'
-              return (
-                <div key={u.userId} className={`bg-card rounded-xl border ${bg} p-3 shadow-sm`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-[12px] font-semibold text-foreground/95 truncate">{u.name || u.email}</p>
-                    <span className={`text-lg font-bold tabular-nums ${color}`}>{score}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground/70">{u.systemRole}</span>
-                    <span className="text-[10px] text-muted-foreground/70">{daysOff}d off</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
+        {/* All Requests tab */}
+        {isPrivileged && (
+          <TabsContent value="all" className="mt-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <div className="min-w-[220px] flex-1">
+                <Input
+                  type="text"
+                  placeholder="Search by name, ID, or reason..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  leftIcon={<Search />}
+                  rightIcon={
+                    search ? (
+                      <button
+                        type="button"
+                        onClick={() => setSearch('')}
+                        className="pointer-events-auto rounded p-0.5 text-muted-foreground/70 hover:text-foreground"
+                        aria-label="Clear search"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    ) : undefined
+                  }
+                  className="h-9"
+                />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 gap-1.5 text-xs"
+                  >
+                    <Filter className="h-3.5 w-3.5" />
+                    <span className="font-semibold">
+                      {STATUS_LABELS[statusFilter]}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={statusFilter}
+                    onValueChange={(v) =>
+                      setStatusFilter(v as StatusFilter)
+                    }
+                  >
+                    {(Object.keys(STATUS_LABELS) as StatusFilter[]).map(
+                      (k) => (
+                        <DropdownMenuRadioItem key={k} value={k}>
+                          {STATUS_LABELS[k]}
+                        </DropdownMenuRadioItem>
+                      )
+                    )}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-      {/* ── My Day-Off Score (ADMIN/MEMBER) ── */}
-      {user && !isOwner && allDayOffs && (
-        <DayOffScoreCard userId={user.userId} dayOffs={allDayOffs} />
-      )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 gap-1.5 text-xs"
+                  >
+                    <ArrowDownUp className="h-3.5 w-3.5" />
+                    <span className="font-semibold">
+                      {ALL_SORT_LABELS[allSort]}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={allSort}
+                    onValueChange={(v) => setAllSort(v as AllSortKey)}
+                  >
+                    {(Object.keys(ALL_SORT_LABELS) as AllSortKey[]).map(
+                      (k) => (
+                        <DropdownMenuRadioItem key={k} value={k}>
+                          {ALL_SORT_LABELS[k]}
+                        </DropdownMenuRadioItem>
+                      )
+                    )}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-      {/* ── Section 1: My Requests (not for OWNER) ── */}
-      {!isOwner && (
-        <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">My Requests</h2>
-          {myLoading ? (
-            <div className="flex justify-center py-12"><Spinner /></div>
-          ) : !myDayOffs?.length ? (
-            <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 p-8 text-center">
-              <p className="text-sm text-muted-foreground/70">You have no day-off requests yet.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade">
-              {myDayOffs.map((req: DayOffRequest) => (
-                <RequestCard key={req.requestId} req={req} showActions={false} showCancel={true}
-                  onApprove={() => {}} onReject={() => {}} onCancel={async () => {
-                    if (await confirmDialog({ title: 'Cancel Day Off', description: 'Are you sure you want to cancel this day-off request?', confirmLabel: 'Cancel Request' })) cancelMutation.mutate(req.requestId)
+              {(search || statusFilter !== 'ALL' || allSort !== 'recent') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearch('')
+                    setStatusFilter('ALL')
+                    setAllSort('recent')
                   }}
-                  isActing={cancelMutation.isPending} />
-              ))}
+                  className="text-muted-foreground"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
-          )}
-        </section>
-      )}
 
-      {/* ── Section 2: Pending Approvals (OWNER / ADMIN) ── */}
-      {(role === 'OWNER' || role === 'ADMIN') && (
-        <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
-            Pending Approvals
-            {(pendingDayOffs?.length ?? 0) > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-[10px] font-bold text-white">
-                {pendingDayOffs?.length}
+            {allLoading ? (
+              <div className="flex justify-center py-12">
+                <Spinner />
+              </div>
+            ) : filteredAll.length === 0 ? (
+              <EmptyState
+                title="No requests found"
+                description={
+                  search || statusFilter !== 'ALL'
+                    ? 'Try clearing filters to see more requests.'
+                    : 'No day-off requests have been submitted yet.'
+                }
+              />
+            ) : (
+              <Card className="overflow-hidden p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Dates</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Decision</TableHead>
+                      <TableHead className="text-center">Score</TableHead>
+                      <TableHead className="text-right">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAll.map((req) => {
+                      const scoreData = getDayOffScore(
+                        req.userId,
+                        allDayOffs ?? []
+                      )
+                      return (
+                        <TableRow key={req.requestId}>
+                          <TableCell>
+                            <p className="font-semibold text-foreground">
+                              {req.userName}
+                            </p>
+                            {req.employeeId && (
+                              <p className="font-mono text-[10px] text-muted-foreground">
+                                {req.employeeId}
+                              </p>
+                            )}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-muted-foreground">
+                            {formatRange(req.startDate, req.endDate)}
+                          </TableCell>
+                          <TableCell className="max-w-[220px] truncate text-muted-foreground">
+                            {req.reason}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {req.adminStatus === 'APPROVED' ||
+                            req.adminStatus === 'REJECTED' ? (
+                              <span className="font-medium text-foreground">
+                                {req.adminName}
+                              </span>
+                            ) : req.status === 'CANCELLED' ? (
+                              <span className="italic text-muted-foreground">
+                                By member
+                              </span>
+                            ) : (
+                              <span className="italic text-muted-foreground">
+                                Awaiting admin
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <ScoreChip score={scoreData.score} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <StatusBadge status={req.status} />
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </TabsContent>
+        )}
+
+        {/* My Requests tab */}
+        {(isAdmin || role === 'MEMBER') && (
+          <TabsContent value="mine" className="mt-4">
+            {myLoading ? (
+              <div className="flex justify-center py-12">
+                <Spinner />
+              </div>
+            ) : !myDayOffs?.length ? (
+              <EmptyState
+                title="No requests yet"
+                description="You haven't submitted any day-off requests."
+                action={
+                  <Button
+                    onClick={() => setShowCreate(true)}
+                    className="gap-1.5"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Request day off
+                  </Button>
+                }
+              />
+            ) : (
+              <>
+                <div className="mb-3 flex justify-end">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 gap-1.5 text-xs"
+                      >
+                        <ArrowDownUp className="h-3.5 w-3.5" />
+                        <span className="font-semibold">
+                          {MINE_SORT_LABELS[mineSort]}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup
+                        value={mineSort}
+                        onValueChange={(v) => setMineSort(v as MineSortKey)}
+                      >
+                        {(Object.keys(MINE_SORT_LABELS) as MineSortKey[]).map(
+                          (k) => (
+                            <DropdownMenuRadioItem key={k} value={k}>
+                              {MINE_SORT_LABELS[k]}
+                            </DropdownMenuRadioItem>
+                          )
+                        )}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <Card className="overflow-hidden p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Dates</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Decision</TableHead>
+                        <TableHead>Submitted</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
+                        <TableHead className="w-[100px]" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedMyDayOffs.map((req) => (
+                        <TableRow key={req.requestId}>
+                          <TableCell className="font-semibold text-foreground">
+                            {formatRange(req.startDate, req.endDate)}
+                          </TableCell>
+                          <TableCell className="max-w-[260px] truncate text-muted-foreground">
+                            {req.reason}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {req.adminStatus === 'APPROVED' ||
+                            req.adminStatus === 'REJECTED' ? (
+                              <span className="font-medium text-foreground">
+                                {req.adminName}
+                              </span>
+                            ) : req.status === 'CANCELLED' ? (
+                              <span className="italic text-muted-foreground">
+                                By you
+                              </span>
+                            ) : (
+                              <span className="italic text-muted-foreground">
+                                Awaiting admin
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {fmtDate(req.createdAt)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <StatusBadge status={req.status} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {req.status === 'PENDING' ||
+                            req.status === 'APPROVED' ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCancel(req)}
+                                disabled={cancelMutation.isPending}
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                Cancel
+                              </Button>
+                            ) : null}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </Card>
+              </>
+            )}
+          </TabsContent>
+        )}
+
+        {/* Team Overview tab (OWNER only) */}
+        {isOwner && (
+          <TabsContent value="team" className="mt-4">
+            {!allUsers || !allDayOffs ? (
+              <div className="flex justify-center py-12">
+                <Spinner />
+              </div>
+            ) : (
+              <>
+                <div className="mb-3 flex justify-end">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 gap-1.5 text-xs"
+                      >
+                        <ArrowDownUp className="h-3.5 w-3.5" />
+                        <span className="font-semibold">
+                          {TEAM_SORT_LABELS[teamSort]}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup
+                        value={teamSort}
+                        onValueChange={(v) => setTeamSort(v as TeamSortKey)}
+                      >
+                        {(Object.keys(TEAM_SORT_LABELS) as TeamSortKey[]).map(
+                          (k) => (
+                            <DropdownMenuRadioItem key={k} value={k}>
+                              {TEAM_SORT_LABELS[k]}
+                            </DropdownMenuRadioItem>
+                          )
+                        )}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <Card className="overflow-hidden p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead className="text-center">
+                          Days off
+                        </TableHead>
+                        <TableHead className="text-center">
+                          Requests this month
+                        </TableHead>
+                        <TableHead className="text-right">Score</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedTeam.map(
+                        ({ user: u, score, daysOff, requestsThisMonth }) => (
+                          <TableRow key={u.userId}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar
+                                  url={u.avatarUrl}
+                                  name={u.name || u.email}
+                                  size="sm"
+                                />
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-foreground">
+                                    {u.name || u.email}
+                                  </p>
+                                  <p className="truncate text-[10px] text-muted-foreground">
+                                    {u.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {u.systemRole}
+                            </TableCell>
+                            <TableCell className="text-center tabular-nums text-foreground">
+                              {daysOff}
+                            </TableCell>
+                            <TableCell className="text-center tabular-nums text-muted-foreground">
+                              {requestsThisMonth}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <ScoreChip score={score} />
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+        )}
+      </Tabs>
+
+      <DayOffCreateDialog
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        isPending={createMutation.isPending}
+        onCreate={(data) => {
+          createMutation.mutate(data, {
+            onSuccess: () => {
+              setShowCreate(false)
+              toast.success('Day-off request submitted')
+            },
+          })
+        }}
+      />
+    </div>
+  )
+}
+
+/* ═══ Pending Request Row ═══ */
+
+function PendingRequestRow({
+  req,
+  avatarUrl,
+  onApprove,
+  onReject,
+  isActing,
+  disableActions,
+}: {
+  req: DayOffRequest
+  avatarUrl?: string
+  onApprove: () => void
+  onReject: () => void
+  isActing: boolean
+  disableActions?: boolean
+}) {
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-start gap-4">
+        <Avatar url={avatarUrl} name={req.userName} size="md" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-bold text-foreground">
+              {req.userName}
+            </p>
+            {req.employeeId && (
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {req.employeeId}
               </span>
             )}
-          </h2>
-          {pendingLoading ? (
-            <div className="flex justify-center py-12"><Spinner /></div>
-          ) : !pendingDayOffs?.length ? (
-            <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 p-8 text-center">
-              <p className="text-sm text-muted-foreground/70">No pending requests require your approval.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade">
-              {pendingDayOffs.map((req: DayOffRequest) => (
-                <RequestCard
-                  key={req.requestId}
-                  req={req}
-                  showActions={req.userId !== user?.userId}
-                  onApprove={() => approveMutation.mutate(req.requestId)}
-                  onReject={() => rejectMutation.mutate(req.requestId)}
-                  isActing={isActing}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Section 3: All Requests (OWNER / ADMIN) ── */}
-      {isAdminOrOwner && (
-        <section>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">All Requests</h2>
-            <div className="flex items-center gap-1.5">
-              {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setAllFilter(f)}
-                  className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all duration-200 ${
-                    allFilter === f
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-muted/40 text-muted-foreground hover:bg-muted border border-border'
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
           </div>
-
-          {allLoading ? (
-            <div className="flex justify-center py-12"><Spinner /></div>
-          ) : !filteredAll.length ? (
-            <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 p-8 text-center">
-              <p className="text-sm text-muted-foreground/70">No requests found.</p>
-            </div>
-          ) : (
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40">
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Employee</th>
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Dates</th>
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Reason</th>
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Approved By</th>
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Score</th>
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {filteredAll.map((req: DayOffRequest) => (
-                      <tr key={req.requestId} className="hover:bg-muted/40 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold text-foreground">{req.userName}</p>
-                          {req.employeeId && <p className="text-[10px] font-mono text-muted-foreground/70">{req.employeeId}</p>}
-                        </td>
-                        <td className="px-5 py-3.5 text-muted-foreground whitespace-nowrap">
-                          {req.startDate.slice(0, 10) === req.endDate.slice(0, 10)
-                            ? fmtDate(req.startDate)
-                            : `${fmtDate(req.startDate)} – ${fmtDate(req.endDate)}`}
-                        </td>
-                        <td className="px-5 py-3.5 text-muted-foreground max-w-[200px] truncate">{req.reason}</td>
-                        <td className="px-5 py-3.5">
-                          <span className="font-semibold text-foreground/85">
-                            {req.adminStatus === 'APPROVED' || req.adminStatus === 'REJECTED' ? req.adminName : 'Awaiting Admin'}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <DayOffScoreBadge userId={req.userId} dayOffs={allDayOffs ?? []} />
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <StatusBadge status={req.status} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Modal ── */}
-      {showCreateModal && (
-        <CreateModal
-          onClose={() => setShowCreateModal(false)}
-          isPending={createMutation.isPending}
-          onCreate={(data) => {
-            createMutation.mutate(data, { onSuccess: () => setShowCreateModal(false) })
-          }}
-        />
-      )}
-    </div>
+          <p className="mt-0.5 text-xs font-medium text-muted-foreground">
+            {formatRange(req.startDate, req.endDate)}
+          </p>
+          <p className="mt-1.5 text-sm text-foreground leading-relaxed">
+            <span className="font-semibold text-muted-foreground">
+              Reason:
+            </span>{' '}
+            {req.reason}
+          </p>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Requested {fmtDate(req.createdAt)}
+          </p>
+        </div>
+        {!disableActions && (
+          <div className="flex shrink-0 gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onApprove}
+              disabled={isActing}
+              className="gap-1.5"
+            >
+              <Check className="h-3.5 w-3.5" />
+              Approve
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onReject}
+              disabled={isActing}
+              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              Reject
+            </Button>
+          </div>
+        )}
+        {disableActions && (
+          <span className="shrink-0 text-[10px] italic text-muted-foreground">
+            (your own request)
+          </span>
+        )}
+      </div>
+    </Card>
   )
 }
