@@ -4,12 +4,35 @@ import type {
   AcceptInviteResponse,
   CurrentOrgResponse,
   ListInvitesResponse,
+  OrgSettings,
   OrgSummary,
   SendInviteRequest,
   SendInviteResponse,
   SignupRequest,
   SignupResponse,
 } from '@/types/org'
+
+/** Partial settings update — only the fields in the request are changed. */
+export type UpdateSettingsRequest = Partial<
+  Pick<
+    OrgSettings,
+    | 'displayName'
+    | 'logoUrl'
+    | 'faviconUrl'
+    | 'primaryColor'
+    | 'accentColor'
+    | 'terminology'
+    | 'timezone'
+    | 'locale'
+    | 'currency'
+    | 'weekStartDay'
+    | 'workingHoursStart'
+    | 'workingHoursEnd'
+    | 'employeeIdPrefix'
+    | 'features'
+    | 'leaveTypes'
+  >
+>
 
 export const orgsApi = {
   // Public — POST /signup creates a tenant and its first owner user
@@ -28,6 +51,12 @@ export const orgsApi = {
   // for the caller's org (resolved from the JWT's custom:orgId claim).
   async getCurrent(): Promise<CurrentOrgResponse> {
     return apiClient.get<CurrentOrgResponse>('/orgs/current')
+  },
+
+  // Authed OWNER — PUT /orgs/current/settings merges a partial payload
+  // into the current settings.
+  async updateSettings(req: UpdateSettingsRequest): Promise<OrgSettings> {
+    return apiClient.put<OrgSettings>('/orgs/current/settings', req)
   },
 
   // ---------- Invites ----------

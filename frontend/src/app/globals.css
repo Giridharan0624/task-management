@@ -12,10 +12,17 @@
     --color-text: #1a1a2e;
     --color-text-secondary: #6b7194;
     --color-text-muted: #9ca3bf;
-    --color-primary: #6366f1;
     --color-primary-hover: #4f46e5;
     --color-primary-light: #eef2ff;
     --sidebar-width: 260px;
+    /* Per-tenant theme — RGB triplets consumed by Tailwind's
+       `rgb(var(--color-primary) / <alpha-value>)` mapping so classes
+       like `bg-primary`, `text-primary/50` work. Overridden at runtime
+       by TenantProvider after it loads OrgSettings. */
+    --color-primary: 99 102 241;
+    --color-primary-fg: 255 255 255;
+    --color-accent: 16 185 129;
+    --color-accent-fg: 255 255 255;
   }
 
   .dark {
@@ -27,7 +34,6 @@
     --color-text: #e4e4ec;
     --color-text-secondary: #9ca3bf;
     --color-text-muted: #6b7194;
-    --color-primary: #818cf8;
     --color-primary-hover: #6366f1;
     --color-primary-light: #1e1b4b;
     color-scheme: dark;

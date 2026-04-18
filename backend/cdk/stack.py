@@ -397,6 +397,15 @@ class TaskManagementStack(Stack):
             orgs_current,
         )
 
+        # Org settings update (Phase 3 — OWNER can edit branding/terminology/features)
+        orgs_current_settings = orgs_current.add_resource("settings")
+        add_api_lambda(
+            "UpdateOrgSettings",
+            "contexts.org.handlers.update_settings.handler",
+            "PUT",
+            orgs_current_settings,
+        )
+
         # Invite routes (Phase 2 — team onboarding flow)
         orgs_current_invites = orgs_current.add_resource("invites")
         send_invite_fn = add_api_lambda(

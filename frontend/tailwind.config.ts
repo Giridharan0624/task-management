@@ -8,6 +8,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Per-tenant theme colors driven by CSS variables set by
+        // TenantProvider at runtime from OrgSettings.primary_color /
+        // accent_color. Fallback defaults live in globals.css.
+        primary: {
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          fg: 'rgb(var(--color-primary-fg) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          fg: 'rgb(var(--color-accent-fg) / <alpha-value>)',
+        },
         sidebar: {
           DEFAULT: '#ffffff',
           hover: '#f8f8fb',

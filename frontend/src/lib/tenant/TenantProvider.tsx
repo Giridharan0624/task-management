@@ -9,6 +9,7 @@ import React, {
 } from 'react'
 
 import { orgsApi } from '@/lib/api/orgsApi'
+import { applyTenantTheme } from '@/lib/tenant/theme'
 import type { CurrentOrgResponse, OrgSummary } from '@/types/org'
 
 const DEFAULT_SLUG = 'neurostack'
@@ -72,6 +73,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       .then((s) => {
         if (cancelled) return
         setSummary(s)
+        // Apply tenant branding colors ASAP so the login/signup page
+        // and the dashboard both theme before first render settles.
+        applyTenantTheme(s.primaryColor, s.accentColor)
         setIsLoading(false)
       })
       .catch((e: unknown) => {
@@ -109,6 +113,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       // (e.g. user switched workspaces), sync it.
       if (c.org.slug && c.org.slug !== slug) {
         setSlug(c.org.slug)
+      }
+      // Apply the full (authed) branding payload — catches any
+      // settings edits made since the public `/orgs/by-slug/{slug}`
+      // response was cached.
+      if (c.settings) {
+        applyTenantTheme(c.settings.primaryColor, c.settings.accentColor)
       }
     } catch {
       // Not logged in yet, or org not found — ignore.
