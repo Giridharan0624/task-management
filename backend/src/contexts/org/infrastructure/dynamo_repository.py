@@ -74,18 +74,82 @@ class OrgDynamoRepository(IOrgRepository):
         return OrgMapper.plan_to_domain(item) if item else None
 
     # ------------------------------------------------------------------
-    # Invite (used in Phase 2; Phase 1 defines only the plumbing)
+    # Invite
     # ------------------------------------------------------------------
     def save_invite(self, invite: Invite) -> None:
+        """Write both the org-scoped invite record AND the global
+        INVITE_TOKEN# lookup so public accept-invite can resolve the
+        token to an org_id in O(1) without a scan."""
         self._table.put_item(Item=OrgMapper.invite_to_dynamo(invite))
+        self._table.put_item(
+            Item={
+                "PK": tenant_keys.invite_token_lookup_pk(invite.token),
+                "SK": tenant_keys.invite_token_lookup_sk(),
+                "token": invite.token,
+                "org_id": invite.org_id,
+                "expires_at": invite.expires_at,
+                "created_at": invite.created_at,
+            }
+        )
 
     def find_invite_by_token(self, token: str) -> Optional[Invite]:
-        # Phase 1 uses a scan — invite volume is low and Phase 2 will
-        # replace this with a GSI or a PK=INVITE#{token} resolver item.
-        response = self._table.scan(
-            FilterExpression=Attr("SK").eq(tenant_keys.invite_sk(token))
+        # O(1) lookup via the global INVITE_TOKEN# record -> org_id -> org-scoped invite
+        lookup_resp = self._table.get_item(
+            Key={
+                "PK": tenant_keys.invite_token_lookup_pk(token),
+                "SK": tenant_keys.invite_token_lookup_sk(),
+            }
         )
-        items = response.get("Items", [])
-        if not items:
+        lookup = lookup_resp.get("Item")
+        if not lookup:
             return None
-        return OrgMapper.invite_to_domain(items[0])
+        invite_resp = self._table.get_item(
+            Key={
+                "PK": tenant_keys.org_pk(lookup["org_id"]),
+                "SK": tenant_keys.invite_sk(token),
+            }
+        )
+        invite_item = invite_resp.get("Item")
+        if not invite_item:
+            return None
+        return OrgMapper.invite_to_domain(invite_item)
+
+    def mark_invite_accepted(self, org_id: str, token: str, accepted_at: str) -> None:
+        """Set the accepted_at timestamp on the org-scoped invite record.
+        The lookup record is left in place so the token can't be reused
+        (accept-invite checks `accepted_at` before proceeding)."""
+        self._table.update_item(
+            Key={
+                "PK": tenant_keys.org_pk(org_id),
+                "SK": tenant_keys.invite_sk(token),
+            },
+            UpdateExpression="SET accepted_at = :a",
+            ExpressionAttributeValues={":a": accepted_at},
+        )
+
+    def delete_invite(self, org_id: str, token: str) -> None:
+        """Revoke an invite — removes both the org-scoped record and the
+        global lookup so the token becomes unresolvable."""
+        self._table.delete_item(
+            Key={
+                "PK": tenant_keys.org_pk(org_id),
+                "SK": tenant_keys.invite_sk(token),
+            }
+        )
+        self._table.delete_item(
+            Key={
+                "PK": tenant_keys.invite_token_lookup_pk(token),
+                "SK": tenant_keys.invite_token_lookup_sk(),
+            }
+        )
+
+    def list_invites(self, org_id: str) -> list[Invite]:
+        """All invite records under this org — includes accepted and
+        unaccepted. Callers filter by `accepted_at` / `expires_at` as
+        needed."""
+        from boto3.dynamodb.conditions import Key as _K
+        response = self._table.query(
+            KeyConditionExpression=_K("PK").eq(tenant_keys.org_pk(org_id))
+            & _K("SK").begins_with("INVITE#")
+        )
+        return [OrgMapper.invite_to_domain(item) for item in response.get("Items", [])]

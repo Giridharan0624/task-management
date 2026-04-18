@@ -356,6 +356,18 @@ class TaskManagementStack(Stack):
             **{**lambda_defaults, "timeout": Duration.seconds(15)},
         )
         table.grant_read_write_data(signup_fn)
+        # Grant Cognito admin permissions so the signup handler can create
+        # the first OWNER user with a permanent password.
+        signup_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "cognito-idp:AdminCreateUser",
+                    "cognito-idp:AdminSetUserPassword",
+                    "cognito-idp:AdminDeleteUser",  # for rollback on DynamoDB failure
+                ],
+                resources=[user_pool.user_pool_arn],
+            )
+        )
         signup_resource.add_method(
             "POST",
             apigw.LambdaIntegration(signup_fn),
@@ -383,6 +395,60 @@ class TaskManagementStack(Stack):
             "contexts.org.handlers.get_current_org.handler",
             "GET",
             orgs_current,
+        )
+
+        # Invite routes (Phase 2 — team onboarding flow)
+        orgs_current_invites = orgs_current.add_resource("invites")
+        send_invite_fn = add_api_lambda(
+            "SendInvite",
+            "contexts.org.handlers.send_invite.handler",
+            "POST",
+            orgs_current_invites,
+        )
+        send_invite_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
+        send_invite_fn.add_environment("APP_URL", config["app_url"])
+        gmail_secret.grant_read(send_invite_fn)
+
+        add_api_lambda(
+            "ListInvites",
+            "contexts.org.handlers.list_invites.handler",
+            "GET",
+            orgs_current_invites,
+        )
+
+        orgs_current_invite_by_token = orgs_current_invites.add_resource("{token}")
+        add_api_lambda(
+            "RevokeInvite",
+            "contexts.org.handlers.revoke_invite.handler",
+            "DELETE",
+            orgs_current_invite_by_token,
+        )
+
+        # Public accept-invite route — no auth, the token itself is the credential
+        invites_root = api.root.add_resource("invites")
+        invite_by_token = invites_root.add_resource("{token}")
+        accept_invite_resource = invite_by_token.add_resource("accept")
+        accept_invite_fn = _lambda.Function(
+            self,
+            "AcceptInvite",
+            handler="contexts.org.handlers.accept_invite.handler",
+            **{**lambda_defaults, "timeout": Duration.seconds(15)},
+        )
+        table.grant_read_write_data(accept_invite_fn)
+        accept_invite_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "cognito-idp:AdminCreateUser",
+                    "cognito-idp:AdminSetUserPassword",
+                    "cognito-idp:AdminDeleteUser",  # for rollback
+                ],
+                resources=[user_pool.user_pool_arn],
+            )
+        )
+        accept_invite_resource.add_method(
+            "POST",
+            apigw.LambdaIntegration(accept_invite_fn),
+            authorization_type=apigw.AuthorizationType.NONE,
         )
 
         # ─── Attendance handlers ────────────────────────────────────────────

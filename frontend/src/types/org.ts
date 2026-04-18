@@ -76,3 +76,44 @@ export interface SignupResponse {
   ownerUserId: string
   redirectUrl: string
 }
+
+export interface SendInviteRequest {
+  email: string
+  roleId?: 'admin' | 'member'
+}
+
+export interface SendInviteResponse {
+  token: string
+  email: string
+  roleId: string
+  expiresAt: string
+  invitedBy: string
+}
+
+export interface Invite {
+  email: string
+  roleId: string
+  invitedBy: string
+  expiresAt: string
+  acceptedAt: string | null
+  createdAt: string
+  status: 'pending' | 'accepted' | 'expired'
+  token: string
+}
+
+export interface ListInvitesResponse {
+  invites: Invite[]
+}
+
+export interface AcceptInviteRequest {
+  name: string
+  password: string
+}
+
+export interface AcceptInviteResponse {
+  orgId: string
+  slug: string
+  userId: string
+  email: string
+  redirectUrl: string
+}

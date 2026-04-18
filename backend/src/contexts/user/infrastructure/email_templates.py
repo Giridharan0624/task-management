@@ -185,3 +185,101 @@ Important: This one-time password expires in 7 days.
 
 Powered by NEUROSTACK
 This is an automated message. Please do not reply."""
+
+
+def build_invite_email_html(
+    recipient_email: str,
+    inviter_name: str,
+    org_name: str,
+    invite_url: str,
+    role: str = "member",
+) -> str:
+    return f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You're invited to {org_name} on TaskFlow</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f8;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f8;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:36px 40px;text-align:center;">
+              <span style="color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">TaskFlow</span>
+              <p style="color:rgba(255,255,255,0.8);font-size:14px;margin:8px 0 0;">You've been invited to a workspace</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px 40px 20px;">
+              <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#1a1a2e;">
+                {inviter_name} invited you to join {org_name}
+              </h1>
+              <p style="margin:0 0 24px;font-size:15px;color:#4a4a65;line-height:1.6;">
+                You've been invited as a <strong>{role}</strong> on {org_name}'s TaskFlow workspace.
+                Click the button below to accept, create your password, and get started.
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#4f46e5,#6366f1);border-radius:10px;">
+                    <a href="{invite_url}" style="display:inline-block;padding:14px 32px;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;">
+                      Accept invitation
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;font-size:13px;color:#6a6a80;">
+                Or paste this link into your browser:
+              </p>
+              <p style="margin:0 0 24px;font-size:12px;color:#6a6a80;word-break:break-all;">
+                <a href="{invite_url}" style="color:#4f46e5;">{invite_url}</a>
+              </p>
+
+              <p style="margin:0;font-size:12px;color:#8a8a9a;">
+                This invitation expires in 7 days. If you didn't expect this, you can ignore this email.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 40px 32px;border-top:1px solid #eceef4;">
+              <p style="margin:0;font-size:12px;color:#8a8a9a;text-align:center;">
+                Powered by NEUROSTACK &middot; This is an automated message. Please do not reply.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def build_invite_email_text(
+    recipient_email: str,
+    inviter_name: str,
+    org_name: str,
+    invite_url: str,
+    role: str = "member",
+) -> str:
+    return f"""\
+{inviter_name} invited you to join {org_name} on TaskFlow.
+
+Role: {role}
+
+Accept your invitation:
+{invite_url}
+
+This invitation expires in 7 days. If you didn't expect this, you can
+ignore this email.
+
+Powered by NEUROSTACK
+This is an automated message. Please do not reply."""

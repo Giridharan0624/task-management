@@ -6,6 +6,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from contexts.user.infrastructure.email_templates import (
+    build_invite_email_html,
+    build_invite_email_text,
     build_welcome_email_html,
     build_welcome_email_text,
 )
@@ -98,3 +100,55 @@ class GmailEmailService:
             logger.info("Welcome email sent to %s", recipient_email)
         except Exception as e:
             logger.warning("Failed to send welcome email to %s: %s", recipient_email, str(e))
+
+    @staticmethod
+    def send_invite_email(
+        recipient_email: str,
+        inviter_name: str,
+        org_name: str,
+        invite_token: str,
+        app_url: str,
+        role: str = "member",
+    ) -> None:
+        """Send a Phase 2 invite email with an accept link.
+
+        The accept link format is `{app_url}/invite/{token}`. The frontend
+        route at /invite/[token] collects name + password and POSTs to
+        /invites/{token}/accept.
+        """
+        gmail_user, gmail_password = _get_gmail_credentials()
+        if not gmail_user or not gmail_password:
+            logger.warning("Gmail credentials not configured — skipping invite email")
+            return
+
+        invite_url = f"{app_url.rstrip('/')}/invite/{invite_token}"
+        html_body = build_invite_email_html(
+            recipient_email=recipient_email,
+            inviter_name=inviter_name,
+            org_name=org_name,
+            invite_url=invite_url,
+            role=role,
+        )
+        text_body = build_invite_email_text(
+            recipient_email=recipient_email,
+            inviter_name=inviter_name,
+            org_name=org_name,
+            invite_url=invite_url,
+            role=role,
+        )
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"{inviter_name} invited you to {org_name} on TaskFlow"
+        msg["From"] = f"TaskFlow <{gmail_user}>"
+        msg["To"] = recipient_email
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+
+        try:
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login(gmail_user, gmail_password)
+                server.sendmail(gmail_user, recipient_email, msg.as_string())
+            logger.info("Invite email sent to %s", recipient_email)
+        except Exception as e:
+            logger.warning("Failed to send invite email to %s: %s", recipient_email, str(e))

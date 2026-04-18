@@ -82,6 +82,17 @@ def invite_sk(token: str) -> str:
     return f"INVITE#{token}"
 
 
+def invite_token_lookup_pk(token: str) -> str:
+    """Global `PK=INVITE_TOKEN#{token}` lookup record so the public
+    accept-invite endpoint can resolve a token -> org_id in O(1)
+    without a scan."""
+    return f"INVITE_TOKEN#{token}"
+
+
+def invite_token_lookup_sk() -> str:
+    return "META"
+
+
 # ---------------------------------------------------------------------------
 # Slug -> org resolver (global, called pre-login for branding lookup)
 # ---------------------------------------------------------------------------
