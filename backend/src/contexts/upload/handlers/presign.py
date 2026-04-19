@@ -87,9 +87,13 @@ def handler(event, context):
         if "." in filename:
             ext = "." + filename.rsplit(".", 1)[-1].lower()
 
-        # Build S3 key: {prefix}/{user_id}/{uuid}{ext}
+        # Build S3 key with org_id prefix: orgs/{org_id}/{prefix}/{user_id}/{uuid}{ext}
+        # The org_id prefix is critical for tenant isolation: if a user
+        # forges a presigned URL with another tenant's user_id, they still
+        # can't reach into another tenant's prefix because their JWT's
+        # org_id determines the prefix.
         file_id = str(uuid.uuid4())
-        key = f"{config['prefix']}/{auth.user_id}/{file_id}{ext}"
+        key = f"orgs/{auth.org_id}/{config['prefix']}/{auth.user_id}/{file_id}{ext}"
 
         # Generate presigned PUT URL (expires in 10 minutes)
         upload_url = s3_client.generate_presigned_url(

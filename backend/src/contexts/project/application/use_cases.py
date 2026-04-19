@@ -30,13 +30,36 @@ def _is_project_admin_or_privileged(
 
 
 class CreateProjectUseCase:
-    def __init__(self, project_repo: IProjectRepository, user_repo: IUserRepository):
+    def __init__(
+        self,
+        project_repo: IProjectRepository,
+        user_repo: IUserRepository,
+        org_repo=None,
+    ):
         self._project_repo = project_repo
         self._user_repo = user_repo
+        self._org_repo = org_repo  # optional — used for plan-limit check
 
-    def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
+    def execute(
+        self,
+        dto: dict,
+        caller_user_id: str,
+        caller_system_role: str,
+        caller_org_id: str = "",
+    ) -> dict:
         if caller_system_role not in PRIVILEGED_ROLES:
             raise AuthorizationError("You don't have permission to create projects.")
+
+        # Plan limit: refuse if max_projects would be exceeded
+        if self._org_repo is not None and caller_org_id:
+            plan = self._org_repo.get_plan(caller_org_id)
+            if plan and plan.max_projects is not None:
+                existing = len(self._project_repo.find_all())
+                if existing >= plan.max_projects:
+                    raise ValidationError(
+                        f"Your {plan.tier.value} plan is limited to "
+                        f"{plan.max_projects} projects. Upgrade to add more."
+                    )
 
         team_lead_id = dto.get("team_lead_id")
         project_manager_id = dto.get("project_manager_id")

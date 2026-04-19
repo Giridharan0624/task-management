@@ -42,6 +42,14 @@ class TaskManagementStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         config = stage_config or DEFAULT_CONFIG
 
+        # Removal policy: RETAIN for any stage that isn't the disposable
+        # staging environment. Prevents `cdk destroy` or stack drift from
+        # accidentally wiping the DynamoDB table or Cognito pool in prod.
+        is_staging = config.get("api_stage") == "staging"
+        data_removal_policy = (
+            RemovalPolicy.DESTROY if is_staging else RemovalPolicy.RETAIN
+        )
+
         # ─── DynamoDB ────────────────────────────────────────────────────────
         table = dynamodb.Table(
             self,
@@ -51,7 +59,7 @@ class TaskManagementStack(Stack):
             sort_key=dynamodb.Attribute(name="SK", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
             point_in_time_recovery=True,
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=data_removal_policy,
         )
 
         table.add_global_secondary_index(
@@ -138,7 +146,7 @@ class TaskManagementStack(Stack):
                 email_body="Hi,\n\nYour TaskFlow password reset verification code is: {####}\n\nThis code is valid for one use only and expires shortly.\n\nIf you did not request this, please ignore this email.\n\nPowered by NEUROSTACK",
                 email_style=cognito.VerificationEmailStyle.CODE,
             ),
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=data_removal_policy,
         )
 
         user_pool_client = user_pool.add_client(

@@ -33,6 +33,32 @@ class OrgDynamoRepository(IOrgRepository):
             return None
         return self.find_by_id(slug_item["org_id"])
 
+    def list_all_orgs(self) -> list[Organization]:
+        """Scan every Organization record across the table. Used by the
+        nightly auto-generate-summaries Lambda (and any other system-level
+        cross-tenant job). Filters out SLUG# resolver records which share
+        the SK="ORG" sort key but are global, not per-org records."""
+        items: list[dict] = []
+        response = self._table.scan(
+            FilterExpression=Attr("SK").eq(tenant_keys.org_sk())
+            & Attr("PK").begins_with("ORG#")
+        )
+        items.extend(response.get("Items", []))
+        while "LastEvaluatedKey" in response:
+            response = self._table.scan(
+                FilterExpression=Attr("SK").eq(tenant_keys.org_sk())
+                & Attr("PK").begins_with("ORG#"),
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+            )
+            items.extend(response.get("Items", []))
+        # Belt-and-suspenders: ensure the PK looks like exactly `ORG#{id}`
+        # (no further `#` segments), excluding any items that snuck through.
+        return [
+            OrgMapper.org_to_domain(it)
+            for it in items
+            if it.get("PK", "").count("#") == 1
+        ]
+
     def save(self, org: Organization) -> None:
         """Save the ORG record AND the SLUG resolver record.
 

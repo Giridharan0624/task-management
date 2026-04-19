@@ -9,16 +9,31 @@ USER_POOL_ID = os.environ.get("USER_POOL_ID", "")
 
 class CognitoService(IIdentityService):
     @staticmethod
-    def create_user(email: str, name: str, temp_password: str, system_role: str, employee_id: str = "") -> str:
+    def create_user(
+        email: str,
+        name: str,
+        temp_password: str,
+        system_role: str,
+        org_id: str,
+        employee_id: str = "",
+    ) -> str:
         """Create a Cognito user with a TEMPORARY password and return their sub (userId).
 
         Legacy admin-creates-a-user flow. The user receives a welcome email
         with the temp password and must change it on first login.
+
+        `org_id` is REQUIRED — without it the new Cognito user has no
+        custom:orgId attribute, the pre-token-generation trigger falls
+        back to DEFAULT_ORG_ID = "neurostack", and the user lands in the
+        wrong tenant on first login (cross-tenant data leak).
         """
+        if not org_id:
+            raise ValueError("org_id is required to create a Cognito user")
         attrs = [
             {"Name": "email", "Value": email},
             {"Name": "email_verified", "Value": "true"},
             {"Name": "name", "Value": name},
+            {"Name": "custom:orgId", "Value": org_id},
             {"Name": "custom:systemRole", "Value": system_role},
         ]
         if employee_id:

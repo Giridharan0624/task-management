@@ -14,7 +14,7 @@ def build_welcome_email_html(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Welcome to TaskFlow</title>
+<title>Welcome to {company_name}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
 </style>
@@ -28,7 +28,7 @@ def build_welcome_email_html(
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:36px 40px;text-align:center;">
-              <span style="color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">TaskFlow</span>
+              <span style="color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">{company_name}</span>
               <p style="color:rgba(255,255,255,0.8);font-size:14px;margin:8px 0 0;">Team Task Management</p>
             </td>
           </tr>
@@ -200,7 +200,7 @@ def build_invite_email_html(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>You're invited to {org_name} on TaskFlow</title>
+<title>You're invited to {org_name}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f4f8;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f8;padding:40px 20px;">
@@ -210,7 +210,7 @@ def build_invite_email_html(
 
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:36px 40px;text-align:center;">
-              <span style="color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">TaskFlow</span>
+              <span style="color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">{org_name}</span>
               <p style="color:rgba(255,255,255,0.8);font-size:14px;margin:8px 0 0;">You've been invited to a workspace</p>
             </td>
           </tr>

@@ -125,10 +125,16 @@ class CreateUserUseCase:
     Admins create Admins or Members.
     Members cannot create anyone.
     Nobody can create OWNER.
+
+    Multi-tenant: every created user is scoped to the caller's org_id.
+    The Cognito user gets `custom:orgId` set so they land in the right
+    tenant on first login, and the User profile record is written via
+    `user_repo` which is already org-scoped via the AuthContext ContextVar.
     """
-    def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService):
+    def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService, org_repo=None):
         self._user_repo = user_repo
         self._cognito = cognito_service
+        self._org_repo = org_repo  # optional — used to read OrgSettings for branding
 
     @staticmethod
     def _generate_otp(length: int = 12) -> str:
@@ -141,10 +147,19 @@ class CreateUserUseCase:
                 any(c.isdigit() for c in otp)):
                 return otp
 
-    def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
+    def execute(
+        self,
+        dto: dict,
+        caller_user_id: str,
+        caller_system_role: str,
+        caller_org_id: str,
+    ) -> dict:
         target_role = dto.get("system_role", "MEMBER")
         email = dto["email"]
         name = dto["name"]
+
+        if not caller_org_id:
+            raise ValidationError("Org context is missing.")
 
         # Validate the target role
         try:
@@ -163,15 +178,43 @@ class CreateUserUseCase:
         else:
             raise AuthorizationError("You don't have permission to create user accounts.")
 
+        # Plan limit: refuse if existing user count + pending invites would exceed max_users
+        if self._org_repo is not None:
+            plan = self._org_repo.get_plan(caller_org_id)
+            if plan and plan.max_users is not None:
+                existing_count = len(self._user_repo.find_all())
+                pending_invites = sum(
+                    1 for i in self._org_repo.list_invites(caller_org_id)
+                    if not i.accepted_at
+                )
+                if existing_count + pending_invites >= plan.max_users:
+                    raise ValidationError(
+                        f"Your {plan.tier.value} plan is limited to "
+                        f"{plan.max_users} users. Upgrade to add more."
+                    )
+
         # Check if email already exists
         existing = self._user_repo.find_by_email(email)
         if existing:
             raise ValidationError(f"User with email {email} already exists")
 
-        # Get company prefix from OWNER
-        all_users_for_prefix = self._user_repo.find_all()
-        owner = next((u for u in all_users_for_prefix if u.system_role == SystemRole.OWNER), None)
-        company_prefix = (owner.company_prefix if owner and owner.company_prefix else "NS").upper()
+        # Resolve the org's employee-ID prefix from OrgSettings (Phase 3),
+        # falling back to the OWNER's per-user company_prefix for legacy
+        # tenants that haven't customized it yet, then to "NS" as the
+        # original NEUROSTACK default.
+        company_prefix = "NS"
+        if self._org_repo is not None:
+            settings = self._org_repo.get_settings(caller_org_id)
+            if settings and settings.employee_id_prefix:
+                # Strip the trailing "-" if present (default is "EMP-")
+                company_prefix = settings.employee_id_prefix.rstrip("-").upper() or "NS"
+        if company_prefix == "NS":
+            # Backward-compat fallback for tenants without OrgSettings yet
+            all_users_for_prefix = self._user_repo.find_all()
+            owner = next((u for u in all_users_for_prefix if u.system_role == SystemRole.OWNER), None)
+            company_prefix = (owner.company_prefix if owner and owner.company_prefix else "NS").upper()
+        else:
+            owner = None  # will resolve below if email needs the company name
 
         # Generate employee ID: PREFIX-YYHASH (e.g., NS-26AK76)
         year = datetime.now(timezone.utc).strftime("%y")
@@ -192,10 +235,18 @@ class CreateUserUseCase:
         # Generate one-time password
         otp = self._generate_otp()
 
-        # Create in Cognito with OTP as temporary password
-        # User will be in FORCE_CHANGE_PASSWORD state
+        # Create in Cognito with OTP as temporary password.
+        # User will be in FORCE_CHANGE_PASSWORD state. Cognito user gets
+        # custom:orgId set so they land in the right tenant on first login.
         try:
-            user_id = self._cognito.create_user(email, name, otp, target_role, employee_id)
+            user_id = self._cognito.create_user(
+                email=email,
+                name=name,
+                temp_password=otp,
+                system_role=target_role,
+                org_id=caller_org_id,
+                employee_id=employee_id,
+            )
         except Exception as e:
             raise ValidationError(str(e))
 
@@ -223,8 +274,16 @@ class CreateUserUseCase:
             from contexts.user.infrastructure.gmail_service import GmailEmailService
             app_url = os.environ.get("APP_URL", "")
 
-            # Get company name from OWNER account (reuse earlier query)
-            company_name = owner.name if owner else "TaskFlow"
+            # Use the org's display_name as the company name in the email
+            # (Phase 3 branding — falls back to legacy OWNER.name then
+            # "TaskFlow" if neither is available).
+            company_name = "TaskFlow"
+            if self._org_repo is not None:
+                settings = self._org_repo.get_settings(caller_org_id)
+                if settings and settings.display_name:
+                    company_name = settings.display_name
+            if company_name == "TaskFlow" and owner is not None:
+                company_name = owner.name or "TaskFlow"
 
             GmailEmailService.send_welcome_email(
                 recipient_email=email,
