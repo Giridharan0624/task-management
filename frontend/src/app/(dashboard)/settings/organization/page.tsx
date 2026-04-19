@@ -1,36 +1,78 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, CheckCircle2, RotateCcw } from 'lucide-react'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
 import { applyTenantTheme } from '@/lib/tenant/theme'
 import { orgsApi, type UpdateSettingsRequest } from '@/lib/api/orgsApi'
-import { BASE_TERMINOLOGY } from '@/lib/tenant/i18n'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Card } from '@/components/ui/Card'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
+import { useToast } from '@/components/ui/Toast'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/Tabs'
+import { ColorField } from '@/components/settings/ColorField'
+import { BrandingPreview } from '@/components/settings/BrandingPreview'
+import { TerminologyPanel } from '@/components/settings/TerminologyPanel'
+import { FeaturesPanel } from '@/components/settings/FeaturesPanel'
 
 type Tab = 'branding' | 'terminology' | 'features'
 
-/** OWNER-only org settings page. Tabs: Branding, Terminology, Features.
- * Phase 3 scope — locale/leave-types tabs deferred to later. */
+interface BrandingState {
+  displayName: string
+  logoUrl: string
+  primaryColor: string
+  accentColor: string
+}
+
+const DEFAULT_PRIMARY = '#4F46E5'
+const DEFAULT_ACCENT = '#10B981'
+
+function shallowEqual<T extends object>(a: T, b: T): boolean {
+  const aKeys = Object.keys(a) as (keyof T)[]
+  const bKeys = Object.keys(b) as (keyof T)[]
+  if (aKeys.length !== bKeys.length) return false
+  for (const k of aKeys) if (a[k] !== b[k]) return false
+  return true
+}
+
 export default function OrgSettingsPage() {
   const { user } = useAuth()
   const { current, refreshCurrent } = useTenant()
   const router = useRouter()
+  const toast = useToast()
+
   const [tab, setTab] = useState<Tab>('branding')
   const [saving, setSaving] = useState(false)
-  const [savedAt, setSavedAt] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Form state, seeded from current settings
-  const [displayName, setDisplayName] = useState('')
-  const [logoUrl, setLogoUrl] = useState('')
-  const [primaryColor, setPrimaryColor] = useState('#4F46E5')
-  const [accentColor, setAccentColor] = useState('#10B981')
+  // Per-tab form state — kept separate so we can detect dirty per tab
+  const [branding, setBranding] = useState<BrandingState>({
+    displayName: '',
+    logoUrl: '',
+    primaryColor: DEFAULT_PRIMARY,
+    accentColor: DEFAULT_ACCENT,
+  })
   const [terminology, setTerminology] = useState<Record<string, string>>({})
   const [features, setFeatures] = useState<Record<string, boolean>>({})
+
+  // Snapshot of last-saved values for dirty checks
+  const [savedBranding, setSavedBranding] = useState<BrandingState>(branding)
+  const [savedTerminology, setSavedTerminology] = useState<
+    Record<string, string>
+  >({})
+  const [savedFeatures, setSavedFeatures] = useState<Record<string, boolean>>(
+    {}
+  )
 
   // Authz — only OWNER can see this page
   useEffect(() => {
@@ -46,237 +88,235 @@ export default function OrgSettingsPage() {
       return
     }
     const s = current.settings
-    setDisplayName(s.displayName ?? '')
-    setLogoUrl(s.logoUrl ?? '')
-    setPrimaryColor(s.primaryColor ?? '#4F46E5')
-    setAccentColor(s.accentColor ?? '#10B981')
-    setTerminology(s.terminology ?? {})
-    setFeatures(s.features ?? {})
+    const initialBranding: BrandingState = {
+      displayName: s.displayName ?? '',
+      logoUrl: s.logoUrl ?? '',
+      primaryColor: s.primaryColor ?? DEFAULT_PRIMARY,
+      accentColor: s.accentColor ?? DEFAULT_ACCENT,
+    }
+    const initialTerminology = s.terminology ?? {}
+    const initialFeatures = s.features ?? {}
+    setBranding(initialBranding)
+    setTerminology(initialTerminology)
+    setFeatures(initialFeatures)
+    setSavedBranding(initialBranding)
+    setSavedTerminology(initialTerminology)
+    setSavedFeatures(initialFeatures)
   }, [current, refreshCurrent])
 
-  const onSave = async (payload: UpdateSettingsRequest) => {
+  // Dirty checks
+  const brandingDirty = useMemo(
+    () => !shallowEqual(branding, savedBranding),
+    [branding, savedBranding]
+  )
+  const terminologyDirty = useMemo(
+    () =>
+      JSON.stringify(terminology) !== JSON.stringify(savedTerminology),
+    [terminology, savedTerminology]
+  )
+  const featuresDirty = useMemo(
+    () => JSON.stringify(features) !== JSON.stringify(savedFeatures),
+    [features, savedFeatures]
+  )
+
+  const dirtyForTab =
+    tab === 'branding'
+      ? brandingDirty
+      : tab === 'terminology'
+        ? terminologyDirty
+        : featuresDirty
+
+  const onSave = async () => {
     setSaving(true)
     setError(null)
     try {
+      let payload: UpdateSettingsRequest = {}
+      if (tab === 'branding') {
+        payload = {
+          displayName: branding.displayName,
+          logoUrl: branding.logoUrl || null,
+          primaryColor: branding.primaryColor,
+          accentColor: branding.accentColor,
+        }
+      } else if (tab === 'terminology') {
+        payload = { terminology }
+      } else {
+        payload = { features }
+      }
+
       await orgsApi.updateSettings(payload)
       await refreshCurrent()
-      setSavedAt(Date.now())
-      // Re-apply theme immediately in case colors changed
+
+      // Sync the saved snapshot for the tab we just persisted
+      if (tab === 'branding') setSavedBranding(branding)
+      else if (tab === 'terminology') setSavedTerminology(terminology)
+      else setSavedFeatures(features)
+
+      // Re-apply theme immediately when colors change
       if (payload.primaryColor || payload.accentColor) {
         applyTenantTheme(
-          payload.primaryColor ?? primaryColor,
-          payload.accentColor ?? accentColor,
+          payload.primaryColor ?? branding.primaryColor,
+          payload.accentColor ?? branding.accentColor
         )
       }
+      toast.success('Settings saved')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save')
+      const msg = e instanceof Error ? e.message : 'Failed to save'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setSaving(false)
     }
+  }
+
+  const onDiscard = () => {
+    if (tab === 'branding') setBranding(savedBranding)
+    else if (tab === 'terminology') setTerminology(savedTerminology)
+    else setFeatures(savedFeatures)
+    setError(null)
   }
 
   if (!user) return null
   if (user.systemRole !== 'OWNER') return null
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground dark:text-white">
-          Organization settings
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          These changes apply to everyone in your workspace.
-        </p>
-      </header>
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-border/80 dark:border-gray-700">
-        {(['branding', 'terminology', 'features'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground/95'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 pb-24 animate-fade-in">
+      <PageHeader
+        title="Organization settings"
+        description="These changes apply to everyone in your workspace."
+      />
 
       {error && (
-        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {savedAt && !error && (
-        <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
-          Saved.
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      {tab === 'branding' && (
-        <div className="flex flex-col gap-5">
-          <Input
-            label="Display name"
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Acme Inc"
-          />
-          <Input
-            label="Logo URL"
-            type="url"
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="https://..."
-          />
-          <div className="grid grid-cols-2 gap-4 stagger-up">
-            <div>
-              <label className="text-sm font-semibold text-foreground/85 mb-1.5 block">
-                Primary color
-              </label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="h-10 w-14 rounded border border-border/80 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="flex-1 rounded-xl border border-border/80 px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-foreground/85 mb-1.5 block">
-                Accent color
-              </label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="h-10 w-14 rounded border border-border/80 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="flex-1 rounded-xl border border-border/80 px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-          </div>
-          {/* Live preview swatch */}
-          <div className="rounded-xl border border-border/80 p-4 flex items-center gap-3">
-            <div
-              className="h-10 w-10 rounded-lg"
-              style={{ backgroundColor: primaryColor }}
-            />
-            <div
-              className="h-10 w-10 rounded-lg"
-              style={{ backgroundColor: accentColor }}
-            />
-            <span className="text-sm text-muted-foreground">Preview</span>
-          </div>
-          <Button
-            onClick={() =>
-              onSave({
-                displayName,
-                logoUrl: logoUrl || null,
-                primaryColor,
-                accentColor,
-              })
-            }
-            loading={saving}
-            className="self-start"
-          >
-            Save branding
-          </Button>
-        </div>
-      )}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <TabsList>
+          <TabsTrigger value="branding" className="gap-2">
+            Branding
+            {brandingDirty && <DirtyDot />}
+          </TabsTrigger>
+          <TabsTrigger value="terminology" className="gap-2">
+            Terminology
+            {terminologyDirty && <DirtyDot />}
+          </TabsTrigger>
+          <TabsTrigger value="features" className="gap-2">
+            Features
+            {featuresDirty && <DirtyDot />}
+          </TabsTrigger>
+        </TabsList>
 
-      {tab === 'terminology' && (
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Override how TaskFlow refers to things in your workspace.
-            Leave any field blank to use the default.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-up">
-            {Object.entries(BASE_TERMINOLOGY).map(([key, defaultValue]) => (
-              <div key={key}>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                  {key}{' '}
-                  <span className="text-muted-foreground/70 font-normal">
-                    (default: {defaultValue})
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  value={terminology[key] ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setTerminology((prev) => {
-                      const next = { ...prev }
-                      if (v.trim() === '') delete next[key]
-                      else next[key] = v
-                      return next
-                    })
-                  }}
-                  placeholder={defaultValue}
-                  className="w-full rounded-xl border border-border/80 px-3 py-2 text-sm"
-                />
-              </div>
-            ))}
-          </div>
-          <Button
-            onClick={() => onSave({ terminology })}
-            loading={saving}
-            className="self-start mt-4"
-          >
-            Save terminology
-          </Button>
-        </div>
-      )}
-
-      {tab === 'features' && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground mb-2">
-            Turn features on or off for everyone in your workspace.
-          </p>
-          {Object.entries(features).map(([key, enabled]) => (
-            <label
-              key={key}
-              className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/80 cursor-pointer hover:bg-muted/40"
-            >
-              <span className="text-sm font-medium text-foreground/95 capitalize">
-                {key.replace(/_/g, ' ')}
-              </span>
-              <input
-                type="checkbox"
-                checked={enabled}
+        <TabsContent value="branding" className="mt-4">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <Card className="space-y-5 p-5">
+              <Input
+                label="Display name"
+                type="text"
+                value={branding.displayName}
                 onChange={(e) =>
-                  setFeatures((prev) => ({ ...prev, [key]: e.target.checked }))
+                  setBranding((b) => ({ ...b, displayName: e.target.value }))
                 }
-                className="h-5 w-9 appearance-none bg-gray-300 rounded-full relative cursor-pointer checked:bg-primary transition-colors before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:h-4 before:w-4 before:rounded-full before:bg-card before:transition-transform checked:before:translate-x-4"
+                placeholder="Acme Inc"
               />
-            </label>
-          ))}
-          <Button
-            onClick={() => onSave({ features })}
-            loading={saving}
-            className="self-start mt-4"
-          >
-            Save features
-          </Button>
+              <Input
+                label="Logo URL"
+                type="url"
+                value={branding.logoUrl}
+                onChange={(e) =>
+                  setBranding((b) => ({ ...b, logoUrl: e.target.value }))
+                }
+                placeholder="https://..."
+                hint="Square images at 128×128 or larger look best."
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <ColorField
+                  label="Primary color"
+                  value={branding.primaryColor}
+                  onChange={(v) =>
+                    setBranding((b) => ({ ...b, primaryColor: v }))
+                  }
+                  hint="Buttons, links, focus rings."
+                />
+                <ColorField
+                  label="Accent color"
+                  value={branding.accentColor}
+                  onChange={(v) =>
+                    setBranding((b) => ({ ...b, accentColor: v }))
+                  }
+                  hint="Status pills, success states."
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setBranding((b) => ({
+                    ...b,
+                    primaryColor: DEFAULT_PRIMARY,
+                    accentColor: DEFAULT_ACCENT,
+                  }))
+                }
+                className="gap-1.5 text-muted-foreground"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset colors to defaults
+              </Button>
+            </Card>
+
+            <BrandingPreview
+              primaryColor={branding.primaryColor}
+              accentColor={branding.accentColor}
+              displayName={branding.displayName}
+              logoUrl={branding.logoUrl}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="terminology" className="mt-4">
+          <TerminologyPanel value={terminology} onChange={setTerminology} />
+        </TabsContent>
+
+        <TabsContent value="features" className="mt-4">
+          <FeaturesPanel value={features} onChange={setFeatures} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Sticky save bar — only renders when the active tab has unsaved changes */}
+      {dirtyForTab && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 shadow-elevated backdrop-blur-md animate-in slide-in-from-bottom-2 fade-in">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-amber-500" />
+              <span className="font-medium text-foreground">
+                You have unsaved changes
+              </span>
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                in {tab === 'branding' ? 'Branding' : tab === 'terminology' ? 'Terminology' : 'Features'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={onDiscard}>
+                Discard
+              </Button>
+              <Button onClick={onSave} loading={saving} size="sm">
+                Save changes
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
+  )
+}
+
+function DirtyDot() {
+  return (
+    <span
+      className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
+      aria-label="unsaved changes"
+    />
   )
 }
