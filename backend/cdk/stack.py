@@ -570,6 +570,35 @@ class TaskManagementStack(Stack):
             targets=[events_targets.LambdaFunction(auto_summary_fn)],
         )
 
+        # ─── Stale-session sweeper (Phase 6 hardening) ─────────────────────
+        # The desktop client auto-signs-out on every termination path it
+        # can observe (tray Quit, Wails OnShutdown, SIGTERM/SIGINT). It
+        # cannot catch force-kill / power-loss scenarios, so a sweeper
+        # Lambda closes abandoned sessions at the last proof-of-life
+        # timestamp (session.last_heartbeat_at, stamped by every
+        # /activity/heartbeat call — see contexts/attendance/application/
+        # sweep_use_case.py for the detection logic).
+        #
+        # Budget: small-table scan once every 5 minutes per tenant —
+        # negligible at current tenant count. The schedule is identical
+        # in staging and prod; grace-minutes can diverge via the env
+        # var.
+        sweep_fn = _lambda.Function(
+            self, "SweepStaleSessions",
+            handler="contexts.attendance.handlers.sweep_stale_sessions.handler",
+            **{**lambda_defaults, "timeout": Duration.minutes(2)},
+        )
+        sweep_fn.add_environment(
+            "STALE_SESSION_GRACE_MINUTES",
+            str(config.get("stale_session_grace_minutes", 15)),
+        )
+        table.grant_read_write_data(sweep_fn)
+        events.Rule(
+            self, "StaleSessionSweepSchedule",
+            schedule=events.Schedule.rate(Duration.minutes(5)),
+            targets=[events_targets.LambdaFunction(sweep_fn)],
+        )
+
         # ─── Upload handlers (S3 presigned URLs) ──────────────────────────
         uploads = api.root.add_resource("uploads")
         uploads_presign = uploads.add_resource("presign")

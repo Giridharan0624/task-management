@@ -25,6 +25,7 @@ class AttendanceMapper:
                 task_title=s.get("task_title"),
                 project_name=s.get("project_name"),
                 description=s.get("description"),
+                last_heartbeat_at=s.get("last_heartbeat_at"),
             ))
 
         total_hours = item.get("total_hours", 0)
@@ -60,6 +61,8 @@ class AttendanceMapper:
                 sd["project_name"] = s.project_name
             if s.description:
                 sd["description"] = s.description
+            if s.last_heartbeat_at:
+                sd["last_heartbeat_at"] = s.last_heartbeat_at
             sessions_data.append(sd)
 
         return {

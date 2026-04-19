@@ -17,6 +17,13 @@ class Session(BaseModel):
     task_title: Optional[str] = None
     project_name: Optional[str] = None
     description: Optional[str] = None
+    # last_heartbeat_at is stamped by POST /activity/heartbeat on every
+    # heartbeat the desktop client sends. When a session is abandoned
+    # (force-kill, power cut) no further heartbeats arrive and the
+    # sweep lambda can close the session with sign_out_at set to this
+    # value — the user's billable time ends at the last proof-of-life,
+    # not at sweep time.
+    last_heartbeat_at: Optional[str] = None
 
 
 class Attendance(BaseModel):
@@ -97,24 +104,38 @@ class Attendance(BaseModel):
             system_role=self.system_role,
         )
 
-    def sign_out(self) -> "Attendance":
-        now = datetime.now(timezone.utc)
+    def sign_out(self, at: Optional[datetime] = None) -> "Attendance":
+        """Close the current session.
+
+        ``at`` defaults to ``datetime.now(utc)`` for the normal
+        user-initiated sign-out path. The sweep lambda passes the
+        session's ``last_heartbeat_at`` so an abandoned session's
+        billable time ends at the last proof-of-life moment, not at
+        sweep time.
+        """
+        close_time = at if at is not None else datetime.now(timezone.utc)
         if not self.is_signed_in:
             return self
 
         last = self.sessions[-1]
         sign_in = datetime.fromisoformat(last.sign_in_at)
-        session_hours = round((now - sign_in).total_seconds() / 3600, 4)
+        # Guard against a sweep that somehow receives a close_time
+        # BEFORE sign_in_at (clock skew, corrupted heartbeat). Clamp
+        # to sign_in_at so we never write a negative-duration session.
+        if close_time < sign_in:
+            close_time = sign_in
+        session_hours = round((close_time - sign_in).total_seconds() / 3600, 4)
 
         closed_session = Session(
             sign_in_at=last.sign_in_at,
-            sign_out_at=now.isoformat(),
+            sign_out_at=close_time.isoformat(),
             hours=session_hours,
             task_id=last.task_id,
             project_id=last.project_id,
             task_title=last.task_title,
             project_name=last.project_name,
             description=last.description,
+            last_heartbeat_at=last.last_heartbeat_at,
         )
 
         updated_sessions = [*self.sessions[:-1], closed_session]
@@ -125,6 +146,38 @@ class Attendance(BaseModel):
             date=self.date,
             sessions=updated_sessions,
             total_hours=new_total,
+            user_name=self.user_name,
+            user_email=self.user_email,
+            system_role=self.system_role,
+        )
+
+    def record_heartbeat(self, at: datetime) -> "Attendance":
+        """Stamp the current session with a fresh heartbeat timestamp.
+
+        No-op if there is no active session (the heartbeat handler
+        guards against this too, but domain-level defence is cheap
+        and keeps the invariant "last_heartbeat_at only on an open
+        session" explicit). See sweep_stale_sessions.
+        """
+        if not self.is_signed_in:
+            return self
+        last = self.sessions[-1]
+        stamped = Session(
+            sign_in_at=last.sign_in_at,
+            sign_out_at=last.sign_out_at,
+            hours=last.hours,
+            task_id=last.task_id,
+            project_id=last.project_id,
+            task_title=last.task_title,
+            project_name=last.project_name,
+            description=last.description,
+            last_heartbeat_at=at.isoformat(),
+        )
+        return Attendance(
+            user_id=self.user_id,
+            date=self.date,
+            sessions=[*self.sessions[:-1], stamped],
+            total_hours=self.total_hours,
             user_name=self.user_name,
             user_email=self.user_email,
             system_role=self.system_role,
@@ -154,6 +207,7 @@ class Attendance(BaseModel):
                     "task_title": s.task_title,
                     "project_name": s.project_name,
                     "description": s.description,
+                    "last_heartbeat_at": s.last_heartbeat_at,
                 }
                 for s in self.sessions
             ],
