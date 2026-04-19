@@ -106,21 +106,29 @@ export function ScreenshotGallery({ screenshots, defaultCollapsed = true }: Scre
         ))}
       </div>}
 
-      {/* Fullscreen modal with prev/next navigation */}
+      {/* Fullscreen modal with prev/next navigation. Uses almost the
+          full viewport (95vw × 95vh) and object-contain so the image
+          is shown at the largest size that fits without cropping —
+          capped by the native resolution, never by modal width. The
+          previous max-w-5xl (1024px) made 1080p screenshots look
+          blurry on anything bigger than a laptop screen. */}
       {selected && selectedIndex !== null && (
         <div
-          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 z-[9999] bg-black/85 flex items-center justify-center p-4 cursor-pointer"
           onClick={close}
           role="dialog"
           aria-modal="true"
           aria-label={`Screenshot ${selectedIndex + 1} of ${total}`}
         >
-          <div className="relative max-w-5xl w-full" onClick={e => e.stopPropagation()}>
+          <div
+            className="relative w-[95vw] h-[95vh] flex items-center justify-center"
+            onClick={e => e.stopPropagation()}
+          >
             {/* Full image */}
             <img
               src={selected.url}
               alt={`Screenshot ${selectedIndex + 1}`}
-              className="w-full rounded-xl shadow-2xl"
+              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
             />
 
             {/* Top-left: timestamp + counter. Always readable regardless
