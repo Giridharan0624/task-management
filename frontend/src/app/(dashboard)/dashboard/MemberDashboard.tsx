@@ -524,7 +524,7 @@ export function MemberDashboard({ user }: { user: User }) {
       <UpcomingDeadlines tasks={upcomingTasks} />
 
       <div className="space-y-3">
-        <SectionHeader title="Task Update" />
+        <SectionHeader title="Daily Update" />
         <TaskUpdateCard />
       </div>
 

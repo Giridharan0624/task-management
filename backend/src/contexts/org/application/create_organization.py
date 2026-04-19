@@ -140,6 +140,12 @@ class CreateOrganizationUseCase:
             _role_record(org_id, MEMBER_ROLE_ID, "Member", now),
         ]
 
+        # Phase 5: seed the four default task pipelines so the kanban view
+        # works out of the box for fresh tenants.
+        from contexts.org.domain.default_pipelines import build_default_pipelines
+        from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
+        default_pipelines = build_default_pipelines(org_id)
+
         # Step 4: write everything to DynamoDB. On any failure, roll
         # back the Cognito user AND the slug record.
         try:
@@ -149,6 +155,9 @@ class CreateOrganizationUseCase:
             for role in role_records:
                 self._table.put_item(Item=role)
             self._table.put_item(Item=UserMapper.to_dynamo(owner_user, org_id))
+            pipeline_repo = OrgDynamoRepository()
+            for pipeline in default_pipelines:
+                pipeline_repo.save_pipeline(org_id, pipeline.to_dict())
         except Exception:
             self._rollback_all(org_id, slug, owner_email)
             raise
@@ -229,8 +238,10 @@ class CreateOrganizationUseCase:
 
 
 def _role_record(org_id: str, role_id: str, name: str, now: str) -> dict:
-    """Default role record. Empty permission set for Phase 2; Phase 4
-    fills in the permission matrix."""
+    """Default system role record with the Phase 4 permission matrix
+    pre-filled from `default_roles.SYSTEM_ROLE_PERMISSIONS`."""
+    from contexts.org.domain.default_roles import default_permissions_for
+
     return {
         "PK": tenant_keys.org_pk(org_id),
         "SK": tenant_keys.role_sk(role_id),
@@ -239,7 +250,7 @@ def _role_record(org_id: str, role_id: str, name: str, now: str) -> dict:
         "name": name,
         "scope": "system",
         "is_system": True,
-        "permissions": json.dumps([]),
+        "permissions": json.dumps(default_permissions_for(role_id)),
         "created_at": now,
         "updated_at": now,
     }

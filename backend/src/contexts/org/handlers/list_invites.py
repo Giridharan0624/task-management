@@ -1,19 +1,16 @@
 """Authed GET /orgs/current/invites — list pending + accepted invites
 for the caller's org. OWNER/ADMIN only."""
+from contexts.org.domain import permissions as P
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
-from contexts.user.domain.value_objects import PRIVILEGED_ROLES
 from shared_kernel.auth_context import extract_auth_context
-from shared_kernel.errors import AuthorizationError
+from shared_kernel.permissions import require
 from shared_kernel.response import build_error, build_success
 
 
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
-        if auth.system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError(
-                "Only owners and admins can view invites."
-            )
+        require(auth, P.USER_INVITE)
 
         org_repo = OrgDynamoRepository()
         invites = org_repo.list_invites(auth.org_id)

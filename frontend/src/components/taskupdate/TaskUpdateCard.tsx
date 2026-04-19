@@ -135,7 +135,7 @@ export function TaskUpdateCard() {
       <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
           <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <p className="text-sm font-bold text-emerald-700">Task Update Submitted</p>
+          <p className="text-sm font-bold text-emerald-700">Daily Update Submitted</p>
           <span className="text-[10px] text-muted-foreground/70 ml-auto">
             {new Date(existingUpdate.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
             {' · '}
@@ -199,7 +199,7 @@ export function TaskUpdateCard() {
       <div className="bg-card rounded-2xl border-2 border-amber-200 shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
           <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <p className="text-sm font-bold text-amber-700">Pending Task Update</p>
+          <p className="text-sm font-bold text-amber-700">Pending Daily Update</p>
           <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg ml-auto">{pendingData.pendingDate}</span>
         </div>
 
@@ -228,7 +228,7 @@ export function TaskUpdateCard() {
 
         <Button className="w-full mt-3" onClick={() => submitMutation.mutate()} loading={submitMutation.isPending}
           disabled={pendingStillWorking}>
-          Submit Task Update for {pendingData.pendingDate}
+          Submit Daily Update for {pendingData.pendingDate}
         </Button>
       </div>
     )
@@ -238,7 +238,7 @@ export function TaskUpdateCard() {
   if (!attendance || !attendance.sessions || attendance.sessions.length === 0) {
     return (
       <div className="bg-card rounded-2xl border-2 border-dashed border-border/80 p-6 text-center">
-        <p className="text-sm text-muted-foreground/70">Start the timer to track your work before submitting a task update.</p>
+        <p className="text-sm text-muted-foreground/70">Start the timer to track your work before submitting a daily update.</p>
       </div>
     )
   }
@@ -253,7 +253,7 @@ export function TaskUpdateCard() {
   return (
     <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-bold text-foreground">Today&apos;s Task Update</p>
+        <p className="text-sm font-bold text-foreground">Today&apos;s Daily Update</p>
         <span className="text-[10px] text-muted-foreground/70">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
       </div>
 
@@ -280,7 +280,7 @@ export function TaskUpdateCard() {
 
         <Button className="w-full" onClick={() => submitMutation.mutate()} loading={submitMutation.isPending}
           disabled={isStillWorking}>
-          Submit Task Update
+          Submit Daily Update
         </Button>
       </div>
     </div>

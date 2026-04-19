@@ -55,10 +55,12 @@ export const BASE_TERMINOLOGY: Record<string, string> = {
   'nav.my_tasks': 'My tasks',
   'nav.attendance': 'Attendance',
   'nav.day_offs': 'Day offs',
-  'nav.task_updates': 'Task updates',
+  'nav.task_updates': 'Daily updates',
   'nav.reports': 'Reports',
   'nav.birthdays': 'Birthdays',
   'nav.settings': 'Settings',
+  'nav.roles': 'Roles',
+  'nav.team': 'Team',
 }
 
 /** Resolve a terminology key against tenant overrides. Falls back to

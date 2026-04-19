@@ -23,7 +23,7 @@ const FEATURE_META: Record<string, { label: string; description: string }> = {
     description: 'Members can request leave; admins approve or reject.',
   },
   task_updates: {
-    label: 'Task updates',
+    label: 'Daily updates',
     description: 'Daily end-of-day work summaries from team members.',
   },
   reports: {

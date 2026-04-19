@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, X, Download, UserPlus, Shield, Users } from 'lucide-react'
+import { Search, X, Download, UserPlus, Shield, Users, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import {
@@ -39,6 +39,7 @@ interface UsersToolbarProps {
 
   onExportCSV: () => void
   onAddUser: () => void
+  onInvite?: () => void
   addLabel: string
 }
 
@@ -66,6 +67,7 @@ export function UsersToolbar({
   onClear,
   onExportCSV,
   onAddUser,
+  onInvite,
   addLabel,
 }: UsersToolbarProps) {
   return (
@@ -226,6 +228,17 @@ export function UsersToolbar({
           <Download className="h-3.5 w-3.5" />
           Export
         </Button>
+        {onInvite && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onInvite}
+            className="h-9 gap-1.5"
+          >
+            <Mail className="h-3.5 w-3.5" />
+            Invite
+          </Button>
+        )}
         <Button
           variant="primary"
           size="sm"

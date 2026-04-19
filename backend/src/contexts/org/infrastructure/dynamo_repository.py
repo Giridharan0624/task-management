@@ -179,3 +179,158 @@ class OrgDynamoRepository(IOrgRepository):
             & _K("SK").begins_with("INVITE#")
         )
         return [OrgMapper.invite_to_domain(item) for item in response.get("Items", [])]
+
+    # ------------------------------------------------------------------
+    # Pipelines (Phase 5)
+    # ------------------------------------------------------------------
+    def save_pipeline(self, org_id: str, pipeline: dict) -> None:
+        """Persist a pipeline record. Statuses are stored as a JSON string
+        for compactness; list_pipelines decodes them."""
+        import json
+        self._table.put_item(
+            Item={
+                "PK": tenant_keys.org_pk(org_id),
+                "SK": tenant_keys.pipeline_sk(pipeline["pipeline_id"]),
+                "org_id": org_id,
+                "pipeline_id": pipeline["pipeline_id"],
+                "name": pipeline["name"],
+                "is_default": bool(pipeline.get("is_default", False)),
+                "statuses": json.dumps(pipeline.get("statuses", [])),
+                "created_at": pipeline["created_at"],
+                "updated_at": pipeline["updated_at"],
+            }
+        )
+
+    def list_pipelines(self, org_id: str) -> list[dict]:
+        import json
+        from boto3.dynamodb.conditions import Key as _K
+        response = self._table.query(
+            KeyConditionExpression=_K("PK").eq(tenant_keys.org_pk(org_id))
+            & _K("SK").begins_with("PIPELINE#")
+        )
+        items = response.get("Items", [])
+        out = []
+        for it in items:
+            raw = it.get("statuses", "[]")
+            if isinstance(raw, str):
+                try:
+                    statuses = json.loads(raw)
+                except (ValueError, TypeError):
+                    statuses = []
+            elif isinstance(raw, list):
+                statuses = raw
+            else:
+                statuses = []
+            out.append({
+                "org_id": it.get("org_id"),
+                "pipeline_id": it.get("pipeline_id"),
+                "name": it.get("name"),
+                "is_default": bool(it.get("is_default", False)),
+                "statuses": statuses,
+                "created_at": it.get("created_at"),
+                "updated_at": it.get("updated_at"),
+            })
+        # Default pipeline first; then alphabetical by name.
+        out.sort(key=lambda p: (0 if p["is_default"] else 1, p.get("name", "")))
+        return out
+
+    # ------------------------------------------------------------------
+    # Roles (Phase 4)
+    # ------------------------------------------------------------------
+    def get_role(self, org_id: str, role_id: str) -> Optional[dict]:
+        import json
+        resp = self._table.get_item(
+            Key={
+                "PK": tenant_keys.org_pk(org_id),
+                "SK": tenant_keys.role_sk(role_id),
+            }
+        )
+        item = resp.get("Item")
+        if not item:
+            return None
+        raw = item.get("permissions", "[]")
+        if isinstance(raw, str):
+            try:
+                perms = json.loads(raw)
+            except (ValueError, TypeError):
+                perms = []
+        elif isinstance(raw, (list, set)):
+            perms = list(raw)
+        else:
+            perms = []
+        return {
+            "org_id": item.get("org_id"),
+            "role_id": item.get("role_id"),
+            "name": item.get("name"),
+            "scope": item.get("scope", "system"),
+            "is_system": bool(item.get("is_system", False)),
+            "permissions": sorted(perms),
+            "created_at": item.get("created_at"),
+            "updated_at": item.get("updated_at"),
+        }
+
+    def save_role(self, role: dict) -> None:
+        """Insert or replace a role record. Caller is responsible for
+        loading-then-mutating; this is a full overwrite write."""
+        import json
+        self._table.put_item(
+            Item={
+                "PK": tenant_keys.org_pk(role["org_id"]),
+                "SK": tenant_keys.role_sk(role["role_id"]),
+                "org_id": role["org_id"],
+                "role_id": role["role_id"],
+                "name": role["name"],
+                "scope": role.get("scope", "system"),
+                "is_system": bool(role.get("is_system", False)),
+                "permissions": json.dumps(sorted(role.get("permissions", []))),
+                "created_at": role["created_at"],
+                "updated_at": role["updated_at"],
+            }
+        )
+
+    def delete_role(self, org_id: str, role_id: str) -> None:
+        self._table.delete_item(
+            Key={
+                "PK": tenant_keys.org_pk(org_id),
+                "SK": tenant_keys.role_sk(role_id),
+            }
+        )
+
+    def list_roles(self, org_id: str) -> list[dict]:
+        """Return all role records under an org, lightly normalized so the
+        `permissions` field is always a list of strings (in storage it's a
+        JSON-encoded string for compactness).
+        """
+        import json
+        from boto3.dynamodb.conditions import Key as _K
+        response = self._table.query(
+            KeyConditionExpression=_K("PK").eq(tenant_keys.org_pk(org_id))
+            & _K("SK").begins_with("ROLE#")
+        )
+        items = response.get("Items", [])
+        result = []
+        for it in items:
+            raw = it.get("permissions", "[]")
+            if isinstance(raw, str):
+                try:
+                    perms = json.loads(raw)
+                except (ValueError, TypeError):
+                    perms = []
+            elif isinstance(raw, (list, set)):
+                perms = list(raw)
+            else:
+                perms = []
+            result.append({
+                "org_id": it.get("org_id"),
+                "role_id": it.get("role_id"),
+                "name": it.get("name"),
+                "scope": it.get("scope", "system"),
+                "is_system": bool(it.get("is_system", False)),
+                "permissions": sorted(perms),
+                "created_at": it.get("created_at"),
+                "updated_at": it.get("updated_at"),
+            })
+        # Stable order: system roles first (OWNER, ADMIN, MEMBER), then custom.
+        order = {"owner": 0, "admin": 1, "member": 2}
+        result.sort(key=lambda r: (order.get((r["role_id"] or "").lower(), 99), r["role_id"] or ""))
+        return result

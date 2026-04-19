@@ -7,12 +7,16 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import {
   TASK_STATUS_COLORS,
   TASK_STATUS_LABEL,
-  type TaskDomain,
   DOMAIN_STATUSES,
 } from '@/types/task'
 import { parseDeadline, isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import type { MyTask } from '@/lib/api/userApi'
 import { cn } from '@/lib/utils'
+import {
+  buildStatusIndex,
+  findPipeline,
+  usePipelines,
+} from '@/lib/tenant/usePipelines'
 
 interface TaskBoardProps {
   tasks: MyTask[]
@@ -34,11 +38,26 @@ const PRIORITY_COLORS: Record<string, string> = {
 /**
  * Cross-project board. Columns derive from the status values actually
  * present in the visible task set (so we don't show empty columns for
- * statuses no task uses). Statuses are ordered via the DEVELOPMENT pipeline
- * when the status appears there, and appended otherwise.
+ * statuses no task uses).
+ *
+ * Phase 5: column ordering + status labels/colors come from the tenant's
+ * pipelines via usePipelines(). Falls back to the legacy hardcoded
+ * DEVELOPMENT pipeline + TASK_STATUS_* constants when pipelines aren't
+ * loaded yet (initial render) or when a status isn't in any pipeline
+ * (legacy data).
  */
 export function TaskBoard({ tasks, onSelectTask }: TaskBoardProps) {
-  const columns = useMemo(() => buildColumns(tasks), [tasks])
+  const { pipelines } = usePipelines()
+  const statusIndex = useMemo(() => buildStatusIndex(pipelines), [pipelines])
+  const defaultPipeline = useMemo(
+    () => findPipeline(pipelines, undefined),
+    [pipelines]
+  )
+
+  const columns = useMemo(
+    () => buildColumns(tasks, defaultPipeline?.statuses.map((s) => s.id) ?? null),
+    [tasks, defaultPipeline]
+  )
 
   if (tasks.length === 0) {
     return (
@@ -56,7 +75,12 @@ export function TaskBoard({ tasks, onSelectTask }: TaskBoardProps) {
         style={{ minWidth: `${columns.length * 288}px` }}
       >
         {columns.map((col) => (
-          <BoardColumn key={col.status} column={col} onSelectTask={onSelectTask} />
+          <BoardColumn
+            key={col.status}
+            column={col}
+            statusIndex={statusIndex}
+            onSelectTask={onSelectTask}
+          />
         ))}
       </div>
     </div>
@@ -65,13 +89,22 @@ export function TaskBoard({ tasks, onSelectTask }: TaskBoardProps) {
 
 function BoardColumn({
   column,
+  statusIndex,
   onSelectTask,
 }: {
   column: { status: string; tasks: MyTask[] }
+  statusIndex: ReturnType<typeof buildStatusIndex>
   onSelectTask: (task: MyTask) => void
 }) {
-  const statusClass =
-    TASK_STATUS_COLORS[column.status] || 'bg-muted text-muted-foreground'
+  // Tenant-defined label/color win; fall back to hardcoded constants for
+  // legacy statuses not present in any pipeline.
+  const meta = statusIndex.get(column.status)
+  const label = meta?.label ?? TASK_STATUS_LABEL[column.status] ?? column.status
+  const statusClass = meta
+    ? // Inline tenant color via style — Tailwind classes can't reach a
+      // dynamic hex. The class still provides padding/rounding/font.
+      'bg-muted text-foreground'
+    : TASK_STATUS_COLORS[column.status] || 'bg-muted text-muted-foreground'
 
   return (
     <div className="flex h-full min-h-[200px] flex-col rounded-2xl border border-border bg-muted/30">
@@ -82,8 +115,13 @@ function BoardColumn({
               'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest',
               statusClass
             )}
+            style={
+              meta
+                ? { backgroundColor: `${meta.color}20`, color: meta.color }
+                : undefined
+            }
           >
-            {TASK_STATUS_LABEL[column.status] ?? column.status}
+            {label}
           </span>
           <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
             {column.tasks.length}
@@ -158,7 +196,8 @@ function BoardCard({
 }
 
 function buildColumns(
-  tasks: MyTask[]
+  tasks: MyTask[],
+  preferredOrder: string[] | null,
 ): { status: string; tasks: MyTask[] }[] {
   const byStatus = new Map<string, MyTask[]>()
   for (const t of tasks) {
@@ -166,13 +205,16 @@ function buildColumns(
     byStatus.get(t.status)!.push(t)
   }
 
-  // Canonical ordering: merge DEVELOPMENT's pipeline for any status that
-  // appears there, then append the rest alphabetically. This keeps the
-  // most common flow (TODO → IN_PROGRESS → ... → DONE) reading left to right
-  // even when tasks span multiple domains.
-  const devOrder = DOMAIN_STATUSES.DEVELOPMENT as readonly string[]
+  // Canonical ordering: prefer the tenant's default pipeline order when
+  // pipelines have loaded; fall back to the legacy DEVELOPMENT pipeline
+  // for the initial render before pipelines arrive. Statuses not present
+  // in either are appended alphabetically — keeps legacy data visible.
+  const order =
+    preferredOrder && preferredOrder.length > 0
+      ? preferredOrder
+      : (DOMAIN_STATUSES.DEVELOPMENT as readonly string[])
   const ordered: string[] = []
-  for (const s of devOrder) if (byStatus.has(s)) ordered.push(s)
+  for (const s of order) if (byStatus.has(s)) ordered.push(s)
   for (const s of Array.from(byStatus.keys()).sort()) {
     if (!ordered.includes(s)) ordered.push(s)
   }

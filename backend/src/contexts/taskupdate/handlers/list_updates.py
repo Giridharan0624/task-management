@@ -1,10 +1,10 @@
 from datetime import datetime, timezone, timedelta
 
-from shared_kernel.auth_context import extract_auth_context
-from shared_kernel.response import build_error, build_success
+from contexts.org.domain import permissions as P
 from contexts.taskupdate.infrastructure.dynamo_repository import TaskUpdateDynamoRepository
-from contexts.user.domain.value_objects import PRIVILEGED_ROLES
-from shared_kernel.errors import AuthorizationError
+from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require
+from shared_kernel.response import build_error, build_success
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -12,9 +12,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
-
-        if auth.system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("You don't have permission to view all task updates.")
+        require(auth, P.TASKUPDATE_LIST_ALL)
 
         query_params = event.get("queryStringParameters") or {}
         date = query_params.get("date", datetime.now(IST).strftime("%Y-%m-%d"))

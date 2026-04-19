@@ -1,6 +1,8 @@
 'use client'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useTenant } from '@/lib/tenant/TenantProvider'
+import { useT } from '@/lib/tenant/useT'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -46,33 +48,52 @@ import { cn } from '@/lib/utils'
 import type { User } from '@/types/user'
 
 interface NavItem {
+  /** i18n key on BASE_TERMINOLOGY. Resolved through useT() at render
+   * time so per-tenant terminology overrides apply. Falls back to the
+   * key itself if no override exists. */
+  nameKey: string
+  /** Default-locale label (also the fallback if the i18n key is missing). */
   name: string
   href: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  /** Optional feature flag from OrgSettings.features. When set, the
+   * nav item is hidden if the tenant has the feature disabled. */
+  feature?: string
+}
+
+/** Returns true if the nav item should be visible. Missing feature key
+ * defaults to enabled (new features are not retroactively hidden). */
+function isFeatureEnabled(
+  feature: string | undefined,
+  features: Record<string, boolean> | null | undefined,
+): boolean {
+  if (!feature) return true
+  if (!features) return true
+  return features[feature] !== false
 }
 
 const adminNav: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'All Tasks', href: '/my-tasks', icon: CheckSquare },
-  { name: 'Task Updates', href: '/task-updates', icon: FileText },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Projects', href: '/projects', icon: KanbanSquare },
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Attendance', href: '/attendance', icon: Clock },
-  { name: 'Day Offs', href: '/day-offs', icon: Calendar },
+  { nameKey: 'nav.dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { nameKey: 'nav.my_tasks', name: 'All Tasks', href: '/my-tasks', icon: CheckSquare },
+  { nameKey: 'nav.task_updates', name: 'Daily Updates', href: '/task-updates', icon: FileText, feature: 'task_updates' },
+  { nameKey: 'user.team', name: 'Users', href: '/admin/users', icon: Users },
+  { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare },
+  { nameKey: 'nav.reports', name: 'Reports', href: '/reports', icon: BarChart3 },
+  { nameKey: 'nav.attendance', name: 'Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
+  { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
 ]
 
 const ownerNav: NavItem[] = [
   ...adminNav,
-  { name: 'Settings', href: '/settings/organization', icon: Settings },
+  { nameKey: 'nav.settings', name: 'Settings', href: '/settings/organization', icon: Settings },
 ]
 
 const memberNav: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'My Tasks', href: '/my-tasks', icon: CheckSquare },
-  { name: 'Projects', href: '/projects', icon: KanbanSquare },
-  { name: 'Attendance', href: '/attendance', icon: Clock },
-  { name: 'Day Offs', href: '/day-offs', icon: Calendar },
+  { nameKey: 'nav.dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { nameKey: 'nav.my_tasks', name: 'My Tasks', href: '/my-tasks', icon: CheckSquare },
+  { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare },
+  { nameKey: 'nav.attendance', name: 'Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
+  { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
 ]
 
 function getNavItems(role?: string) {
@@ -239,6 +260,7 @@ interface SidebarContentProps {
   signOut: () => void
   onNavClick?: () => void
   getBadgeCount: (href: string) => number
+  features: Record<string, boolean> | null | undefined
 }
 
 function SidebarContent({
@@ -250,7 +272,9 @@ function SidebarContent({
   signOut,
   onNavClick,
   getBadgeCount,
+  features,
 }: SidebarContentProps) {
+  const t = useT()
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo + actions */}
@@ -275,9 +299,13 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — items with `feature` are hidden when the tenant
+          has that feature disabled. Missing entries default to enabled
+          so a freshly-added feature isn't retroactively hidden. */}
       <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-0.5">
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => isFeatureEnabled(item.feature, features))
+          .map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + '/')
           const badgeCount = getBadgeCount(item.href)
@@ -303,7 +331,7 @@ function SidebarContent({
                 )}
                 strokeWidth={1.8}
               />
-              <span className="truncate">{item.name}</span>
+              <span className="truncate">{t(item.nameKey) || item.name}</span>
               {badgeCount > 0 && (
                 <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold tabular-nums text-destructive-foreground shadow-sm">
                   {badgeCount > 99 ? '99+' : badgeCount}
@@ -368,6 +396,8 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const { user, isLoading, signOut, updateUser } = useAuth()
+  const { current: currentTenant } = useTenant()
+  const tenantFeatures = currentTenant?.settings?.features
   const router = useRouter()
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>()
   const [profileName, setProfileName] = useState<string | undefined>()
@@ -420,6 +450,7 @@ export default function DashboardLayout({
   if (!user) return null
 
   const navItems = getNavItems(user.systemRole)
+  const features = tenantFeatures
   const closeSidebar = () => setSidebarOpen(false)
 
   const isPrivileged =
@@ -447,6 +478,7 @@ export default function DashboardLayout({
             profileName={profileName}
             signOut={signOut}
             getBadgeCount={getBadgeCount}
+            features={features}
           />
         </aside>
 
@@ -465,6 +497,7 @@ export default function DashboardLayout({
               signOut={signOut}
               onNavClick={closeSidebar}
               getBadgeCount={getBadgeCount}
+              features={features}
             />
           </SheetContent>
         </Sheet>

@@ -10,6 +10,7 @@ import {
   changePassword as cognitoChangePassword,
   getCurrentToken,
 } from './cognitoClient'
+import { useTenant } from '@/lib/tenant/TenantProvider'
 
 interface PendingPasswordChange {
   cognitoUser: CognitoUser
@@ -60,6 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [pendingPasswordChange, setPendingPasswordChange] = useState<PendingPasswordChange | null>(null)
+
+  // Pull tenant.refreshCurrent() up here so signIn can call it after the
+  // token is stored. Without this, the dashboard renders before
+  // /orgs/current returns and the user sees no tenant branding /
+  // terminology / features until they manually reload.
+  const { refreshCurrent: refreshTenant } = useTenant()
 
   const needsPasswordChange = pendingPasswordChange !== null
 
@@ -139,7 +146,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('auth_token', idToken)
     setToken(idToken)
     setUser(decodeJwtForUser(idToken))
-  }, [])
+    // Hydrate the full org payload (settings + plan + branding) before
+    // the dashboard renders. Best-effort — if /orgs/current 401s
+    // because of a token race, the dashboard's own hooks will retry.
+    try {
+      await refreshTenant()
+    } catch {
+      // ignore — TenantProvider's effect will fall back to /orgs/by-slug
+    }
+  }, [refreshTenant])
 
   const completePasswordChange = useCallback(async (newPassword: string) => {
     if (!pendingPasswordChange) throw new Error('No pending password change')
@@ -155,7 +170,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(idToken)
     setUser(decodeJwtForUser(idToken))
     setPendingPasswordChange(null)
-  }, [pendingPasswordChange])
+    try {
+      await refreshTenant()
+    } catch {
+      // ignore — TenantProvider falls back to public branding
+    }
+  }, [pendingPasswordChange, refreshTenant])
 
   const signOut = useCallback(() => {
     cognitoSignOut()

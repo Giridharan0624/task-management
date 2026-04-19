@@ -1,8 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, CheckCircle2, RotateCcw } from 'lucide-react'
+import {
+  AlertCircle,
+  ChevronRight,
+  CheckCircle2,
+  RotateCcw,
+  ShieldCheck,
+} from 'lucide-react'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
@@ -22,16 +29,31 @@ import {
 } from '@/components/ui/Tabs'
 import { ColorField } from '@/components/settings/ColorField'
 import { BrandingPreview } from '@/components/settings/BrandingPreview'
-import { TerminologyPanel } from '@/components/settings/TerminologyPanel'
+import { GlossaryPanel } from '@/components/settings/GlossaryPanel'
 import { FeaturesPanel } from '@/components/settings/FeaturesPanel'
+import { LocalePanel, type LocaleState } from '@/components/settings/LocalePanel'
+import {
+  LeaveTypesPanel,
+  type LeaveType,
+} from '@/components/settings/LeaveTypesPanel'
 
-type Tab = 'branding' | 'terminology' | 'features'
+type Tab = 'branding' | 'terminology' | 'features' | 'locale' | 'leave'
 
 interface BrandingState {
   displayName: string
   logoUrl: string
+  faviconUrl: string
   primaryColor: string
   accentColor: string
+}
+
+const DEFAULT_LOCALE: LocaleState = {
+  timezone: 'Asia/Kolkata',
+  locale: 'en-IN',
+  currency: 'INR',
+  weekStartDay: 1,
+  workingHoursStart: '09:00',
+  workingHoursEnd: '18:00',
 }
 
 const DEFAULT_PRIMARY = '#4F46E5'
@@ -59,11 +81,14 @@ export default function OrgSettingsPage() {
   const [branding, setBranding] = useState<BrandingState>({
     displayName: '',
     logoUrl: '',
+    faviconUrl: '',
     primaryColor: DEFAULT_PRIMARY,
     accentColor: DEFAULT_ACCENT,
   })
   const [terminology, setTerminology] = useState<Record<string, string>>({})
   const [features, setFeatures] = useState<Record<string, boolean>>({})
+  const [locale, setLocale] = useState<LocaleState>(DEFAULT_LOCALE)
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
 
   // Snapshot of last-saved values for dirty checks
   const [savedBranding, setSavedBranding] = useState<BrandingState>(branding)
@@ -73,6 +98,8 @@ export default function OrgSettingsPage() {
   const [savedFeatures, setSavedFeatures] = useState<Record<string, boolean>>(
     {}
   )
+  const [savedLocale, setSavedLocale] = useState<LocaleState>(DEFAULT_LOCALE)
+  const [savedLeaveTypes, setSavedLeaveTypes] = useState<LeaveType[]>([])
 
   // Authz — only OWNER can see this page
   useEffect(() => {
@@ -91,17 +118,32 @@ export default function OrgSettingsPage() {
     const initialBranding: BrandingState = {
       displayName: s.displayName ?? '',
       logoUrl: s.logoUrl ?? '',
+      faviconUrl: s.faviconUrl ?? '',
       primaryColor: s.primaryColor ?? DEFAULT_PRIMARY,
       accentColor: s.accentColor ?? DEFAULT_ACCENT,
     }
     const initialTerminology = s.terminology ?? {}
     const initialFeatures = s.features ?? {}
+    const initialLocale: LocaleState = {
+      timezone: s.timezone ?? DEFAULT_LOCALE.timezone,
+      locale: s.locale ?? DEFAULT_LOCALE.locale,
+      currency: s.currency ?? DEFAULT_LOCALE.currency,
+      weekStartDay: s.weekStartDay ?? DEFAULT_LOCALE.weekStartDay,
+      workingHoursStart:
+        s.workingHoursStart ?? DEFAULT_LOCALE.workingHoursStart,
+      workingHoursEnd: s.workingHoursEnd ?? DEFAULT_LOCALE.workingHoursEnd,
+    }
+    const initialLeaveTypes = s.leaveTypes ?? []
     setBranding(initialBranding)
     setTerminology(initialTerminology)
     setFeatures(initialFeatures)
+    setLocale(initialLocale)
+    setLeaveTypes(initialLeaveTypes)
     setSavedBranding(initialBranding)
     setSavedTerminology(initialTerminology)
     setSavedFeatures(initialFeatures)
+    setSavedLocale(initialLocale)
+    setSavedLeaveTypes(initialLeaveTypes)
   }, [current, refreshCurrent])
 
   // Dirty checks
@@ -118,13 +160,25 @@ export default function OrgSettingsPage() {
     () => JSON.stringify(features) !== JSON.stringify(savedFeatures),
     [features, savedFeatures]
   )
+  const localeDirty = useMemo(
+    () => !shallowEqual(locale, savedLocale),
+    [locale, savedLocale]
+  )
+  const leaveTypesDirty = useMemo(
+    () => JSON.stringify(leaveTypes) !== JSON.stringify(savedLeaveTypes),
+    [leaveTypes, savedLeaveTypes]
+  )
 
   const dirtyForTab =
     tab === 'branding'
       ? brandingDirty
       : tab === 'terminology'
         ? terminologyDirty
-        : featuresDirty
+        : tab === 'features'
+          ? featuresDirty
+          : tab === 'locale'
+            ? localeDirty
+            : leaveTypesDirty
 
   const onSave = async () => {
     setSaving(true)
@@ -135,13 +189,25 @@ export default function OrgSettingsPage() {
         payload = {
           displayName: branding.displayName,
           logoUrl: branding.logoUrl || null,
+          faviconUrl: branding.faviconUrl || null,
           primaryColor: branding.primaryColor,
           accentColor: branding.accentColor,
         }
       } else if (tab === 'terminology') {
         payload = { terminology }
-      } else {
+      } else if (tab === 'features') {
         payload = { features }
+      } else if (tab === 'locale') {
+        payload = {
+          timezone: locale.timezone,
+          locale: locale.locale,
+          currency: locale.currency,
+          weekStartDay: locale.weekStartDay,
+          workingHoursStart: locale.workingHoursStart,
+          workingHoursEnd: locale.workingHoursEnd,
+        }
+      } else {
+        payload = { leaveTypes }
       }
 
       await orgsApi.updateSettings(payload)
@@ -150,7 +216,9 @@ export default function OrgSettingsPage() {
       // Sync the saved snapshot for the tab we just persisted
       if (tab === 'branding') setSavedBranding(branding)
       else if (tab === 'terminology') setSavedTerminology(terminology)
-      else setSavedFeatures(features)
+      else if (tab === 'features') setSavedFeatures(features)
+      else if (tab === 'locale') setSavedLocale(locale)
+      else setSavedLeaveTypes(leaveTypes)
 
       // Re-apply theme immediately when colors change
       if (payload.primaryColor || payload.accentColor) {
@@ -172,7 +240,9 @@ export default function OrgSettingsPage() {
   const onDiscard = () => {
     if (tab === 'branding') setBranding(savedBranding)
     else if (tab === 'terminology') setTerminology(savedTerminology)
-    else setFeatures(savedFeatures)
+    else if (tab === 'features') setFeatures(savedFeatures)
+    else if (tab === 'locale') setLocale(savedLocale)
+    else setLeaveTypes(savedLeaveTypes)
     setError(null)
   }
 
@@ -185,6 +255,29 @@ export default function OrgSettingsPage() {
         title="Organization settings"
         description="These changes apply to everyone in your workspace."
       />
+
+      {/* Admin areas — pages too rich for a single tab live behind these
+          links. Add more entries here as new admin domains land
+          (pipelines, plans, audit log, etc.). */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Link
+          href="/settings/roles"
+          className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ShieldCheck className="h-4.5 w-4.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              Roles & permissions
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Define who can do what.
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+        </Link>
+      </div>
 
       {error && (
         <Alert variant="destructive">
@@ -206,6 +299,14 @@ export default function OrgSettingsPage() {
           <TabsTrigger value="features" className="gap-2">
             Features
             {featuresDirty && <DirtyDot />}
+          </TabsTrigger>
+          <TabsTrigger value="locale" className="gap-2">
+            Locale
+            {localeDirty && <DirtyDot />}
+          </TabsTrigger>
+          <TabsTrigger value="leave" className="gap-2">
+            Leave types
+            {leaveTypesDirty && <DirtyDot />}
           </TabsTrigger>
         </TabsList>
 
@@ -230,6 +331,16 @@ export default function OrgSettingsPage() {
                 }
                 placeholder="https://..."
                 hint="Square images at 128×128 or larger look best."
+              />
+              <Input
+                label="Favicon URL"
+                type="url"
+                value={branding.faviconUrl}
+                onChange={(e) =>
+                  setBranding((b) => ({ ...b, faviconUrl: e.target.value }))
+                }
+                placeholder="https://..."
+                hint="Square 32×32 PNG or ICO. Shown in browser tabs."
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <ColorField
@@ -276,11 +387,19 @@ export default function OrgSettingsPage() {
         </TabsContent>
 
         <TabsContent value="terminology" className="mt-4">
-          <TerminologyPanel value={terminology} onChange={setTerminology} />
+          <GlossaryPanel value={terminology} onChange={setTerminology} />
         </TabsContent>
 
         <TabsContent value="features" className="mt-4">
           <FeaturesPanel value={features} onChange={setFeatures} />
+        </TabsContent>
+
+        <TabsContent value="locale" className="mt-4">
+          <LocalePanel value={locale} onChange={setLocale} />
+        </TabsContent>
+
+        <TabsContent value="leave" className="mt-4">
+          <LeaveTypesPanel value={leaveTypes} onChange={setLeaveTypes} />
         </TabsContent>
       </Tabs>
 
@@ -294,7 +413,16 @@ export default function OrgSettingsPage() {
                 You have unsaved changes
               </span>
               <span className="hidden text-xs text-muted-foreground sm:inline">
-                in {tab === 'branding' ? 'Branding' : tab === 'terminology' ? 'Terminology' : 'Features'}
+                in{' '}
+                {tab === 'branding'
+                  ? 'Branding'
+                  : tab === 'terminology'
+                    ? 'Terminology'
+                    : tab === 'features'
+                      ? 'Features'
+                      : tab === 'locale'
+                        ? 'Locale'
+                        : 'Leave types'}
               </span>
             </div>
             <div className="flex items-center gap-2">

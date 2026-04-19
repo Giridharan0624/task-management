@@ -5,15 +5,16 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel
 
-from shared_kernel.auth_context import extract_auth_context
-from shared_kernel.response import build_error, build_success
-from shared_kernel.validate_body import validate_body
-from contexts.task.infrastructure.dynamo_repository import TaskDynamoRepository
-from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
+from contexts.org.domain import permissions as P
 from contexts.task.domain.entities import Task
 from contexts.task.domain.value_objects import TaskPriority
-from contexts.user.domain.value_objects import PRIVILEGED_ROLES
-from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
+from contexts.task.infrastructure.dynamo_repository import TaskDynamoRepository
+from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
+from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.errors import NotFoundError, ValidationError
+from shared_kernel.permissions import require
+from shared_kernel.response import build_error, build_success
+from shared_kernel.validate_body import validate_body
 
 
 class CreateDirectTaskRequest(BaseModel):
@@ -29,9 +30,10 @@ class CreateDirectTaskRequest(BaseModel):
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
-
-        if auth.system_role not in PRIVILEGED_ROLES:
-            raise AuthorizationError("You don't have permission to create direct tasks.")
+        # Direct tasks (no project) are an admin affordance — use the
+        # privileged TASK_MANAGE permission, not the broader TASK_CREATE
+        # which members get for self-service task creation.
+        require(auth, P.TASK_MANAGE)
 
         body = validate_body(CreateDirectTaskRequest, event.get("body"))
         user_repo = UserDynamoRepository()

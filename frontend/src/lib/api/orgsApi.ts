@@ -4,8 +4,10 @@ import type {
   AcceptInviteResponse,
   CurrentOrgResponse,
   ListInvitesResponse,
+  ListRolesResponse,
   OrgSettings,
   OrgSummary,
+  Role,
   SendInviteRequest,
   SendInviteResponse,
   SignupRequest,
@@ -75,6 +77,38 @@ export const orgsApi = {
   async revokeInvite(token: string): Promise<void> {
     return apiClient.del<void>(`/orgs/current/invites/${encodeURIComponent(token)}`)
   },
+
+  // ---------- Roles ----------
+
+  // Authed — GET /orgs/current/roles returns the role records + permission catalog.
+  // Members get role names only (no permission lists); role.manage holders see all.
+  async listRoles(): Promise<ListRolesResponse> {
+    return apiClient.get<ListRolesResponse>('/orgs/current/roles')
+  },
+
+  // Authed (role.manage) — POST /orgs/current/roles
+  async createRole(req: { name: string; permissions: string[] }): Promise<Role> {
+    return apiClient.post<Role>('/orgs/current/roles', req)
+  },
+
+  // Authed (role.manage) — PUT /orgs/current/roles/{roleId}
+  async updateRole(
+    roleId: string,
+    req: { name?: string; permissions?: string[] },
+  ): Promise<Role> {
+    return apiClient.put<Role>(
+      `/orgs/current/roles/${encodeURIComponent(roleId)}`,
+      req,
+    )
+  },
+
+  // Authed (role.manage) — DELETE /orgs/current/roles/{roleId}
+  async deleteRole(roleId: string): Promise<void> {
+    return apiClient.del<void>(`/orgs/current/roles/${encodeURIComponent(roleId)}`)
+  },
+
+  // Pipelines are folded into GET /orgs/current — no dedicated endpoint.
+  // Use `useTenant().current?.pipelines` or the `usePipelines()` hook.
 
   // Public — POST /invites/{token}/accept (invited user sets password)
   async acceptInvite(

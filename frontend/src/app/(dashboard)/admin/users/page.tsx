@@ -36,6 +36,7 @@ import {
 import { UserStatStrip } from '@/components/admin/UserStatStrip'
 import { RoleDropdown, ROLE_STYLES } from '@/components/admin/RoleDropdown'
 import { UserActionsMenu } from '@/components/admin/UserActionsMenu'
+import { orgsApi } from '@/lib/api/orgsApi'
 import type { User } from '@/types/user'
 import type { Attendance } from '@/types/attendance'
 
@@ -52,6 +53,11 @@ export default function UsersPage() {
   const toast = useToast()
 
   const [showAddUser, setShowAddUser] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member')
+  const [inviteSending, setInviteSending] = useState(false)
+  const [inviteError, setInviteError] = useState('')
   const [progressUser, setProgressUser] = useState<string | null>(null)
   const [viewUser, setViewUser] = useState<User | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -215,6 +221,27 @@ export default function UsersPage() {
     }
   }
 
+  const handleSendInvite = async () => {
+    setInviteError('')
+    const email = inviteEmail.trim().toLowerCase()
+    if (!email || !/.+@.+\..+/.test(email)) {
+      setInviteError('Enter a valid email address')
+      return
+    }
+    setInviteSending(true)
+    try {
+      await orgsApi.sendInvite({ email, roleId: inviteRole })
+      toast.success(`Invitation sent to ${email}`)
+      setShowInvite(false)
+      setInviteEmail('')
+      setInviteRole('member')
+    } catch (err: unknown) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to send invite')
+    } finally {
+      setInviteSending(false)
+    }
+  }
+
   const handleDelete = async (u: User) => {
     const confirmed = await confirm({
       title: `Delete ${u.name || u.email}?`,
@@ -308,6 +335,7 @@ export default function UsersPage() {
         }}
         onExportCSV={exportUsersCSV}
         onAddUser={() => setShowAddUser(true)}
+        onInvite={isOwner ? () => setShowInvite(true) : undefined}
         addLabel={isOwner ? 'Add user' : 'Add member'}
       />
 
@@ -513,6 +541,69 @@ export default function UsersPage() {
               loading={createUserMutation.isPending}
             >
               {createUserMutation.isPending ? 'Creating...' : 'Create user'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Invite by email Modal */}
+      <Modal
+        isOpen={showInvite}
+        onClose={() => {
+          setShowInvite(false)
+          setInviteError('')
+        }}
+        title="Invite teammate by email"
+      >
+        <div className="space-y-4">
+          {inviteError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{inviteError}</AlertDescription>
+            </Alert>
+          )}
+          <p className="text-sm text-muted-foreground">
+            They&apos;ll get an email link to choose their own password. They
+            fill in their own department and other profile details after
+            joining.
+          </p>
+          <Input
+            label="Email"
+            type="email"
+            placeholder="user@example.com"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            autoComplete="off"
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-foreground">
+              Role
+            </label>
+            <Select
+              value={inviteRole}
+              onChange={(v) => setInviteRole(v as 'admin' | 'member')}
+              options={[
+                { value: 'member', label: 'Member' },
+                { value: 'admin', label: 'Admin' },
+              ]}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowInvite(false)
+                setInviteError('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSendInvite}
+              loading={inviteSending}
+            >
+              {inviteSending ? 'Sending...' : 'Send invite'}
             </Button>
           </div>
         </div>

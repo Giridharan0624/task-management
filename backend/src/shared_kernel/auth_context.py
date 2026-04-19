@@ -9,6 +9,11 @@ class AuthContext:
     email: str
     system_role: str
     org_id: str = DEFAULT_ORG_ID
+    # Phase 4 — canonical lowercase role identifier (owner/admin/member or
+    # a tenant-defined custom role id). Defaults to system_role lowercased
+    # so the Phase-4 require() helper works against tenants that haven't
+    # been migrated yet.
+    role_id: str = ""
 
 
 def extract_auth_context(event: dict) -> AuthContext:
@@ -45,9 +50,16 @@ def extract_auth_context(event: dict) -> AuthContext:
     except Exception:
         pass  # Fall back to JWT role on any DB error
 
+    # Phase 4: role_id claim is injected by the pre-token trigger from
+    # custom:systemRole. If it's missing (legacy token before the trigger
+    # update rolled out), derive it from the authoritative DB role so
+    # require() still resolves the right permission set.
+    role_id = (claims.get("custom:roleId") or db_role or "").strip().lower()
+
     return AuthContext(
         user_id=user_id,
         email=claims.get("email", ""),
         system_role=db_role,
         org_id=org_id,
+        role_id=role_id,
     )

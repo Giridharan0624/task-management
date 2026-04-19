@@ -201,7 +201,7 @@ export default function TaskUpdatesPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 animate-fade-in">
       <PageHeader
-        title="Task Updates"
+        title="Daily Updates"
         description="Daily work summaries from team members"
       />
 
@@ -245,8 +245,8 @@ export default function TaskUpdatesPage() {
               q
                 ? `Nothing matches "${search}"`
                 : isToday
-                  ? 'Task updates will appear here as team members submit their daily summaries.'
-                  : 'No one submitted a task update on this date.'
+                  ? 'Daily updates will appear here as team members submit their summaries.'
+                  : 'No one submitted a daily update on this date.'
             }
           />
         ) : (

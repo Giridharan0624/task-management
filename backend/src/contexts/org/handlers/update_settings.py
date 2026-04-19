@@ -12,11 +12,12 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from contexts.org.domain import permissions as P
 from contexts.org.domain.entities import OrgSettings
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
-from contexts.user.domain.value_objects import SystemRole
 from shared_kernel.auth_context import extract_auth_context
-from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
+from shared_kernel.errors import NotFoundError, ValidationError
+from shared_kernel.permissions import require
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
 
@@ -48,13 +49,7 @@ class UpdateSettingsRequest(BaseModel):
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
-        # OWNER-only: settings changes can affect every user in the tenant
-        # (branding, roles, feature toggles) so we restrict to the single
-        # role that can do them. Phase 4 swaps this for `require(ctx, 'settings.edit')`.
-        if auth.system_role != SystemRole.OWNER.value:
-            raise AuthorizationError(
-                "Only the organization owner can change settings."
-            )
+        require(auth, P.SETTINGS_EDIT)
 
         req = validate_body(UpdateSettingsRequest, event.get("body"))
 

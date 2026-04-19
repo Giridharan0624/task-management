@@ -15,15 +15,16 @@ Inspired by Adobe Workfront, Jira, Asana, and ClickUp:
 
 from datetime import datetime, timezone
 
-from shared_kernel.auth_context import extract_auth_context
-from shared_kernel.response import build_error, build_success
-from contexts.project.infrastructure.dynamo_repository import ProjectDynamoRepository
-from contexts.task.infrastructure.dynamo_repository import TaskDynamoRepository
 from contexts.attendance.infrastructure.dynamo_repository import AttendanceDynamoRepository
-from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
-from contexts.user.domain.value_objects import PRIVILEGED_ROLES
+from contexts.org.domain import permissions as P
 from contexts.project.domain.value_objects import ProjectRole
-from contexts.task.domain.value_objects import STATUS_PROGRESS, DOMAIN_PROGRESS
+from contexts.project.infrastructure.dynamo_repository import ProjectDynamoRepository
+from contexts.task.domain.value_objects import DOMAIN_PROGRESS, STATUS_PROGRESS
+from contexts.task.infrastructure.dynamo_repository import TaskDynamoRepository
+from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
+from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import has_permission
+from shared_kernel.response import build_error, build_success
 
 
 def _parse_deadline(deadline_str: str) -> datetime | None:
@@ -64,9 +65,15 @@ def handler(event, context):
         if not project:
             return build_success(404, {"error": "Project not found"})
 
-        if auth.system_role not in PRIVILEGED_ROLES:
+        # Org-wide TASK_VIEW_ALL grants project-status access. Otherwise
+        # the caller must be a project lead/manager/admin via membership.
+        if not has_permission(auth, P.TASK_VIEW_ALL):
             member = project_repo.find_member(project_id, auth.user_id)
-            if not member or member.project_role not in (ProjectRole.ADMIN, ProjectRole.PROJECT_MANAGER, ProjectRole.TEAM_LEAD):
+            if not member or member.project_role not in (
+                ProjectRole.ADMIN,
+                ProjectRole.PROJECT_MANAGER,
+                ProjectRole.TEAM_LEAD,
+            ):
                 return build_success(403, {"error": "Access denied"})
 
         tasks = task_repo.find_by_project(project_id)

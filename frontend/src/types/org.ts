@@ -59,6 +59,9 @@ export interface CurrentOrgResponse {
   org: OrgDetail
   settings: OrgSettings | null
   plan: OrgPlan | null
+  /** Phase 5 — folded into this response so the kanban can render
+   *  pipelines without a second round-trip on app load. */
+  pipelines?: Pipeline[]
 }
 
 export interface SignupRequest {
@@ -103,6 +106,44 @@ export interface Invite {
 
 export interface ListInvitesResponse {
   invites: Invite[]
+}
+
+export interface Role {
+  orgId: string
+  roleId: string
+  name: string
+  scope: 'system' | 'project'
+  isSystem: boolean
+  permissions: string[]
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface ListRolesResponse {
+  roles: Role[]
+  allPermissions: string[]
+}
+
+export interface PipelineStatus {
+  id: string
+  label: string
+  color: string
+  order: number
+  isTerminal: boolean
+}
+
+export interface Pipeline {
+  orgId: string
+  pipelineId: string
+  name: string
+  isDefault: boolean
+  statuses: PipelineStatus[]
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface ListPipelinesResponse {
+  pipelines: Pipeline[]
 }
 
 export interface AcceptInviteRequest {

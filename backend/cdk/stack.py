@@ -17,6 +17,7 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_events as events,
     aws_events_targets as events_targets,
+    aws_wafv2 as wafv2,
 )
 from constructs import Construct
 
@@ -34,6 +35,12 @@ DEFAULT_CONFIG = {
     "table_name": "TaskManagementTable",
     "user_pool_name": "TaskManagementUserPool",
     "user_pool_client_name": "TaskManagementClient",
+    # Phase 6 — WAF rate limits (5-minute sliding window).
+    # `per_workspace` keys on the `x-org-slug` header. Requests without
+    # the header skip this rule and fall through to `per_ip`. Tune in
+    # config overrides per stage; staging uses a generous ceiling.
+    "waf_rate_per_workspace": 2000,
+    "waf_rate_per_ip": 5000,
 }
 
 
@@ -468,6 +475,29 @@ class TaskManagementStack(Stack):
             authorization_type=apigw.AuthorizationType.NONE,
         )
 
+        # Roles routes (Phase 4) — collapsed into one Lambda router so we
+        # stay under the 500-resource CFN cap. The router dispatches by
+        # httpMethod + pathParameters; see roles_router.py.
+        #
+        # We bind GET via add_api_lambda (creates the Lambda + permission),
+        # then ANY for the other methods on the same resource. Using ANY
+        # keeps it to one Method + one Permission per resource instead of
+        # 4 of each — meaningful when we're 10 resources from the cap.
+        orgs_current_roles = orgs_current.add_resource("roles")
+        roles_router_fn = add_api_lambda(
+            "RolesRouter",
+            "contexts.org.handlers.roles_router.handler",
+            "ANY",
+            orgs_current_roles,
+        )
+        orgs_current_role_by_id = orgs_current_roles.add_resource("{roleId}")
+        orgs_current_role_by_id.add_method(
+            "ANY", apigw.LambdaIntegration(roles_router_fn)
+        )
+
+        # Pipelines (Phase 5) — folded into GET /orgs/current to save a
+        # route + Lambda. See get_current_org.py for the merged response.
+
         # ─── Attendance handlers ────────────────────────────────────────────
         attendance = api.root.add_resource("attendance")
         attendance_sign_in = attendance.add_resource("sign-in")
@@ -556,6 +586,93 @@ class TaskManagementStack(Stack):
         add_api_lambda("SubmitTaskUpdate", "contexts.taskupdate.handlers.submit_update.handler", "POST", task_updates)
         add_api_lambda("ListTaskUpdates", "contexts.taskupdate.handlers.list_updates.handler", "GET", task_updates)
         add_api_lambda("MyTaskUpdate", "contexts.taskupdate.handlers.my_update.handler", "GET", task_updates_me)
+
+        # ─── WAFv2 — per-tenant + per-IP rate limits (Phase 6) ──────────────
+        # Skipped in staging to keep us under the 500-resource CFN cap and
+        # because WAF metrics on a low-traffic test environment are noise.
+        # Prod gets the protection.
+        if not is_staging:
+            # Two rate-based rules in priority order:
+            #   1. PerWorkspaceRate — keys on the `x-org-slug` header so a
+            #      single noisy tenant cannot exhaust the global quota for
+            #      everyone else. Requests without the header (public
+            #      signup, legacy clients) skip this rule and fall through
+            #      to PerIpRate.
+            #   2. PerIpRate — global per-IP ceiling, catches credential-
+            #      stuffing / scraping that rotates orgs but stays on one IP.
+            # Both windows are WAF's fixed 5-minute sliding window. Action
+            # is BLOCK; switch to COUNT temporarily if a rollout looks
+            # misconfigured.
+            per_ws_limit = int(config.get("waf_rate_per_workspace", 2000))
+            per_ip_limit = int(config.get("waf_rate_per_ip", 5000))
+
+            web_acl = wafv2.CfnWebACL(
+                self,
+                "ApiWebAcl",
+                scope="REGIONAL",
+                default_action=wafv2.CfnWebACL.DefaultActionProperty(allow={}),
+                visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                    cloud_watch_metrics_enabled=True,
+                    metric_name="ApiWebAcl",
+                    sampled_requests_enabled=True,
+                ),
+                rules=[
+                    wafv2.CfnWebACL.RuleProperty(
+                        name="PerWorkspaceRate",
+                        priority=10,
+                        action=wafv2.CfnWebACL.RuleActionProperty(block={}),
+                        statement=wafv2.CfnWebACL.StatementProperty(
+                            rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                                limit=per_ws_limit,
+                                aggregate_key_type="CUSTOM_KEYS",
+                                custom_keys=[
+                                    wafv2.CfnWebACL.RateBasedStatementCustomKeyProperty(
+                                        header=wafv2.CfnWebACL.RateLimitHeaderProperty(
+                                            name="x-org-slug",
+                                            text_transformations=[
+                                                wafv2.CfnWebACL.TextTransformationProperty(
+                                                    priority=0, type="LOWERCASE"
+                                                )
+                                            ],
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ),
+                        visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                            cloud_watch_metrics_enabled=True,
+                            metric_name="PerWorkspaceRate",
+                            sampled_requests_enabled=True,
+                        ),
+                    ),
+                    wafv2.CfnWebACL.RuleProperty(
+                        name="PerIpRate",
+                        priority=20,
+                        action=wafv2.CfnWebACL.RuleActionProperty(block={}),
+                        statement=wafv2.CfnWebACL.StatementProperty(
+                            rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                                limit=per_ip_limit,
+                                aggregate_key_type="IP",
+                            ),
+                        ),
+                        visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                            cloud_watch_metrics_enabled=True,
+                            metric_name="PerIpRate",
+                            sampled_requests_enabled=True,
+                        ),
+                    ),
+                ],
+            )
+
+            wafv2.CfnWebACLAssociation(
+                self,
+                "ApiWebAclAssoc",
+                web_acl_arn=web_acl.attr_arn,
+                resource_arn=(
+                    f"arn:aws:apigateway:{self.region}::/restapis/"
+                    f"{api.rest_api_id}/stages/{config['api_stage']}"
+                ),
+            )
 
         # ─── Outputs ─────────────────────────────────────────────────────────
         CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")
