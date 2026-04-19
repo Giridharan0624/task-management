@@ -37,7 +37,7 @@ export default function DashboardPage() {
       <TeamPulseStrip role={dashboardRole} />
 
       {/* 3 + 4. Live attendance + top projects (side-by-side on lg) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-up">
         <WhoIsWorking />
         <TopProjects />
       </div>

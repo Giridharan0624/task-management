@@ -181,7 +181,7 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
       {isLoading ? <div className="flex justify-center py-20"><Spinner size="lg" /></div> : (
         <>
           {/* ── Stats Row ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-up">
             <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white">
@@ -224,7 +224,7 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
           </div>
 
           {/* ── Charts: Task Hours + Status Distribution ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 stagger-up">
             {/* Hours by Task — Bar */}
             <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
               <h3 className="text-[13px] font-bold text-foreground/85 mb-4">Hours by Task</h3>

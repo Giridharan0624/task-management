@@ -187,7 +187,7 @@ export function ProjectTaskCounts({ status }: { status: ProjectStatus }) {
       <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
         Task counts
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 stagger-up">
         <CountTile
           label="To do"
           value={todoCount}

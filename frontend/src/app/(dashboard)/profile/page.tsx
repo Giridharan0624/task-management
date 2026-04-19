@@ -338,7 +338,7 @@ export default function ProfilePage() {
       )}
 
       {!isOwner && profile && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-up">
           <Card className="p-5">
             <div className="mb-4 flex items-center gap-2">
               <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -346,7 +346,7 @@ export default function ProfilePage() {
                 Contact & work
               </h3>
             </div>
-            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 stagger-up">
               <DetailField
                 icon={<Phone className="h-3 w-3" />}
                 label="Phone"
@@ -375,7 +375,7 @@ export default function ProfilePage() {
               <GraduationCap className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-bold text-foreground">Personal</h3>
             </div>
-            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 stagger-up">
               <DetailField
                 icon={<Calendar className="h-3 w-3" />}
                 label="Date of birth"
@@ -417,7 +417,7 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-up">
         <ThemeCard />
         <SecurityCard onChangePassword={() => setPwOpen(true)} />
       </div>

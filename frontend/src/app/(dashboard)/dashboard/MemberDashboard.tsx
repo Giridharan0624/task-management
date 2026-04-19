@@ -482,7 +482,7 @@ export function MemberDashboard({ user }: { user: User }) {
 
       <OverdueAlert tasks={overdueTasks} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 stagger-up">
         <StatCard
           icon={Icons.tasks}
           label="Total"

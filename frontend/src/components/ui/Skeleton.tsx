@@ -57,7 +57,7 @@ export function SkeletonDashboard() {
         <Skeleton className="h-6 w-16 rounded-lg" />
       </div>
       <Skeleton className="h-24 w-full rounded-2xl" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-up">
         {[1, 2, 3, 4].map((i) => (
           <SkeletonCard key={i} />
         ))}

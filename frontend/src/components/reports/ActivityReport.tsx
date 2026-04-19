@@ -160,7 +160,7 @@ function ActivityCard({ activity, date, userInfo }: { activity: UserActivity; da
 
       {/* Expandable content */}
       {expanded && appData.length > 0 && (
-        <div className="px-5 py-4 grid grid-cols-2 gap-4 border-b border-border/50 dark:border-gray-800">
+        <div className="px-5 py-4 grid grid-cols-2 gap-4 border-b border-border/50 dark:border-gray-800 stagger-up">
           {/* Bar chart — hours by app */}
           <div>
             <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">App Usage (hours)</p>

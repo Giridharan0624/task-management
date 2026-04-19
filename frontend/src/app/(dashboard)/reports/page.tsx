@@ -12,7 +12,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
+  Sector,
 } from 'recharts'
 import {
   ChevronLeft,
@@ -79,6 +79,39 @@ const COLORS = [
   '#38bdf8',
   '#818cf8',
 ]
+
+/** Recharts v3 removed activeIndex/activeShape from Pie's public types but still supports them at runtime. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pieInteractiveProps(activeIndex: number): any {
+  return {
+    activeIndex,
+    activeShape: (props: {
+      cx: number
+      cy: number
+      innerRadius: number
+      outerRadius: number
+      startAngle: number
+      endAngle: number
+      fill: string
+    }) => (
+      <g>
+        <Sector
+          cx={props.cx}
+          cy={props.cy}
+          innerRadius={props.innerRadius}
+          outerRadius={props.outerRadius + 6}
+          startAngle={props.startAngle}
+          endAngle={props.endAngle}
+          fill={props.fill}
+        />
+      </g>
+    ),
+  }
+}
+
+function slugId(s: string) {
+  return s.replace(/[^a-zA-Z0-9]/g, '_')
+}
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
@@ -429,6 +462,8 @@ function SummaryView({
   start: string
   end: string
 }) {
+  const [activePieIndex, setActivePieIndex] = useState<number>(-1)
+
   const projectHoursMap = useMemo(() => {
     const map = new Map<string, number>()
     for (const r of records)
@@ -518,6 +553,24 @@ function SummaryView({
     [records]
   )
 
+  // Integer percentages per project, summing to exactly 100 (largest-remainder method).
+  const percentageMap = useMemo(() => {
+    const map: Record<string, number> = {}
+    if (totalHours <= 0) {
+      for (const p of allProjects) map[p] = 0
+      return map
+    }
+    const items = allProjects.map((p) => {
+      const exact = ((projectHoursMap.get(p) ?? 0) / totalHours) * 100
+      return { name: p, floor: Math.floor(exact), rem: exact - Math.floor(exact) }
+    })
+    const leftover = 100 - items.reduce((s, it) => s + it.floor, 0)
+    const ordered = [...items].sort((a, b) => b.rem - a.rem)
+    for (let i = 0; i < leftover && i < ordered.length; i++) ordered[i].floor += 1
+    for (const it of items) map[it.name] = it.floor
+    return map
+  }, [allProjects, projectHoursMap, totalHours])
+
   const topTasks = useMemo(() => {
     const map = new Map<
       string,
@@ -566,130 +619,242 @@ function SummaryView({
         projects={allProjects.length}
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 stagger-up">
         {/* Bar chart */}
-        <Card className="p-5">
-          <h3 className="mb-4 text-sm font-bold text-foreground">
-            Hours by project —{' '}
-            {period === 'daily' ? 'per member' : 'per day'}
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <Card className="relative overflow-hidden p-5">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+            aria-hidden
+          />
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold tracking-tight text-foreground">
+                Hours by project
+                <span className="font-normal text-muted-foreground">
+                  {' '}
+                  — {period === 'daily' ? 'per member' : 'per day'}
+                </span>
+              </h3>
+              <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                Across {allProjects.length}{' '}
+                {allProjects.length === 1 ? 'project' : 'projects'}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Total
+              </p>
+              <p className="text-lg font-bold leading-tight tabular-nums text-foreground">
+                {formatDuration(totalHours)}
+              </p>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
             <BarChart
               data={stackedBarData}
-              margin={{ left: 0, right: 10, top: 5, bottom: 5 }}
+              margin={{ left: -8, right: 8, top: 8, bottom: 0 }}
+              barCategoryGap="22%"
             >
+              <defs>
+                {allProjects.map((p) => (
+                  <linearGradient
+                    key={p}
+                    id={`rp-bargrad-${slugId(p)}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={colorMap[p]} stopOpacity={0.95} />
+                    <stop offset="100%" stopColor={colorMap[p]} stopOpacity={0.55} />
+                  </linearGradient>
+                ))}
+              </defs>
               <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                strokeDasharray="4 6"
+                stroke="currentColor"
+                strokeOpacity={0.08}
                 vertical={false}
               />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.6 }}
                 interval={period === 'monthly' ? 2 : 0}
+                axisLine={false}
+                tickLine={false}
+                dy={6}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                tickFormatter={(v: number) =>
-                  v > 0 ? formatDuration(v) : '0'
-                }
+                tick={{ fontSize: 11, fill: 'currentColor', opacity: 0.55 }}
+                tickFormatter={(v: number) => (v > 0 ? formatDuration(v) : '0')}
+                axisLine={false}
+                tickLine={false}
+                width={58}
               />
-              <Tooltip content={<CustomBarTooltip />} />
-              {allProjects.map((p) => (
+              <Tooltip
+                cursor={{ fill: 'currentColor', fillOpacity: 0.05 }}
+                content={<CustomBarTooltip />}
+              />
+              {allProjects.map((p, i) => (
                 <Bar
                   key={p}
                   dataKey={p}
                   stackId="h"
-                  fill={colorMap[p]}
-                  maxBarSize={40}
+                  fill={`url(#rp-bargrad-${slugId(p)})`}
+                  radius={i === allProjects.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
+                  maxBarSize={44}
                 />
               ))}
             </BarChart>
           </ResponsiveContainer>
-          <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3">
+          <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 border-t border-border/60 pt-4">
             {allProjects.map((p) => (
               <div key={p} className="flex items-center gap-1.5">
-                <div
-                  className="h-2.5 w-2.5 rounded-full"
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: colorMap[p] }}
                 />
-                <span className="text-[11px] text-muted-foreground">{p}</span>
+                <span className="text-xs font-medium text-foreground/85">{p}</span>
+                <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/70">
+                  {percentageMap[p] ?? 0}%
+                </span>
               </div>
             ))}
           </div>
         </Card>
 
         {/* Pie chart */}
-        <Card className="p-5">
-          <h3 className="mb-4 text-sm font-bold text-foreground">
-            Distribution
-          </h3>
+        <Card className="relative overflow-hidden p-5">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent"
+            aria-hidden
+          />
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold tracking-tight text-foreground">
+                Distribution
+              </h3>
+              <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                Hours by project
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Entries
+              </p>
+              <p className="text-lg font-bold leading-tight tabular-nums text-foreground">
+                {pieData.length}
+              </p>
+            </div>
+          </div>
           {pieData.length === 0 ? (
-            <div className="flex h-[300px] items-center justify-center">
+            <div className="flex h-[280px] items-center justify-center">
               <p className="text-sm text-muted-foreground">No data</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={100}
-                  paddingAngle={3}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {pieData.map((e) => (
-                    <Cell
-                      key={e.name}
-                      fill={colorMap[e.name] || COLORS[0]}
+            <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={64}
+                      outerRadius={98}
+                      paddingAngle={pieData.length > 1 ? 3 : 0}
+                      dataKey="value"
+                      stroke="none"
+                      onMouseEnter={(_, i) => setActivePieIndex(i)}
+                      onMouseLeave={() => setActivePieIndex(-1)}
+                      {...pieInteractiveProps(activePieIndex)}
+                    >
+                      {pieData.map((e) => (
+                        <Cell key={e.name} fill={colorMap[e.name] || COLORS[0]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null
+                        const e = payload[0]
+                        const v = Number(e.value)
+                        const pct = percentageMap[String(e.name)] ?? 0
+                        return (
+                          <div className="rounded-xl border border-border bg-popover p-3 text-sm shadow-lg">
+                            <div className="mb-1 flex items-center gap-2">
+                              <div
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: e.payload?.fill }}
+                              />
+                              <span className="font-semibold text-foreground">
+                                {e.name}
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground">
+                              {formatDuration(v)}
+                            </p>
+                            <p className="font-bold text-primary">{pct}%</p>
+                          </div>
+                        )
+                      }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null
-                    const e = payload[0]
-                    const v = Number(e.value)
-                    const pct =
-                      totalHours > 0
-                        ? Math.round((v / totalHours) * 100)
-                        : 0
-                    return (
-                      <div className="rounded-xl border border-border bg-popover p-3 text-sm shadow-lg">
-                        <div className="mb-1 flex items-center gap-2">
-                          <div
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: e.payload?.fill }}
-                          />
-                          <span className="font-semibold text-foreground">
-                            {e.name}
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground">
-                          {formatDuration(v)}
-                        </p>
-                        <p className="font-bold text-primary">{pct}%</p>
-                      </div>
-                    )
-                  }}
-                />
-                <Legend
-                  layout="vertical"
-                  align="right"
-                  verticalAlign="middle"
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(v: string) => (
-                    <span className="text-[11px] text-muted-foreground">
-                      {v}
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center total label */}
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    {activePieIndex >= 0 ? 'Selected' : 'Total'}
+                  </span>
+                  <span className="mt-0.5 text-base font-bold leading-tight tabular-nums text-foreground">
+                    {activePieIndex >= 0
+                      ? formatDuration(pieData[activePieIndex].value)
+                      : formatDuration(totalHours)}
+                  </span>
+                  {activePieIndex >= 0 && (
+                    <span className="mt-0.5 max-w-[110px] truncate px-2 text-[10px] text-muted-foreground/80">
+                      {pieData[activePieIndex].name}
                     </span>
                   )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                </div>
+              </div>
+              {/* Custom legend */}
+              <div className="max-h-[260px] space-y-1 overflow-y-auto pr-1">
+                {pieData.map((entry, i) => {
+                  const pct = percentageMap[entry.name] ?? 0
+                  const isActive = activePieIndex === i
+                  return (
+                    <div
+                      key={entry.name}
+                      onMouseEnter={() => setActivePieIndex(i)}
+                      onMouseLeave={() => setActivePieIndex(-1)}
+                      className={cn(
+                        'flex cursor-default items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors',
+                        isActive ? 'bg-muted/70' : 'hover:bg-muted/40'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'h-2.5 w-2.5 shrink-0 rounded-full transition-transform',
+                          isActive && 'scale-125'
+                        )}
+                        style={{ backgroundColor: colorMap[entry.name] || COLORS[0] }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-foreground/90">
+                          {entry.name}
+                        </p>
+                        <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground/70">
+                          {formatDuration(entry.value)}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold tabular-nums text-foreground/85">
+                        {pct}%
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           )}
         </Card>
       </div>

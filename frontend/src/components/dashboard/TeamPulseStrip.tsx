@@ -184,7 +184,7 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
         ]
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 stagger-up">
       {metrics.map((m) => {
         const Icon = m.icon
         return (

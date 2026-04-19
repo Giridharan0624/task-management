@@ -747,7 +747,7 @@ function UserBioContent({
         })()}
 
       {/* Details grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 stagger-up">
         <DetailTile label="Phone" value={viewUser.phone} />
         <DetailTile label="Department" value={viewUser.department} />
         <DetailTile label="Location" value={viewUser.location} />
@@ -844,7 +844,7 @@ function UserProgressModal({
         </div>
       ) : progress ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-3 stagger-up">
             <ProgressStat
               label="Total"
               value={progress.totalStats.total}

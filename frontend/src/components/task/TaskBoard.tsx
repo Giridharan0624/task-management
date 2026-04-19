@@ -52,7 +52,7 @@ export function TaskBoard({ tasks, onSelectTask }: TaskBoardProps) {
   return (
     <div className="kanban-scroll -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
       <div
-        className="grid auto-cols-[minmax(280px,1fr)] grid-flow-col gap-3"
+        className="grid auto-cols-[minmax(280px,1fr)] grid-flow-col gap-3 stagger-up"
         style={{ minWidth: `${columns.length * 288}px` }}
       >
         {columns.map((col) => (

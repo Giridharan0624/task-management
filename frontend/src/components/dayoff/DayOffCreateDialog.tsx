@@ -138,7 +138,7 @@ export function DayOffCreateDialog({
                     (optional — leave blank for full day)
                   </span>
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 stagger-up">
                   <TimePicker
                     value={startTime}
                     onChange={setStartTime}
@@ -155,7 +155,7 @@ export function DayOffCreateDialog({
           )}
 
           {mode === 'multiple' && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 stagger-up">
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Start date

@@ -133,7 +133,7 @@ export default function OrgSettingsPage() {
             onChange={(e) => setLogoUrl(e.target.value)}
             placeholder="https://..."
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 stagger-up">
             <div>
               <label className="text-sm font-semibold text-foreground/85 mb-1.5 block">
                 Primary color
@@ -208,7 +208,7 @@ export default function OrgSettingsPage() {
             Override how TaskFlow refers to things in your workspace.
             Leave any field blank to use the default.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-up">
             {Object.entries(BASE_TERMINOLOGY).map(([key, defaultValue]) => (
               <div key={key}>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">

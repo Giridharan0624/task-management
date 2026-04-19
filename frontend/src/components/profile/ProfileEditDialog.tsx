@@ -176,7 +176,7 @@ export function ProfileEditDialog({
               />
             </TabsContent>
 
-            <TabsContent value="contact" className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TabsContent value="contact" className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 stagger-up">
               <Input
                 label="Phone"
                 value={phone}
@@ -207,7 +207,7 @@ export function ProfileEditDialog({
               />
             </TabsContent>
 
-            <TabsContent value="personal" className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TabsContent value="personal" className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 stagger-up">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-foreground">
                   Date of birth

@@ -259,7 +259,7 @@ export default function ProjectDetailPage() {
               </div>
             ) : (
               <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-up">
                   <ProjectHealthCard status={projectStatus} />
                   <ProjectTaskCounts status={projectStatus} />
                 </div>
