@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useActivityReport, useSummary, useGenerateSummary } from '@/lib/hooks/useActivity'
 import { useUsers } from '@/lib/hooks/useUsers'
 import { Spinner } from '@/components/ui/Spinner'
@@ -304,8 +304,52 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
 
 /* ═══ Screenshot gallery ═══ */
 function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timestamp: string }[] }) {
-  const [selected, setSelected] = useState<string | null>(null)
+  // Selected index (not URL) so we can navigate relative to the array.
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [collapsed, setCollapsed] = useState(true)
+
+  const total = screenshots.length
+  const selected = selectedIndex !== null ? screenshots[selectedIndex] : null
+  const close = useCallback(() => setSelectedIndex(null), [])
+  const goPrev = useCallback(() => {
+    setSelectedIndex(i => (i === null || i <= 0 ? i : i - 1))
+  }, [])
+  const goNext = useCallback(() => {
+    setSelectedIndex(i => (i === null || i >= total - 1 ? i : i + 1))
+  }, [total])
+
+  // Keyboard navigation (only active when modal is open). Arrow keys
+  // move between shots; Escape closes; Home/End jump to ends. Matches
+  // the OS photo-viewer conventions users already know.
+  useEffect(() => {
+    if (selectedIndex === null) return
+    const handler = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault()
+          goPrev()
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          goNext()
+          break
+        case 'Escape':
+          e.preventDefault()
+          close()
+          break
+        case 'Home':
+          e.preventDefault()
+          setSelectedIndex(0)
+          break
+        case 'End':
+          e.preventDefault()
+          setSelectedIndex(total - 1)
+          break
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectedIndex, goPrev, goNext, close, total])
 
   return (
     <div className="px-5 py-4 border-b border-border/50 dark:border-gray-800">
@@ -324,7 +368,7 @@ function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timest
         {screenshots.map((s, i) => (
           <button
             key={i}
-            onClick={() => setSelected(s.url)}
+            onClick={() => setSelectedIndex(i)}
             className="group relative rounded-lg overflow-hidden border border-border/80 dark:border-gray-700 hover:border-indigo-400 transition-all hover:shadow-md"
           >
             <img
@@ -342,30 +386,88 @@ function ScreenshotGallery({ screenshots }: { screenshots: { url: string; timest
         ))}
       </div>}
 
-      {/* Fullscreen modal */}
-      {selected && (
+      {/* Fullscreen modal with prev/next navigation */}
+      {selected && selectedIndex !== null && (
         <div
           className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setSelected(null)}
+          onClick={close}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Screenshot ${selectedIndex + 1} of ${total}`}
         >
           <div className="relative max-w-5xl w-full" onClick={e => e.stopPropagation()}>
-            <img src={selected} alt="Screenshot" className="w-full rounded-xl shadow-2xl" />
+            {/* Full image */}
+            <img
+              src={selected.url}
+              alt={`Screenshot ${selectedIndex + 1}`}
+              className="w-full rounded-xl shadow-2xl"
+            />
+
+            {/* Top-left: timestamp + counter. Always readable regardless
+                of image content via solid bg + shadow. */}
+            <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-medium tabular-nums flex items-center gap-2">
+              <span>
+                {new Date(selected.timestamp).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </span>
+              <span className="text-white/60">·</span>
+              <span className="text-white/80">
+                {selectedIndex + 1} / {total}
+              </span>
+            </div>
+
+            {/* Close */}
             <button
-              onClick={() => setSelected(null)}
+              onClick={close}
+              aria-label="Close"
               className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            {/* Navigation */}
+
+            {/* Prev arrow — hidden at index 0 rather than disabled-styled
+                so the UI doesn't imply "there's a previous, it's just off"
+                which the user might click at repeatedly. */}
+            {selectedIndex > 0 && (
+              <button
+                onClick={goPrev}
+                aria-label="Previous screenshot"
+                className="absolute top-1/2 left-3 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            {selectedIndex < total - 1 && (
+              <button
+                onClick={goNext}
+                aria-label="Next screenshot"
+                className="absolute top-1/2 right-3 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+
+            {/* Thumbnail strip — click to jump anywhere. */}
             <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">
               {screenshots.map((s, i) => (
                 <button
                   key={i}
-                  onClick={() => setSelected(s.url)}
+                  onClick={() => setSelectedIndex(i)}
+                  aria-label={`Go to screenshot ${i + 1}`}
+                  aria-current={i === selectedIndex ? 'true' : undefined}
                   className={`w-12 h-7 rounded overflow-hidden border-2 transition-all ${
-                    s.url === selected ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'
+                    i === selectedIndex ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'
                   }`}
                 >
                   <img src={s.url} alt="" className="w-full h-full object-cover" />
