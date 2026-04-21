@@ -1,13 +1,31 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from contexts.dayoff.domain.entities import DayOffRequest
 from contexts.dayoff.domain.repository import IDayOffRepository
 from contexts.user.domain.repository import IUserRepository
 from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
 from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
+
+# Upper bound on a single day-off request. Longer leave should be broken
+# into smaller requests so admins review them in review-friendly chunks.
+MAX_DAYOFF_SPAN_DAYS = 365
+
+
+def _parse_date_only(value: str, field_name: str) -> date:
+    """Accept "YYYY-MM-DD" or ISO datetime, return the date portion.
+
+    Raises ValidationError with a user-facing message on unparsable input.
+    """
+    if not value or not isinstance(value, str):
+        raise ValidationError(f"{field_name} is required.")
+    # Prefer the date-only slice so "2026-04-21T10:30" works.
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        raise ValidationError(f"{field_name} must be a valid date.")
 
 
 class CreateDayOffRequestUseCase:
@@ -18,6 +36,22 @@ class CreateDayOffRequestUseCase:
     def execute(self, caller_user_id: str, start_date: str, end_date: str, reason: str) -> dict:
         if not start_date or not end_date or not reason:
             raise ValidationError("Please fill in the start date, end date, and reason for your day-off request.")
+
+        # Date sanity — done before any DynamoDB calls so malformed input
+        # bails fast and with a clear message.
+        start = _parse_date_only(start_date, "Start date")
+        end = _parse_date_only(end_date, "End date")
+        today = date.today()
+        if start < today:
+            raise ValidationError("Day-off start date cannot be in the past.")
+        if end < start:
+            raise ValidationError("End date must be on or after start date.")
+        span = (end - start).days + 1
+        if span > MAX_DAYOFF_SPAN_DAYS:
+            raise ValidationError(
+                f"Day-off requests are capped at {MAX_DAYOFF_SPAN_DAYS} days. "
+                "Please split longer leave into multiple requests."
+            )
 
         user = self._user_repo.find_by_id(caller_user_id)
         if not user:
@@ -148,7 +182,12 @@ class RejectRequestUseCase:
 
 
 class CancelRequestUseCase:
-    """Allow the requesting user to cancel their own day-off (pending or approved)."""
+    """Allow the requesting user to cancel their own pending day-off.
+
+    Once a request has been approved or rejected it can't be cancelled —
+    the requester must talk to an admin to revert it. This prevents a
+    member silently withdrawing leave that an admin already counted on.
+    """
     def __init__(self, dayoff_repo: IDayOffRepository):
         self._dayoff_repo = dayoff_repo
 
@@ -162,6 +201,12 @@ class CancelRequestUseCase:
 
         if day_off.status == "CANCELLED":
             raise ValidationError("This day-off request has already been cancelled.")
+        if day_off.status == "APPROVED":
+            raise ValidationError(
+                "This request was already approved. Ask an admin to cancel it for you."
+            )
+        if day_off.status == "REJECTED":
+            raise ValidationError("A rejected request cannot be cancelled.")
 
         now = datetime.now(timezone.utc).isoformat()
         day_off.status = "CANCELLED"

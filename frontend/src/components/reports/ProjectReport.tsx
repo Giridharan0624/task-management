@@ -5,6 +5,7 @@ import { useAttendanceReport } from '@/lib/hooks/useAttendance'
 import { useProjectStatus } from '@/lib/hooks/useProjects'
 import { Spinner } from '@/components/ui/Spinner'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { buildCsvName } from '@/lib/utils/csvFilename'
 import { TASK_STATUS_LABEL } from '@/types/task'
 import type { Attendance } from '@/types/attendance'
 import {
@@ -147,7 +148,7 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
     const rows = detailedRows.map(r => [r.date, r.member, projectName, r.task, formatTime(r.signIn), r.signOut ? formatTime(r.signOut) : 'Active', r.hours != null ? formatDuration(r.hours) : '—'])
     const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${projectName}-report-${start}-${end}.csv`; a.click()
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = buildCsvName(`${projectName}-report`, start, end); a.click()
   }
 
   const budgetPct = totalEstimated > 0 ? Math.round((totalHours / totalEstimated) * 100) : 0

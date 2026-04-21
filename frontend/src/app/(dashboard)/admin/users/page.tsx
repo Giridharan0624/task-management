@@ -38,6 +38,8 @@ import { UserStatStrip } from '@/components/admin/UserStatStrip'
 import { RoleDropdown, ROLE_STYLES } from '@/components/admin/RoleDropdown'
 import { UserActionsMenu } from '@/components/admin/UserActionsMenu'
 import { orgsApi } from '@/lib/api/orgsApi'
+import { buildCsvName } from '@/lib/utils/csvFilename'
+import { getLocalToday } from '@/lib/utils/date'
 import type { User } from '@/types/user'
 import type { Attendance } from '@/types/attendance'
 
@@ -191,7 +193,7 @@ export default function UsersPage() {
     const blob = new Blob([csv], { type: 'text/csv' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = 'users-export.csv'
+    a.download = buildCsvName('users-export', getLocalToday())
     a.click()
   }
 
@@ -203,10 +205,18 @@ export default function UsersPage() {
       setError('All fields are required')
       return
     }
+    // Normalize the email so "John@Example.com" and "john@example.com"
+    // never produce two separate user records. Keeps behavior consistent
+    // with handleSendInvite below, which already lowercases.
+    const normalizedEmail = newEmail.trim().toLowerCase()
+    if (!/.+@.+\..+/.test(normalizedEmail)) {
+      setError('Enter a valid email address')
+      return
+    }
     try {
       await createUserMutation.mutateAsync({
-        email: newEmail,
-        name: newName,
+        email: normalizedEmail,
+        name: newName.trim(),
         systemRole: newRole,
         department: newDepartment,
         dateOfJoining: newDateOfJoining,
@@ -245,6 +255,16 @@ export default function UsersPage() {
   }
 
   const handleDelete = async (u: User) => {
+    // Short-circuit self-delete — the backend will reject it anyway, but
+    // a toast is friendlier than a 403 and avoids a confirm-dialog dance.
+    if (u.userId === currentUser?.userId) {
+      toast.error("You can't delete your own account.")
+      return
+    }
+    if (u.systemRole === 'OWNER') {
+      toast.error("The Owner account can't be deleted from this screen.")
+      return
+    }
     const confirmed = await confirm({
       title: `Delete ${u.name || u.email}?`,
       description:

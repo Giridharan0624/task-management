@@ -2,9 +2,11 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import { useState } from 'react'
 import {
   KanbanSquare,
   AlertCircle,
+  ChevronDown,
   Folder,
   Layers,
   type LucideIcon,
@@ -117,47 +119,80 @@ export function TaskListView({
 
   return (
     <div className="space-y-3">
-      {groups.map((group) => {
-        const groupIds = group.tasks.map((t) => t.taskId)
-        return (
-          <div
-            key={group.key}
-            className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
-          >
-            <GroupHeader group={group} />
-            <TaskTableHeader
-              showAssignee={showAssignee}
-              selection={
-                selection
-                  ? {
-                      isAllSelected: selection.isAllSelected(groupIds),
-                      onToggleAll: () => selection.selectAll(groupIds),
-                    }
-                  : undefined
-              }
-            />
-            <ul className="divide-y divide-border/60">
-              {group.tasks.map((task) => (
-                <TaskRow
-                  key={task.taskId}
-                  task={task}
-                  showAssignee={showAssignee}
-                  resolveName={resolveName}
-                  onSelect={() => onSelectTask(task)}
-                  selection={
-                    selection
-                      ? {
-                          isSelected: selection.isSelected(task.taskId),
-                          toggle: () => selection.toggle(task.taskId),
-                        }
-                      : undefined
+      {groups.map((group) => (
+        <CollapsibleGroup
+          key={group.key}
+          group={group}
+          showAssignee={showAssignee}
+          resolveName={resolveName}
+          onSelectTask={onSelectTask}
+          selection={selection}
+        />
+      ))}
+    </div>
+  )
+}
+
+function CollapsibleGroup({
+  group,
+  showAssignee,
+  resolveName,
+  onSelectTask,
+  selection,
+}: {
+  group: TaskGroup
+  showAssignee: boolean
+  resolveName: (userId: string) => string
+  onSelectTask: (task: MyTask) => void
+  selection?: TaskListViewProps['selection']
+}) {
+  // Default expanded — collapsing is opt-in so users don't have to re-open
+  // every project group on first paint. State is per-group so toggling
+  // one doesn't move the others.
+  const [expanded, setExpanded] = useState(true)
+  const groupIds = group.tasks.map((t) => t.taskId)
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <GroupHeader
+        group={group}
+        expanded={expanded}
+        onToggle={() => setExpanded((v) => !v)}
+      />
+      {expanded && (
+        <div className="animate-fade-in" style={{ animationDuration: '0.15s' }}>
+          <TaskTableHeader
+            showAssignee={showAssignee}
+            selection={
+              selection
+                ? {
+                    isAllSelected: selection.isAllSelected(groupIds),
+                    onToggleAll: () => selection.selectAll(groupIds),
                   }
-                />
-              ))}
-            </ul>
-          </div>
-        )
-      })}
+                : undefined
+            }
+          />
+          <ul className="divide-y divide-border/60">
+            {group.tasks.map((task) => (
+              <TaskRow
+                key={task.taskId}
+                task={task}
+                showAssignee={showAssignee}
+                resolveName={resolveName}
+                onSelect={() => onSelectTask(task)}
+                selection={
+                  selection
+                    ? {
+                        isSelected: selection.isSelected(task.taskId),
+                        toggle: () => selection.toggle(task.taskId),
+                      }
+                    : undefined
+                }
+              />
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
@@ -394,13 +429,33 @@ function TaskRow({
   )
 }
 
-function GroupHeader({ group }: { group: TaskGroup }) {
+function GroupHeader({
+  group,
+  expanded,
+  onToggle,
+}: {
+  group: TaskGroup
+  expanded?: boolean
+  onToggle?: () => void
+}) {
   const done = group.tasks.filter((t) => t.status === 'DONE').length
   const pct =
     group.tasks.length > 0 ? Math.round((done / group.tasks.length) * 100) : 0
-  return (
-    <div className="flex items-center justify-between border-b border-border bg-muted/40 px-5 py-3">
+  // Whole header becomes the toggle when a handler is provided. Falls back
+  // to a plain div when used outside a CollapsibleGroup.
+  const interactive = typeof onToggle === 'function'
+
+  const body = (
+    <>
       <div className="flex min-w-0 items-center gap-3">
+        {interactive && (
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+              expanded ? 'rotate-0' : '-rotate-90'
+            )}
+          />
+        )}
         {group.icon ? (
           group.icon
         ) : (
@@ -433,6 +488,26 @@ function GroupHeader({ group }: { group: TaskGroup }) {
           {pct}%
         </span>
       </div>
+    </>
+  )
+
+  if (interactive) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-label={expanded ? 'Collapse group' : 'Expand group'}
+        className="flex w-full cursor-pointer items-center justify-between border-b border-border bg-muted/40 px-5 py-3 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        {body}
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex items-center justify-between border-b border-border bg-muted/40 px-5 py-3">
+      {body}
     </div>
   )
 }

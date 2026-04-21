@@ -23,6 +23,7 @@ import {
   type MissingSubmitter,
 } from '@/components/taskupdate/MissingSubmittersList'
 import { getSessionHours } from '@/lib/utils/liveSession'
+import { buildCsvName } from '@/lib/utils/csvFilename'
 import type { Attendance } from '@/types/attendance'
 
 function getToday() {
@@ -185,7 +186,7 @@ export default function TaskUpdatesPage() {
     const blob = new Blob([csv], { type: 'text/csv' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `task-updates-${selectedDate}.csv`
+    a.download = buildCsvName('task-updates', selectedDate)
     a.click()
   }
 

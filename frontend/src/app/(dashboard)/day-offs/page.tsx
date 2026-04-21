@@ -12,7 +12,9 @@ import {
   ArrowDownUp,
   Inbox,
   CalendarCheck2,
+  AlertTriangle,
 } from 'lucide-react'
+import { getLocalToday } from '@/lib/utils/date'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import {
   useMyDayOffs,
@@ -1095,18 +1097,37 @@ function PendingRequestRow({
   isActing: boolean
   disableActions?: boolean
 }) {
+  // Legacy records (made before backend validation shipped) can still be
+  // pending for dates in the past. Flag them so admins spot the staleness
+  // instead of rubber-stamping a request that's already moot.
+  //   expired       → end date is before today (entire range in the past)
+  //   startedInPast → start is before today, but end is still today or later
+  const today = getLocalToday()
+  const startDay = req.startDate.slice(0, 10)
+  const endDay = req.endDate.slice(0, 10)
+  const isExpired = endDay < today
+  const startedInPast = !isExpired && startDay < today
+
   return (
-    <Card className="p-4">
+    <Card
+      className={cn('p-4', isExpired && 'border-amber-500/40 bg-amber-500/5')}
+    >
       <div className="flex flex-wrap items-start gap-4">
         <Avatar url={avatarUrl} name={req.userName} size="md" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-sm font-bold text-foreground">
               {req.userName}
             </p>
             {req.employeeId && (
               <span className="font-mono text-[10px] text-muted-foreground">
                 {req.employeeId}
+              </span>
+            )}
+            {(isExpired || startedInPast) && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="h-3 w-3" />
+                {isExpired ? 'Date passed' : 'Started in past'}
               </span>
             )}
           </div>
@@ -1121,6 +1142,11 @@ function PendingRequestRow({
           </p>
           <p className="mt-2 text-[10px] text-muted-foreground">
             Requested {fmtDate(req.createdAt)}
+            {isExpired && (
+              <span className="ml-2 text-amber-700 dark:text-amber-400">
+                · This request is already in the past. Reject to clear.
+              </span>
+            )}
           </p>
         </div>
         {!disableActions && (
@@ -1129,8 +1155,9 @@ function PendingRequestRow({
               variant="primary"
               size="sm"
               onClick={onApprove}
-              disabled={isActing}
+              disabled={isActing || isExpired}
               className="gap-1.5"
+              title={isExpired ? 'The date is already in the past' : undefined}
             >
               <Check className="h-3.5 w-3.5" />
               Approve

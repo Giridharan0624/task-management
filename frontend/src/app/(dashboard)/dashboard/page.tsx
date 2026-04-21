@@ -6,6 +6,7 @@ import { BirthdayBanner } from '@/components/ui/BirthdayBanner'
 import { TodayHero } from '@/components/dashboard/TodayHero'
 import { TeamPulseStrip } from '@/components/dashboard/TeamPulseStrip'
 import { WhoIsWorking } from '@/components/dashboard/WhoIsWorking'
+import { OnLeaveToday } from '@/components/dashboard/OnLeaveToday'
 import { TopProjects } from '@/components/dashboard/TopProjects'
 import { QuickActions } from '@/components/dashboard/QuickActions'
 import { SetupChecklist } from '@/components/dashboard/SetupChecklist'
@@ -41,11 +42,14 @@ export default function DashboardPage() {
       {/* 2. Team pulse strip */}
       <TeamPulseStrip role={dashboardRole} />
 
-      {/* 3 + 4. Live attendance + top projects (side-by-side on lg) */}
+      {/* 3. Attendance row — who's in vs who's out today. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-up">
         <WhoIsWorking />
-        <TopProjects />
+        <OnLeaveToday />
       </div>
+
+      {/* 4. Top projects — full width so long project names don't truncate. */}
+      <TopProjects />
 
       {/* 5. Quick actions */}
       <QuickActions role={dashboardRole} />

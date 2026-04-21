@@ -45,6 +45,7 @@ import { useAdmins } from '@/lib/hooks/useUsers'
 import { useUpdateTask } from '@/lib/hooks/useTasks'
 import { usePrefetchTask } from '@/lib/hooks/usePrefetchTask'
 import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { cn } from '@/lib/utils'
 
@@ -140,14 +141,30 @@ export function TaskKanban({
   const { data: admins } = useAdmins()
   const updateTask = useUpdateTask(projectId)
   const toast = useToast()
-  const changeStatusWithUndo = (taskId: string, prev: string, next: string) => {
-    updateTask.mutate({ taskId, data: { status: next as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
-    if (prev !== next) {
-      const label = TASK_STATUS_LABEL[next] ?? next
-      toast.undoable(`Status changed to ${label}`, () => {
-        updateTask.mutate({ taskId, data: { status: prev as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
+  const confirm = useConfirm()
+  const changeStatusWithUndo = async (
+    taskId: string,
+    prev: string,
+    next: string
+  ) => {
+    if (prev === next) return
+    // Reopening a completed task demands an explicit confirm so a stray
+    // click in the dropdown can't silently un-finish shipped work.
+    if (prev === 'DONE' && next !== 'DONE') {
+      const ok = await confirm({
+        title: 'Reopen completed task?',
+        description:
+          'This task is marked Done. Changing its status will move it back into active work. Continue?',
+        confirmLabel: 'Reopen task',
+        variant: 'danger',
       })
+      if (!ok) return
     }
+    updateTask.mutate({ taskId, data: { status: next as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
+    const label = TASK_STATUS_LABEL[next] ?? next
+    toast.undoable(`Status changed to ${label}`, () => {
+      updateTask.mutate({ taskId, data: { status: prev as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
+    })
   }
 
   const nameMap = useMemo(() => {

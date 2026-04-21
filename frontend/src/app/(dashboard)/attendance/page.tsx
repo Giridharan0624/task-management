@@ -47,6 +47,7 @@ import {
 } from '@/components/attendance/WeeklyLeaderboard'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { getSessionHours } from '@/lib/utils/liveSession'
+import { buildCsvName } from '@/lib/utils/csvFilename'
 import type { Attendance } from '@/types/attendance'
 
 function getRecordHours(r: Attendance): number {
@@ -389,7 +390,7 @@ export default function AttendancePage() {
     const blob = new Blob([csv], { type: 'text/csv' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `attendance-${start}-to-${end}.csv`
+    a.download = buildCsvName('attendance', start, end)
     a.click()
   }
 

@@ -225,6 +225,17 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   if (!task) return null
 
   const handleSave = async (values: EditFormValues) => {
+    // Reject past-date deadlines on edit too. Only blocks when the deadline
+    // moved — don't punish the user for leaving an already-past deadline
+    // untouched on a legacy task.
+    if (
+      values.deadline &&
+      values.deadline !== task.deadline?.slice(0, 16) &&
+      new Date(values.deadline).getTime() < Date.now()
+    ) {
+      toast.error('Deadline cannot be in the past.')
+      return
+    }
     editDraft.clear()
     await updateTask.mutateAsync({
       taskId: task.taskId,
@@ -272,8 +283,24 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   }
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
-    setStatusUpdating(true)
     const previousStatus = task.status
+    if (previousStatus === newStatus) return
+
+    // Reopening a completed task is almost always an accident. Force an
+    // explicit confirm so a mis-click doesn't silently un-finish work the
+    // team thought was shipped.
+    if (previousStatus === 'DONE' && newStatus !== 'DONE') {
+      const ok = await confirm({
+        title: 'Reopen completed task?',
+        description:
+          'This task is marked Done. Changing its status will move it back into active work. Continue?',
+        confirmLabel: 'Reopen task',
+        variant: 'danger',
+      })
+      if (!ok) return
+    }
+
+    setStatusUpdating(true)
     try {
       await updateTask.mutateAsync({ taskId: task.taskId, data: { status: newStatus } })
       if (previousStatus !== newStatus) {

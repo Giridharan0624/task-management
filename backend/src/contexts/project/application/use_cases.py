@@ -173,13 +173,24 @@ class ListProjectsForUserUseCase:
             d = p.to_dict()
             members = self._project_repo.find_members(p.project_id)
             d["member_count"] = len(members)
+            # Always emit numeric counts + percent, even when we have no task
+            # repo handy. Keeps the frontend type-safe — consumers never have
+            # to guard against undefined/NaN on these keys.
             if self._task_repo:
                 tasks = self._task_repo.find_by_project(p.project_id)
                 total = len(tasks)
                 done = sum(1 for t in tasks if str(t.status) == "DONE")
                 d["task_count"] = total
                 d["done_count"] = done
-                d["completion_percent"] = round(sum(STATUS_PROGRESS.get(str(t.status), 0) for t in tasks) / total) if total > 0 else 0
+                d["completion_percent"] = (
+                    round(sum(STATUS_PROGRESS.get(str(t.status), 0) for t in tasks) / total)
+                    if total > 0
+                    else 0
+                )
+            else:
+                d["task_count"] = 0
+                d["done_count"] = 0
+                d["completion_percent"] = 0
             result.append(d)
         return result
 
@@ -272,9 +283,17 @@ class AddProjectMemberUseCase:
         except ValueError:
             raise ValidationError(f"Invalid project role: {project_role_value}")
 
+        # Existing members — used for both the duplicate-guard and the
+        # single-Team-Lead check. One query covers both.
+        existing_members = self._project_repo.find_members(project_id)
+        for m in existing_members:
+            if m.user_id == target_user_id:
+                raise ValidationError(
+                    f"{target_user.name or target_user.email} is already a member of this project."
+                )
+
         # Only one TEAM_LEAD per project
         if project_role == ProjectRole.TEAM_LEAD:
-            existing_members = self._project_repo.find_members(project_id)
             for m in existing_members:
                 if m.project_role == ProjectRole.TEAM_LEAD:
                     raise ValidationError("This project already has a Team Lead. Please remove the current one before assigning a new one.")

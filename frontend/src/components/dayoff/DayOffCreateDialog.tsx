@@ -15,6 +15,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { TimePicker } from '@/components/ui/TimePicker'
 import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
 import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
+import { useTenant } from '@/lib/tenant/TenantProvider'
 import { cn } from '@/lib/utils'
 
 interface DayOffCreateDialogProps {
@@ -25,19 +26,44 @@ interface DayOffCreateDialogProps {
 }
 
 /**
- * Min-date helper: members can request day-off for today only if it's
- * before 5 PM IST; after that the earliest allowed is tomorrow. Kept in
- * sync with the admin policy that was in the original page.
+ * Min-date helper: members can request a day-off for today only if it's
+ * before 5 PM in the tenant's configured timezone. After that cutoff the
+ * earliest allowed is tomorrow. Falls back to browser-local time when the
+ * tenant hasn't picked a zone (first-time signup before settings save).
+ *
+ * Returns a `YYYY-MM-DD` string in the target zone — NOT in UTC — so the
+ * DatePicker's comparison against the user's local picker value works.
  */
-function earliestAllowedDate(): string {
+function earliestAllowedDate(timezone: string | undefined): string {
   const now = new Date()
-  const istHour = new Date(
-    now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })
-  ).getHours()
-  if (istHour < 17) return now.toISOString().slice(0, 10)
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
+  const zone = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
+  // Extract hour + Y-M-D in the tenant timezone. We can't rely on
+  // toISOString() because it always reports UTC.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: zone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+
+  const get = (k: string) => parts.find((p) => p.type === k)?.value ?? ''
+  const year = get('year')
+  const month = get('month')
+  const day = get('day')
+  const hour = Number(get('hour'))
+
+  const sameDay = `${year}-${month}-${day}`
+  if (hour < 17) return sameDay
+
+  // After cutoff → return tomorrow in the same zone.
+  const tomorrow = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)) + 86_400_000)
+  const ty = tomorrow.getUTCFullYear()
+  const tm = String(tomorrow.getUTCMonth() + 1).padStart(2, '0')
+  const td = String(tomorrow.getUTCDate()).padStart(2, '0')
+  return `${ty}-${tm}-${td}`
 }
 
 export function DayOffCreateDialog({
@@ -54,7 +80,12 @@ export function DayOffCreateDialog({
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
 
-  const minDate = earliestAllowedDate()
+  // Day-off policy follows the tenant's working timezone, not the user's
+  // browser. Prevents an ADMIN in New York silently bypassing an IST-based
+  // cutoff (or vice versa).
+  const { current } = useTenant()
+  const tenantTimezone = current?.settings?.timezone
+  const minDate = earliestAllowedDate(tenantTimezone)
 
   // Preserve the reason across accidental dialog closes / navigations.
   const reasonDraft = useAutosaveDraft('dayoff:reason', reason, {

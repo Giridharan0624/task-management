@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { useCreateTask } from '@/lib/hooks/useTasks'
 import { useProject } from '@/lib/hooks/useProjects'
 import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
+import { useTenant } from '@/lib/tenant/TenantProvider'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
@@ -12,6 +13,7 @@ import type { TaskPriority } from '@/types/task'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { TimePicker } from '@/components/ui/TimePicker'
 import { UserMultiSelect } from '@/components/ui/UserSelect'
+import { getLocalToday } from '@/lib/utils/date'
 
 interface CreateTaskModalProps {
   projectId: string
@@ -49,6 +51,13 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
   const currentPriority = watch('priority')
   const members = project?.members ?? []
 
+  // Default deadline time honors the tenant's working-hours start (#15) so
+  // a 9-to-5 org doesn't default to some other team's morning.
+  const { current: tenant } = useTenant()
+  const defaultDeadlineTime = tenant?.settings?.workingHoursStart || '09:00'
+
+  const todayLocal = getLocalToday()
+
   // Draft key is scoped per-project so switching projects doesn't leak
   // descriptions across unrelated workspaces.
   const descriptionDraftKey = `create-task:${projectId}:description`
@@ -68,13 +77,21 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
   const clearAll = () => setSelectedAssignees([])
 
   const onSubmit = async (values: FormValues) => {
-    const deadline = `${values.deadlineDate}T${values.deadlineTime || '09:00'}`
+    if (!values.deadlineDate) return
+    const time = values.deadlineTime || defaultDeadlineTime
+    const deadlineIso = `${values.deadlineDate}T${time}`
+    // Last-chance validation — UI's `min` prop can be bypassed via keyboard
+    // or pasted input. Compare the combined date+time to now.
+    if (new Date(deadlineIso).getTime() < Date.now()) {
+      alert('Deadline cannot be in the past. Please pick a later date or time.')
+      return
+    }
     await createTask.mutateAsync({
       title: values.title,
       description: values.description || undefined,
       status: 'TODO',
       priority: values.priority,
-      deadline,
+      deadline: deadlineIso,
       assignedTo: selectedAssignees.length > 0 ? selectedAssignees : undefined,
     })
     draft.clear()
@@ -152,7 +169,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
             <DatePicker
               value={watch('deadlineDate') || ''}
               onChange={(v) => setValue('deadlineDate', v, { shouldValidate: true })}
-              min={new Date().toISOString().slice(0, 10)}
+              min={todayLocal}
             />
             <TimePicker
               value={watch('deadlineTime') || ''}

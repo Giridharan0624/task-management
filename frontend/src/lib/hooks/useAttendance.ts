@@ -19,8 +19,13 @@ export function useMyAttendance() {
     queryKey: attendanceKeys.me,
     queryFn: async () => {
       const data = await getMyAttendance()
-      // If we have an optimistic sign-in timestamp, preserve it so the timer
-      // doesn't jump when the background refetch returns the server timestamp
+      // If an optimistic timestamp is still active (we're between
+      // click and the server's SignIn response), preserve it so the
+      // timer doesn't tick briefly then jump. As soon as useSignIn's
+      // onSuccess lands and clears the stamp, subsequent refetches
+      // return the server's canonical signInAt, which matches what
+      // the desktop app (and any other tab) uses — so cross-client
+      // time is consistent.
       if (_optimisticSignInAt && data && data.status === 'SIGNED_IN') {
         let patched = { ...data, currentSignInAt: _optimisticSignInAt }
         if (patched.sessions && patched.sessions.length > 0) {
@@ -34,8 +39,12 @@ export function useMyAttendance() {
       }
       return data
     },
-    staleTime: 15000,
-    refetchInterval: 15000,
+    // 5 s refetch so the web app picks up a desktop-initiated Stop
+    // (or another tab's Start) within 5 s instead of up to 15. The
+    // primary complaint was cross-client time disagreement — closer
+    // polling narrows the window in which two clients can disagree.
+    staleTime: 5000,
+    refetchInterval: 5000,
   })
 }
 
@@ -106,30 +115,20 @@ export function useSignIn() {
       return { previous }
     },
     onSuccess: (data) => {
-      if (data) {
-        // Keep the client-side timestamp so the timer doesn't jump
-        if (_optimisticSignInAt && data.status === 'SIGNED_IN') {
-          data = { ...data, currentSignInAt: _optimisticSignInAt }
-          // Also fix the last session's signInAt so getSessionHours works
-          if (data.sessions && data.sessions.length > 0) {
-            const lastIdx = data.sessions.length - 1
-            const lastSession = data.sessions[lastIdx]
-            if (!lastSession.signOutAt) {
-              data = {
-                ...data,
-                sessions: [
-                  ...data.sessions.slice(0, lastIdx),
-                  { ...lastSession, signInAt: _optimisticSignInAt },
-                ],
-              }
-            }
-          }
-        }
-        queryClient.setQueryData(attendanceKeys.me, data)
-      }
-      // Do NOT clear _optimisticSignInAt here — keep it alive so refetches
-      // (window focus, 60s interval) continue patching with the client timestamp.
-      // It gets cleared only on sign-out or error.
+      // The server has now confirmed the sign-in and returned the
+      // canonical signInAt. Commit the server payload as-is and drop
+      // the optimistic override — every client (this tab, other
+      // tabs, desktop app) then derives its timer from the same
+      // server timestamp, so cross-client "elapsed" agrees.
+      //
+      // Previously we kept _optimisticSignInAt alive for the whole
+      // session, which meant THIS tab used click-time forever while
+      // the desktop / other tabs used server-time. The resulting
+      // drift (sign-in RTT, typically 100 ms – 2 s) was invisible
+      // on short sessions and compounded to minutes on a full-day
+      // session viewed from two places.
+      _optimisticSignInAt = null
+      if (data) queryClient.setQueryData(attendanceKeys.me, data)
       queryClient.invalidateQueries({ queryKey: attendanceKeys.today })
     },
     onError: (_err, _vars, context) => {

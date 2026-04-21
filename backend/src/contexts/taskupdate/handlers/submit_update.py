@@ -16,6 +16,19 @@ def _get_ist_today() -> str:
     return datetime.now(IST).strftime("%Y-%m-%d")
 
 
+def _hms(hours: float) -> tuple[int, int, int]:
+    """Split fractional hours into whole (hours, minutes, seconds).
+
+    Uses rounded seconds to keep total_seconds round-trips stable — floor
+    alone loses up to a second per call which compounds across 50+ tasks.
+    """
+    total_seconds = round(hours * 3600)
+    h = total_seconds // 3600
+    m = (total_seconds % 3600) // 60
+    s = total_seconds % 60
+    return h, m, s
+
+
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
@@ -78,9 +91,8 @@ def handler(event, context):
         task_summary = []
         for task_name, data in task_data.items():
             hours = data["hours"]
-            h = int(hours)
-            m = int((hours - h) * 60)
-            time_str = f"{h}h {m}m" if m > 0 else f"{h}h"
+            h, m, s = _hms(hours)
+            time_str = f"{h}h {m}m {s}s"
             entry: dict = {"task_name": task_name, "time_recorded": time_str}
             if data["descriptions"]:
                 entry["description"] = "; ".join(data["descriptions"])
@@ -101,9 +113,8 @@ def handler(event, context):
 
         # Calculate total hours including any running session
         total_hours = sum(task_hours.values())
-        total_h = int(total_hours)
-        total_m = int((total_hours - total_h) * 60)
-        total_time = f"{total_h}h {total_m}m" if total_m > 0 else f"{total_h}h"
+        total_h, total_m, total_s = _hms(total_hours)
+        total_time = f"{total_h}h {total_m}m {total_s}s"
 
         update = TaskUpdate.create(
             user_id=auth.user_id,

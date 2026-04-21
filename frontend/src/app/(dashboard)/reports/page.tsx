@@ -61,6 +61,7 @@ import {
 import { ReportsStatStrip } from '@/components/reports/ReportsStatStrip'
 import { ActivityReport } from '@/components/reports/ActivityReport'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { buildCsvName } from '@/lib/utils/csvFilename'
 import type { Attendance } from '@/types/attendance'
 import { cn } from '@/lib/utils'
 
@@ -1207,7 +1208,7 @@ function DetailedView({
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `time-report-${rangeStart}-${rangeEnd}.csv`
+    a.download = buildCsvName('time-report', rangeStart, rangeEnd)
     a.click()
     URL.revokeObjectURL(url)
   }
