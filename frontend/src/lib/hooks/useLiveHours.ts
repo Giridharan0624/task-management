@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useMyAttendance } from './useAttendance'
+import { serverNow } from '@/lib/utils/serverClock'
 
 /**
  * Returns today's total hours that update live every second when the timer is running.
@@ -20,7 +21,10 @@ export function useLiveHours() {
       return
     }
     const tick = () => {
-      const elapsed = Math.max(0, (Date.now() - new Date(signInAt).getTime()) / 3600000)
+      // serverNow() so the live "today total" agrees with the
+      // LiveTimer and the desktop app (all three tick against the
+      // same server-sourced clock).
+      const elapsed = Math.max(0, (serverNow() - new Date(signInAt).getTime()) / 3600000)
       setLiveExtra(elapsed)
     }
     tick()

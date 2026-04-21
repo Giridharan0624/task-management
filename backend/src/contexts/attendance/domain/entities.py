@@ -219,4 +219,17 @@ class Attendance(BaseModel):
             "system_role": self.system_role,
             "status": "SIGNED_IN" if self.is_signed_in else "SIGNED_OUT",
             "session_count": len(self.sessions),
+            # Server-authoritative UTC timestamp at the moment this
+            # response is built. Clients use it as a clock reference —
+            # they record `offset = server_time - client_now_at_receive`
+            # and drive the Timer from `Date.now() + offset` instead of
+            # `Date.now()` directly. This immunizes cross-device display
+            # against OS clock drift (if device A's clock is 30 s off
+            # NTP and B's is synced, their timers still agree on
+            # elapsed time because both tick relative to the server).
+            #
+            # Non-breaking: a client that ignores this field continues
+            # to work exactly as before, just without the clock-drift
+            # correction.
+            "server_time": datetime.now(timezone.utc).isoformat(),
         }

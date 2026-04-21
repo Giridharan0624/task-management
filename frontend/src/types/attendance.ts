@@ -30,6 +30,11 @@ export interface Attendance {
   systemRole: string
   status: AttendanceStatus
   sessionCount: number
+  /** UTC ISO timestamp the backend stamped when it built this
+   *  response. Feeds serverClock so the Timer ticks against server
+   *  time, not the local OS clock. Optional — absent from old
+   *  backend responses pre the clock-sync change. */
+  serverTime?: string
 }
 
 export interface StartTimerData {

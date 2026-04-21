@@ -7,6 +7,7 @@ import {
   signOutFromWork,
 } from '@/lib/api/attendanceApi'
 import type { Attendance, StartTimerData } from '@/types/attendance'
+import { recordServerTime } from '@/lib/utils/serverClock'
 
 const attendanceKeys = {
   me: ['attendance', 'me'] as const,
@@ -19,6 +20,11 @@ export function useMyAttendance() {
     queryKey: attendanceKeys.me,
     queryFn: async () => {
       const data = await getMyAttendance()
+      // Refresh the server-clock offset on every poll. Cheap
+      // (just a Date.parse + arithmetic) and ensures the Timer
+      // keeps agreeing with server time even across long sessions
+      // where the local OS clock may drift. See serverClock.ts.
+      if (data?.serverTime) recordServerTime(data.serverTime)
       // If an optimistic timestamp is still active (we're between
       // click and the server's SignIn response), preserve it so the
       // timer doesn't tick briefly then jump. As soon as useSignIn's
@@ -128,7 +134,10 @@ export function useSignIn() {
       // on short sessions and compounded to minutes on a full-day
       // session viewed from two places.
       _optimisticSignInAt = null
-      if (data) queryClient.setQueryData(attendanceKeys.me, data)
+      if (data) {
+        if (data.serverTime) recordServerTime(data.serverTime)
+        queryClient.setQueryData(attendanceKeys.me, data)
+      }
       queryClient.invalidateQueries({ queryKey: attendanceKeys.today })
     },
     onError: (_err, _vars, context) => {
@@ -177,7 +186,10 @@ export function useSignOut() {
       return { previous }
     },
     onSuccess: (data) => {
-      if (data) queryClient.setQueryData(attendanceKeys.me, data)
+      if (data) {
+        if (data.serverTime) recordServerTime(data.serverTime)
+        queryClient.setQueryData(attendanceKeys.me, data)
+      }
       queryClient.invalidateQueries({ queryKey: attendanceKeys.today })
     },
     onError: (_err, _vars, context) => {
