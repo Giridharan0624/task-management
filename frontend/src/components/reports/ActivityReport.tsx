@@ -24,14 +24,18 @@ export function ActivityReport() {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
-  const [selectedUser, setSelectedUser] = useState('')
+  // Radix Select reserves the empty string for "clear selection", so the
+  // "All Members" option uses a sentinel instead.
+  const ALL_USERS = 'ALL'
+  const [selectedUser, setSelectedUser] = useState<string>(ALL_USERS)
 
   const { data: activities, isLoading } = useActivityReport(date, date)
   const { data: users } = useUsers()
 
   const filteredActivities = useMemo(() => {
     if (!activities) return []
-    if (selectedUser) return activities.filter(a => a.userId === selectedUser)
+    if (selectedUser !== ALL_USERS)
+      return activities.filter(a => a.userId === selectedUser)
     return activities
   }, [activities, selectedUser])
 
@@ -70,7 +74,7 @@ export function ActivityReport() {
         <FilterSelect
           value={selectedUser}
           onChange={setSelectedUser}
-          options={[{ value: '', label: 'All Members' }, ...userOptions]}
+          options={[{ value: ALL_USERS, label: 'All Members' }, ...userOptions]}
           placeholder="Filter by member"
           className="w-48"
         />

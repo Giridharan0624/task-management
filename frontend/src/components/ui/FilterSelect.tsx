@@ -22,6 +22,18 @@ export function FilterSelect({
   placeholder,
   active,
 }: FilterSelectProps) {
+  // Radix Select crashes if any <Item /> gets value="" — it reserves the
+  // empty string for "clear selection / show placeholder". Drop any such
+  // options defensively and warn in dev so the caller notices.
+  const safeOptions = options.filter((o) => o.value !== '')
+  if (process.env.NODE_ENV !== 'production' && safeOptions.length !== options.length) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[FilterSelect] Dropped options with empty-string `value`. ' +
+        'Use a sentinel like "ALL" for catch-all entries.'
+    )
+  }
+
   return (
     <SelectPrimitive.Root value={value} onValueChange={onChange}>
       <SelectPrimitive.Trigger
@@ -55,7 +67,7 @@ export function FilterSelect({
           )}
         >
           <SelectPrimitive.Viewport className="p-1">
-            {options.map((opt) => (
+            {safeOptions.map((opt) => (
               <SelectPrimitive.Item
                 key={opt.value}
                 value={opt.value}
