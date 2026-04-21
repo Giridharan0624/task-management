@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import {
   Search,
   X,
+  Clock,
   Download,
   User,
   Users,
@@ -574,6 +575,12 @@ export default function AttendancePage() {
 
           {visibleSummaries.length === 0 ? (
             <EmptyState
+              icon={
+                <Clock
+                  className="h-7 w-7 text-muted-foreground/70"
+                  strokeWidth={1.5}
+                />
+              }
               title={
                 memberSummaries.length === 0
                   ? 'No attendance records'

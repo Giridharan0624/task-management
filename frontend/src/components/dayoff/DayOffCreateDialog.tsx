@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { TimePicker } from '@/components/ui/TimePicker'
+import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
+import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
 import { cn } from '@/lib/utils'
 
 interface DayOffCreateDialogProps {
@@ -54,6 +56,16 @@ export function DayOffCreateDialog({
 
   const minDate = earliestAllowedDate()
 
+  // Preserve the reason across accidental dialog closes / navigations.
+  const reasonDraft = useAutosaveDraft('dayoff:reason', reason, {
+    enabled: open,
+  })
+  const pendingRestore = reasonDraft.pendingRestore
+  useEffect(() => {
+    if (!open) reasonDraft.dismissRestore()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   const canSubmit =
     reason.trim().length > 0 &&
     ((mode === 'single' && !!singleDate) ||
@@ -70,6 +82,7 @@ export function DayOffCreateDialog({
     } else {
       onCreate({ startDate, endDate, reason: reason.trim() })
     }
+    reasonDraft.clear()
   }
 
   const reset = () => {
@@ -98,6 +111,18 @@ export function DayOffCreateDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {pendingRestore && pendingRestore.value.trim() && (
+            <DraftRestoreBanner
+              savedAt={pendingRestore.savedAt}
+              onRestore={() => {
+                setReason(pendingRestore.value)
+                reasonDraft.dismissRestore()
+              }}
+              onDismiss={reasonDraft.dismissRestore}
+              entityLabel="day-off reason"
+            />
+          )}
+
           {/* Duration type */}
           <div>
             <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">

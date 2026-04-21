@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useCreateTask } from '@/lib/hooks/useTasks'
 import { useProject } from '@/lib/hooks/useProjects'
+import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
 import type { TaskPriority } from '@/types/task'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { TimePicker } from '@/components/ui/TimePicker'
@@ -41,10 +43,26 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: { priority: 'MEDIUM' },
+    mode: 'onTouched',
   })
 
   const currentPriority = watch('priority')
   const members = project?.members ?? []
+
+  // Draft key is scoped per-project so switching projects doesn't leak
+  // descriptions across unrelated workspaces.
+  const descriptionDraftKey = `create-task:${projectId}:description`
+  const description = watch('description') ?? ''
+  const draft = useAutosaveDraft(descriptionDraftKey, description, {
+    enabled: isOpen,
+  })
+  const pendingRestore = draft.pendingRestore
+  useEffect(() => {
+    // Clear the banner on close so reopening doesn't keep offering an
+    // already-restored / already-dismissed draft forever.
+    if (!isOpen) draft.dismissRestore()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   const selectAll = () => setSelectedAssignees(members.map((m) => m.userId))
   const clearAll = () => setSelectedAssignees([])
@@ -59,6 +77,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
       deadline,
       assignedTo: selectedAssignees.length > 0 ? selectedAssignees : undefined,
     })
+    draft.clear()
     reset()
     setSelectedAssignees([])
     onClose()
@@ -73,6 +92,21 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Create New Task" size="lg">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+        {pendingRestore && pendingRestore.value.trim() && (
+          <DraftRestoreBanner
+            savedAt={pendingRestore.savedAt}
+            onRestore={() => {
+              setValue('description', pendingRestore.value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+              draft.dismissRestore()
+            }}
+            onDismiss={draft.dismissRestore}
+            entityLabel="task description"
+          />
+        )}
 
         {/* Title */}
         <div>

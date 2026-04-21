@@ -44,6 +44,8 @@ import { UpcomingBirthdays } from '@/components/ui/BirthdayBanner'
 import { CommandPalette } from '@/components/ui/CommandPalette'
 import { Walkthrough } from '@/components/ui/Walkthrough'
 import { NotificationCenter } from '@/components/ui/NotificationCenter'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { OfflineBanner } from '@/components/ui/OfflineBanner'
 import { cn } from '@/lib/utils'
 import type { User } from '@/types/user'
 
@@ -302,7 +304,10 @@ function SidebarContent({
       {/* Navigation — items with `feature` are hidden when the tenant
           has that feature disabled. Missing entries default to enabled
           so a freshly-added feature isn't retroactively hidden. */}
-      <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-0.5">
+      <nav
+        aria-label="Primary"
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-0.5"
+      >
         {navItems
           .filter((item) => isFeatureEnabled(item.feature, features))
           .map((item) => {
@@ -467,6 +472,12 @@ export default function DashboardLayout({
 
   return (
     <TooltipProvider delayDuration={400}>
+      <a
+        href="#main-content"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-[100] focus-visible:rounded-lg focus-visible:bg-primary focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:font-semibold focus-visible:text-primary-foreground focus-visible:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <div className="flex h-screen bg-background">
         {/* Desktop sidebar — fixed 260px */}
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col border-r border-sidebar-border lg:flex safe-bottom">
@@ -504,6 +515,7 @@ export default function DashboardLayout({
 
         {/* Main content */}
         <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col lg:ml-[260px]">
+          <OfflineBanner />
           {/* Mobile top bar */}
           <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/80 px-4 py-3 backdrop-blur-lg lg:hidden">
             <Button
@@ -534,8 +546,12 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          <main className="w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
-            {children}
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 focus-visible:outline-none"
+          >
+            <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
           </main>
         </div>
 

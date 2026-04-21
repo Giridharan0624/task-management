@@ -14,9 +14,16 @@ import {
   Moon,
   KeyRound,
   CheckCircle2,
+  Globe2,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTheme } from '@/lib/theme/ThemeProvider'
+import {
+  useUserTimezone,
+  detectBrowserTimezone,
+  COMMON_TIMEZONES,
+} from '@/lib/hooks/useUserTimezone'
+import { Select } from '@/components/ui/Select'
 import { useMyTasks } from '@/lib/hooks/useUsers'
 import { useLiveHours } from '@/lib/hooks/useLiveHours'
 import { useProjects } from '@/lib/hooks/useProjects'
@@ -420,6 +427,7 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-up">
         <ThemeCard />
         <SecurityCard onChangePassword={() => setPwOpen(true)} />
+        <TimezoneCard />
       </div>
 
       <DesktopAppCard />
@@ -486,6 +494,49 @@ function ThemeCard() {
           icon={<Moon className="h-3.5 w-3.5" />}
           label="Dark"
         />
+      </div>
+    </Card>
+  )
+}
+
+function TimezoneCard() {
+  const { timezone, stored, setTimezone } = useUserTimezone()
+  const browser = detectBrowserTimezone()
+
+  // Make sure the currently-active tz is always in the dropdown even if
+  // it's not in the common list — otherwise the Select renders blank.
+  const options = COMMON_TIMEZONES.some((o) => o.value === timezone)
+    ? COMMON_TIMEZONES
+    : [{ value: timezone, label: timezone }, ...COMMON_TIMEZONES]
+
+  return (
+    <Card className="p-5">
+      <div className="mb-1 flex items-center gap-1.5">
+        <Globe2 className="h-3.5 w-3.5 text-muted-foreground" />
+        <h3 className="text-sm font-bold text-foreground">Time zone</h3>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Used to render all absolute-time tooltips and scheduling dialogs for
+        this device.
+      </p>
+      <Select
+        value={timezone}
+        onChange={(v) => setTimezone(v)}
+        options={options}
+      />
+      <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
+        <span>
+          Browser detected: <span className="font-mono">{browser}</span>
+        </span>
+        {stored && stored !== browser && (
+          <button
+            type="button"
+            onClick={() => setTimezone(null)}
+            className="text-primary hover:underline"
+          >
+            Reset to browser
+          </button>
+        )}
       </div>
     </Card>
   )

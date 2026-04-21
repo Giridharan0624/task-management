@@ -17,6 +17,7 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
+  Clock,
   Download,
   User,
   Users,
@@ -604,8 +605,14 @@ function SummaryView({
   if (records.length === 0) {
     return (
       <EmptyState
+        icon={
+          <Clock
+            className="h-7 w-7 text-muted-foreground/70"
+            strokeWidth={1.5}
+          />
+        }
         title="No time data"
-        description="Nothing was logged in the selected period."
+        description="Nothing was logged in the selected period. Try a different date range."
       />
     )
   }
@@ -1243,6 +1250,12 @@ function DetailedView({
       {memberGroups.length === 0 ? (
         <div className="p-4">
           <EmptyState
+            icon={
+              <Clock
+                className="h-7 w-7 text-muted-foreground/70"
+                strokeWidth={1.5}
+              />
+            }
             title="No sessions"
             description="Nothing was logged in this period."
             className="border-0 py-6"

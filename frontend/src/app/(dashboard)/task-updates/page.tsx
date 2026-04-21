@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { FileText } from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTaskUpdates } from '@/lib/hooks/useTaskUpdates'
 import { useUsers } from '@/lib/hooks/useUsers'
@@ -234,6 +235,12 @@ export default function TaskUpdatesPage() {
       ) : tab === 'submitted' ? (
         filteredSubmitted.length === 0 ? (
           <EmptyState
+            icon={
+              <FileText
+                className="h-7 w-7 text-muted-foreground/70"
+                strokeWidth={1.5}
+              />
+            }
             title={
               q
                 ? 'No matching updates'
@@ -245,7 +252,7 @@ export default function TaskUpdatesPage() {
               q
                 ? `Nothing matches "${search}"`
                 : isToday
-                  ? 'Daily updates will appear here as team members submit their summaries.'
+                  ? 'Daily updates will appear here as team members submit their summaries from the desktop app.'
                   : 'No one submitted a daily update on this date.'
             }
           />

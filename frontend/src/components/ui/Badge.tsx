@@ -12,15 +12,18 @@ const badgeVariants = cva(
         default: 'bg-muted text-muted-foreground ring-1 ring-inset ring-border',
         primary:
           'bg-primary/10 text-primary ring-1 ring-inset ring-primary/20',
+        // Dark-mode variants pair a 15% saturated tint background with a
+        // lightened foreground, which keeps contrast above WCAG AA on both
+        // the dark sidebar + dark card surfaces.
         success:
-          'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+          'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/25',
         warning:
-          'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
+          'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25',
         danger:
-          'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
-        info: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200',
+          'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/25',
+        info: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/25',
         neutral:
-          'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200',
+          'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/25',
         outline: 'border border-border text-foreground',
       },
       size: {
@@ -56,9 +59,10 @@ interface BadgeWithToneProps
 type BadgeProps = BadgeWithVariantProps | BadgeWithToneProps
 
 const priorityClasses: Record<string, string> = {
-  LOW: 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200',
-  MEDIUM: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-  HIGH: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
+  LOW: 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/25',
+  MEDIUM:
+    'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25',
+  HIGH: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/25',
 }
 
 const legacyClasses: Record<string, string> = {

@@ -5,6 +5,8 @@ import { Users, Clock } from 'lucide-react'
 import type { Project } from '@/types/project'
 import { getProjectColor } from '@/lib/utils/projectColor'
 import { Progress } from '@/components/ui/Progress'
+import { RelativeTime } from '@/components/ui/RelativeTime'
+import { usePrefetchProject } from '@/lib/hooks/usePrefetchProject'
 import { ProjectActionsMenu } from './ProjectActionsMenu'
 import { cn } from '@/lib/utils'
 
@@ -18,21 +20,6 @@ interface ProjectCardProps {
 
 function getGradient(name: string): string {
   return getProjectColor(name)
-}
-
-function relativeTime(iso?: string): string {
-  if (!iso) return ''
-  const ms = Date.now() - new Date(iso).getTime()
-  const days = Math.floor(ms / 86400000)
-  if (days < 1) return 'today'
-  if (days === 1) return '1 day ago'
-  if (days < 7) return `${days} days ago`
-  const weeks = Math.floor(days / 7)
-  if (weeks === 1) return '1 week ago'
-  if (weeks < 5) return `${weeks} weeks ago`
-  const months = Math.floor(days / 30)
-  if (months === 1) return '1 month ago'
-  return `${months} months ago`
 }
 
 const DOMAIN_PILL: Record<string, string> = {
@@ -49,6 +36,7 @@ export function ProjectCard({
   creatorName,
 }: ProjectCardProps) {
   const router = useRouter()
+  const prefetchProject = usePrefetchProject()
 
   const memberCount = project.memberCount ?? project.members?.length ?? 0
   const taskCount = project.taskCount ?? 0
@@ -69,6 +57,8 @@ export function ProjectCard({
   return (
     <div
       onClick={handleCardClick}
+      onMouseEnter={() => prefetchProject(project.projectId)}
+      onFocus={() => prefetchProject(project.projectId)}
       className="group hover-lift relative flex cursor-pointer flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:border-border/80 hover:shadow-md"
     >
       {/* Header */}
@@ -163,7 +153,7 @@ export function ProjectCard({
         </span>
         <span className="flex items-center gap-1.5">
           <Clock className="h-3 w-3" />
-          {relativeTime(lastActivity)}
+          <RelativeTime value={lastActivity} />
         </span>
       </div>
       {creatorName && (
@@ -186,4 +176,4 @@ function StatDot({ color, label }: { color: string; label: string }) {
   )
 }
 
-export { relativeTime, DOMAIN_PILL }
+export { DOMAIN_PILL }

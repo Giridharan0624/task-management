@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Avatar } from '@/components/ui/AvatarUpload'
+import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,9 @@ import { CreateTaskModal } from './CreateTaskModal'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useAdmins } from '@/lib/hooks/useUsers'
 import { useUpdateTask } from '@/lib/hooks/useTasks'
-import { isOverdue as checkOverdue, parseDeadline } from '@/lib/utils/deadline'
+import { usePrefetchTask } from '@/lib/hooks/usePrefetchTask'
+import { useToast } from '@/components/ui/Toast'
+import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { cn } from '@/lib/utils'
 
 interface TaskKanbanProps {
@@ -108,13 +111,6 @@ const SORT_LABELS: Record<SortOption, string> = {
   created: 'Newest',
 }
 
-function safeDeadlineLabel(deadline: string): string | null {
-  if (!deadline) return null
-  const d = parseDeadline(deadline)
-  if (!d || isNaN(d.getTime())) return null
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 export function TaskKanban({
   projectId,
   tasks,
@@ -143,6 +139,16 @@ export function TaskKanban({
 
   const { data: admins } = useAdmins()
   const updateTask = useUpdateTask(projectId)
+  const toast = useToast()
+  const changeStatusWithUndo = (taskId: string, prev: string, next: string) => {
+    updateTask.mutate({ taskId, data: { status: next as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
+    if (prev !== next) {
+      const label = TASK_STATUS_LABEL[next] ?? next
+      toast.undoable(`Status changed to ${label}`, () => {
+        updateTask.mutate({ taskId, data: { status: prev as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
+      })
+    }
+  }
 
   const nameMap = useMemo(() => {
     const m = new Map<string, { name: string; avatarUrl?: string }>()
@@ -538,10 +544,7 @@ export function TaskKanban({
                           }
                           onSelect={() => setSelectedTaskId(task.taskId)}
                           onStatusChange={(status) =>
-                            updateTask.mutate({
-                              taskId: task.taskId,
-                              data: { status },
-                            })
+                            changeStatusWithUndo(task.taskId, task.status, status)
                           }
                           statusOptions={statusOptions}
                           resolveUser={resolveUser}
@@ -636,8 +639,8 @@ function TaskRow({
 }: TaskRowProps) {
   const overdue = checkOverdue(task.deadline, task.status)
   const progressPct = getStatusProgress(task.status, domain)
-  const deadlineLabel = safeDeadlineLabel(task.deadline)
   const assignees = task.assignedTo ?? []
+  const prefetchTask = usePrefetchTask()
 
   return (
     <div
@@ -648,6 +651,8 @@ function TaskRow({
         if (t.closest('button, [role="menuitem"], [data-no-row-click]')) return
         onSelect()
       }}
+      onMouseEnter={() => task.projectId && prefetchTask(task.projectId, task.taskId)}
+      onFocus={() => task.projectId && prefetchTask(task.projectId, task.taskId)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -694,17 +699,14 @@ function TaskRow({
             <Progress value={progressPct} className="h-1 w-24" />
             <span className="shrink-0 tabular-nums">{progressPct}%</span>
           </div>
-          {deadlineLabel && (
+          {task.deadline && (
             <>
               <span className="text-muted-foreground/40">·</span>
-              <span
-                className={cn(
-                  'tabular-nums',
-                  overdue ? 'font-semibold text-destructive' : ''
-                )}
-              >
-                {deadlineLabel}
-              </span>
+              <DeadlineLabel
+                deadline={task.deadline}
+                status={task.status}
+                compact
+              />
             </>
           )}
         </div>

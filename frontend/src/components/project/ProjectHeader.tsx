@@ -12,6 +12,7 @@ import {
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { Card } from '@/components/ui/Card'
 import { Progress } from '@/components/ui/Progress'
+import { RelativeTime } from '@/components/ui/RelativeTime'
 import { getProjectColor } from '@/lib/utils/projectColor'
 import { DOMAIN_LABELS, type TaskDomain } from '@/types/task'
 import type { Project } from '@/types/project'
@@ -75,22 +76,6 @@ const HEALTH_STYLES: Record<
   },
 }
 
-function relativeTime(iso?: string): string {
-  if (!iso) return ''
-  const ms = Date.now() - new Date(iso).getTime()
-  const days = Math.floor(ms / 86400000)
-  if (days < 1) return 'today'
-  if (days === 1) return 'yesterday'
-  if (days < 7) return `${days} days ago`
-  const weeks = Math.floor(days / 7)
-  if (weeks === 1) return '1 week ago'
-  if (weeks < 5) return `${weeks} weeks ago`
-  const months = Math.floor(days / 30)
-  if (months === 1) return '1 month ago'
-  if (months < 12) return `${months} months ago`
-  const years = Math.floor(days / 365)
-  return years === 1 ? '1 year ago' : `${years} years ago`
-}
 
 export function ProjectHeader({
   project,
@@ -184,12 +169,12 @@ export function ProjectHeader({
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <Calendar className="h-3 w-3" />
-                  Created {relativeTime(project.createdAt)}
+                  Created <RelativeTime value={project.createdAt} />
                 </span>
                 {project.updatedAt && project.updatedAt !== project.createdAt && (
                   <span className="inline-flex items-center gap-1.5">
                     <RefreshCw className="h-3 w-3" />
-                    Updated {relativeTime(project.updatedAt)}
+                    Updated <RelativeTime value={project.updatedAt} />
                   </span>
                 )}
                 {creatorName && (

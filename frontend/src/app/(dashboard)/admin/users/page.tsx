@@ -12,6 +12,7 @@ import {
 import { useTodayAttendance } from '@/lib/hooks/useAttendance'
 import { useAllDayOffs } from '@/lib/hooks/useDayOffs'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
+import { useUrlParam } from '@/lib/hooks/useUrlState'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -26,7 +27,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, UserPlus, Users as UsersIcon } from 'lucide-react'
 import { LiveDot } from '@/components/ui/LiveDot'
 import {
   UsersToolbar,
@@ -60,13 +61,14 @@ export default function UsersPage() {
   const [inviteError, setInviteError] = useState('')
   const [progressUser, setProgressUser] = useState<string | null>(null)
   const [viewUser, setViewUser] = useState<User | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [deptFilter, setDeptFilter] = useState<string>('ALL')
-  const [sortBy, setSortBy] = useState<UsersSort>('name')
+  const [searchQuery, setSearchQuery] = useUrlParam<string>('q', '')
+  const [deptFilter, setDeptFilter] = useUrlParam<string>('dept', 'ALL')
+  const [sortBy, setSortBy] = useUrlParam<UsersSort>('sort', 'name')
   const [error, setError] = useState('')
 
   const isOwner = currentUser?.systemRole === 'OWNER'
-  const [scope, setScope] = useState<UsersScope>(
+  const [scope, setScope] = useUrlParam<UsersScope>(
+    'scope',
     isOwner ? 'management' : 'members'
   )
 
@@ -341,11 +343,45 @@ export default function UsersPage() {
 
       {displayedUsers.length === 0 ? (
         <EmptyState
+          icon={
+            <UsersIcon
+              className="h-7 w-7 text-muted-foreground/70"
+              strokeWidth={1.5}
+            />
+          }
           title={canClear ? 'No users match your filters' : 'No users yet'}
           description={
             canClear
               ? 'Try clearing filters or switching scope.'
-              : `Click "${isOwner ? 'Add user' : 'Add member'}" to create one.`
+              : `Invite teammates by email, or create them directly from here.`
+          }
+          action={
+            !canClear ? (
+              <div className="flex gap-2">
+                <Button onClick={() => setShowAddUser(true)}>
+                  <UserPlus className="h-3.5 w-3.5" />
+                  {isOwner ? 'Add user' : 'Add member'}
+                </Button>
+                {isOwner && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowInvite(true)}
+                  >
+                    Send invite
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSearchQuery('')
+                  setDeptFilter('ALL')
+                }}
+              >
+                Clear filters
+              </Button>
+            )
           }
         />
       ) : (

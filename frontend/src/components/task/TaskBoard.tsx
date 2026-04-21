@@ -3,7 +3,9 @@
 import { useMemo } from 'react'
 import { Folder } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { usePrefetchTask } from '@/lib/hooks/usePrefetchTask'
 import {
   TASK_STATUS_COLORS,
   TASK_STATUS_LABEL,
@@ -148,11 +150,13 @@ function BoardCard({
   task: MyTask
   onClick: () => void
 }) {
-  const overdue = checkOverdue(task.deadline, task.status)
+  const prefetchTask = usePrefetchTask()
   return (
     <button
       type="button"
       onClick={onClick}
+      onMouseEnter={() => prefetchTask(task.projectId, task.taskId)}
+      onFocus={() => prefetchTask(task.projectId, task.taskId)}
       className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex items-start gap-2">
@@ -172,21 +176,16 @@ function BoardCard({
         <span className="truncate">{task.projectName}</span>
       </div>
       <div className="flex items-center justify-between">
-        <span
-          className={cn(
-            'text-[10px]',
-            overdue
-              ? 'font-bold text-destructive'
-              : 'text-muted-foreground'
-          )}
-        >
-          {task.deadline
-            ? new Date(task.deadline).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              }) + (overdue ? ' · overdue' : '')
-            : 'No deadline'}
-        </span>
+        {task.deadline ? (
+          <DeadlineLabel
+            deadline={task.deadline}
+            status={task.status}
+            compact
+            className="text-[10px]"
+          />
+        ) : (
+          <span className="text-[10px] text-muted-foreground">No deadline</span>
+        )}
         <Badge className={PRIORITY_COLORS[task.priority]}>
           {task.priority}
         </Badge>

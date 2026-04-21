@@ -36,7 +36,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>()
+  } = useForm<FormValues>({ mode: 'onTouched' })
 
   // Filter to non-OWNER users for team selection
   const availableUsers = (allUsers ?? []).filter((u) => u.systemRole !== 'OWNER')

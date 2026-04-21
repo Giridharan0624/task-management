@@ -3,13 +3,15 @@
 import { useMemo, useState } from 'react'
 import { AlertCircle, FolderPlus } from 'lucide-react'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
-import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/lib/auth/AuthProvider'
-import { useProjects, useDeleteProject } from '@/lib/hooks/useProjects'
+import { useProjects, projectKeys } from '@/lib/hooks/useProjects'
+import { deleteProject as deleteProjectApi } from '@/lib/api/projectApi'
+import { useUndoableDelete } from '@/lib/hooks/useUndoableDelete'
 import { useUsers } from '@/lib/hooks/useUsers'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
+import { useUrlParam } from '@/lib/hooks/useUrlState'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Spinner } from '@/components/ui/Spinner'
+import { SkeletonCard } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -49,16 +51,23 @@ export function ProjectList() {
   const systemPerms = useSystemPermission(user?.systemRole)
   const { data: projects, isLoading, error } = useProjects()
   const { data: allUsers } = useUsers()
-  const deleteProject = useDeleteProject()
   const confirm = useConfirm()
-  const toast = useToast()
+
+  // Delete with 5s undo window: hide now, DELETE fires after delay unless
+  // the user hits Undo.
+  const undoableDelete = useUndoableDelete<Project, 'projectId'>({
+    queryKey: projectKeys.all,
+    idKey: 'projectId',
+    commit: (projectId) => deleteProjectApi(projectId),
+    entityLabel: 'Project',
+  })
 
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [search, setSearch] = useState('')
-  const [domain, setDomain] = useState<ProjectDomainFilter>('ALL')
-  const [status, setStatus] = useState<ProjectStatusFilter>('ALL')
-  const [sort, setSort] = useState<ProjectSort>('recent')
-  const [view, setView] = useState<ProjectView>('grid')
+  const [search, setSearch] = useUrlParam<string>('q', '')
+  const [domain, setDomain] = useUrlParam<ProjectDomainFilter>('domain', 'ALL')
+  const [status, setStatus] = useUrlParam<ProjectStatusFilter>('status', 'ALL')
+  const [sort, setSort] = useUrlParam<ProjectSort>('sort', 'recent')
+  const [view, setView] = useUrlParam<ProjectView>('view', 'grid')
 
   const nameMap = useMemo(() => {
     const m = new Map<string, string>()
@@ -125,25 +134,31 @@ export function ProjectList() {
     const confirmed = await confirm({
       title: `Delete ${p.name}?`,
       description:
-        'This permanently deletes the project and all its tasks. This action cannot be undone.',
+        'This deletes the project and all its tasks. You have 5 seconds to undo.',
       confirmLabel: 'Delete project',
       variant: 'danger',
     })
     if (!confirmed) return
-    try {
-      await deleteProject.mutateAsync(projectId)
-      toast.success('Project deleted')
-    } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to delete project'
-      )
-    }
+    undoableDelete(p)
   }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner size="lg" />
+      <div className="flex w-full max-w-7xl flex-col gap-5 animate-fade-in">
+        <div className="space-y-2">
+          <div className="h-6 w-32 animate-pulse rounded bg-muted" />
+          <div className="h-3 w-48 animate-pulse rounded bg-muted/60" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       </div>
     )
   }

@@ -8,6 +8,7 @@ import { TeamPulseStrip } from '@/components/dashboard/TeamPulseStrip'
 import { WhoIsWorking } from '@/components/dashboard/WhoIsWorking'
 import { TopProjects } from '@/components/dashboard/TopProjects'
 import { QuickActions } from '@/components/dashboard/QuickActions'
+import { SetupChecklist } from '@/components/dashboard/SetupChecklist'
 import { MemberDashboard } from './MemberDashboard'
 
 export default function DashboardPage() {
@@ -27,6 +28,10 @@ export default function DashboardPage() {
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-5 animate-fade-in">
+      {/* First-run checklist — hides itself when all steps done or dismissed.
+          Owner-only: members/admins don't have permission for every step. */}
+      {dashboardRole === 'OWNER' && <SetupChecklist />}
+
       {/* 1. Today hero — greeting + action CTAs */}
       <TodayHero userName={user.name} role={dashboardRole} />
 

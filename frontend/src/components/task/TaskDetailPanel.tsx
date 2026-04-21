@@ -3,7 +3,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
-import { useUpdateTask, useDeleteTask, useAssignTask } from '@/lib/hooks/useTasks'
+import { useUpdateTask, useAssignTask, taskKeys } from '@/lib/hooks/useTasks'
+import { deleteTask as deleteTaskApi } from '@/lib/api/taskApi'
+import { useUndoableDelete } from '@/lib/hooks/useUndoableDelete'
 import { useComments, useCreateComment } from '@/lib/hooks/useComments'
 import { useProject } from '@/lib/hooks/useProjects'
 import { useAdmins, useUsers } from '@/lib/hooks/useUsers'
@@ -13,6 +15,11 @@ import { TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_STATUSES, DOMAIN_OPTION
 import type { TaskDomain } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { useToast } from '@/components/ui/Toast'
+import { RelativeTime } from '@/components/ui/RelativeTime'
+import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
+import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
+import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -101,13 +108,37 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   const { user } = useAuth()
   const { data: project } = useProject(projectId)
   const updateTask = useUpdateTask(projectId)
-  const deleteTask = useDeleteTask(projectId)
   const assignTask = useAssignTask(projectId)
+  const toast = useToast()
+  const undoableDeleteTask = useUndoableDelete<Task, 'taskId'>({
+    queryKey: taskKeys.all(projectId),
+    idKey: 'taskId',
+    commit: (taskId) => deleteTaskApi(projectId, taskId),
+    invalidate: [['my-tasks'], ['projects']],
+    entityLabel: 'Task',
+  })
   const [isEditing, setIsEditing] = useState(false)
   const [showAssignInput, setShowAssignInput] = useState(false)
   const [selectedAssignee, setSelectedAssignee] = useState('')
   const [commentText, setCommentText] = useState('')
   const [statusUpdating, setStatusUpdating] = useState(false)
+
+  // Autosave comment draft per-task so a half-typed comment survives
+  // accidentally closing the panel.
+  const commentDraftKey = task ? `comment:${task.taskId}` : 'comment:none'
+  const commentDraft = useAutosaveDraft(commentDraftKey, commentText, {
+    enabled: !!task,
+  })
+  // Silently re-hydrate the textarea on mount when a draft is available.
+  // The "banner" pattern is overkill for one-line comments — showing the
+  // text back is enough signal on its own.
+  useEffect(() => {
+    if (commentDraft.pendingRestore?.value && !commentText) {
+      setCommentText(commentDraft.pendingRestore.value)
+      commentDraft.dismissRestore()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commentDraft.pendingRestore?.value])
 
   const { data: comments } = useComments(projectId, task?.taskId ?? '')
   const createComment = useCreateComment(projectId, task?.taskId ?? '')
@@ -145,7 +176,21 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     watch,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<EditFormValues>()
+  } = useForm<EditFormValues>({ mode: 'onTouched' })
+
+  // Autosave the edit-form description while in edit mode, keyed per task.
+  const editDescriptionDraftKey = task
+    ? `task:edit:${task.taskId}:description`
+    : 'task:edit:none'
+  const editDescription = watch('description') ?? ''
+  const editDraft = useAutosaveDraft(
+    editDescriptionDraftKey,
+    editDescription,
+    {
+      enabled: isEditing && !!task,
+      emptyValue: task?.description ?? '',
+    }
+  )
 
   // Reset form when a DIFFERENT task is selected (not on every data refetch)
   const taskId = task?.taskId ?? null
@@ -180,6 +225,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   if (!task) return null
 
   const handleSave = async (values: EditFormValues) => {
+    editDraft.clear()
     await updateTask.mutateAsync({
       taskId: task.taskId,
       data: {
@@ -195,8 +241,13 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
   }
 
   const handleDelete = async () => {
-    if (!await confirm({ title: 'Delete Task', description: 'This task will be permanently deleted. This cannot be undone.', confirmLabel: 'Delete' })) return
-    await deleteTask.mutateAsync(task.taskId)
+    if (!await confirm({
+      title: 'Delete Task',
+      description: 'You have 5 seconds to undo after the task is hidden.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })) return
+    undoableDeleteTask(task)
     onClose()
   }
 
@@ -217,12 +268,26 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     if (!commentText.trim()) return
     await createComment.mutateAsync(commentText.trim())
     setCommentText('')
+    commentDraft.clear()
   }
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
     setStatusUpdating(true)
+    const previousStatus = task.status
     try {
       await updateTask.mutateAsync({ taskId: task.taskId, data: { status: newStatus } })
+      if (previousStatus !== newStatus) {
+        const newLabel = TASK_STATUS_LABEL[newStatus] ?? newStatus
+        toast.undoable(
+          `Status changed to ${newLabel}`,
+          () => {
+            updateTask.mutate({
+              taskId: task.taskId,
+              data: { status: previousStatus },
+            })
+          }
+        )
+      }
     } finally {
       setStatusUpdating(false)
     }
@@ -278,6 +343,23 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
         <div className="flex-1 px-6 py-5 overflow-y-auto min-h-0">
           {isEditing ? (
             <form onSubmit={handleSubmit(handleSave)} className="flex flex-col gap-5">
+              {editDraft.pendingRestore &&
+                editDraft.pendingRestore.value.trim() &&
+                editDraft.pendingRestore.value !== (task.description ?? '') && (
+                  <DraftRestoreBanner
+                    savedAt={editDraft.pendingRestore.savedAt}
+                    onRestore={() => {
+                      const v = editDraft.pendingRestore?.value ?? ''
+                      setValue('description', v, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                      editDraft.dismissRestore()
+                    }}
+                    onDismiss={editDraft.dismissRestore}
+                    entityLabel="description edit"
+                  />
+                )}
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Title</label>
                 <input
@@ -295,7 +377,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   className="w-full rounded-lg border border-border/80 bg-card px-3.5 py-2.5 text-[13px] text-foreground/85 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition-all"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4 stagger-up">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 stagger-up">
                 <div>
                   <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Priority</label>
                   <Select
@@ -403,10 +485,15 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
               <div className="grid grid-cols-2 gap-2 mb-5">
                 <div className="bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
                   <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">Deadline</p>
-                  <p className={`text-[12px] font-semibold mt-0.5 ${isOverdue ? 'text-red-600' : 'text-foreground/95'}`}>
-                    {task.deadline
-                      ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : '—'}
+                  <p className="text-[12px] font-semibold mt-0.5">
+                    {task.deadline ? (
+                      <DeadlineLabel
+                        deadline={task.deadline}
+                        status={task.status}
+                      />
+                    ) : (
+                      <span className="text-foreground/95">—</span>
+                    )}
                   </p>
                 </div>
                 <div className="bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
@@ -483,9 +570,10 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-[12px] font-bold text-foreground/95">{resolveName(comment.authorId)}</span>
-                            <span className="text-[10px] text-muted-foreground/70">
-                              {new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                            <RelativeTime
+                              value={comment.createdAt}
+                              className="text-[10px] text-muted-foreground/70"
+                            />
                           </div>
                           <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-wrap">{comment.message}</p>
                         </div>

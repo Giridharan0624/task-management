@@ -3,6 +3,7 @@
 import { Clock, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { parseDeadline } from '@/lib/utils/deadline'
+import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
 import { TASK_STATUS_LABEL } from '@/types/task'
 import type { Task } from '@/types/task'
 import { cn } from '@/lib/utils'
@@ -58,23 +59,11 @@ export function ProjectUpcomingDeadlines({
             (deadlineDay.getTime() - todayStart.getTime()) /
               (1000 * 60 * 60 * 24)
           )
-          const urgencyLabel = isOverdue
-            ? `${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''} overdue`
-            : diffDays === 0
-              ? 'Due today'
-              : diffDays === 1
-                ? 'Due tomorrow'
-                : `${diffDays} days left`
           const dot = isOverdue
             ? 'bg-destructive'
             : diffDays <= 2
               ? 'bg-amber-500'
               : 'bg-blue-500'
-          const urgencyText = isOverdue
-            ? 'text-destructive'
-            : diffDays <= 2
-              ? 'text-amber-700'
-              : 'text-muted-foreground'
           return (
             <li
               key={t.taskId}
@@ -94,20 +83,11 @@ export function ProjectUpcomingDeadlines({
               <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">
                 {TASK_STATUS_LABEL[t.status] ?? t.status}
               </span>
-              <span
-                className={cn(
-                  'shrink-0 text-[11px] font-semibold tabular-nums',
-                  urgencyText
-                )}
-              >
-                {urgencyLabel}
-              </span>
-              <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-                {t.deadlineDate.toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </span>
+              <DeadlineLabel
+                deadline={t.deadline}
+                status={t.status}
+                className="shrink-0 text-[11px] font-semibold"
+              />
             </li>
           )
         })}

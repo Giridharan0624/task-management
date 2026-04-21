@@ -6,9 +6,12 @@ import {
   X,
   Plus,
   Check,
+  CheckCircle2,
   XCircle,
   Filter,
   ArrowDownUp,
+  Inbox,
+  CalendarCheck2,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import {
@@ -597,6 +600,12 @@ export default function DayOffsPage() {
               </div>
             ) : !pendingDayOffs?.length ? (
               <EmptyState
+                icon={
+                  <CheckCircle2
+                    className="h-7 w-7 text-emerald-500/80"
+                    strokeWidth={1.5}
+                  />
+                }
                 title="No pending approvals"
                 description="All requests have been reviewed. You're all caught up."
               />
@@ -734,11 +743,30 @@ export default function DayOffsPage() {
               </div>
             ) : filteredAll.length === 0 ? (
               <EmptyState
+                icon={
+                  <Inbox
+                    className="h-7 w-7 text-muted-foreground/70"
+                    strokeWidth={1.5}
+                  />
+                }
                 title="No requests found"
                 description={
                   search || statusFilter !== 'ALL'
                     ? 'Try clearing filters to see more requests.'
                     : 'No day-off requests have been submitted yet.'
+                }
+                action={
+                  search || statusFilter !== 'ALL' ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setSearch('')
+                        setStatusFilter('ALL')
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  ) : undefined
                 }
               />
             ) : (

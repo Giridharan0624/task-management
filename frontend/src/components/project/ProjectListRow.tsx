@@ -5,8 +5,10 @@ import { Users, Clock } from 'lucide-react'
 import type { Project } from '@/types/project'
 import { getProjectColor } from '@/lib/utils/projectColor'
 import { Progress } from '@/components/ui/Progress'
+import { RelativeTime } from '@/components/ui/RelativeTime'
+import { usePrefetchProject } from '@/lib/hooks/usePrefetchProject'
 import { ProjectActionsMenu } from './ProjectActionsMenu'
-import { relativeTime, DOMAIN_PILL } from './ProjectCard'
+import { DOMAIN_PILL } from './ProjectCard'
 import { cn } from '@/lib/utils'
 
 interface ProjectListRowProps {
@@ -21,6 +23,7 @@ export function ProjectListRow({
   onDelete,
 }: ProjectListRowProps) {
   const router = useRouter()
+  const prefetchProject = usePrefetchProject()
   const memberCount = project.memberCount ?? project.members?.length ?? 0
   const taskCount = project.taskCount ?? 0
   const completionPercent = project.completionPercent ?? 0
@@ -36,8 +39,11 @@ export function ProjectListRow({
   return (
     <div
       onClick={handleClick}
+      onMouseEnter={() => prefetchProject(project.projectId)}
+      onFocus={() => prefetchProject(project.projectId)}
+      tabIndex={0}
       className={cn(
-        'group grid cursor-pointer items-center gap-4 border-b border-border/60 px-5 py-3 transition-colors last:border-b-0 hover:bg-muted/30',
+        'group grid cursor-pointer items-center gap-4 border-b border-border/60 px-5 py-3 transition-colors last:border-b-0 hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none',
         'grid-cols-[minmax(0,1fr)_110px_140px_100px_40px]',
         'md:grid-cols-[minmax(0,1fr)_110px_160px_80px_100px_40px]'
       )}
@@ -109,7 +115,7 @@ export function ProjectListRow({
       {/* Last activity (hidden on narrow) */}
       <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
         <Clock className="h-3 w-3" />
-        <span className="truncate">{relativeTime(lastActivity)}</span>
+        <RelativeTime value={lastActivity} className="truncate" />
       </div>
 
       {/* Actions */}

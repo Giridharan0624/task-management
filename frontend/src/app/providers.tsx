@@ -8,6 +8,7 @@ import { TenantDocumentTitle } from '@/lib/tenant/TenantDocumentTitle'
 import { ThemeProvider } from '@/lib/theme/ThemeProvider'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -25,13 +26,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TenantProvider>
-          <TenantDocumentTitle />
-          <AuthProvider><ToastProvider><ConfirmProvider>{children}</ConfirmProvider></ToastProvider></AuthProvider>
-        </TenantProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TenantProvider>
+            <TenantDocumentTitle />
+            <AuthProvider><ToastProvider><ConfirmProvider>{children}</ConfirmProvider></ToastProvider></AuthProvider>
+          </TenantProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

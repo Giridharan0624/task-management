@@ -33,7 +33,7 @@ export default function AcceptInvitePage({
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>()
+  } = useForm<FormValues>({ mode: 'onTouched' })
 
   const password = watch('password', '')
 

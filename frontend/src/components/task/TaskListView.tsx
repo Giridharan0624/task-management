@@ -5,15 +5,17 @@ import Link from 'next/link'
 import {
   KanbanSquare,
   AlertCircle,
-  CalendarClock,
   Folder,
   Layers,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Progress } from '@/components/ui/Progress'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/Tooltip'
+import { usePrefetchTask } from '@/lib/hooks/usePrefetchTask'
 import { getProjectColor } from '@/lib/utils/projectColor'
 import { parseDeadline, isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import {
@@ -32,6 +34,13 @@ interface TaskListViewProps {
   showAssignee: boolean
   resolveName: (userId: string) => string
   onSelectTask: (task: MyTask) => void
+  /** Optional multi-select — when passed, a checkbox column is shown. */
+  selection?: {
+    isSelected: (taskId: string) => boolean
+    toggle: (taskId: string) => void
+    selectAll: (taskIds: string[]) => void
+    isAllSelected: (taskIds: string[]) => boolean
+  }
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -55,6 +64,7 @@ export function TaskListView({
   showAssignee,
   resolveName,
   onSelectTask,
+  selection,
 }: TaskListViewProps) {
   if (tasks.length === 0) {
     return (
@@ -66,9 +76,20 @@ export function TaskListView({
   }
 
   if (groupBy === 'none') {
+    const ids = tasks.map((t) => t.taskId)
     return (
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-        <TaskTableHeader showAssignee={showAssignee} />
+        <TaskTableHeader
+          showAssignee={showAssignee}
+          selection={
+            selection
+              ? {
+                  isAllSelected: selection.isAllSelected(ids),
+                  onToggleAll: () => selection.selectAll(ids),
+                }
+              : undefined
+          }
+        />
         <ul className="divide-y divide-border/60">
           {tasks.map((task) => (
             <TaskRow
@@ -77,6 +98,14 @@ export function TaskListView({
               showAssignee={showAssignee}
               resolveName={resolveName}
               onSelect={() => onSelectTask(task)}
+              selection={
+                selection
+                  ? {
+                      isSelected: selection.isSelected(task.taskId),
+                      toggle: () => selection.toggle(task.taskId),
+                    }
+                  : undefined
+              }
             />
           ))}
         </ul>
@@ -88,40 +117,79 @@ export function TaskListView({
 
   return (
     <div className="space-y-3">
-      {groups.map((group) => (
-        <div
-          key={group.key}
-          className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
-        >
-          <GroupHeader group={group} />
-          <TaskTableHeader showAssignee={showAssignee} />
-          <ul className="divide-y divide-border/60">
-            {group.tasks.map((task) => (
-              <TaskRow
-                key={task.taskId}
-                task={task}
-                showAssignee={showAssignee}
-                resolveName={resolveName}
-                onSelect={() => onSelectTask(task)}
-              />
-            ))}
-          </ul>
-        </div>
-      ))}
+      {groups.map((group) => {
+        const groupIds = group.tasks.map((t) => t.taskId)
+        return (
+          <div
+            key={group.key}
+            className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+          >
+            <GroupHeader group={group} />
+            <TaskTableHeader
+              showAssignee={showAssignee}
+              selection={
+                selection
+                  ? {
+                      isAllSelected: selection.isAllSelected(groupIds),
+                      onToggleAll: () => selection.selectAll(groupIds),
+                    }
+                  : undefined
+              }
+            />
+            <ul className="divide-y divide-border/60">
+              {group.tasks.map((task) => (
+                <TaskRow
+                  key={task.taskId}
+                  task={task}
+                  showAssignee={showAssignee}
+                  resolveName={resolveName}
+                  onSelect={() => onSelectTask(task)}
+                  selection={
+                    selection
+                      ? {
+                          isSelected: selection.isSelected(task.taskId),
+                          toggle: () => selection.toggle(task.taskId),
+                        }
+                      : undefined
+                  }
+                />
+              ))}
+            </ul>
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-function TaskTableHeader({ showAssignee }: { showAssignee: boolean }) {
+function TaskTableHeader({
+  showAssignee,
+  selection,
+}: {
+  showAssignee: boolean
+  selection?: { isAllSelected: boolean; onToggleAll: () => void }
+}) {
+  const gridCols = selection
+    ? showAssignee
+      ? 'grid-cols-[28px_minmax(0,1fr)_140px_120px_100px_70px]'
+      : 'grid-cols-[28px_minmax(0,1fr)_120px_100px_70px]'
+    : showAssignee
+      ? 'grid-cols-[minmax(0,1fr)_140px_120px_100px_70px]'
+      : 'grid-cols-[minmax(0,1fr)_120px_100px_70px]'
   return (
     <div
       className={cn(
         'hidden md:grid items-center gap-4 border-b border-border/60 bg-muted/30 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground',
-        showAssignee
-          ? 'grid-cols-[minmax(0,1fr)_140px_120px_100px_70px]'
-          : 'grid-cols-[minmax(0,1fr)_120px_100px_70px]'
+        gridCols
       )}
     >
+      {selection && (
+        <Checkbox
+          checked={selection.isAllSelected}
+          onCheckedChange={selection.onToggleAll}
+          aria-label="Select all tasks"
+        />
+      )}
       <span>Task</span>
       {showAssignee && <span>Assignee</span>}
       <span>Status</span>
@@ -136,23 +204,37 @@ function TaskRow({
   showAssignee,
   resolveName,
   onSelect,
+  selection,
 }: {
   task: MyTask
   showAssignee: boolean
   resolveName: (userId: string) => string
   onSelect: () => void
+  selection?: { isSelected: boolean; toggle: () => void }
 }) {
   const overdue = checkOverdue(task.deadline, task.status)
   const pct = getStatusProgress(
     task.status,
     (task.domain as TaskDomain) || 'DEVELOPMENT'
   )
+  const prefetchTask = usePrefetchTask()
+
+  const gridCols = selection
+    ? showAssignee
+      ? 'md:grid-cols-[28px_minmax(0,1fr)_140px_120px_100px_70px]'
+      : 'md:grid-cols-[28px_minmax(0,1fr)_120px_100px_70px]'
+    : showAssignee
+      ? 'md:grid-cols-[minmax(0,1fr)_140px_120px_100px_70px]'
+      : 'md:grid-cols-[minmax(0,1fr)_120px_100px_70px]'
 
   return (
     <li
       role="button"
       tabIndex={0}
+      aria-selected={selection?.isSelected}
       onClick={onSelect}
+      onMouseEnter={() => prefetchTask(task.projectId, task.taskId)}
+      onFocus={() => prefetchTask(task.projectId, task.taskId)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -163,13 +245,43 @@ function TaskRow({
         'group relative block cursor-pointer transition-colors hover:bg-muted/30',
         // Grid on md+
         'md:grid md:items-center md:gap-4 md:px-5 md:py-3',
-        showAssignee
-          ? 'md:grid-cols-[minmax(0,1fr)_140px_120px_100px_70px]'
-          : 'md:grid-cols-[minmax(0,1fr)_120px_100px_70px]'
+        gridCols,
+        selection?.isSelected && 'bg-primary/5'
       )}
     >
+      {selection && (
+        <div
+          className="hidden md:flex items-center"
+          onClick={(e) => {
+            e.stopPropagation()
+            selection.toggle()
+          }}
+        >
+          <Checkbox
+            checked={selection.isSelected}
+            onCheckedChange={selection.toggle}
+            aria-label={`Select ${task.title}`}
+          />
+        </div>
+      )}
       {/* Mobile: stacked card */}
-      <div className="flex flex-col gap-1.5 p-4 md:hidden">
+      <div className="flex gap-3 p-4 md:hidden">
+        {selection && (
+          <div
+            className="pt-0.5"
+            onClick={(e) => {
+              e.stopPropagation()
+              selection.toggle()
+            }}
+          >
+            <Checkbox
+              checked={selection.isSelected}
+              onCheckedChange={selection.toggle}
+              aria-label={`Select ${task.title}`}
+            />
+          </div>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-1 text-sm font-semibold text-foreground">
             {task.title}
@@ -194,20 +306,15 @@ function TaskRow({
           {task.deadline && (
             <>
               <span aria-hidden>·</span>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1',
-                  overdue ? 'text-destructive font-semibold' : ''
-                )}
-              >
-                <CalendarClock className="h-3 w-3" />
-                {new Date(task.deadline).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </span>
+              <DeadlineLabel
+                deadline={task.deadline}
+                status={task.status}
+                icon
+                compact
+              />
             </>
           )}
+        </div>
         </div>
       </div>
 
@@ -261,22 +368,16 @@ function TaskRow({
         </span>
       </div>
 
-      <div className="hidden md:block">
-        <span
-          className={cn(
-            'text-xs',
-            overdue
-              ? 'font-semibold text-destructive'
-              : 'text-muted-foreground'
-          )}
-        >
-          {task.deadline
-            ? new Date(task.deadline).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })
-            : '—'}
-        </span>
+      <div className="hidden md:block text-xs">
+        {task.deadline ? (
+          <DeadlineLabel
+            deadline={task.deadline}
+            status={task.status}
+            compact
+          />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </div>
 
       <div className="hidden md:flex justify-end">

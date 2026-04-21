@@ -28,7 +28,7 @@ export function SignupForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<SignupFormValues>()
+  } = useForm<SignupFormValues>({ mode: 'onTouched' })
 
   const onSubmit = async (values: SignupFormValues) => {
     setServerError(null)
