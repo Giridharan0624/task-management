@@ -4,6 +4,130 @@ Branch `saas-migration` vs `main`: **231 files · +29,382 / −6,714 lines** acr
 
 ---
 
+# Architecture — how org identification + isolation works
+
+**Pooled isolation model**: one DynamoDB table, one Cognito user pool, one S3 bucket. Every non-global item keyed with `ORG#{orgId}#`. Two tenants coexist with zero data leakage because their PKs don't overlap.
+
+## Request flow (browser → Lambda → DynamoDB)
+
+```
+┌──────────────────┐
+│ acme.taskflow.com│  Subdomain → middleware extracts slug "acme"
+└────────┬─────────┘
+         │
+         ▼  GET /orgs/by-slug/acme  (public, pre-auth)
+┌──────────────────────────────┐
+│ DynamoDB                     │
+│   PK=SLUG#acme, SK=ORG       │  → { orgId, displayName, colors, logoUrl }
+└──────────────────────────────┘
+         │
+         ▼  Frontend themes login screen, user enters credentials
+┌──────────────────────────────┐
+│ Cognito SRP                  │  User pool shared across all tenants
+│   ├─ validates password      │  `custom:orgId` on user = authoritative
+│   └─ pre-token Lambda fires  │  trigger: reads attrs, injects into claims
+└──────────────────────────────┘
+         │
+         ▼  ID token with claims: sub, email, custom:orgId, custom:roleId
+┌──────────────────────────────┐
+│ API Gateway                  │  Cognito authorizer validates JWT
+│   → Lambda handler           │
+└──────────────────────────────┘
+         │
+         ▼  auth = extract_auth_context(event)
+┌──────────────────────────────────────────────────────┐
+│ shared_kernel/auth_context.py                        │
+│   1. Read custom:orgId from JWT claims               │
+│   2. Re-read system_role from DB (live role edits)   │
+│   3. set_current_org_id(org_id)  ← ContextVar        │
+└──────────────────────────────────────────────────────┘
+         │
+         ▼  Handler code
+┌──────────────────────────────────────────────────────┐
+│ require(auth, "task.delete.any")                     │  permissions.py
+│   └─ lookup ROLE record + permission set             │  cached per-process
+└──────────────────────────────────────────────────────┘
+         │
+         ▼  Repository instantiation
+┌──────────────────────────────────────────────────────┐
+│ TaskDynamoRepository()                               │
+│   └─ reads org_id from ContextVar                    │
+│   └─ uses tenant_keys.task_pk(org_id, task_id)       │
+│      → "ORG#acme#PROJECT#p1#TASK#t1"                 │
+└──────────────────────────────────────────────────────┘
+         │
+         ▼  Query
+┌──────────────────────────────────────────────────────┐
+│ DynamoDB — cross-tenant read structurally impossible │
+│ because another org's PK literally doesn't exist     │
+└──────────────────────────────────────────────────────┘
+```
+
+## DynamoDB key shape
+
+```
+Global (cross-tenant):
+  PK=SLUG#{slug}              SK=ORG                   # slug → org resolver
+  GSI1PK=USER_EMAIL#{email}                            # email uniqueness
+
+Per-tenant (every item prefixed with ORG#):
+  PK=ORG#{org}                SK=ORG                   # Organization
+  PK=ORG#{org}                SK=SETTINGS              # Branding, features, locale
+  PK=ORG#{org}                SK=PLAN                  # Tier + limits
+  PK=ORG#{org}                SK=ROLE#{role_id}        # Role + permission set
+  PK=ORG#{org}                SK=PIPELINE#{pipe_id}    # Task workflow
+  PK=ORG#{org}                SK=INVITE#{token}        # Pending invite
+  PK=ORG#{org}#USER#{uid}     SK=PROFILE               # User record
+  PK=ORG#{org}#PROJECT#{pid}  SK=METADATA              # Project record
+  PK=ORG#{org}#PROJECT#{pid}  SK=TASK#{tid}            # Tasks under project
+  PK=ORG#{org}#PROJECT#{pid}  SK=MEMBER#{uid}          # Project members
+  GSI2PK=ORG#{org}#EMPLOYEE#{eid}                      # Per-tenant employee ids
+```
+
+## Key files
+
+| Concern | File |
+|---|---|
+| Slug → org resolver | [get_org_by_slug.py](backend/src/contexts/org/handlers/get_org_by_slug.py) |
+| Cognito claim injection | [pre_token_trigger.py](backend/src/contexts/org/handlers/pre_token_trigger.py) |
+| JWT → org_id extraction | [auth_context.py](backend/src/shared_kernel/auth_context.py) |
+| PK/SK builders | [tenant_keys.py](backend/src/shared_kernel/tenant_keys.py) |
+| Permission resolver | [permissions.py](backend/src/shared_kernel/permissions.py) |
+| Signup transaction | [create_organization.py](backend/src/contexts/org/application/create_organization.py) |
+| Frontend tenant context | [TenantProvider.tsx](frontend/src/lib/tenant/TenantProvider.tsx) |
+| Desktop workspace storage | [workspace.go](desktop/internal/workspace/workspace.go) |
+
+## Signup — the one moment that creates a tenant
+
+```
+POST /signup  { orgName, slug, ownerEmail, password }
+  │
+  ├─ Validate slug (3-30 chars, lowercase alnum + hyphens, not reserved)
+  ├─ Check SLUG#{slug} doesn't exist
+  ├─ Check email globally unique (USER_EMAIL#{email} GSI)
+  │
+  ├─ Cognito admin_create_user with custom:orgId=<new>, systemRole=OWNER
+  │   └─ If later step fails → admin_delete_user (rollback)
+  │
+  └─ TransactWriteItems (all-or-nothing):
+       ├─ ORG record
+       ├─ SETTINGS record (defaults)
+       ├─ PLAN record (FREE tier)
+       ├─ ROLE owner/admin/member (default permissions)
+       ├─ First USER record (the owner)
+       ├─ SLUG resolver record
+       └─ PIPELINE records (4 defaults)
+```
+
+## Failure modes — what keeps tenants isolated
+
+1. **JWT spoofing**: a token issued to org A can't read org B because `custom:orgId` is signed by Cognito and the handler uses only the claim, never a request-body value.
+2. **Cross-tenant handcrafted PK**: a handler that bypassed `tenant_keys` and built `ORG#B#...` manually — prevented because every repo constructor uses the ContextVar set by `extract_auth_context`.
+3. **Public endpoints** (`POST /signup`, `GET /orgs/by-slug/{slug}`, `POST /invites/{token}/accept`): explicitly authenticate the operation differently. Signup is unauthenticated but rate-limited and creates a fresh org. `by-slug` is a narrow public read of safe branding fields only. Accept-invite trusts the token (random 256-bit secret) and runs a conditional write.
+4. **S3**: presign handler refuses any key that doesn't start with `orgs/{orgId}/{userId}/...` — enforced at presign time, not only via bucket policy.
+
+---
+
 ## Phase 1 — Multi-tenant foundation
 
 **Infra**
