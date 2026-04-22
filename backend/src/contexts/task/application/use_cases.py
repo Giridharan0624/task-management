@@ -5,24 +5,25 @@ from datetime import datetime, timezone
 
 from contexts.comment.domain.repository import ICommentRepository
 from contexts.project.domain.repository import IProjectRepository
-from contexts.project.domain.value_objects import ProjectRole
 from contexts.task.domain.entities import Task
 from contexts.task.domain.repository import ITaskRepository
 from contexts.task.domain.value_objects import TaskPriority, DOMAIN_STATUSES, DOMAIN_PROGRESS
 from contexts.user.domain.repository import IUserRepository
 from contexts.org.domain import permissions as P
+from contexts.org.domain.default_project_roles import PROJECT_MANAGE_ROLE_IDS
 from contexts.user.domain.value_objects import SystemRole
 from shared_kernel.permissions import role_has
 from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
-_TASK_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.PROJECT_MANAGER, ProjectRole.TEAM_LEAD)
 
 
 def _can_manage_tasks(project_repo, project_id, caller_user_id, caller_system_role):
-    """Caller with org-wide TASK_MANAGE OR project-level ADMIN/TEAM_LEAD role."""
+    """Caller with org-wide TASK_MANAGE OR a project-role that's in the
+    manage-set (project_admin / project_manager / team_lead by default).
+    """
     if role_has(caller_system_role, P.TASK_MANAGE):
         return True
     member = project_repo.find_member(project_id, caller_user_id)
-    return member is not None and member.project_role in _TASK_MANAGE_ROLES
+    return member is not None and member.project_role_id in PROJECT_MANAGE_ROLE_IDS
 
 
 class CreateTaskUseCase:
@@ -143,7 +144,7 @@ class ListTasksForProjectUseCase:
         if not caller_member:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
 
-        if caller_member and caller_member.project_role in _TASK_MANAGE_ROLES:
+        if caller_member and caller_member.project_role_id in PROJECT_MANAGE_ROLE_IDS:
             return [t.to_dict() for t in tasks]
 
         # Regular MEMBER — only assigned tasks

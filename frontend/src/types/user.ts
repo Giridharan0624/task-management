@@ -33,7 +33,15 @@ export interface User {
 export interface ProjectMember {
   projectId: string
   userId: string
+  /** Legacy enum value. Backend emits this for backward compatibility;
+   *  consumers should migrate to `projectRoleId` which is the canonical
+   *  post-refactor field and supports tenant-defined custom roles. */
   projectRole: ProjectRole
+  /** Canonical project-scope role_id (e.g. 'project_admin',
+   *  'project_manager', 'team_lead', 'project_member', or any tenant-
+   *  defined custom role with scope='project'). Fetched from
+   *  `/orgs/current/roles` filtered to `scope === 'project'`. */
+  projectRoleId?: string
   addedBy?: string
   addedByName?: string
   joinedAt: string

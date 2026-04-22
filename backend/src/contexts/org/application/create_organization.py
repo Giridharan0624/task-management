@@ -145,11 +145,23 @@ class CreateOrganizationUseCase:
             name=owner_name,
             system_role=SystemRole.OWNER,
         )
+        # System roles (scope='system') + project roles (scope='project')
+        # both seed here so the Roles UI has a starting point the owner
+        # can clone or edit. Project roles replace the legacy hardcoded
+        # ProjectRole enum (ADMIN, PROJECT_MANAGER, TEAM_LEAD, MEMBER).
+        from contexts.org.domain.default_project_roles import (
+            DEFAULT_PROJECT_ROLE_IDS,
+            PROJECT_ROLE_DISPLAY_NAMES,
+        )
         role_records = [
             _role_record(org_id, OWNER_ROLE_ID, "Owner", now),
             _role_record(org_id, ADMIN_ROLE_ID, "Admin", now),
             _role_record(org_id, MEMBER_ROLE_ID, "Member", now),
         ]
+        for pr_id in DEFAULT_PROJECT_ROLE_IDS:
+            role_records.append(_project_role_record(
+                org_id, pr_id, PROJECT_ROLE_DISPLAY_NAMES[pr_id], now,
+            ))
 
         # Phase 5: seed the four default task pipelines so the kanban view
         # works out of the box for fresh tenants.
@@ -262,6 +274,32 @@ def _role_record(org_id: str, role_id: str, name: str, now: str) -> dict:
         "scope": "system",
         "is_system": True,
         "permissions": json.dumps(default_permissions_for(role_id)),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def _project_role_record(
+    org_id: str, role_id: str, name: str, now: str,
+) -> dict:
+    """Default project-scope role record. Same shape as system role
+    but `scope='project'` so the Roles UI + permission resolver can
+    branch cleanly. `is_system=True` — owner can clone/edit but not
+    delete, so the defaults always remain available."""
+    from contexts.org.domain.default_project_roles import (
+        PROJECT_ROLE_PERMISSIONS,
+    )
+
+    perms = sorted(PROJECT_ROLE_PERMISSIONS.get(role_id, frozenset()))
+    return {
+        "PK": tenant_keys.org_pk(org_id),
+        "SK": tenant_keys.role_sk(role_id),
+        "org_id": org_id,
+        "role_id": role_id,
+        "name": name,
+        "scope": "project",
+        "is_system": True,
+        "permissions": json.dumps(perms),
         "created_at": now,
         "updated_at": now,
     }

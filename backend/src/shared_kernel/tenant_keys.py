@@ -251,6 +251,17 @@ def audit_pk(org_id: str) -> str:
     return f"ORG#{org_id}#AUDIT"
 
 
+# ---------------------------------------------------------------------------
+# Webhook registrations (per-org, session 5)
+# ---------------------------------------------------------------------------
+
+def webhook_sk(webhook_id: str) -> str:
+    """Webhooks live on the same PK=ORG#{org_id} partition as settings /
+    plan / roles so one query can pull "everything about this org" when
+    needed. Distinct SK prefix keeps them enumerable on their own."""
+    return f"WEBHOOK#{webhook_id}"
+
+
 def audit_sk(created_at: str, event_id: str) -> str:
     """Time-ordered SK — lexicographic sort on an ISO-8601 string matches
     chronological order, and `event_id` breaks ties for events recorded

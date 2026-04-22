@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 from contexts.attendance.infrastructure.dynamo_repository import AttendanceDynamoRepository
 from contexts.org.domain import permissions as P
-from contexts.project.domain.value_objects import ProjectRole
+from contexts.org.domain.default_project_roles import PROJECT_MANAGE_ROLE_IDS
 from contexts.project.infrastructure.dynamo_repository import ProjectDynamoRepository
 from contexts.task.domain.value_objects import DOMAIN_PROGRESS, STATUS_PROGRESS
 from contexts.task.infrastructure.dynamo_repository import TaskDynamoRepository
@@ -69,11 +69,7 @@ def handler(event, context):
         # the caller must be a project lead/manager/admin via membership.
         if not has_permission(auth, P.TASK_VIEW_ALL):
             member = project_repo.find_member(project_id, auth.user_id)
-            if not member or member.project_role not in (
-                ProjectRole.ADMIN,
-                ProjectRole.PROJECT_MANAGER,
-                ProjectRole.TEAM_LEAD,
-            ):
+            if not member or member.project_role_id not in PROJECT_MANAGE_ROLE_IDS:
                 return build_success(403, {"error": "Access denied"})
 
         tasks = task_repo.find_by_project(project_id)
@@ -204,7 +200,16 @@ def handler(event, context):
             member_progress.append({
                 "user_id": m.user_id,
                 "name": user.name if user else m.user_id,
-                "project_role": m.project_role.value,
+                "project_role_id": m.project_role_id,
+                # Legacy enum value for frontend clients that still read
+                # `project_role`. Dropped in a future session once all
+                # consumers migrate to project_role_id.
+                "project_role": {
+                    "project_admin": "ADMIN",
+                    "project_manager": "PROJECT_MANAGER",
+                    "team_lead": "TEAM_LEAD",
+                    "project_member": "MEMBER",
+                }.get(m.project_role_id, m.project_role_id.upper()),
                 "tracked_hours": round(tracked, 2),
                 "total_tasks": len(assigned_tasks),
                 "done_tasks": done_tasks,

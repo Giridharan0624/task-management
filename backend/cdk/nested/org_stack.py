@@ -99,6 +99,19 @@ class OrgNestedStack(NestedStack):
         users_birthdays_resource: apigw.IResource | None = None,
         users_admins_resource: apigw.IResource | None = None,
         users_department_resource: apigw.IResource | None = None,
+        # Session 5 — notifications router (GET + POST-with-action).
+        users_me_notifications_resource: apigw.IResource | None = None,
+        # Session 5 — platform operator feature-flag toggle.
+        platform_org_features_resource: apigw.IResource | None = None,
+        # Session 5 budget-reclaim relocations — parent-owned resources
+        # whose LIST methods move here so parent stays under CFN cap.
+        projects_list_resource: apigw.IResource | None = None,
+        tasks_list_resource: apigw.IResource | None = None,
+        comments_list_resource: apigw.IResource | None = None,
+        users_list_resource: apigw.IResource | None = None,
+        users_me_resource: apigw.IResource | None = None,
+        users_me_tasks_resource: apigw.IResource | None = None,
+        user_progress_resource: apigw.IResource | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -293,6 +306,23 @@ class OrgNestedStack(NestedStack):
         )
         orgs_current_pipeline_by_id.add_method(
             "ANY", apigw.LambdaIntegration(pipelines_router_fn)
+        )
+
+        # ── Webhooks router (Session 5) ──────────────────────────────
+        # Same ANY-verb pattern as roles/pipelines. Tenant webhook
+        # config lives on the same ORG#{org} partition as settings.
+        orgs_current_webhooks = orgs_current.add_resource("webhooks")
+        webhooks_router_fn = add_api_lambda(
+            "WebhooksRouter",
+            "contexts.org.handlers.webhooks_router.handler",
+            "ANY",
+            orgs_current_webhooks,
+        )
+        orgs_current_webhook_by_id = orgs_current_webhooks.add_resource(
+            "{webhookId}",
+        )
+        orgs_current_webhook_by_id.add_method(
+            "ANY", apigw.LambdaIntegration(webhooks_router_fn),
         )
 
         # ── Audit log viewer ──────────────────────────────────────────
@@ -499,6 +529,51 @@ class OrgNestedStack(NestedStack):
             )
             return fn
 
+        # Session 5 budget-reclaim: 6 read-only handlers live here so
+        # the parent stack stays under the 500-resource CFN cap.
+        if projects_list_resource is not None:
+            _mount_authed(
+                projects_list_resource,
+                "contexts.project.handlers.list_projects.handler",
+                "GET", "ListProjects",
+            )
+        if tasks_list_resource is not None:
+            _mount_authed(
+                tasks_list_resource,
+                "contexts.task.handlers.list_tasks.handler",
+                "GET", "ListTasks",
+            )
+        if comments_list_resource is not None:
+            _mount_authed(
+                comments_list_resource,
+                "contexts.comment.handlers.list_comments.handler",
+                "GET", "ListComments",
+            )
+        if users_list_resource is not None:
+            _mount_authed(
+                users_list_resource,
+                "contexts.user.handlers.list_users.handler",
+                "GET", "ListUsers",
+            )
+        if users_me_resource is not None:
+            _mount_authed(
+                users_me_resource,
+                "contexts.user.handlers.get_profile.handler",
+                "GET", "GetProfile",
+            )
+        if users_me_tasks_resource is not None:
+            _mount_authed(
+                users_me_tasks_resource,
+                "contexts.user.handlers.my_tasks.handler",
+                "GET", "MyTasks",
+            )
+        if user_progress_resource is not None:
+            _mount_authed(
+                user_progress_resource,
+                "contexts.user.handlers.get_user_progress.handler",
+                "GET", "GetUserProgress",
+            )
+
         if users_birthdays_resource is not None:
             _mount_authed(
                 users_birthdays_resource,
@@ -527,6 +602,25 @@ class OrgNestedStack(NestedStack):
                 authorization_type=apigw.AuthorizationType.COGNITO,
             )
 
+        # Notifications router — one Lambda serves GET (list) and POST
+        # (mark_read / mark_all_read action on body). Shallow URL to
+        # stay under the CFN cap.
+        if users_me_notifications_resource is not None:
+            notif_fn = _lambda.Function(
+                self,
+                "NotificationsRouter",
+                handler="shared_kernel.notifications_router.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_write_data(notif_fn)
+            for verb in ("GET", "POST"):
+                users_me_notifications_resource.add_method(
+                    verb,
+                    apigw.LambdaIntegration(notif_fn),
+                    authorizer=authorizer,
+                    authorization_type=apigw.AuthorizationType.COGNITO,
+                )
+
         # Admin MFA reset — OWNER disables a target user's TOTP factor
         # so they can sign in with password alone and re-enroll.
         if user_mfa_reset_resource is not None:
@@ -547,6 +641,25 @@ class OrgNestedStack(NestedStack):
             user_mfa_reset_resource.add_method(
                 "POST",
                 apigw.LambdaIntegration(reset_mfa_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        # Platform-operator feature-flag toggle — same allowlist env.
+        if platform_org_features_resource is not None:
+            set_features_fn = _lambda.Function(
+                self,
+                "SetOrgFeatures",
+                handler="contexts.org.handlers.set_org_features.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_write_data(set_features_fn)
+            set_features_fn.add_environment(
+                "PLATFORM_ADMIN_USER_IDS", platform_admin_user_ids,
+            )
+            platform_org_features_resource.add_method(
+                "PATCH",
+                apigw.LambdaIntegration(set_features_fn),
                 authorizer=authorizer,
                 authorization_type=apigw.AuthorizationType.COGNITO,
             )

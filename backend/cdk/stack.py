@@ -334,10 +334,15 @@ class TaskManagementStack(Stack):
         users_department = users.add_resource("department")
         users_admins = users.add_resource("admins")
         users_birthdays = users.add_resource("birthdays")
+        # Session 5 — notifications. Single resource with GET (list) +
+        # POST (action: mark_read / mark_all_read via body) — fewer
+        # CFN resources than separate /read and /read-all subpaths.
+        # Method + Lambda live in the Org nested stack.
+        users_me_notifications = users_me.add_resource("notifications")
 
         # ─── Project handlers ────────────────────────────────────────────────
         add_api_lambda("CreateProject", "contexts.project.handlers.create_project.handler", "POST", projects)
-        add_api_lambda("ListProjects", "contexts.project.handlers.list_projects.handler", "GET", projects)
+        # ListProjects method + Lambda live in Org nested stack.
         add_api_lambda("GetProject", "contexts.project.handlers.get_project.handler", "GET", project)
         add_api_lambda("UpdateProject", "contexts.project.handlers.update_project.handler", "PUT", project)
         add_api_lambda("DeleteProject", "contexts.project.handlers.delete_project.handler", "DELETE", project)
@@ -349,7 +354,7 @@ class TaskManagementStack(Stack):
 
         # ─── Task handlers ───────────────────────────────────────────────────
         add_api_lambda("CreateTask", "contexts.task.handlers.create_task.handler", "POST", tasks)
-        add_api_lambda("ListTasks", "contexts.task.handlers.list_tasks.handler", "GET", tasks)
+        # ListTasks method + Lambda live in Org nested stack.
         add_api_lambda("GetTask", "contexts.task.handlers.get_task.handler", "GET", task)
         add_api_lambda("UpdateTask", "contexts.task.handlers.update_task.handler", "PUT", task)
         add_api_lambda("DeleteTask", "contexts.task.handlers.delete_task.handler", "DELETE", task)
@@ -358,19 +363,18 @@ class TaskManagementStack(Stack):
 
         # ─── Comment handlers ────────────────────────────────────────────────
         add_api_lambda("CreateComment", "contexts.comment.handlers.create_comment.handler", "POST", comments)
-        add_api_lambda("ListComments", "contexts.comment.handlers.list_comments.handler", "GET", comments)
+        # ListComments method + Lambda live in Org nested stack.
 
         # ─── User handlers ───────────────────────────────────────────────────
-        add_api_lambda("GetProfile", "contexts.user.handlers.get_profile.handler", "GET", users_me)
+        # GetProfile + MyTasks methods + Lambdas live in Org nested stack.
         add_api_lambda("UpdateProfile", "contexts.user.handlers.update_profile.handler", "PUT", users_me, cognito_policies=["cognito-idp:AdminUpdateUserAttributes"])
-        add_api_lambda("MyTasks", "contexts.user.handlers.my_tasks.handler", "GET", users_me_tasks)
         # /users/me/email resource lives here (attaches to the
         # parent-owned users_me tree); the PUT method + its Lambda live
         # in the Org nested stack to stay under the 500-resource cap.
         users_me_email = users_me.add_resource("email")
         # /users/bulk resource — same pattern as /users/me/email.
         users_bulk = users.add_resource("bulk")
-        add_api_lambda("ListUsers", "contexts.user.handlers.list_users.handler", "GET", users)
+        # ListUsers method + Lambda live in Org nested stack.
 
         # ─── User management (with Cognito admin permissions) ────────────────
         create_user_fn = add_api_lambda(
@@ -400,7 +404,7 @@ class TaskManagementStack(Stack):
             users_role,
             cognito_policies=["cognito-idp:AdminUpdateUserAttributes"],
         )
-        add_api_lambda("GetUserProgress", "contexts.user.handlers.get_user_progress.handler", "GET", user_progress)
+        # GetUserProgress method + Lambda live in Org nested stack.
         # UpdateUserDepartment / ListAdmins / GetBirthdays — methods +
         # Lambdas live in the Org nested stack for CFN budget. Parent
         # declares the resources above.
@@ -423,6 +427,10 @@ class TaskManagementStack(Stack):
         platform_orgs = platform.add_resource("orgs")
         platform_org = platform_orgs.add_resource("{orgId}")
         platform_org_status = platform_org.add_resource("status")
+        # Session 5 — platform operator toggles OrgSettings.features
+        # on a target tenant (roll out experimental features, emergency
+        # disable, etc.). Method + Lambda in OrgNestedStack.
+        platform_org_features = platform_org.add_resource("features")
 
         # Task-update resources — declared here (before OrgNestedStack)
         # so we can pass them through as kwargs. Methods + Lambdas are
@@ -468,6 +476,16 @@ class TaskManagementStack(Stack):
             users_birthdays_resource=users_birthdays,
             users_admins_resource=users_admins,
             users_department_resource=users_department,
+            users_me_notifications_resource=users_me_notifications,
+            platform_org_features_resource=platform_org_features,
+            # Session 5 budget reclaim — read-only handlers moved here.
+            projects_list_resource=projects,
+            tasks_list_resource=tasks,
+            comments_list_resource=comments,
+            users_list_resource=users,
+            users_me_resource=users_me,
+            users_me_tasks_resource=users_me_tasks,
+            user_progress_resource=user_progress,
         )
 
         # ─── Attendance + Day-off handlers (nested) ─────────────────────────

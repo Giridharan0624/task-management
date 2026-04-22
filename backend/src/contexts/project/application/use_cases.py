@@ -5,17 +5,20 @@ from datetime import datetime, timezone
 
 from contexts.project.domain.entities import Project, ProjectMember
 from contexts.project.domain.repository import IProjectRepository
-from contexts.project.domain.value_objects import ProjectRole
 from contexts.user.domain.repository import IUserRepository
 from contexts.org.domain import permissions as P
+from contexts.org.domain.default_project_roles import (
+    PROJECT_MANAGER_ROLE_ID,
+    PROJECT_MEMBER_ROLE_ID,
+    PROJECT_MANAGE_ROLE_IDS,
+    TEAM_LEAD_ROLE_ID,
+    normalize_project_role_id,
+)
 from contexts.user.domain.value_objects import SystemRole
 from shared_kernel.permissions import role_has
 from contexts.task.domain.repository import ITaskRepository
 from contexts.task.domain.value_objects import STATUS_PROGRESS, DOMAIN_STATUSES
 from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
-
-
-_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.PROJECT_MANAGER, ProjectRole.TEAM_LEAD)
 
 
 def _is_project_admin_or_privileged(
@@ -25,11 +28,22 @@ def _is_project_admin_or_privileged(
     caller_system_role: str,
 ) -> bool:
     """Return True if caller has project-edit power via system role OR is a
-    project-level ADMIN/TEAM_LEAD on this specific project."""
+    privileged member on this specific project (default project_admin /
+    project_manager / team_lead, or any custom project role whose ID
+    matches one of the seeded manage roles).
+
+    Pragmatism: we gate on the role_id string for the seeded defaults.
+    Tenant-defined custom project roles fall through to false here and
+    would need the frontend to call the system permission resolver if
+    per-tenant project-admin roles are needed. Good enough for v1 — the
+    default roles cover the common case.
+    """
     if role_has(caller_system_role, P.PROJECT_EDIT):
         return True
     member = project_repo.find_member(project_id, caller_user_id)
-    return member is not None and member.project_role in _MANAGE_ROLES
+    if member is None:
+        return False
+    return member.project_role_id in PROJECT_MANAGE_ROLE_IDS
 
 
 class CreateProjectUseCase:
@@ -100,7 +114,7 @@ class CreateProjectUseCase:
             tl_member = ProjectMember.create(
                 project_id=project_id,
                 user_id=team_lead_id,
-                project_role=ProjectRole.TEAM_LEAD,
+                project_role_id=TEAM_LEAD_ROLE_ID,
             )
             self._project_repo.save_member(tl_member)
 
@@ -109,7 +123,7 @@ class CreateProjectUseCase:
             pm_member = ProjectMember.create(
                 project_id=project_id,
                 user_id=project_manager_id,
-                project_role=ProjectRole.PROJECT_MANAGER,
+                project_role_id=PROJECT_MANAGER_ROLE_ID,
             )
             self._project_repo.save_member(pm_member)
 
@@ -120,7 +134,7 @@ class CreateProjectUseCase:
             m = ProjectMember.create(
                 project_id=project_id,
                 user_id=uid,
-                project_role=ProjectRole.MEMBER,
+                project_role_id=PROJECT_MEMBER_ROLE_ID,
             )
             self._project_repo.save_member(m)
 
@@ -268,7 +282,16 @@ class AddProjectMemberUseCase:
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         project_id = dto["project_id"]
         target_user_id = dto["user_id"]
-        project_role_value = dto.get("project_role", ProjectRole.MEMBER.value)
+        # Accept either the new `project_role_id` field (canonical) or
+        # the legacy `project_role` field. normalize_project_role_id
+        # handles enum-value → role_id translation both for legacy
+        # clients and for anyone writing custom role IDs.
+        raw_role = (
+            dto.get("project_role_id")
+            or dto.get("project_role")
+            or PROJECT_MEMBER_ROLE_ID
+        )
+        project_role_id = normalize_project_role_id(raw_role)
 
         project = self._project_repo.find_by_id(project_id)
         if not project:
@@ -281,11 +304,6 @@ class AddProjectMemberUseCase:
         if not target_user:
             raise NotFoundError(f"User {target_user_id} not found")
 
-        try:
-            project_role = ProjectRole(project_role_value)
-        except ValueError:
-            raise ValidationError(f"Invalid project role: {project_role_value}")
-
         # Existing members — used for both the duplicate-guard and the
         # single-Team-Lead check. One query covers both.
         existing_members = self._project_repo.find_members(project_id)
@@ -295,16 +313,17 @@ class AddProjectMemberUseCase:
                     f"{target_user.name or target_user.email} is already a member of this project."
                 )
 
-        # Only one TEAM_LEAD per project
-        if project_role == ProjectRole.TEAM_LEAD:
+        # Only one Team Lead per project. Matched on role_id string so
+        # this survives the enum removal.
+        if project_role_id == TEAM_LEAD_ROLE_ID:
             for m in existing_members:
-                if m.project_role == ProjectRole.TEAM_LEAD:
+                if m.project_role_id == TEAM_LEAD_ROLE_ID:
                     raise ValidationError("This project already has a Team Lead. Please remove the current one before assigning a new one.")
 
         member = ProjectMember.create(
             project_id=project_id,
             user_id=target_user_id,
-            project_role=project_role,
+            project_role_id=project_role_id,
             added_by=caller_user_id,
         )
         self._project_repo.save_member(member)
@@ -338,7 +357,10 @@ class UpdateMemberRoleUseCase:
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
         project_id = dto["project_id"]
         target_user_id = dto["user_id"]
-        new_role_value = dto["project_role"]
+        raw_role = dto.get("project_role_id") or dto.get("project_role")
+        if not raw_role:
+            raise ValidationError("project_role_id is required.")
+        new_role_id = normalize_project_role_id(raw_role)
 
         project = self._project_repo.find_by_id(project_id)
         if not project:
@@ -351,22 +373,21 @@ class UpdateMemberRoleUseCase:
         if not target_member:
             raise NotFoundError(f"Member {target_user_id} not found in project {project_id}")
 
-        try:
-            new_role = ProjectRole(new_role_value)
-        except ValueError:
-            raise ValidationError(f"Invalid project role: {new_role_value}")
-
-        # Only one TEAM_LEAD per project
-        if new_role == ProjectRole.TEAM_LEAD:
+        # Only one Team Lead per project. Match on role_id string.
+        if new_role_id == TEAM_LEAD_ROLE_ID:
             existing_members = self._project_repo.find_members(project_id)
             for m in existing_members:
-                if m.project_role == ProjectRole.TEAM_LEAD and m.user_id != target_user_id:
+                if (
+                    m.project_role_id == TEAM_LEAD_ROLE_ID
+                    and m.user_id != target_user_id
+                ):
                     raise ValidationError("This project already has a Team Lead. Please remove the current one before assigning a new one.")
 
         updated_member = ProjectMember(
             project_id=target_member.project_id,
             user_id=target_member.user_id,
-            project_role=new_role,
+            project_role_id=new_role_id,
+            added_by=target_member.added_by,
             joined_at=target_member.joined_at,
         )
         self._project_repo.save_member(updated_member)

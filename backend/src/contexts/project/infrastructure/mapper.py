@@ -1,5 +1,8 @@
+from contexts.org.domain.default_project_roles import (
+    PROJECT_MEMBER_ROLE_ID,
+    normalize_project_role_id,
+)
 from contexts.project.domain.entities import Project, ProjectMember
-from contexts.project.domain.value_objects import ProjectRole
 from shared_kernel import tenant_keys
 
 
@@ -38,10 +41,18 @@ class ProjectMapper:
 
     @staticmethod
     def member_to_domain(item: dict) -> ProjectMember:
+        # Pre-refactor records stored the role as the legacy enum value
+        # in `project_role` (ADMIN / PROJECT_MANAGER / TEAM_LEAD / MEMBER).
+        # Post-refactor records store the prefixed role_id in
+        # `project_role_id`. Prefer the new field; fall back by
+        # translating the legacy value via `normalize_project_role_id`.
+        raw_id = item.get("project_role_id")
+        if not raw_id:
+            raw_id = item.get("project_role", PROJECT_MEMBER_ROLE_ID)
         return ProjectMember(
             project_id=item["project_id"],
             user_id=item["user_id"],
-            project_role=ProjectRole(item["project_role"]),
+            project_role_id=normalize_project_role_id(raw_id),
             added_by=item.get("added_by"),
             joined_at=item["joined_at"],
         )
@@ -56,7 +67,10 @@ class ProjectMapper:
             "org_id": org_id,
             "project_id": member.project_id,
             "user_id": member.user_id,
-            "project_role": member.project_role.value,
+            # Write only the new field. Legacy `project_role` attribute
+            # is intentionally dropped on update — mapper read-path
+            # still translates historical records.
+            "project_role_id": member.project_role_id,
             "joined_at": member.joined_at,
         }
         if member.added_by:
