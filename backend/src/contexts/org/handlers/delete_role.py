@@ -9,15 +9,17 @@ the affected users.
 """
 from contexts.org.domain import permissions as P
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
+from shared_kernel import audit
 from shared_kernel.auth_context import extract_auth_context
 from shared_kernel.errors import NotFoundError, ValidationError
-from shared_kernel.permissions import invalidate_role_cache, require
+from shared_kernel.permissions import invalidate_role_cache, require, require_not_suspended
 from shared_kernel.response import build_error, build_success
 
 
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        require_not_suspended(auth)
         require(auth, P.ROLE_MANAGE)
 
         path = event.get("pathParameters") or {}
@@ -36,6 +38,13 @@ def handler(event, context):
 
         repo.delete_role(auth.org_id, role_id)
         invalidate_role_cache(auth.org_id)
+        audit.record(
+            auth,
+            action=audit.ROLE_DELETED,
+            target={"type": "role", "id": role_id},
+            summary=f"Deleted role '{existing.get('name', role_id)}'",
+            before=existing,
+        )
         return build_success(200, {"role_id": role_id, "deleted": True})
     except Exception as e:
         return build_error(e)

@@ -11,9 +11,10 @@ from pydantic import BaseModel, Field
 
 from contexts.org.domain import permissions as P
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
+from shared_kernel import audit
 from shared_kernel.auth_context import extract_auth_context
 from shared_kernel.errors import NotFoundError, ValidationError
-from shared_kernel.permissions import invalidate_role_cache, require
+from shared_kernel.permissions import invalidate_role_cache, require, require_not_suspended
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
 
@@ -26,6 +27,7 @@ class UpdateRoleRequest(BaseModel):
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        require_not_suspended(auth)
         require(auth, P.ROLE_MANAGE)
 
         path = event.get("pathParameters") or {}
@@ -53,6 +55,14 @@ def handler(event, context):
 
         repo.save_role(updated)
         invalidate_role_cache(auth.org_id)
+        audit.record(
+            auth,
+            action=audit.ROLE_UPDATED,
+            target={"type": "role", "id": role_id},
+            summary=f"Edited role '{updated['name']}'",
+            before=existing,
+            after=updated,
+        )
         return build_success(200, updated)
     except Exception as e:
         return build_error(e)

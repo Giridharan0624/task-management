@@ -386,11 +386,6 @@ function SidebarContent({
       </div>
 
       <DesktopDownloadLink />
-
-      <p className="pb-3 text-center text-[10px] text-muted-foreground">
-        Powered by{' '}
-        <span className="font-semibold text-foreground/60">NEUROSTACK</span>
-      </p>
     </div>
   )
 }

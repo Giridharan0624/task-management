@@ -30,7 +30,9 @@ from contexts.org.domain.entities import Invite
 from contexts.org.domain.repository import IOrgRepository
 from contexts.user.domain.entities import User
 from contexts.user.domain.repository import IUserRepository
-from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
+from contexts.org.domain import permissions as P
+from contexts.user.domain.value_objects import SystemRole
+from shared_kernel.permissions import role_has
 from shared_kernel.errors import (
     AuthorizationError, NotFoundError, ValidationError,
 )
@@ -73,8 +75,7 @@ class SendInviteUseCase:
         caller_org_id: str,
         app_url: str,
     ) -> dict:
-        # Authz: only OWNER/ADMIN can send invites
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.USER_INVITE):
             raise AuthorizationError("Only owners and admins can invite users.")
 
         email = req.email.strip().lower()

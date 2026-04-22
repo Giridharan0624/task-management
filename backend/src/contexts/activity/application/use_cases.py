@@ -2,12 +2,11 @@ from datetime import datetime, timezone
 
 from contexts.activity.domain.entities import UserActivity, ActivityBucket, DailySummary
 from contexts.activity.domain.repository import IActivityRepository
-from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
 from contexts.activity.infrastructure.groq_service import generate_work_summary
+from contexts.org.domain import permissions as P
+from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
 from shared_kernel.errors import ValidationError, AuthorizationError
-
-
-PRIVILEGED_ROLES = {"OWNER", "ADMIN"}
+from shared_kernel.permissions import role_has
 
 
 def _today() -> str:
@@ -94,7 +93,7 @@ class GetActivityReportUseCase:
         self._activity_repo = activity_repo
 
     def execute(self, caller_system_role: str, start_date: str, end_date: str) -> list[dict]:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.ACTIVITY_REPORT_VIEW):
             raise AuthorizationError("You don't have permission to view activity reports.")
 
         if not start_date or not end_date:
@@ -111,7 +110,7 @@ class GenerateSummaryUseCase:
         self._activity_repo = activity_repo
 
     def execute(self, caller_system_role: str, target_user_id: str, date: str, task_context: str = "") -> dict:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.ACTIVITY_SUMMARY_GENERATE):
             raise AuthorizationError("You don't have permission to generate AI summaries.")
 
         if not target_user_id or not date:
@@ -155,7 +154,9 @@ class GetSummaryUseCase:
 
     def execute(self, caller_user_id: str, caller_system_role: str, target_user_id: str, date: str) -> dict | None:
         # Users can view their own summary; admins can view anyone's
-        if caller_user_id != target_user_id and caller_system_role not in PRIVILEGED_ROLES:
+        if caller_user_id != target_user_id and not role_has(
+            caller_system_role, P.ACTIVITY_REPORT_VIEW
+        ):
             raise AuthorizationError("You can only view your own activity summary.")
 
         if not date:

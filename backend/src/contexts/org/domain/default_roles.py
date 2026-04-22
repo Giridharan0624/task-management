@@ -22,7 +22,10 @@ ADMIN_PERMISSIONS: frozenset[str] = frozenset(
     - {P.SETTINGS_EDIT, P.BILLING_VIEW, P.ROLE_MANAGE, P.USER_ROLE_MANAGE}
 )
 
-# MEMBER — view + own-update subset only
+# MEMBER — view + own-update subset. Members can comment on tasks they
+# are assigned to, and read comments on tasks in projects they belong
+# to. The "see anything" bypass lives behind TASK_VIEW_ALL, which is
+# OWNER/ADMIN-only by default.
 MEMBER_PERMISSIONS: frozenset[str] = frozenset({
     P.SETTINGS_VIEW,
     P.USER_UPDATE_OWN,

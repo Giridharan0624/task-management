@@ -35,6 +35,55 @@ def has_permission(ctx: AuthContext, permission: str) -> bool:
     return permission in _resolve_permissions(ctx)
 
 
+def require_not_suspended(ctx: AuthContext) -> None:
+    """Block writes when the tenant is suspended.
+
+    Suspended orgs are read-only: logins still work, dashboards still
+    load, but every mutation-path handler calls this at the top and gets
+    a 403 that the frontend renders as an "account suspended" banner.
+
+    Reads the Org record once per invocation; the ContextVar-scoped
+    permission cache keeps cold starts cheap. A missing Org record
+    (unknown tenant, pre-migration user) is treated as NOT suspended —
+    fail-open for the primary action, fail-closed for the audit side.
+    """
+    from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
+    from shared_kernel.errors import AuthorizationError
+
+    try:
+        org = OrgDynamoRepository().find_by_id(ctx.org_id)
+    except Exception:
+        return  # DB hiccup — don't block the user
+    if org is None:
+        return
+    status = getattr(org, "status", None)
+    status_value = status.value if hasattr(status, "value") else str(status)
+    if status_value == "SUSPENDED":
+        raise AuthorizationError(
+            "This workspace is currently suspended. "
+            "Contact the workspace owner to resume activity.",
+        )
+
+
+def role_has(role_id_or_system_role: str, permission: str) -> bool:
+    """Check whether a role string holds a permission, WITHOUT building a
+    full AuthContext. Resolves through `default_roles.permissions_for_role_id`
+    (the owner/admin/member map).
+
+    Use this in application/use_cases.py where functions only receive a
+    `caller_system_role: str` parameter (not a full AuthContext). Handler-
+    level checks should prefer `require(ctx, perm)` which also consults
+    per-tenant custom role records.
+
+    Custom-role caveat: this helper falls back to member-level permissions
+    for any role_id it doesn't recognize (fail-closed). Tenants who
+    define custom roles need to use the handler-layer `require()` path
+    or migrate the use-case signature to pass AuthContext through.
+    """
+    from contexts.org.domain.default_roles import permissions_for_role_id
+    return permission in permissions_for_role_id(role_id_or_system_role)
+
+
 def require(ctx: AuthContext, permission: str) -> None:
     """Raise AuthorizationError if the caller lacks `permission`.
 

@@ -115,6 +115,47 @@ export function confirmForgotPassword(email: string, code: string, newPassword: 
   })
 }
 
+/** Force Cognito to re-issue the ID token using the stored refresh
+ * token. Used after a role edit so `custom:roleId` + `custom:systemRole`
+ * claims in the token reflect the current DB state without requiring
+ * the user to sign out and back in.
+ *
+ * Returns the new id-token string on success. Falls back to rejecting
+ * if there's no refresh token cached (user needs a full sign-in).
+ */
+export function refreshSession(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+    // getSession with `{}` options silently refreshes if the access
+    // token is expired; passing refreshSession() directly forces it
+    // even on non-expired tokens — which is what we want here.
+    currentUser.getSession(
+      (err: Error | null, session: CognitoUserSession | null) => {
+        if (err || !session) {
+          reject(err ?? new Error('No active session.'))
+          return
+        }
+        const refreshToken = session.getRefreshToken()
+        currentUser.refreshSession(refreshToken, (e, newSession) => {
+          if (e || !newSession) {
+            reject(e ?? new Error('Failed to refresh session.'))
+            return
+          }
+          const idToken = newSession.getIdToken().getJwtToken()
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('auth_token', idToken)
+          }
+          resolve(idToken)
+        })
+      },
+    )
+  })
+}
+
 export function changePassword(oldPassword: string, newPassword: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const currentUser = userPool.getCurrentUser()

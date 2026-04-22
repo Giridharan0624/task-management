@@ -493,11 +493,34 @@
   .stagger-up > *,
   .animate-breathe,
   .animate-drift,
+  .animate-drift-slow,
+  .animate-drift-slower,
   .animate-ping,
   .animate-pulse-soft,
   .animate-pulse,
-  .animate-float {
+  .animate-float,
+  .animate-float-lg,
+  .animate-gradient-shift,
+  .animate-slow-spin,
+  .animate-blink,
+  .animate-shimmer,
+  .animate-fade-in,
+  .animate-fade-in-scale,
+  .animate-slide-in-left,
+  .animate-slide-in-right {
     animation: none !important;
   }
   .stagger-up > * { opacity: 1; }
+}
+
+/* Touch-only devices can't `:hover`, so anything we hide behind a
+ * hover-reveal becomes invisible on phones/tablets. Landing-page compact
+ * bento cards mark their CTA with `.touch-always-visible` — this media
+ * query short-circuits the hover animation so the CTA is discoverable
+ * on touch without changing the desktop experience. */
+@media (hover: none) {
+  .touch-always-visible {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from contexts.task.domain.value_objects import TaskPriority
 
@@ -15,7 +15,15 @@ class Task(BaseModel):
     description: Optional[str] = None
     status: str = "TODO"
     priority: TaskPriority = TaskPriority.MEDIUM
-    domain: str = "DEVELOPMENT"
+    # Phase 5: canonical field name is `pipeline_id`. `domain` is the
+    # legacy attribute — kept as a Pydantic alias so existing DynamoDB
+    # items (and any in-flight payloads) still deserialize. Writes emit
+    # both keys via `to_dict()` for a compat window; after all tenants
+    # are migrated we'll drop `domain`.
+    domain: str = Field(
+        default="DEVELOPMENT",
+        validation_alias=AliasChoices("pipeline_id", "domain"),
+    )
     assigned_to: list[str] = []
     assigned_by: Optional[str] = None
     created_by: str
@@ -23,6 +31,14 @@ class Task(BaseModel):
     estimated_hours: Optional[float] = None
     created_at: str
     updated_at: str
+
+    model_config = {"populate_by_name": True}
+
+    @property
+    def pipeline_id(self) -> str:
+        """Canonical accessor. New code should read this; `.domain`
+        remains for legacy call sites until the rename lands everywhere."""
+        return self.domain
 
     @classmethod
     def create(
@@ -59,6 +75,10 @@ class Task(BaseModel):
         )
 
     def to_dict(self) -> dict:
+        # Emit both keys during the rename window. Frontend can read
+        # either `pipeline_id` (preferred) or `domain` (legacy) without
+        # breaking; once all consumers have moved off `domain` we drop
+        # it from the dict.
         return {
             "task_id": self.task_id,
             "project_id": self.project_id,
@@ -67,6 +87,7 @@ class Task(BaseModel):
             "status": self.status if isinstance(self.status, str) else self.status.value if hasattr(self.status, 'value') else str(self.status),
             "priority": self.priority.value,
             "domain": self.domain,
+            "pipeline_id": self.domain,
             "assigned_to": self.assigned_to,
             "assigned_by": self.assigned_by,
             "created_by": self.created_by,

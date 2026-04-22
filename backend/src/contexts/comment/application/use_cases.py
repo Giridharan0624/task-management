@@ -4,10 +4,12 @@ import uuid
 
 from contexts.comment.domain.entities import ProgressComment
 from contexts.comment.domain.repository import ICommentRepository
+from contexts.org.domain import permissions as P
 from contexts.project.domain.repository import IProjectRepository
 from contexts.task.domain.repository import ITaskRepository
-from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
+from contexts.user.domain.value_objects import SystemRole
 from shared_kernel.errors import AuthorizationError, NotFoundError
+from shared_kernel.permissions import role_has
 
 
 class CreateCommentUseCase:
@@ -22,8 +24,9 @@ class CreateCommentUseCase:
         if not task:
             raise NotFoundError(f"Task {task_id} not found")
 
-        # Caller must be assigned to the task OR be privileged (OWNER/ADMIN)
-        if caller_system_role not in PRIVILEGED_ROLES:
+        # Caller must be assigned to the task OR hold TASK_VIEW_ALL (the
+        # "see any task" privilege — OWNER/ADMIN by default).
+        if not role_has(caller_system_role, P.TASK_VIEW_ALL):
             if caller_user_id not in task.assigned_to:
                 raise AuthorizationError("You must be assigned to this task to post a comment.")
 
@@ -51,8 +54,8 @@ class ListCommentsUseCase:
         if not task:
             raise NotFoundError(f"Task {task_id} not found")
 
-        # OWNER/ADMIN can see any. Others must be a project member.
-        if caller_system_role not in PRIVILEGED_ROLES:
+        # TASK_VIEW_ALL holders bypass membership. Others must be a project member.
+        if not role_has(caller_system_role, P.TASK_VIEW_ALL):
             member = self._project_repo.find_member(task.project_id, caller_user_id)
             if not member:
                 raise AuthorizationError("You must be a member of this project to view comments.")

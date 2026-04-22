@@ -73,7 +73,7 @@ const NEUTRAL_THEME = {
 }
 
 export default function RolesSettingsPage() {
-  const { user } = useAuth()
+  const { user, refreshSession } = useAuth()
   const router = useRouter()
   const toast = useToast()
   const confirm = useConfirm()
@@ -133,6 +133,9 @@ export default function RolesSettingsPage() {
       await orgsApi.deleteRole(role.roleId)
       toast.success(`Role '${role.name}' deleted`)
       await refresh()
+      // If the caller's own role was deleted their token is stale.
+      // Safe to always refresh — no-op if the token is already current.
+      await refreshSession().catch(() => {})
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to delete role')
     }
@@ -242,6 +245,9 @@ export default function RolesSettingsPage() {
           onSaved={async () => {
             setEditingRole(null)
             await refresh()
+            // If the edited role is one the caller holds, their token
+            // is stale until refresh. Always-refresh is cheap and safe.
+            await refreshSession().catch(() => {})
           }}
         />
       )}

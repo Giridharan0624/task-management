@@ -10,7 +10,8 @@ import { BirthdayBanner } from '@/components/ui/BirthdayBanner'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Sparkline } from '@/components/ui/Sparkline'
-import { TASK_STATUS_COLORS, TASK_STATUS_LABEL } from '@/types/task'
+import { TASK_STATUS_COLORS } from '@/types/task'
+import { useStatusLabel } from '@/lib/tenant/usePipelines'
 import { isOverdue as checkOverdue, parseDeadline } from '@/lib/utils/deadline'
 import type { User } from '@/types/user'
 
@@ -147,6 +148,7 @@ function TaskRow({
     priority: string
   }
 }) {
+  const labelOf = useStatusLabel()
   return (
     <Link
       href={`/projects/${task.projectId}`}
@@ -181,8 +183,7 @@ function TaskRow({
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
         <Badge className={TASK_STATUS_COLORS[task.status]}>
-          {TASK_STATUS_LABEL[task.status as keyof typeof TASK_STATUS_LABEL] ??
-            task.status}
+          {labelOf(task.status)}
         </Badge>
         <Badge className={PRIORITY_COLORS[task.priority]}>{task.priority}</Badge>
       </div>
@@ -277,6 +278,7 @@ function UpcomingDeadlines({
     status: string
   }[]
 }) {
+  const labelOf = useStatusLabel()
   if (tasks.length === 0) return null
   return (
     <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
@@ -337,8 +339,7 @@ function UpcomingDeadlines({
                 {t.title}
               </p>
               <span className="text-[10px] text-muted-foreground/70">
-                {TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL] ??
-                  t.status}
+                {labelOf(t.status)}
               </span>
               <span
                 className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${

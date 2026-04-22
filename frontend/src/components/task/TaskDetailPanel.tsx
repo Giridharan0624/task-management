@@ -11,7 +11,8 @@ import { useProject } from '@/lib/hooks/useProjects'
 import { useAdmins, useUsers } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import type { Task, TaskStatus, TaskPriority } from '@/types/task'
-import { TASK_STATUS_LABEL, TASK_STATUS_PROGRESS, DOMAIN_STATUSES, DOMAIN_OPTIONS, getStatusOptions, getStatusProgress } from '@/types/task'
+import { DOMAIN_STATUSES, DOMAIN_OPTIONS, getStatusOptions, getStatusProgress } from '@/types/task'
+import { useStatusLabel } from '@/lib/tenant/usePipelines'
 import type { TaskDomain } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -107,6 +108,7 @@ interface EditFormValues {
 export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskDetailPanelProps) {
   const { user } = useAuth()
   const { data: project } = useProject(projectId)
+  const labelOf = useStatusLabel()
   const updateTask = useUpdateTask(projectId)
   const assignTask = useAssignTask(projectId)
   const toast = useToast()
@@ -304,7 +306,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
     try {
       await updateTask.mutateAsync({ taskId: task.taskId, data: { status: newStatus } })
       if (previousStatus !== newStatus) {
-        const newLabel = TASK_STATUS_LABEL[newStatus] ?? newStatus
+        const newLabel = labelOf(newStatus)
         toast.undoable(
           `Status changed to ${newLabel}`,
           () => {
@@ -464,7 +466,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                       domain={((project?.domain || task.domain) as TaskDomain) || 'DEVELOPMENT'}
                     />
                   ) : (
-                    <Badge variant={task.status}>{TASK_STATUS_LABEL[task.status]}</Badge>
+                    <Badge variant={task.status}>{labelOf(task.status)}</Badge>
                   )}
                   <Badge variant={task.priority}>{task.priority}</Badge>
                   {isOverdue && (
@@ -495,9 +497,9 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                       <span className="text-[11px] font-bold tabular-nums flex-shrink-0" style={{ color: STAGE_CLR[task.status] }}>{pct}%</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground/50">{TASK_STATUS_LABEL[STAGES[0]]}</span>
+                      <span className="text-[10px] text-muted-foreground/50">{labelOf(STAGES[0])}</span>
                       <span className="text-[10px] font-medium" style={{ color: STAGE_CLR[task.status] }}>Stage {currentIdx + 1}/{STAGES.length}</span>
-                      <span className="text-[10px] text-muted-foreground/50">{TASK_STATUS_LABEL[STAGES[STAGES.length - 1]]}</span>
+                      <span className="text-[10px] text-muted-foreground/50">{labelOf(STAGES[STAGES.length - 1])}</span>
                     </div>
                   </div>
                 )

@@ -2,7 +2,6 @@
 
 import type { Task, TaskStatus } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
-import { TASK_STATUS_LABEL } from '@/types/task'
 
 interface TaskCardProps {
   task: Task

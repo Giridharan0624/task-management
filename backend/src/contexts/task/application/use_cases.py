@@ -10,14 +10,16 @@ from contexts.task.domain.entities import Task
 from contexts.task.domain.repository import ITaskRepository
 from contexts.task.domain.value_objects import TaskPriority, DOMAIN_STATUSES, DOMAIN_PROGRESS
 from contexts.user.domain.repository import IUserRepository
-from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
+from contexts.org.domain import permissions as P
+from contexts.user.domain.value_objects import SystemRole
+from shared_kernel.permissions import role_has
 from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
 _TASK_MANAGE_ROLES = (ProjectRole.ADMIN, ProjectRole.PROJECT_MANAGER, ProjectRole.TEAM_LEAD)
 
 
 def _can_manage_tasks(project_repo, project_id, caller_user_id, caller_system_role):
-    """OWNER/ADMIN system role OR project ADMIN/TEAM_LEAD can manage tasks."""
-    if caller_system_role in PRIVILEGED_ROLES:
+    """Caller with org-wide TASK_MANAGE OR project-level ADMIN/TEAM_LEAD role."""
+    if role_has(caller_system_role, P.TASK_MANAGE):
         return True
     member = project_repo.find_member(project_id, caller_user_id)
     return member is not None and member.project_role in _TASK_MANAGE_ROLES
@@ -99,8 +101,8 @@ class GetTaskUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner/Admin can view any task; others must be project members
-        if caller_system_role not in PRIVILEGED_ROLES:
+        # TASK_VIEW_ALL holders bypass the membership check.
+        if not role_has(caller_system_role, P.TASK_VIEW_ALL):
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
                 raise AuthorizationError("You don't have access to this project.")
@@ -124,9 +126,10 @@ class ListTasksForProjectUseCase:
         if not project:
             raise NotFoundError(f"Project {project_id} not found")
 
-        # Owner/Admin can list any project's tasks; others must be project members
+        # TASK_VIEW_ALL bypasses the membership check.
         caller_member = None
-        if caller_system_role not in PRIVILEGED_ROLES:
+        can_view_all = role_has(caller_system_role, P.TASK_VIEW_ALL)
+        if not can_view_all:
             caller_member = self._project_repo.find_member(project_id, caller_user_id)
             if not caller_member:
                 raise AuthorizationError("You don't have access to this project.")
@@ -134,7 +137,7 @@ class ListTasksForProjectUseCase:
         tasks = self._task_repo.find_by_project(project_id)
 
         # Members only see tasks assigned to them; Team Leads and above see all
-        if caller_system_role in PRIVILEGED_ROLES:
+        if can_view_all:
             return [t.to_dict() for t in tasks]
 
         if not caller_member:
@@ -167,8 +170,9 @@ class UpdateTaskUseCase:
         if not task or task.project_id != project_id:
             raise NotFoundError(f"Task {task_id} not found")
 
-        # Owner/Admin/Team Lead can update any task; Member can only update status of their assigned tasks
-        if project_id == "DIRECT" and caller_system_role in PRIVILEGED_ROLES:
+        # Org-wide TASK_MANAGE or project-level management can update any field;
+        # a regular member can only update status on tasks assigned to them.
+        if project_id == "DIRECT" and role_has(caller_system_role, P.TASK_MANAGE):
             pass
         elif project_id != "DIRECT" and _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
             pass
@@ -256,7 +260,7 @@ class DeleteTaskUseCase:
             raise NotFoundError(f"Task {task_id} not found")
 
         if project_id == "DIRECT":
-            if caller_system_role not in PRIVILEGED_ROLES:
+            if not role_has(caller_system_role, P.TASK_DELETE_ANY):
                 raise AuthorizationError("You don't have permission to delete direct tasks.")
         elif not _can_manage_tasks(self._project_repo, project_id, caller_user_id, caller_system_role):
             raise AuthorizationError("You don't have permission to delete tasks in this project.")
@@ -338,7 +342,7 @@ class GetMyAssignedTasksUseCase:
         my_tasks = []
 
         # Project tasks
-        if caller_system_role in PRIVILEGED_ROLES:
+        if role_has(caller_system_role, P.TASK_VIEW_ALL):
             projects = self._project_repo.find_all()
             for project in projects:
                 tasks = self._task_repo.find_by_project(project.project_id)

@@ -150,7 +150,12 @@ class TaskManagementStack(Stack):
             ),
             user_verification=cognito.UserVerificationConfig(
                 email_subject="TaskFlow — Password Reset Code",
-                email_body="Hi,\n\nYour TaskFlow password reset verification code is: {####}\n\nThis code is valid for one use only and expires shortly.\n\nIf you did not request this, please ignore this email.\n\nPowered by NEUROSTACK",
+                email_body=(
+                    "Hi,\n\n"
+                    "Your TaskFlow password reset verification code is: {####}\n\n"
+                    "This code is valid for one use only and expires shortly.\n\n"
+                    "If you did not request this, please ignore this email."
+                ),
                 email_style=cognito.VerificationEmailStyle.CODE,
             ),
             removal_policy=data_removal_policy,
@@ -634,6 +639,10 @@ class TaskManagementStack(Stack):
             # misconfigured.
             per_ws_limit = int(config.get("waf_rate_per_workspace", 2000))
             per_ip_limit = int(config.get("waf_rate_per_ip", 5000))
+            # Signup is the highest-leverage abuse target — one POST creates
+            # an entire tenant. Cap it tight (5 / 5-min / IP). Ordinary
+            # human signups don't approach this; bots flood it.
+            signup_limit = int(config.get("waf_signup_per_ip", 5))
 
             web_acl = wafv2.CfnWebACL(
                 self,
@@ -687,6 +696,59 @@ class TaskManagementStack(Stack):
                         visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                             cloud_watch_metrics_enabled=True,
                             metric_name="PerIpRate",
+                            sampled_requests_enabled=True,
+                        ),
+                    ),
+                    # Signup-specific tighter rate limit. scope_down_statement
+                    # restricts the rate count to POSTs whose URI path ends
+                    # in /signup — only those count against the budget.
+                    wafv2.CfnWebACL.RuleProperty(
+                        name="SignupPerIpRate",
+                        priority=5,  # higher precedence than PerIpRate
+                        action=wafv2.CfnWebACL.RuleActionProperty(block={}),
+                        statement=wafv2.CfnWebACL.StatementProperty(
+                            rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                                limit=signup_limit,
+                                aggregate_key_type="IP",
+                                scope_down_statement=wafv2.CfnWebACL.StatementProperty(
+                                    and_statement=wafv2.CfnWebACL.AndStatementProperty(
+                                        statements=[
+                                            wafv2.CfnWebACL.StatementProperty(
+                                                byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
+                                                    field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
+                                                        uri_path={},
+                                                    ),
+                                                    positional_constraint="ENDS_WITH",
+                                                    search_string="/signup",
+                                                    text_transformations=[
+                                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                                            priority=0, type="LOWERCASE"
+                                                        )
+                                                    ],
+                                                ),
+                                            ),
+                                            wafv2.CfnWebACL.StatementProperty(
+                                                byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
+                                                    field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
+                                                        method={},
+                                                    ),
+                                                    positional_constraint="EXACTLY",
+                                                    search_string="POST",
+                                                    text_transformations=[
+                                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                                            priority=0, type="NONE"
+                                                        )
+                                                    ],
+                                                ),
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                            ),
+                        ),
+                        visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                            cloud_watch_metrics_enabled=True,
+                            metric_name="SignupPerIpRate",
                             sampled_requests_enabled=True,
                         ),
                     ),

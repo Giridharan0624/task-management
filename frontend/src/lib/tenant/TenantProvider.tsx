@@ -12,15 +12,22 @@ import { orgsApi } from '@/lib/api/orgsApi'
 import { applyTenantTheme } from '@/lib/tenant/theme'
 import type { CurrentOrgResponse, OrgSummary } from '@/types/org'
 
-const DEFAULT_SLUG = 'neurostack'
 const STORAGE_KEY = 'taskflow_workspace'
 
 interface TenantContextValue {
-  /** The active workspace code. Resolved once at mount from URL query
-   *  `?workspace=...`, then localStorage, then DEFAULT_SLUG. */
+  /** The active workspace code, or '' when unknown.
+   *
+   *  Option-B model: login is email+password only, not scoped to a
+   *  workspace. The slug is resolved *after* login from the JWT's
+   *  org claim (via refreshCurrent()). Pre-login the slug is almost
+   *  always empty — a generic TaskFlow login screen with no tenant
+   *  theming. The URL query `?workspace=acme` is still honored when
+   *  present (e.g. invite links, signup links) to pre-theme the
+   *  screen, but it's not required. */
   slug: string
-  /** Public branding data from GET /orgs/by-slug/{slug}. Available
-   *  even before the user logs in so the login screen can theme. */
+  /** Public branding data from GET /orgs/by-slug/{slug}. Null
+   *  whenever slug is empty — we don't fetch without an explicit
+   *  workspace code. */
   summary: OrgSummary | null
   /** Full org + settings + plan from GET /orgs/current. Available only
    *  after the user has an authenticated session. Hydrated via
@@ -35,8 +42,11 @@ interface TenantContextValue {
 
 const TenantContext = createContext<TenantContextValue | null>(null)
 
+/** Only honor a workspace slug that came in explicitly via `?workspace=`
+ *  or a previously-authenticated session's localStorage hint. Empty
+ *  string means "no tenant yet" — login screen renders generic. */
 function readInitialSlug(): string {
-  if (typeof window === 'undefined') return DEFAULT_SLUG
+  if (typeof window === 'undefined') return ''
   const params = new URLSearchParams(window.location.search)
   const fromQuery = params.get('workspace')
   if (fromQuery) {
@@ -44,27 +54,29 @@ function readInitialSlug(): string {
     localStorage.setItem(STORAGE_KEY, normalized)
     return normalized
   }
-  const fromStorage = localStorage.getItem(STORAGE_KEY)
-  if (fromStorage) return fromStorage
-  return DEFAULT_SLUG
+  return localStorage.getItem(STORAGE_KEY) ?? ''
 }
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
-  const [slug, setSlugState] = useState<string>(DEFAULT_SLUG)
+  const [slug, setSlugState] = useState<string>('')
   const [summary, setSummary] = useState<OrgSummary | null>(null)
   const [current, setCurrent] = useState<CurrentOrgResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Resolve initial slug client-side (URL → localStorage → default)
+  // Resolve initial slug client-side (URL → localStorage → empty)
   useEffect(() => {
     setSlugState(readInitialSlug())
   }, [])
 
-  // Fetch summary whenever slug changes. Public endpoint, safe
-  // to call pre-authentication.
+  // Fetch pre-auth branding only when we actually have a slug. Empty
+  // slug means generic login — don't call the API at all.
   useEffect(() => {
-    if (!slug) return
+    if (!slug) {
+      setSummary(null)
+      setIsLoading(false)
+      return
+    }
     let cancelled = false
     setIsLoading(true)
     setError(null)
@@ -81,6 +93,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       .catch((e: unknown) => {
         if (cancelled) return
         setSummary(null)
+        // Bad/stale slug → forget it so we don't keep 404ing. Typical
+        // case: user logged out of one org and is signing into another;
+        // the old slug sits in localStorage and mismatches their JWT.
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+        setSlugState('')
         setError(e instanceof Error ? e.message : 'Workspace not found')
         setIsLoading(false)
       })
@@ -93,7 +112,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     const normalized = newSlug.trim().toLowerCase()
     setSlugState(normalized)
     if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, normalized)
+      if (normalized) {
+        localStorage.setItem(STORAGE_KEY, normalized)
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
     }
   }, [])
 
@@ -101,8 +124,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY)
     }
-    setSlugState(DEFAULT_SLUG)
+    setSlugState('')
     setCurrent(null)
+    setSummary(null)
   }, [])
 
   const refreshCurrent = useCallback(async () => {

@@ -7,7 +7,9 @@ from contexts.attendance.domain.entities import Attendance
 from contexts.attendance.domain.repository import IAttendanceRepository
 from contexts.task.domain.repository import ITaskRepository
 from contexts.user.domain.repository import IUserRepository
-from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
+from contexts.org.domain import permissions as P
+from contexts.user.domain.value_objects import SystemRole
+from shared_kernel.permissions import role_has
 from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -147,7 +149,7 @@ class ListTodayAttendanceUseCase:
         self._attendance_repo = attendance_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.ATTENDANCE_REPORT_VIEW):
             raise AuthorizationError("You don't have permission to view team attendance.")
 
         date = _today()
@@ -170,7 +172,7 @@ class GetAttendanceReportUseCase:
     def execute(self, caller_user_id: str, caller_system_role: str, start_date: str, end_date: str) -> list[dict]:
         records = self._attendance_repo.find_all_by_date_range(start_date, end_date)
 
-        if caller_system_role in PRIVILEGED_ROLES:
+        if role_has(caller_system_role, P.ATTENDANCE_REPORT_VIEW):
             return [r.to_dict() for r in records]
 
         # MEMBER sees only their own records

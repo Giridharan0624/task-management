@@ -27,7 +27,7 @@ export default function LoginPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
-        <Logo size="lg" />
+        <Logo size="lg" hideSubline />
         <Spinner size="md" />
         <p className="animate-pulse text-xs font-medium text-muted-foreground">
           Checking authentication...
@@ -86,7 +86,7 @@ export default function LoginPage() {
         />
 
         <div className="relative z-10 max-w-lg">
-          <Logo size="xl" className="mb-10" />
+          <Logo size="xl" hideSubline className="mb-10" />
 
           <h1 className="mb-5 animate-fade-in text-[42px] font-bold leading-[1.1] tracking-tight text-foreground text-balance">
             Manage your team&apos;s work,{' '}
@@ -124,12 +124,6 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <p className="mt-14 animate-fade-in-delay-3 text-[11px] text-muted-foreground/70">
-            Powered by{' '}
-            <span className="font-semibold text-muted-foreground">
-              NEUROSTACK
-            </span>
-          </p>
         </div>
       </div>
 
@@ -137,7 +131,7 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center bg-background px-6 py-12">
         <div className="w-full max-w-sm animate-fade-in">
           <div className="mb-8 flex justify-center lg:hidden">
-            <Logo size="lg" />
+            <Logo size="lg" hideSubline />
           </div>
 
           <div className="mb-6">
@@ -149,9 +143,7 @@ export default function LoginPage() {
           </Card>
 
           <p className="mt-6 text-center text-[10px] text-muted-foreground">
-            Powered by{' '}
-            <span className="font-semibold">NEUROSTACK</span> · Secure login via
-            AWS Cognito
+            Secure sign-in via AWS Cognito
           </p>
         </div>
       </div>

@@ -5,9 +5,11 @@ from datetime import date, datetime, timezone
 
 from contexts.dayoff.domain.entities import DayOffRequest
 from contexts.dayoff.domain.repository import IDayOffRepository
+from contexts.org.domain import permissions as P
 from contexts.user.domain.repository import IUserRepository
-from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
+from contexts.user.domain.value_objects import SystemRole
 from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
+from shared_kernel.permissions import role_has
 
 # Upper bound on a single day-off request. Longer leave should be broken
 # into smaller requests so admins review them in review-friendly chunks.
@@ -66,7 +68,8 @@ class CreateDayOffRequestUseCase:
         for u in all_users:
             if u.user_id == caller_user_id:
                 continue
-            if u.system_role.value in PRIVILEGED_ROLES:
+            # Anyone who can approve a day-off is a valid auto-approver.
+            if role_has(u.system_role.value, P.DAYOFF_APPROVE):
                 approver = u
                 break
 
@@ -104,7 +107,7 @@ class GetPendingApprovalsUseCase:
         self._dayoff_repo = dayoff_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.DAYOFF_APPROVE):
             return []
         requests = self._dayoff_repo.find_all()
         # Show pending requests, but exclude caller's own requests (can't self-approve)
@@ -117,7 +120,7 @@ class GetAllRequestsUseCase:
         self._dayoff_repo = dayoff_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.DAYOFF_LIST_ALL):
             raise AuthorizationError("You don't have permission to view all day-off requests.")
         requests = self._dayoff_repo.find_all()
         return [r.to_dict() for r in requests]
@@ -129,7 +132,7 @@ class ApproveRequestUseCase:
         self._user_repo = user_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str, request_id: str) -> dict:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.DAYOFF_APPROVE):
             raise AuthorizationError("You don't have permission to approve day-off requests.")
 
         day_off = self._dayoff_repo.find_by_id(request_id)
@@ -158,7 +161,7 @@ class RejectRequestUseCase:
         self._user_repo = user_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str, request_id: str) -> dict:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.DAYOFF_REJECT):
             raise AuthorizationError("You don't have permission to reject day-off requests.")
 
         day_off = self._dayoff_repo.find_by_id(request_id)

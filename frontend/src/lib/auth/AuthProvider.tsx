@@ -8,6 +8,7 @@ import {
   completeNewPassword as cognitoCompleteNewPassword,
   signOut as cognitoSignOut,
   changePassword as cognitoChangePassword,
+  refreshSession as cognitoRefreshSession,
   getCurrentToken,
 } from './cognitoClient'
 import { useTenant } from '@/lib/tenant/TenantProvider'
@@ -27,6 +28,10 @@ interface AuthContextValue {
   signOut: () => void
   updateUser: (updates: Partial<User>) => void
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>
+  /** Force-refresh the ID token + update local state. Call after any
+   * server action that may have changed the user's role or claims
+   * (e.g. after an admin edits a role the current user holds). */
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -66,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // token is stored. Without this, the dashboard renders before
   // /orgs/current returns and the user sees no tenant branding /
   // terminology / features until they manually reload.
-  const { refreshCurrent: refreshTenant } = useTenant()
+  const { refreshCurrent: refreshTenant, clearWorkspace } = useTenant()
 
   const needsPasswordChange = pendingPasswordChange !== null
 
@@ -182,7 +187,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null)
     setUser(null)
     setPendingPasswordChange(null)
-  }, [])
+    // Drop the cached workspace slug too — a second user on the same
+    // device should not see the previous user's org branding on the
+    // login screen.
+    clearWorkspace()
+  }, [clearWorkspace])
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser((prev) => prev ? { ...prev, ...updates } : null)
@@ -192,11 +201,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await cognitoChangePassword(oldPassword, newPassword)
   }, [])
 
+  const refreshSession = useCallback(async () => {
+    // Force a fresh ID token and re-hydrate local user state from the
+    // new claims — picks up role / orgId changes that happened since
+    // the last login.
+    const freshToken = await cognitoRefreshSession()
+    setToken(freshToken)
+    const decoded = decodeJwtForUser(freshToken)
+    if (decoded) setUser(decoded)
+  }, [])
+
   return (
     <AuthContext.Provider value={{
       user, token, isLoading, needsPasswordChange,
       signIn, completePasswordChange, signOut, updateUser,
       changePassword: changePasswordFn,
+      refreshSession,
     }}>
       {children}
     </AuthContext.Provider>

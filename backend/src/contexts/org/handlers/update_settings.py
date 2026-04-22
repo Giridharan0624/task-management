@@ -15,9 +15,10 @@ from pydantic import BaseModel, Field
 from contexts.org.domain import permissions as P
 from contexts.org.domain.entities import OrgSettings
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
+from shared_kernel import audit
 from shared_kernel.auth_context import extract_auth_context
 from shared_kernel.errors import NotFoundError, ValidationError
-from shared_kernel.permissions import require
+from shared_kernel.permissions import require, require_not_suspended
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
 
@@ -49,6 +50,7 @@ class UpdateSettingsRequest(BaseModel):
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        require_not_suspended(auth)
         require(auth, P.SETTINGS_EDIT)
 
         req = validate_body(UpdateSettingsRequest, event.get("body"))
@@ -66,6 +68,15 @@ def handler(event, context):
         merged.updated_at = datetime.now(timezone.utc).isoformat()
 
         repo.save_settings(merged)
+        # Audit which field groups changed (not each value — leaks PII).
+        changed_keys = sorted(updates.keys())
+        audit.record(
+            auth,
+            action=audit.ORG_SETTINGS_UPDATED,
+            target={"type": "settings", "id": auth.org_id},
+            summary=f"Updated {', '.join(changed_keys)}" if changed_keys else "Updated settings",
+            metadata={"changed": changed_keys},
+        )
         return build_success(200, merged.to_dict())
     except Exception as e:
         return build_error(e)

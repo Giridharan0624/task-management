@@ -7,13 +7,15 @@ import string
 import uuid
 from datetime import datetime, timezone
 
-from contexts.user.domain.entities import User
-from contexts.user.domain.repository import IUserRepository
-from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
+from contexts.org.domain import permissions as P
 from contexts.project.domain.repository import IProjectRepository
 from contexts.task.domain.repository import ITaskRepository
-from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
+from contexts.user.domain.entities import User
 from contexts.user.domain.identity_service import IIdentityService
+from contexts.user.domain.repository import IUserRepository
+from contexts.user.domain.value_objects import SystemRole
+from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
+from shared_kernel.permissions import role_has
 
 
 class ListUsersUseCase:
@@ -22,7 +24,7 @@ class ListUsersUseCase:
         self._user_repo = user_repo
 
     def execute(self, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.USER_LIST):
             raise AuthorizationError("You don't have permission to view the user list.")
         users = self._user_repo.find_all()
         return [u.to_dict() for u in users]
@@ -77,7 +79,7 @@ class GetUserProgressUseCase:
         self._task_repo = task_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.USER_VIEW_PROGRESS):
             raise AuthorizationError("You don't have permission to view user progress.")
 
         target_user_id = dto["user_id"]

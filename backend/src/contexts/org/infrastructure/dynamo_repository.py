@@ -201,6 +201,14 @@ class OrgDynamoRepository(IOrgRepository):
             }
         )
 
+    def delete_pipeline(self, org_id: str, pipeline_id: str) -> None:
+        self._table.delete_item(
+            Key={
+                "PK": tenant_keys.org_pk(org_id),
+                "SK": tenant_keys.pipeline_sk(pipeline_id),
+            }
+        )
+
     def list_pipelines(self, org_id: str) -> list[dict]:
         import json
         from boto3.dynamodb.conditions import Key as _K

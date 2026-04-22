@@ -6,7 +6,7 @@ import { useProjectStatus } from '@/lib/hooks/useProjects'
 import { Spinner } from '@/components/ui/Spinner'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { buildCsvName } from '@/lib/utils/csvFilename'
-import { TASK_STATUS_LABEL } from '@/types/task'
+import { useStatusLabel } from '@/lib/tenant/usePipelines'
 import type { Attendance } from '@/types/attendance'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -60,6 +60,7 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
   const [period, setPeriod] = useState<Period>('weekly')
   const [offset, setOffset] = useState(0)
   const [showLog, setShowLog] = useState(false)
+  const labelOf = useStatusLabel()
 
   const { start, end, label } = useMemo(() => getRange(period, offset), [period, offset])
   const { data: rawRecords, isLoading } = useAttendanceReport(start, end)
@@ -119,8 +120,8 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
     if (!projectStatus?.taskProgress) return []
     const counts = new Map<string, number>()
     for (const t of projectStatus.taskProgress) counts.set(t.status, (counts.get(t.status) ?? 0) + 1)
-    return Array.from(counts.entries()).map(([status, count]) => ({ name: TASK_STATUS_LABEL[status as keyof typeof TASK_STATUS_LABEL] ?? status, value: count, status }))
-  }, [projectStatus])
+    return Array.from(counts.entries()).map(([status, count]) => ({ name: labelOf(status), value: count, status }))
+  }, [projectStatus, labelOf])
 
   // ── Estimated vs Actual ──
   const estVsActual = useMemo(() => {

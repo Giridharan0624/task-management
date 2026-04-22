@@ -6,6 +6,13 @@ import { useTenant } from '@/lib/tenant/TenantProvider'
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   showText?: boolean
+  /**
+   * Force-hide the tenant-name subline. Use on public marketing pages
+   * (landing, auth) where there's no workspace context yet, so the
+   * TenantProvider's default-tenant fallback (NEUROSTACK) doesn't leak
+   * into the header of what's really a generic TaskFlow page.
+   */
+  hideSubline?: boolean
   className?: string
 }
 
@@ -20,7 +27,12 @@ const PRODUCT_NAME = 'TaskFlow'
 const PRODUCT_HEAD = 'Task'
 const PRODUCT_TAIL = 'Flow'
 
-export function Logo({ size = 'md', showText = true, className }: LogoProps) {
+export function Logo({
+  size = 'md',
+  showText = true,
+  hideSubline = false,
+  className,
+}: LogoProps) {
   const s = config[size]
   // Product brand stays "TaskFlow" — that's the SaaS this user is on.
   // The tenant name renders as a secondary subline so admins know which
@@ -35,7 +47,9 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
   // (no real tenant resolved yet) or when the org happens to be named
   // "TaskFlow" already.
   const showSubline =
-    !!orgName && orgName.toLowerCase() !== PRODUCT_NAME.toLowerCase()
+    !hideSubline &&
+    !!orgName &&
+    orgName.toLowerCase() !== PRODUCT_NAME.toLowerCase()
 
   return (
     <div className={cn('flex items-center', s.gap, className)}>

@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/Table'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { TASK_STATUS_LABEL } from '@/types/task'
+import { useStatusLabel } from '@/lib/tenant/usePipelines'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import type { ProjectStatus, TaskProgress } from '@/lib/api/projectApi'
 import { cn } from '@/lib/utils'
@@ -74,9 +74,8 @@ export function ProjectTaskBreakdown({ status }: ProjectTaskBreakdownProps) {
 }
 
 function TaskRow({ task }: { task: TaskProgress }) {
-  const statusLabel =
-    TASK_STATUS_LABEL[task.status as keyof typeof TASK_STATUS_LABEL] ??
-    task.status.replace(/_/g, ' ')
+  const labelOf = useStatusLabel()
+  const statusLabel = labelOf(task.status) || task.status.replace(/_/g, ' ')
 
   const progressColor =
     task.statusProgress >= 100

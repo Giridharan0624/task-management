@@ -10,6 +10,7 @@ import { OnLeaveToday } from '@/components/dashboard/OnLeaveToday'
 import { TopProjects } from '@/components/dashboard/TopProjects'
 import { QuickActions } from '@/components/dashboard/QuickActions'
 import { SetupChecklist } from '@/components/dashboard/SetupChecklist'
+import { PlanLimitBanner } from '@/components/tenant/PlanLimitBanner'
 import { MemberDashboard } from './MemberDashboard'
 
 export default function DashboardPage() {
@@ -29,6 +30,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-5 animate-fade-in">
+      {/* Plan-limit banner — OWNER-only; self-hides when well below caps. */}
+      <PlanLimitBanner />
+
       {/* First-run checklist — hides itself when all steps done or dismissed.
           Owner-only: members/admins don't have permission for every step. */}
       {dashboardRole === 'OWNER' && <SetupChecklist />}

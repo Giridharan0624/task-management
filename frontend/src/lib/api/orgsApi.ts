@@ -3,10 +3,12 @@ import type {
   AcceptInviteRequest,
   AcceptInviteResponse,
   CurrentOrgResponse,
+  ListAuditResponse,
   ListInvitesResponse,
   ListRolesResponse,
   OrgSettings,
   OrgSummary,
+  Pipeline,
   Role,
   SendInviteRequest,
   SendInviteResponse,
@@ -107,8 +109,53 @@ export const orgsApi = {
     return apiClient.del<void>(`/orgs/current/roles/${encodeURIComponent(roleId)}`)
   },
 
-  // Pipelines are folded into GET /orgs/current — no dedicated endpoint.
-  // Use `useTenant().current?.pipelines` or the `usePipelines()` hook.
+  // Pipelines list is folded into GET /orgs/current — use `useTenant().current?.pipelines`
+  // or the `usePipelines()` hook. CRUD routes below hit the pipelines_router
+  // Lambda (not yet wired into CDK; pending nested-stack refactor).
+
+  async createPipeline(req: {
+    name: string
+    statuses: Array<{ id: string; label: string; color: string; isTerminal?: boolean }>
+    isDefault?: boolean
+  }): Promise<Pipeline> {
+    return apiClient.post<Pipeline>('/orgs/current/pipelines', req)
+  },
+
+  async updatePipeline(
+    pipelineId: string,
+    req: {
+      name?: string
+      statuses?: Array<{ id: string; label: string; color: string; isTerminal?: boolean }>
+      isDefault?: boolean
+    },
+  ): Promise<Pipeline> {
+    return apiClient.put<Pipeline>(
+      `/orgs/current/pipelines/${encodeURIComponent(pipelineId)}`,
+      req,
+    )
+  },
+
+  async deletePipeline(pipelineId: string): Promise<void> {
+    return apiClient.del<void>(
+      `/orgs/current/pipelines/${encodeURIComponent(pipelineId)}`,
+    )
+  },
+
+  // Authed (settings.edit) — GET /orgs/current/audit
+  // Paginated reverse-chronological audit log. Not yet wired in CDK;
+  // UI renders empty-state until endpoint deploys.
+  async listAudit(params: {
+    limit?: number
+    cursor?: string | null
+    action?: string | null
+  } = {}): Promise<ListAuditResponse> {
+    const qs = new URLSearchParams()
+    if (params.limit) qs.set('limit', String(params.limit))
+    if (params.cursor) qs.set('cursor', params.cursor)
+    if (params.action) qs.set('action', params.action)
+    const suffix = qs.toString() ? `?${qs}` : ''
+    return apiClient.get<ListAuditResponse>(`/orgs/current/audit${suffix}`)
+  },
 
   // Public — POST /invites/{token}/accept (invited user sets password)
   async acceptInvite(

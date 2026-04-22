@@ -146,6 +146,26 @@ export interface ListPipelinesResponse {
   pipelines: Pipeline[]
 }
 
+export interface AuditEvent {
+  eventId: string
+  action: string
+  actorId: string
+  actorEmail: string
+  actorRole: string
+  targetType: string
+  targetId: string
+  summary: string
+  before?: unknown
+  after?: unknown
+  metadata?: unknown
+  createdAt: string
+}
+
+export interface ListAuditResponse {
+  events: AuditEvent[]
+  nextCursor: string | null
+}
+
 export interface AcceptInviteRequest {
   name: string
   password: string

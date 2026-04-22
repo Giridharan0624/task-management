@@ -26,6 +26,7 @@ import {
   getStatusProgress,
   type TaskDomain,
 } from '@/types/task'
+import { useStatusLabel } from '@/lib/tenant/usePipelines'
 import type { MyTask } from '@/lib/api/userApi'
 import type { GroupBy } from './TaskToolbar'
 import { cn } from '@/lib/utils'
@@ -247,6 +248,7 @@ function TaskRow({
   onSelect: () => void
   selection?: { isSelected: boolean; toggle: () => void }
 }) {
+  const labelOf = useStatusLabel()
   const overdue = checkOverdue(task.deadline, task.status)
   const pct = getStatusProgress(
     task.status,
@@ -336,7 +338,7 @@ function TaskRow({
                 'bg-muted text-muted-foreground'
             )}
           >
-            {TASK_STATUS_LABEL[task.status] ?? task.status}
+            {labelOf(task.status)}
           </span>
           {task.deadline && (
             <>
@@ -399,7 +401,7 @@ function TaskRow({
             TASK_STATUS_COLORS[task.status] || 'bg-muted text-muted-foreground'
           )}
         >
-          {TASK_STATUS_LABEL[task.status] ?? task.status}
+          {labelOf(task.status)}
         </span>
       </div>
 

@@ -22,10 +22,14 @@ import { cn } from '@/lib/utils'
 
 const DISMISS_KEY = 'tf:setup-checklist:dismissed'
 const DESKTOP_FLAG_KEY = 'tf:setup:desktop-installed'
-// Brand defaults we ship with. If the tenant hasn't touched these, branding
-// hasn't been set up yet. Kept in sync with the seeded signup values.
-const DEFAULT_PRIMARY = '#6366f1'
-const DEFAULT_ACCENT = '#8b5cf6'
+// Brand defaults we ship with — MUST match the backend OrgSettings seed
+// (`primary_color = "#4F46E5"`, `accent_color = "#10B981"` in
+// backend/src/contexts/org/domain/entities.py). When these values match
+// the tenant's settings, branding is considered "untouched" and the
+// checklist step stays un-ticked. Kept lowercase so comparisons are
+// case-insensitive against whatever the tenant may have re-saved.
+const DEFAULT_PRIMARY = '#4f46e5'
+const DEFAULT_ACCENT = '#10b981'
 
 interface Step {
   key: string
@@ -71,11 +75,13 @@ export function SetupChecklist() {
   const hasTeammates = nonOwnerUsers.length > 0
   const hasProject = (projects ?? []).length > 0
   const settings = current?.settings
+  // Branding is considered set when the tenant has picked any color that
+  // differs from the backend-seeded defaults. Logo upload is no longer
+  // part of the UI, so it doesn't factor into this check anymore.
   const hasBranding =
-    !!settings?.logoUrl ||
-    (settings &&
-      (settings.primaryColor?.toLowerCase() !== DEFAULT_PRIMARY ||
-        settings.accentColor?.toLowerCase() !== DEFAULT_ACCENT))
+    !!settings &&
+    (settings.primaryColor?.toLowerCase() !== DEFAULT_PRIMARY ||
+      settings.accentColor?.toLowerCase() !== DEFAULT_ACCENT)
 
   const steps: Step[] = [
     {
@@ -135,7 +141,7 @@ export function SetupChecklist() {
     {
       key: 'branding',
       title: 'Customize your workspace',
-      description: 'Upload a logo and pick colors that match your brand.',
+      description: 'Pick colors that match your brand.',
       done: !!hasBranding,
       icon: Palette,
       action: (

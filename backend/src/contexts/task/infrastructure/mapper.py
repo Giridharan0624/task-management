@@ -14,6 +14,10 @@ class TaskMapper:
         else:
             assigned_to = [raw_assigned]
 
+        # Dual-read: accept the new `pipeline_id` attribute first, fall
+        # back to the legacy `domain` attribute for un-migrated rows.
+        pipeline_value = item.get("pipeline_id") or item.get("domain", "DEVELOPMENT")
+
         return Task(
             task_id=item["task_id"],
             project_id=item["project_id"],
@@ -21,7 +25,7 @@ class TaskMapper:
             description=item.get("description"),
             status=item.get("status", "TODO"),
             priority=TaskPriority(item.get("priority", TaskPriority.MEDIUM.value)),
-            domain=item.get("domain", "DEVELOPMENT"),
+            domain=pipeline_value,
             assigned_to=assigned_to,
             assigned_by=item.get("assigned_by"),
             created_by=item["created_by"],
@@ -45,6 +49,10 @@ class TaskMapper:
             "title": task.title,
             "status": status_val,
             "priority": task.priority.value,
+            # Dual-write: emit both names during the rename window. New
+            # readers prefer `pipeline_id`; legacy readers still find
+            # `domain`. After a burn-in + backfill we drop `domain`.
+            "pipeline_id": task.domain,
             "domain": task.domain,
             "created_by": task.created_by,
             "created_at": task.created_at,

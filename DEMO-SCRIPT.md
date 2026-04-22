@@ -5,6 +5,7 @@
 **Login:** `emma.thompson@neurostack.demo` / `Demo1234!`
 **Total runtime:** ~4:30
 **Register:** first-person founder voice, architectural/capability language — no vendor or service names
+**Core theme:** *running a company with real visibility into the work — captured automatically, not self-reported*
 
 ---
 
@@ -12,7 +13,7 @@
 
 **[SHOW]** Login screen. Workspace code `neurostack` already filled. Type `emma.thompson@neurostack.demo` and password.
 
-**[SAY]** "Running a company, I need one place that tells me what's being built, who's building it, and how they're doing. One workspace — isolated from every other company on the platform, shaped end-to-end to how my team works. Let me walk you through a day, as the founder of NEUROSTACK."
+**[SAY]** "Running a company, I need real visibility — what's being built, who's building it, and how the work is actually moving. Not status updates people type out. Signals captured from the work itself. That's what this app gives me. Let me walk you through a day, as the founder of NEUROSTACK."
 
 ---
 
@@ -20,7 +21,7 @@
 
 **[SHOW]** Land on dashboard. Pan across the widgets.
 
-**[SAY]** "The dashboard isn't my to-do list — it's the company's pulse. Active projects, the team's hours this week, anything routed to me: leave I'm the approver on, flagged blockers. Every view is scoped to my workspace — my data and another company's never mix, at any layer, not just in the UI."
+**[SAY]** "The dashboard isn't my to-do list — it's the company's pulse. Active projects, the team's hours this week, anything routed to me: a leave request, a flagged blocker. I don't have to ask anyone for an update — the signal is already here. And every view is scoped to my workspace — my data and another company's never mix, at any layer."
 
 ---
 
@@ -40,51 +41,51 @@
 
 ---
 
-## 2:10 – 2:40 · Desktop companion — how time gets tracked
+## 2:10 – 2:45 · Desktop companion — tracking the actual work
 
-**[SHOW]** Cut to the Windows system tray. Click the app icon to open the desktop companion. Pick an active task from the dropdown. Hit **Start**. The activity counter begins ticking. Minimize it back to the tray.
+**[SHOW]** Cut to the Windows system tray. Click the app icon to open the desktop companion. Pick an active task from the dropdown. Hit **Start**. The activity counter begins ticking. Minimize back to the tray.
 
-**[SAY]** "Everything time-related runs through a small companion in the system tray — an auto-updating binary. When I pick a task and hit start, it samples input cadence and app focus in five-minute windows and forwards them to the workspace. Token lives in the OS credential store, not on disk. If the network drops, samples queue locally and sync when it's back."
+**[SAY]** "This is where real tracking happens — a small companion that lives in the system tray. When someone picks a task and hits start, the app captures input cadence, app focus, and periodic screenshots in five-minute windows, all in the background. This is what gives me visibility I've never had before — I'm not relying on people to log their own hours or write up what they did. The work itself produces the record. Token lives in the OS credential store, not on disk, and if the network drops, samples queue locally and sync when it's back."
 
 ---
 
-## 2:40 – 3:10 · Attendance + task updates
+## 2:45 – 3:15 · Attendance + task updates — no more chasing timesheets
 
 **[SHOW]** Back to the browser. Click **Attendance** → team grid. Then **Task Updates** → today's standup list.
 
-**[SAY]** "Back on the web, this is where the captured time lands. Attendance is recorded per user, per day, broken into sessions — sign-in, sign-out, active task — rolled up into weekly and monthly reports. Task updates are the narrative layer on top: what I did, not just when I was online."
+**[SAY]** "Back on the web, this is where the captured time lands. Attendance — per user, per day, broken into sessions: sign-in, sign-out, active task — rolled up into weekly and monthly reports. No manual timesheets, no 'did you punch in?' The system already knows. And task updates are the narrative layer on top: what each person worked on, where their time went. The management view I'd normally have to chase — sitting here, current."
 
 ---
 
-## 3:10 – 3:45 · Day-off workflow
+## 3:15 – 3:45 · Day-off workflow — approvals without email chains
 
 **[SHOW]** Click **Day-offs**. Open one pending request routed to you. Show approve/reject.
 
-**[SAY]** "Leave lives in the same workspace, on a two-stage approval chain. People request against the leave types I've defined — casual, sick, earned, or any custom type with its own yearly quota. Requests route to the team lead, then to an admin. Every transition is logged — who, when, any note — so I have an audit trail I can pull later."
+**[SAY]** "Leave requests live in the same workspace. Someone submits a request, it routes to the team lead first, then to me. Every transition is logged — who approved, when, any note they left — so I have a full audit trail. Approvals reflect in the team's capacity view the moment I click. No separate HR tool, no email threads, no forgotten approvals."
 
 ---
 
-## 3:45 – 4:15 · Activity insights
+## 3:45 – 4:20 · Activity insights — monitoring becomes management
 
 **[SHOW]** Click the activity report page. Show a user's daily summary with the AI paragraph and productivity score.
 
-**[SAY]** "The activity the desktop app captures turns into something useful here. Each five-minute bucket holds input cadence, active versus idle, the apps in focus. At end-of-day those buckets feed a summarization model — the paragraph, a productivity score, the day's themes. Raw buckets stay in the workspace; the summary is a derivative view. Gated by plan tier."
+**[SAY]** "This is where tracking becomes management. For each person, each day, I see a full picture — input cadence, active versus idle time, the apps they focused on, screenshots captured through the day, and an AI-generated summary of what they actually did, with a productivity score and the themes of their day. I can spot a productive day at a glance, catch someone on the verge of burnout, find coaching moments I'd otherwise miss. Real-time insight into how every day actually went — without asking a single person."
 
 ---
 
-## 4:15 – 4:45 · Settings — shaping the workspace
+## 4:20 – 4:50 · Settings — streamlining the whole operation
 
 **[SHOW]** Click **Settings → Roles** → show the permission matrix. Then **Settings → Organization** → branding, terminology, leave types.
 
-**[SAY]** "Everything I've shown you is shaped from here. The roles matrix is that thirty-five-permission catalog — toggle actions on a role, or define entirely new roles. Branding: logo, colors, favicon — applied everywhere. Terminology is an override map — if we called them 'missions' instead of 'tasks', the whole product picks up the new label without a code change. Leave types, working hours, timezone, feature flags — every knob on one screen."
+**[SAY]** "Everything I've shown you is shaped from here, in one place. The roles matrix is that thirty-five-permission catalog — toggle actions on a role, or define entirely new roles. Branding: logo, colors, favicon — applied everywhere. Terminology is an override map — if we called them 'missions' instead of 'tasks', the whole product picks up the new label without a code change. Leave policies, working hours, timezone, feature flags — every knob that shapes how my workspace runs, on one screen. Management, streamlined."
 
 ---
 
-## 4:45 – 5:00 · Close
+## 4:50 – 5:00 · Close
 
 **[SHOW]** Return to dashboard.
 
-**[SAY]** "Projects, people, time, permissions — one tenant-isolated workspace, shaped end-to-end by me as the founder. That's how a company runs day-to-day."
+**[SAY]** "Tasks, time, attention, approvals — captured automatically, surfaced where I need them. Running a company without the constant chasing. That's what this app gives me."
 
 ---
 
@@ -92,25 +93,27 @@
 
 ### Before you hit record
 - Point [frontend/.env.local](frontend/.env.local) at the staging Cognito pool (`ap-south-1_NedaPlHsx`, region `ap-south-1`). Confirm `npm run dev` serves the staging-backed app on `localhost:3000`.
-- Log in once manually to prime caches — first-load can be laggy.
+- Log in once manually to prime caches.
 - Close Slack/email/notifications. Silence the phone.
-- Browser: Chrome in a clean profile, zoomed to 100%, window sized 1920×1080. Hide the bookmarks bar.
+- Browser: Chrome, clean profile, 100% zoom, 1920×1080, bookmarks bar hidden.
 
-### Desktop segment (2:10 – 2:40)
+### Desktop segment (2:10 – 2:45)
 - Record the desktop clip **separately** from the browser tour — hard-cut into the final edit.
 - Run `wails dev` from [desktop/](desktop/) for a dev binary, or `make windows` per [desktop/Makefile](desktop/Makefile) for a production build.
+- If screenshots are enabled in the desktop app, you'll see a small indicator when one fires — let it happen naturally on camera; don't hide it.
 
 ### Speaking tips
-- Total script is ~540 words → lands at 4:00–4:30 at natural pace. Plenty of room to breathe at transitions.
+- Total script is ~590 words → lands at 4:15–4:45 at natural pace.
 - Read first-person as Emma. Smoother than narrator voice for an Owner demo.
-- Lines to slow down on — let the architectural phrases land:
-  - *"pipelines are first-class entities, not hardcoded columns"* (1:00)
-  - *"catalog of thirty-five granular actions"* (1:40)
-  - *"samples input cadence and app focus in five-minute windows"* (2:10)
-  - *"raw buckets stay in the workspace; the summary is a derivative view"* (3:45)
+- Stress these lines — they're the ones that sell the product:
+  - *"signals captured from the work itself"* (0:00)
+  - *"the work itself produces the record"* (2:10)
+  - *"no manual timesheets, no 'did you punch in?' — the system already knows"* (2:45)
+  - *"tracking becomes management"* (3:45)
+  - *"without asking a single person"* (3:45 close)
 - If you fluff a line, keep going — cut it in post.
 
 ### Editing
 - Light background music under everything, ducked -20dB during narration.
-- Zoom in during the desktop segment and the roles permission matrix — small UI, needs emphasis.
+- Zoom in on the desktop counter, the attendance grid, and the activity report paragraph — those three screens are the "money shots" that visually sell the monitoring story.
 - End with a 1-second hold on the dashboard before cutting.

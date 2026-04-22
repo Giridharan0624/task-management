@@ -7,7 +7,6 @@ interface BrandingPreviewProps {
   primaryColor: string
   accentColor: string
   displayName: string
-  logoUrl: string
 }
 
 /**
@@ -20,7 +19,6 @@ export function BrandingPreview({
   primaryColor,
   accentColor,
   displayName,
-  logoUrl,
 }: BrandingPreviewProps) {
   return (
     <Card className="space-y-4 p-5">
@@ -28,26 +26,15 @@ export function BrandingPreview({
         Live preview
       </p>
 
-      {/* Logo + name preview */}
+      {/* Initial + name preview — no logo upload anymore, so we always
+          render the colored initial tile. */}
       <div className="flex items-center gap-3">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoUrl}
-            alt="Logo"
-            className="h-10 w-10 rounded-xl border border-border bg-card object-cover shadow-sm"
-            onError={(e) => {
-              ;(e.target as HTMLImageElement).style.display = 'none'
-            }}
-          />
-        ) : (
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-base font-bold text-white shadow-sm"
-            style={{ backgroundColor: primaryColor }}
-          >
-            {(displayName || 'A').charAt(0).toUpperCase()}
-          </div>
-        )}
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-base font-bold text-white shadow-sm"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {(displayName || 'A').charAt(0).toUpperCase()}
+        </div>
         <div>
           <p className="text-sm font-bold text-foreground">
             {displayName || 'Your workspace'}

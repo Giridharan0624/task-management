@@ -1,6 +1,8 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import { useTenant } from '@/lib/tenant/TenantProvider'
+import { TASK_STATUS_LABEL } from '@/types/task'
 import type { Pipeline } from '@/types/org'
 
 /** Phase 5 — read this org's task pipelines from TenantContext.
@@ -49,6 +51,34 @@ export function findPipeline(
     if (found) return found
   }
   return pipelines.find((p) => p.isDefault) ?? pipelines[0] ?? null
+}
+
+/** Convenience hook: returns a label-lookup function for task status
+ * strings, consulting the tenant's pipelines first and falling back to
+ * the hardcoded `TASK_STATUS_LABEL` for legacy statuses not in any
+ * pipeline. Use in place of `TASK_STATUS_LABEL[status]` in components. */
+export function useStatusLabel(): (status: string) => string {
+  const { pipelines } = usePipelines()
+  const index = useMemo(() => buildStatusIndex(pipelines), [pipelines])
+  return useCallback(
+    (status: string) =>
+      index.get(status)?.label ??
+      TASK_STATUS_LABEL[status as keyof typeof TASK_STATUS_LABEL] ??
+      status,
+    [index],
+  )
+}
+
+/** Companion hook for inline status color (hex string from pipelines,
+ * falling back to null when the status isn't in any pipeline — callers
+ * can then use their existing TASK_STATUS_COLORS tailwind classes). */
+export function useStatusColor(): (status: string) => string | null {
+  const { pipelines } = usePipelines()
+  const index = useMemo(() => buildStatusIndex(pipelines), [pipelines])
+  return useCallback(
+    (status: string) => index.get(status)?.color ?? null,
+    [index],
+  )
 }
 
 /** Flatten the union of all pipelines' statuses, keyed by status id.

@@ -117,9 +117,29 @@ const config: Config = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-6px)' },
         },
+        'float-lg': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-18px)' },
+        },
         'shimmer': {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        // Slow wandering for decorative blobs so hero doesn't feel flat.
+        'drift': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(30px, -20px) scale(1.06)' },
+          '66%': { transform: 'translate(-20px, 25px) scale(0.97)' },
+        },
+        // Very slow rotation for background halos.
+        'slow-spin': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        // Typewriter-style blink for demo cursors.
+        'blink': {
+          '0%, 49%': { opacity: '1' },
+          '50%, 100%': { opacity: '0' },
         },
       },
       animation: {
@@ -136,7 +156,12 @@ const config: Config = {
         'gradient-shift': 'gradient-shift 8s ease infinite',
         'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
         'float': 'float 3s ease-in-out infinite',
+        'float-lg': 'float-lg 6s ease-in-out infinite',
         'shimmer': 'shimmer 2s linear infinite',
+        'drift-slow': 'drift 14s ease-in-out infinite',
+        'drift-slower': 'drift 22s ease-in-out infinite',
+        'slow-spin': 'slow-spin 40s linear infinite',
+        'blink': 'blink 1s steps(1) infinite',
       },
       backdropBlur: {
         xs: '2px',

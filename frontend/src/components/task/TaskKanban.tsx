@@ -30,12 +30,12 @@ import {
 } from '@/components/ui/DropdownMenu'
 import type { Task, TaskPriority, TaskDomain } from '@/types/task'
 import {
-  TASK_STATUS_LABEL,
   TASK_STATUS_COLORS,
   DOMAIN_STATUSES,
   getStatusOptions,
   getStatusProgress,
 } from '@/types/task'
+import { useStatusLabel } from '@/lib/tenant/usePipelines'
 import type { ProjectMember } from '@/types/user'
 import type { Permissions } from '@/lib/hooks/usePermission'
 import { TaskDetailPanel } from './TaskDetailPanel'
@@ -120,6 +120,7 @@ export function TaskKanban({
   domain = 'DEVELOPMENT',
 }: TaskKanbanProps) {
   const { user } = useAuth()
+  const labelOf = useStatusLabel()
   const STAGES = DOMAIN_STATUSES[domain]
   const statusOptions = getStatusOptions(domain)
 
@@ -161,7 +162,7 @@ export function TaskKanban({
       if (!ok) return
     }
     updateTask.mutate({ taskId, data: { status: next as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
-    const label = TASK_STATUS_LABEL[next] ?? next
+    const label = labelOf(next)
     toast.undoable(`Status changed to ${label}`, () => {
       updateTask.mutate({ taskId, data: { status: prev as Parameters<typeof updateTask.mutate>[0]['data']['status'] } })
     })
@@ -470,7 +471,7 @@ export function TaskKanban({
         {STAGES.map((stage) => (
           <StageChip
             key={stage}
-            label={TASK_STATUS_LABEL[stage] ?? stage}
+            label={labelOf(stage)}
             count={statusCounts[stage]}
             color={STAGE_COLORS[stage]}
             activeBg={STAGE_BG[stage]}
@@ -532,7 +533,7 @@ export function TaskKanban({
                     style={{ backgroundColor: STAGE_COLORS[stage] }}
                   />
                   <span className="text-sm font-semibold text-foreground">
-                    {TASK_STATUS_LABEL[stage]}
+                    {labelOf(stage)}
                   </span>
                   <span
                     className={cn(
@@ -654,6 +655,7 @@ function TaskRow({
   statusOptions,
   resolveUser,
 }: TaskRowProps) {
+  const labelOf = useStatusLabel()
   const overdue = checkOverdue(task.deadline, task.status)
   const progressPct = getStatusProgress(task.status, domain)
   const assignees = task.assignedTo ?? []
@@ -739,7 +741,7 @@ function TaskRow({
                 size="sm"
                 className="h-7 gap-1 px-2 text-[11px]"
               >
-                {TASK_STATUS_LABEL[task.status] ?? task.status}
+                {labelOf(task.status)}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">

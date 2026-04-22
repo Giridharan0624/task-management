@@ -7,8 +7,11 @@ import {
   AlertCircle,
   ChevronRight,
   CheckCircle2,
+  ClipboardList,
+  KanbanSquare,
   RotateCcw,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -41,8 +44,6 @@ type Tab = 'branding' | 'terminology' | 'features' | 'locale' | 'leave'
 
 interface BrandingState {
   displayName: string
-  logoUrl: string
-  faviconUrl: string
   primaryColor: string
   accentColor: string
 }
@@ -80,8 +81,6 @@ export default function OrgSettingsPage() {
   // Per-tab form state — kept separate so we can detect dirty per tab
   const [branding, setBranding] = useState<BrandingState>({
     displayName: '',
-    logoUrl: '',
-    faviconUrl: '',
     primaryColor: DEFAULT_PRIMARY,
     accentColor: DEFAULT_ACCENT,
   })
@@ -117,8 +116,6 @@ export default function OrgSettingsPage() {
     const s = current.settings
     const initialBranding: BrandingState = {
       displayName: s.displayName ?? '',
-      logoUrl: s.logoUrl ?? '',
-      faviconUrl: s.faviconUrl ?? '',
       primaryColor: s.primaryColor ?? DEFAULT_PRIMARY,
       accentColor: s.accentColor ?? DEFAULT_ACCENT,
     }
@@ -188,8 +185,9 @@ export default function OrgSettingsPage() {
       if (tab === 'branding') {
         payload = {
           displayName: branding.displayName,
-          logoUrl: branding.logoUrl || null,
-          faviconUrl: branding.faviconUrl || null,
+          // Logo / favicon are intentionally omitted — feature removed from
+          // the UI. Leaving them out of the payload preserves any legacy
+          // values the backend may still hold for this tenant.
           primaryColor: branding.primaryColor,
           accentColor: branding.accentColor,
         }
@@ -260,23 +258,30 @@ export default function OrgSettingsPage() {
           links. Add more entries here as new admin domains land
           (pipelines, plans, audit log, etc.). */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Link
+        <AdminLink
           href="/settings/roles"
-          className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <ShieldCheck className="h-4.5 w-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">
-              Roles & permissions
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Define who can do what.
-            </p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-        </Link>
+          icon={ShieldCheck}
+          title="Roles & permissions"
+          subtitle="Define who can do what."
+        />
+        <AdminLink
+          href="/settings/pipelines"
+          icon={KanbanSquare}
+          title="Task pipelines"
+          subtitle="Custom task workflows + colors."
+        />
+        <AdminLink
+          href="/settings/plan"
+          icon={Sparkles}
+          title="Plan & usage"
+          subtitle="Seats, projects, retention."
+        />
+        <AdminLink
+          href="/settings/audit"
+          icon={ClipboardList}
+          title="Audit log"
+          subtitle="Who changed what, when."
+        />
       </div>
 
       {error && (
@@ -322,26 +327,6 @@ export default function OrgSettingsPage() {
                 }
                 placeholder="Acme Inc"
               />
-              <Input
-                label="Logo URL"
-                type="url"
-                value={branding.logoUrl}
-                onChange={(e) =>
-                  setBranding((b) => ({ ...b, logoUrl: e.target.value }))
-                }
-                placeholder="https://..."
-                hint="Square images at 128×128 or larger look best."
-              />
-              <Input
-                label="Favicon URL"
-                type="url"
-                value={branding.faviconUrl}
-                onChange={(e) =>
-                  setBranding((b) => ({ ...b, faviconUrl: e.target.value }))
-                }
-                placeholder="https://..."
-                hint="Square 32×32 PNG or ICO. Shown in browser tabs."
-              />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <ColorField
                   label="Primary color"
@@ -381,7 +366,6 @@ export default function OrgSettingsPage() {
               primaryColor={branding.primaryColor}
               accentColor={branding.accentColor}
               displayName={branding.displayName}
-              logoUrl={branding.logoUrl}
             />
           </div>
         </TabsContent>
@@ -446,5 +430,33 @@ function DirtyDot() {
       className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
       aria-label="unsaved changes"
     />
+  )
+}
+
+function AdminLink({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  href: string
+  icon: typeof ShieldCheck
+  title: string
+  subtitle: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+    </Link>
   )
 }

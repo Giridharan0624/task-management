@@ -4,8 +4,8 @@ import { Clock, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { parseDeadline } from '@/lib/utils/deadline'
 import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
-import { TASK_STATUS_LABEL } from '@/types/task'
 import type { Task } from '@/types/task'
+import { useStatusLabel } from '@/lib/tenant/usePipelines'
 import { cn } from '@/lib/utils'
 
 interface ProjectUpcomingDeadlinesProps {
@@ -19,6 +19,7 @@ interface EnrichedDeadline extends Task {
 export function ProjectUpcomingDeadlines({
   tasks,
 }: ProjectUpcomingDeadlinesProps) {
+  const labelOf = useStatusLabel()
   const now = new Date()
   const todayStart = new Date(
     now.getFullYear(),
@@ -81,7 +82,7 @@ export function ProjectUpcomingDeadlines({
                 {t.title}
               </p>
               <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">
-                {TASK_STATUS_LABEL[t.status] ?? t.status}
+                {labelOf(t.status)}
               </span>
               <DeadlineLabel
                 deadline={t.deadline}

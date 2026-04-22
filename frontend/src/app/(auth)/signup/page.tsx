@@ -10,7 +10,7 @@ export default function SignupPage() {
       <div className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm animate-fade-in">
           <div className="mb-8 flex justify-center">
-            <Logo size="lg" />
+            <Logo size="lg" hideSubline />
           </div>
 
           <div className="mb-6">
@@ -27,8 +27,7 @@ export default function SignupPage() {
           </Card>
 
           <p className="mt-6 text-center text-[10px] text-muted-foreground">
-            Powered by{' '}
-            <span className="font-semibold">NEUROSTACK</span>
+            Your workspace, your rules.
           </p>
         </div>
       </div>

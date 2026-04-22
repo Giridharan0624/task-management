@@ -13,9 +13,10 @@ from pydantic import BaseModel, Field
 
 from contexts.org.domain import permissions as P
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
+from shared_kernel import audit
 from shared_kernel.auth_context import extract_auth_context
 from shared_kernel.errors import ValidationError
-from shared_kernel.permissions import invalidate_role_cache, require
+from shared_kernel.permissions import invalidate_role_cache, require, require_not_suspended
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
 
@@ -41,6 +42,7 @@ class CreateRoleRequest(BaseModel):
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        require_not_suspended(auth)
         require(auth, P.ROLE_MANAGE)
 
         req = validate_body(CreateRoleRequest, event.get("body"))
@@ -75,6 +77,13 @@ def handler(event, context):
         }
         repo.save_role(role)
         invalidate_role_cache(auth.org_id)
+        audit.record(
+            auth,
+            action=audit.ROLE_CREATED,
+            target={"type": "role", "id": role_id},
+            summary=f"Created role '{req.name}' with {len(clean_perms)} permission(s)",
+            after=role,
+        )
         return build_success(201, role)
     except Exception as e:
         return build_error(e)

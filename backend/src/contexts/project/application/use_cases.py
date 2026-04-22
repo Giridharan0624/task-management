@@ -7,7 +7,9 @@ from contexts.project.domain.entities import Project, ProjectMember
 from contexts.project.domain.repository import IProjectRepository
 from contexts.project.domain.value_objects import ProjectRole
 from contexts.user.domain.repository import IUserRepository
-from contexts.user.domain.value_objects import SystemRole, PRIVILEGED_ROLES
+from contexts.org.domain import permissions as P
+from contexts.user.domain.value_objects import SystemRole
+from shared_kernel.permissions import role_has
 from contexts.task.domain.repository import ITaskRepository
 from contexts.task.domain.value_objects import STATUS_PROGRESS, DOMAIN_STATUSES
 from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationError
@@ -22,8 +24,9 @@ def _is_project_admin_or_privileged(
     caller_user_id: str,
     caller_system_role: str,
 ) -> bool:
-    """Return True if caller is OWNER/ADMIN system role OR a project-level ADMIN/TEAM_LEAD."""
-    if caller_system_role in PRIVILEGED_ROLES:
+    """Return True if caller has project-edit power via system role OR is a
+    project-level ADMIN/TEAM_LEAD on this specific project."""
+    if role_has(caller_system_role, P.PROJECT_EDIT):
         return True
     member = project_repo.find_member(project_id, caller_user_id)
     return member is not None and member.project_role in _MANAGE_ROLES
@@ -47,7 +50,7 @@ class CreateProjectUseCase:
         caller_system_role: str,
         caller_org_id: str = "",
     ) -> dict:
-        if caller_system_role not in PRIVILEGED_ROLES:
+        if not role_has(caller_system_role, P.PROJECT_CREATE):
             raise AuthorizationError("You don't have permission to create projects.")
 
         # Plan limit: refuse if max_projects would be exceeded
@@ -136,7 +139,7 @@ class GetProjectUseCase:
             raise NotFoundError(f"Project {project_id} not found")
 
         caller_member = self._project_repo.find_member(project_id, caller_user_id)
-        if not caller_member and caller_system_role not in PRIVILEGED_ROLES:
+        if not caller_member and not role_has(caller_system_role, P.PROJECT_LIST_ALL):
             raise AuthorizationError("You don't have access to this project.")
 
         members = self._project_repo.find_members(project_id)
@@ -164,7 +167,7 @@ class ListProjectsForUserUseCase:
         self._task_repo = task_repo
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> list[dict]:
-        if caller_system_role in PRIVILEGED_ROLES:
+        if role_has(caller_system_role, P.PROJECT_LIST_ALL):
             projects = self._project_repo.find_all()
         else:
             projects = self._project_repo.find_projects_for_user(caller_user_id)

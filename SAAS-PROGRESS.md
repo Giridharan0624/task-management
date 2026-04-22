@@ -2,6 +2,23 @@
 
 Branch `saas-migration` vs `main`: **231 files · +29,382 / −6,714 lines** across 17 commits.
 
+## Status at a glance
+
+| Phase | Scope | Status |
+|---|---|---|
+| 1 | Multi-tenant foundation (org, keys, signup) | ✅ Shipped |
+| 2 | Invites + tenant user management | ✅ Shipped |
+| 3 | Tenant configuration (branding / settings) | ✅ Shipped |
+| 4 | Custom roles + permission matrix | 🟨 Core shipped; ~10 use-case sites + Project roles pending |
+| 5 | Custom task pipelines | 🟨 Foundation shipped; CRUD UI + frontend migration pending |
+| 6 | Desktop + WAF rate limiting | 🟨 Screenshot gate + WAF shipped; first-run UI + signing pending |
+| Prod rollout | Wildcard cert, Route53, stack splitting | ⏳ Not started |
+| Billing | Stripe + plan enforcement | ⏳ Not started |
+
+**Staging**: deployed and verified — stack `task-management-staging`, 494/500 resources, NEUROSTACK backfilled (role matrix + pipelines + `features.screenshots: true`).
+
+**Prod**: untouched, live users, stays on current version until staging gate passes.
+
 ---
 
 # Architecture — how org identification + isolation works
@@ -312,18 +329,11 @@ All visible changes shipped across phases:
 ## Staging deployment
 
 - [x] Deployed end-to-end — stack `task-management-staging`, API URL `https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/`
-- [x] Backfills applied (NEUROSTACK has role matrix + pipelines + `features.screenshots: true`)
-- [x] CDK synth passes — **494 / 500 resources**
-
-## Open items
-
-- **Production cutover** — prod stays untouched until staging verified
-- **Stack splitting** — any new Lambda requires a NestedStack refactor (6 resources headroom)
-- **Wildcard ACM cert** `*.taskflow.com` (cross-region us-east-1 stack) + Route53 + API Gateway custom domain
-- **Use-case-level `PRIVILEGED_ROLES`** — ~10 sites in `contexts/*/application/use_cases.py` still on legacy path (non-blocking, works via fallback)
-- **Pipeline editor UI** — write endpoints not yet built
-- **Desktop first-run UI** — Preact workspace prompt screen, tray "Switch workspace", drop APP_NAME from ldflags
-- **Broken backend tests** — `test_domain_user.py` / `test_domain_task.py` use pre-existing legacy import paths (not introduced by this migration)
+- [x] Deploy run verified (148s, exit 0, CloudFormation clean)
+- [x] AWS identity confirmed: `giri-dev` account `013484737418` (personal/staging)
+- [x] Backfills applied — 3 role records populated (owner=35 perms, admin=31, member=9), 4 default pipelines inserted (DEVELOPMENT / DESIGNING / MANAGEMENT / RESEARCH)
+- [x] `features.screenshots: true` live for NEUROSTACK (desktop gate passes)
+- [x] CDK synth clean — **494 / 500 resources** (6 headroom before stack-splitting required)
 
 ---
 

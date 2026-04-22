@@ -238,3 +238,21 @@ def activity_summary_sk(date: str) -> str:
 
 def activity_date_gsi1pk(org_id: str, date: str) -> str:
     return f"ORG#{org_id}#ACTIVITY_DATE#{date}"
+
+
+# ---------------------------------------------------------------------------
+# Audit log (org-scoped, time-ordered)
+# ---------------------------------------------------------------------------
+
+def audit_pk(org_id: str) -> str:
+    """All audit events for an org share one PK so time-range queries
+    remain a single Query call. High-volume tenants can later shard by
+    month by switching to `AUDIT#{org}#{YYYY-MM}`; not needed day-one."""
+    return f"ORG#{org_id}#AUDIT"
+
+
+def audit_sk(created_at: str, event_id: str) -> str:
+    """Time-ordered SK — lexicographic sort on an ISO-8601 string matches
+    chronological order, and `event_id` breaks ties for events recorded
+    in the same millisecond."""
+    return f"EVENT#{created_at}#{event_id}"
