@@ -47,12 +47,23 @@ function decodeJwtForUser(token: string): User | null {
         .join('')
     )
     const decoded = JSON.parse(jsonPayload) as Record<string, unknown>
+    // `email_verified` is a standard OIDC claim Cognito emits as a bool
+    // (true) or missing (legacy users). A missing claim is treated as
+    // verified — pre-rollout users had the admin-create path stamp
+    // the attribute true at creation time, and we don't want to
+    // retroactively lock them out of the dashboard.
+    const rawVerified = decoded.email_verified
+    const emailVerified =
+      rawVerified === undefined
+        ? true
+        : rawVerified === true || rawVerified === 'true'
     return {
       userId: decoded.sub as string,
       employeeId: (decoded['custom:employeeId'] as string) ?? undefined,
       email: decoded.email as string,
       name: (decoded.name as string) ?? (decoded.email as string),
       systemRole: ((decoded['custom:systemRole'] as string) ?? 'MEMBER') as User['systemRole'],
+      emailVerified,
       createdAt: '',
       updatedAt: '',
     }

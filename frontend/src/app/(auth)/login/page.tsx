@@ -20,6 +20,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
+      // Unverified-email accounts go through the verification gate
+      // first instead of bouncing through the dashboard. `=== false`
+      // because undefined (legacy token) is treated as verified.
+      if (user.emailVerified === false) {
+        router.replace('/verify-email')
+        return
+      }
       router.replace('/dashboard')
     }
   }, [user, isLoading, router])

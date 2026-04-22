@@ -46,7 +46,6 @@ import { Walkthrough } from '@/components/ui/Walkthrough'
 import { NotificationCenter } from '@/components/ui/NotificationCenter'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
-import { PageTransition } from '@/components/ui/PageTransition'
 import { SuspendedScreen } from '@/components/tenant/SuspendedScreen'
 import { cn } from '@/lib/utils'
 import type { User } from '@/types/user'
@@ -412,6 +411,16 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router])
 
+  // Email-verification gate. `emailVerified === false` (not undefined)
+  // triggers the redirect — undefined means a pre-rollout token, which
+  // we treat as verified for backward compat. Legacy users never see
+  // this redirect.
+  useEffect(() => {
+    if (!isLoading && user && user.emailVerified === false) {
+      router.replace('/verify-email')
+    }
+  }, [user, isLoading, router])
+
   const { data: pendingDayOffs } = usePendingDayOffs()
   const { data: myTasks } = useMyTasks()
   useTimerTitle()
@@ -450,6 +459,11 @@ export default function DashboardLayout({
   }
 
   if (!user) return null
+
+  // Block render while the email-verify redirect resolves — avoids a
+  // flash of dashboard UI for unverified users. The useEffect above
+  // pushes them to /verify-email on the next tick.
+  if (user.emailVerified === false) return null
 
   // Tenant-level kill switch. If the org is suspended by a platform
   // operator, every dashboard route renders a single block instead of
@@ -557,7 +571,7 @@ export default function DashboardLayout({
             className="w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 focus-visible:outline-none"
           >
             <ErrorBoundary resetKey={pathname}>
-              <PageTransition>{children}</PageTransition>
+              {children}
             </ErrorBoundary>
           </main>
         </div>

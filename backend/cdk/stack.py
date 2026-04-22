@@ -163,10 +163,14 @@ class TaskManagementStack(Stack):
                 require_symbols=False,
             ),
             user_verification=cognito.UserVerificationConfig(
-                email_subject="TaskFlow — Password Reset Code",
+                # This template is used for BOTH password-reset codes
+                # (ForgotPassword flow) and email-attribute verification
+                # codes (VerifyUserAttribute flow). Cognito doesn't let
+                # us disambiguate, so the copy stays generic.
+                email_subject="TaskFlow — Verification Code",
                 email_body=(
                     "Hi,\n\n"
-                    "Your TaskFlow password reset verification code is: {####}\n\n"
+                    "Your TaskFlow verification code is: {####}\n\n"
                     "This code is valid for one use only and expires shortly.\n\n"
                     "If you did not request this, please ignore this email."
                 ),

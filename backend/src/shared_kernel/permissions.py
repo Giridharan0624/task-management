@@ -35,6 +35,25 @@ def has_permission(ctx: AuthContext, permission: str) -> bool:
     return permission in _resolve_permissions(ctx)
 
 
+def require_email_verified(ctx: AuthContext) -> None:
+    """Block the action when the caller's email is not verified.
+
+    Signup creates users with `email_verified=false`; the /verify-email
+    frontend flow flips it to true via Cognito VerifyUserAttribute. A
+    legacy user (pre-verification rollout) has `email_verified=true`
+    already because the pool's backfill set it that way, so existing
+    tenants are unaffected.
+
+    Not applied globally — only called from handlers where a bot with a
+    real-looking but unverified email could cause outsized damage
+    (invite spam, role edits, billing). Other handlers leave the gate
+    to the frontend, which is good enough for UX-level enforcement.
+    """
+    if not ctx.email_verified:
+        from shared_kernel.errors import EmailNotVerifiedError
+        raise EmailNotVerifiedError()
+
+
 def require_not_suspended(ctx: AuthContext) -> None:
     """Block writes when the tenant is suspended.
 

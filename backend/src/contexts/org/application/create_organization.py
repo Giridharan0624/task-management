@@ -114,6 +114,12 @@ class CreateOrganizationUseCase:
                     password=req.password,
                     org_id=org_id,
                     system_role=SystemRole.OWNER.value,
+                    # Signup does NOT vouch for email ownership — the user
+                    # must complete a code challenge via the /verify-email
+                    # flow before the account is fully trusted. Invite
+                    # acceptance uses the default `True` because the link
+                    # that got the invitee here was sent to that email.
+                    email_verified_flag=False,
                 )
             except Exception:
                 # Cognito failed. Roll back the slug claim.

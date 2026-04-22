@@ -7,6 +7,12 @@ export interface User {
   email: string
   name: string
   systemRole: SystemRole
+  /** True when the user has completed the email-verification code
+   *  challenge. Signup creates users with this false; invite acceptance
+   *  ships true because the invite link was sent to the same email.
+   *  Undefined = legacy token pre-verification rollout; treat as true
+   *  for backward compat. */
+  emailVerified?: boolean
   createdBy?: string
   phone?: string
   designation?: string

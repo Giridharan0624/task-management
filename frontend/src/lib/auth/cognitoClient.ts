@@ -181,6 +181,62 @@ export function changePassword(oldPassword: string, newPassword: string): Promis
   })
 }
 
+/** Ask Cognito to email a 6-digit verification code to the current
+ *  user's email address. Used by the /verify-email flow for accounts
+ *  created via /signup (which deliberately leave `email_verified=false`).
+ *
+ *  Requires a live session — the user must have signed in first, which
+ *  they can since Cognito lets unverified-email accounts authenticate.
+ *  Only the attribute's verified state is false, not the account.
+ */
+export function sendEmailVerificationCode(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        reject(new Error('Session expired. Please sign in again.'))
+        return
+      }
+      currentUser.getAttributeVerificationCode('email', {
+        onSuccess: () => resolve(),
+        onFailure: (e) => reject(e),
+      })
+    })
+  })
+}
+
+/** Verify the current user's email attribute with the 6-digit code
+ *  Cognito emailed in response to `sendEmailVerificationCode()`.
+ *
+ *  Success mutates `email_verified` to true in Cognito. The caller
+ *  must then invoke `refreshSession()` to get a fresh ID token that
+ *  reflects the new claim value, otherwise the frontend's local
+ *  view stays stale for up to one ID-token TTL.
+ */
+export function verifyEmailCode(code: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        reject(new Error('Session expired. Please sign in again.'))
+        return
+      }
+      currentUser.verifyAttribute('email', code, {
+        onSuccess: () => resolve(),
+        onFailure: (e) => reject(e),
+      })
+    })
+  })
+}
+
 export function signOut(): void {
   const currentUser = userPool.getCurrentUser()
   if (currentUser) {

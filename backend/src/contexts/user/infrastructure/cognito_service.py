@@ -57,12 +57,20 @@ class CognitoService(IIdentityService):
         org_id: str,
         system_role: str,
         employee_id: str = "",
+        email_verified_flag: bool = True,
     ) -> str:
         """Create a Cognito user with a PERMANENT password set in one shot.
 
         Used by:
           - signup (org OWNER, chose their own password on the form)
           - invite acceptance (invited user, chose their own password)
+
+        `email_verified_flag` defaults to True for backward compatibility
+        with the invite flow: the invitee clicked a link that was emailed
+        to that exact address, so receipt of the link IS the proof of
+        ownership. Signup passes `False` — a stranger on the signup form
+        has provided no such proof and must complete a code challenge
+        before the account counts as real.
 
         Workflow:
           1. admin_create_user with the password as TemporaryPassword + SUPPRESS
@@ -74,7 +82,7 @@ class CognitoService(IIdentityService):
         """
         attrs = [
             {"Name": "email", "Value": email},
-            {"Name": "email_verified", "Value": "true"},
+            {"Name": "email_verified", "Value": "true" if email_verified_flag else "false"},
             {"Name": "name", "Value": name},
             {"Name": "custom:orgId", "Value": org_id},
             {"Name": "custom:systemRole", "Value": system_role},

@@ -14,6 +14,12 @@ class AuthContext:
     # so the Phase-4 require() helper works against tenants that haven't
     # been migrated yet.
     role_id: str = ""
+    # True when the user has completed the email-verification code
+    # challenge. Signup creates users with this false; the /verify-email
+    # flow flips it to true via Cognito's VerifyUserAttribute API.
+    # Handlers that want defense-in-depth against unverified accounts
+    # can call `require_email_verified(ctx)` from shared_kernel.
+    email_verified: bool = False
 
 
 def extract_auth_context(event: dict) -> AuthContext:
@@ -56,10 +62,17 @@ def extract_auth_context(event: dict) -> AuthContext:
     # require() still resolves the right permission set.
     role_id = (claims.get("custom:roleId") or db_role or "").strip().lower()
 
+    # Cognito sends `email_verified` as a string `"true"`/`"false"` in
+    # the JWT, not a bool. Missing/malformed → treat as unverified
+    # (fail-closed). Handlers can branch on this via `ctx.email_verified`
+    # and the new `require_email_verified` helper.
+    email_verified = str(claims.get("email_verified", "")).lower() == "true"
+
     return AuthContext(
         user_id=user_id,
         email=claims.get("email", ""),
         system_role=db_role,
         org_id=org_id,
         role_id=role_id,
+        email_verified=email_verified,
     )

@@ -34,3 +34,17 @@ class OrgSuspendedError(AuthorizationError):
 
     def __init__(self, message: str = "This workspace is currently suspended."):
         super().__init__(message, code="ORG_SUSPENDED")
+
+
+class EmailNotVerifiedError(AuthorizationError):
+    """Raised by `require_email_verified` — frontend routes the user to
+    /verify-email when it sees this code. The primary gate is a
+    frontend redirect post-login; this exists for defense-in-depth on
+    backend handlers that want to be paranoid (invites, role changes,
+    billing ops)."""
+
+    def __init__(
+        self,
+        message: str = "Please verify your email before continuing.",
+    ):
+        super().__init__(message, code="EMAIL_NOT_VERIFIED")
