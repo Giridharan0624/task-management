@@ -117,7 +117,7 @@ export function TaskListView({
     )
   }
 
-  const groups = groupTasks(tasks, groupBy)
+  const groups = groupTasks(tasks, groupBy, resolveName)
 
   return (
     <div className="space-y-3">
@@ -511,11 +511,15 @@ function GroupHeader({
   )
 }
 
-function groupTasks(tasks: MyTask[], groupBy: GroupBy): TaskGroup[] {
+function groupTasks(
+  tasks: MyTask[],
+  groupBy: GroupBy,
+  resolveName: (userId: string) => string,
+): TaskGroup[] {
   const map = new Map<string, TaskGroup>()
 
   for (const t of tasks) {
-    const keys = getGroupKey(t, groupBy)
+    const keys = getGroupKey(t, groupBy, resolveName)
     for (const { key, label, sublabel, icon, accent } of keys) {
       if (!map.has(key)) {
         map.set(key, { key, label, sublabel, icon, accent, tasks: [] })
@@ -543,7 +547,8 @@ function groupTasks(tasks: MyTask[], groupBy: GroupBy): TaskGroup[] {
 
 function getGroupKey(
   task: MyTask,
-  groupBy: GroupBy
+  groupBy: GroupBy,
+  resolveName: (userId: string) => string,
 ): { key: string; label: string; sublabel?: string; icon?: React.ReactNode; accent?: string }[] {
   switch (groupBy) {
     case 'project':
@@ -588,7 +593,11 @@ function getGroupKey(
       }
       return task.assignedTo.map((uid) => ({
         key: uid,
-        label: uid,
+        // Fall back to the raw id only when we can't resolve — for
+        // example a user who was deleted after being assigned. That
+        // edge case is rare; preferring the name the user actually
+        // recognises is worth it.
+        label: resolveName(uid) || uid,
         sublabel: 'Assignee',
       }))
     }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import {
   BarChart,
   Bar,
@@ -15,10 +16,12 @@ import {
   Sector,
 } from 'recharts'
 import {
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Clock,
   Download,
+  Sparkles,
   User,
   Users,
 } from 'lucide-react'
@@ -349,6 +352,8 @@ export default function ReportsPage() {
           </DropdownMenu>
         }
       />
+
+      <WeeklyRollupPromo />
 
       <Tabs
         value={view}
@@ -1521,5 +1526,51 @@ function WeeklyView({
         )}
       </Table>
     </Card>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Weekly rollup promo — a compact banner above the tabs pointing owners at
+// the AI-assisted digest. It's separate from the tabbed reports because the
+// rollup pulls from task updates (daily standups), not the attendance data
+// the existing tabs render.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function WeeklyRollupPromo() {
+  return (
+    <Link
+      href="/reports/weekly"
+      className="group relative block overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card to-accent/[0.06] p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-5"
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl transition-colors group-hover:bg-primary/20"
+      />
+      <div className="relative flex items-center gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-inset ring-primary/20">
+          <Sparkles className="h-5 w-5 text-primary" strokeWidth={1.8} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 text-sm font-bold text-foreground">
+            Weekly rollup
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
+              AI
+            </span>
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            An editorial summary of every task update from the last seven days —
+            top contributors, themes, and things worth flagging.
+          </p>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
+          View
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        </span>
+      </div>
+    </Link>
   )
 }

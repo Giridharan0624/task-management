@@ -41,6 +41,34 @@ class TaskUpdateDynamoRepository:
             return None
         return TaskUpdateMapper.to_domain(items[0])
 
+    def find_by_date_range(self, start_date: str, end_date: str) -> list[TaskUpdate]:
+        """Return every task update the tenant submitted within the inclusive
+        [start_date, end_date] window (YYYY-MM-DD strings).
+
+        The partition layout is one PK per (org, date), so we issue one Query
+        per day and concatenate. For a 7-day window that's 7 cheap queries —
+        well under a Scan's cost and bounded by tenant size.
+        """
+        from datetime import date as date_cls, timedelta
+
+        start = date_cls.fromisoformat(start_date)
+        end = date_cls.fromisoformat(end_date)
+        if end < start:
+            return []
+
+        updates: list[TaskUpdate] = []
+        current = start
+        while current <= end:
+            response = self._table.query(
+                KeyConditionExpression=Key("PK").eq(
+                    tenant_keys.taskupdate_pk(self._org_id, current.isoformat())
+                )
+            )
+            for item in response.get("Items", []):
+                updates.append(TaskUpdateMapper.to_domain(item))
+            current += timedelta(days=1)
+        return updates
+
     def find_recent(self, limit: int = 50) -> list[TaskUpdate]:
         """Scan recent task updates (for the overview page), scoped to
         the current tenant."""
