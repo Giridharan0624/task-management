@@ -1,0 +1,377 @@
+# TaskFlow — Technical Design Document
+
+**Scope:** how the multi-tenant SaaS is built. Complements [PRD.md](PRD.md) (product surface) and [SAAS-STATUS.md](SAAS-STATUS.md) (shipped vs. not).
+**Last updated:** 2026-04-22
+
+---
+
+## 1. System diagram
+
+```
+                              ┌─────────────────────────────────────────────────┐
+                              │                   AWS (ap-south-1)              │
+                              │                                                 │
+  ┌──────────┐     HTTPS      │  ┌───────┐     ┌──────────────────────────┐    │
+  │  Web     │────────────────│──│  API  │─────│   Lambda (~50 fn)        │    │
+  │ Next 16  │  JWT (Bearer)  │  │  GW   │     │   Python 3.12 + DDD      │    │
+  │ Vercel   │                │  │ REST  │     │   parent + 2 nested      │    │
+  └──────────┘                │  └───┬───┘     └─────┬─────┬─────┬────────┘    │
+        ▲                     │      │WAFv2         │     │     │             │
+        │                     │   rate-limit        │     │     │             │
+  ┌──────────┐                │  ┌───┴────┐  ┌─────▼───┐ │  ┌──▼─────────┐   │
+  │ Desktop  │────────────────│──│Cognito │  │ DynamoDB│ │  │ S3 + CDN   │   │
+  │ Wails v2 │  JWT (SRP)     │  │  Pool  │  │ 1 table │ │  │ avatars +  │   │
+  │ Go+Preact│                │  │+PreTok │  │ +2 GSI  │ │  │ screenshots│   │
+  └──────────┘                │  └────────┘  └─────────┘ │  └────────────┘   │
+                              │                          │                    │
+                              │  ┌──────────────┐  ┌─────▼────────┐          │
+                              │  │ CloudWatch   │  │ Secrets Mgr  │          │
+                              │  │ 5 alarms     │  │ Gmail + Groq │          │
+                              │  └──────────────┘  └──────────────┘          │
+                              └─────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. Deployment units
+
+Three deployable units in one monorepo:
+
+| Unit | Language | Host | Release cadence |
+|---|---|---|---|
+| `backend/` | Python 3.12 | AWS Lambda behind API Gateway REST | `cdk deploy` |
+| `frontend/` | Next.js 16 (App Router) | Vercel | `git push` → Vercel auto-deploy |
+| `desktop/` | Go 1.22 + Wails v2 + Preact | GitHub releases (separate repo, gitignored here) | tag push → GitHub Actions builds Win/Linux/macOS |
+
+### Stages
+- **Staging**: personal AWS account, default profile, `app_staging.py` entry point. Safe for experimental deploys.
+- **Prod**: company AWS account, `--profile company`, `app.py` or `app_company.py`. Has live users — no SaaS-migration work touches prod until the user explicitly says "cut over."
+
+---
+
+## 3. Multi-tenant data model
+
+### Single DynamoDB table
+
+All tenant-scoped items prefix `ORG#{org_id}#` in their PK. Key construction is **centralized** in [backend/src/shared_kernel/tenant_keys.py](backend/src/shared_kernel/tenant_keys.py) — repositories never string-format PKs inline.
+
+```
+PK=ORG#{org}#USER#{userId}        SK=PROFILE
+PK=ORG#{org}#PROJECT#{pid}        SK=METADATA | MEMBER#{uid} | TASK#{tid}
+PK=ORG#{org}                      SK=ORG | SETTINGS | PLAN
+PK=ORG#{org}                      SK=ROLE#{id} | PIPELINE#{id} | INVITE#{token}
+PK=ORG#{org}#AUDIT                SK=EVENT#{ts}#{eventId}
+PK=ORG#{org}#ACTIVITY             SK=...
+PK=SLUG#{slug}                    SK=ORG              # global resolver
+PK=INVITE_TOKEN#{token}           SK=LOOKUP           # global, O(1) accept
+GSI1PK=USER_EMAIL#{email}                             # email uniqueness
+GSI2PK=ORG#{org}#EMPLOYEE#{eid}                       # per-tenant employee IDs
+```
+
+`DEFAULT_ORG_ID = "neurostack"` is the legacy fallback when a token lacks `custom:orgId`. New code emits v2 keys only.
+
+### Aggregate keys are forbidden
+No `ORG#{id}#USER#LIST` or similar — they concentrate writes on one partition. Always query scoped PKs.
+
+### PITR
+Enabled on both stages. Staging: 7-day retention. Prod: 35-day. Uses `PointInTimeRecoverySpecification` (not the deprecated `point_in_time_recovery=True`).
+
+---
+
+## 4. Auth flow
+
+### Pooled Cognito
+One user pool, one client ID, shared across all tenants. Users from different tenants can coexist with the same email because email is not a sign-in alias — it's just a profile attribute. Login uses `email` + `password`.
+
+### JWT claims
+- `sub` — user_id
+- `email`, `email_verified` — standard OIDC
+- `custom:orgId` — immutable tenant binding, set by signup / backfill
+- `custom:systemRole` — role ID (owner/admin/member or custom)
+- `custom:roleId` — derived lowercase canonical form (Phase 4)
+
+### Pre-token-generation trigger
+[backend/src/contexts/org/handlers/pre_token_trigger.py](backend/src/contexts/org/handlers/pre_token_trigger.py) runs on every token issuance — **pure function, 5-second timeout**, no DB access, no heavy imports. Injects the three `custom:*` claims on every ID token.
+
+### AuthContext + ContextVar propagation
+Every authenticated handler's first line:
+
+```python
+auth = extract_auth_context(event)   # shared_kernel/auth_context.py
+```
+
+`extract_auth_context` reads JWT claims, re-reads the authoritative `system_role` from DynamoDB (so role changes take effect without re-login), and **sets `org_id` into a ContextVar** so every repository instantiated later automatically scopes its reads/writes — no handler threads `org_id` manually.
+
+### Email verification
+Signup creates the Cognito user with `email_verified=false`. Invite acceptance ships `email_verified=true` (link receipt proves ownership). The `/verify-email` page calls Cognito SDK `getAttributeVerificationCode` / `verifyAttribute`; post-verify `refreshSession()` pulls a fresh token. Dashboard layout + login page both gate on `emailVerified === false` and redirect.
+
+---
+
+## 5. Authorization
+
+### Permission catalog (Phase 4)
+~35 strings covering every mutation surface: `task.create`, `task.delete.any`, `task.update.own`, `project.create`, `user.invite`, `settings.edit`, `billing.view`, `role.manage`, etc. See [backend/src/contexts/org/domain/permissions.py](backend/src/contexts/org/domain/permissions.py).
+
+### Resolution
+```python
+require(ctx, P.TASK_DELETE_ANY)    # raises AuthorizationError if missing
+has_permission(ctx, P.TASK_VIEW)   # bool, for UI-mode decisions
+role_has("admin", P.USER_INVITE)   # bool, when only a role string is available
+```
+
+`require()` resolves through:
+1. Per-tenant Role record at `PK=ORG#{org} SK=ROLE#{role_id}`
+2. Default role map (`default_roles.py`) as fallback
+
+Lookups are cached per Lambda invocation in `_PERMISSION_CACHE: dict[(org_id, role_id), frozenset[str]]`. `invalidate_role_cache(org_id)` is called on every role edit so changes take effect across warm Lambdas.
+
+### Suspension gate
+`require_not_suspended(ctx)` reads the Org record once per invocation, raises typed `OrgSuspendedError(code="ORG_SUSPENDED")` on a suspended tenant. Every mutation handler calls it at the top.
+
+### Email-verification gate (defense-in-depth)
+`require_email_verified(ctx)` raises `EmailNotVerifiedError(code="EMAIL_NOT_VERIFIED")`. Helper is defined but not applied anywhere yet — frontend gate is the primary enforcement.
+
+---
+
+## 6. Backend architecture (DDD)
+
+Each bounded context in [backend/src/contexts/](backend/src/contexts/) has four layers:
+
+```
+contexts/{context}/
+├── domain/           # Entities, value objects, repository interfaces
+├── application/      # Use cases — business logic + RBAC
+├── infrastructure/   # DynamoDB repos, mappers, external services
+└── handlers/         # Lambda entry points (event → usecase → response)
+```
+
+Contexts: `user`, `project`, `task`, `comment`, `attendance`, `dayoff`, `taskupdate`, `activity`, `upload`, `org`, `system`.
+
+### Shared kernel
+[backend/src/shared_kernel/](backend/src/shared_kernel/) holds cross-cutting concerns used by every context:
+
+- `auth_context.py` — JWT → AuthContext + ContextVar stamp
+- `tenant_keys.py` — PK/SK builders
+- `permissions.py` — require / has_permission / require_not_suspended / require_email_verified
+- `errors.py` — typed exceptions with `code` field
+- `response.py` — CORS-aware success/error envelope
+- `validate_body.py` — Pydantic parse with JSON error handling
+- `audit.py` — audit writer/reader
+- `captcha.py` — hCaptcha siteverify wrapper
+- `observability.py` — Sentry cold-start init
+- `dynamo_client.py` — single boto3 resource, reused across repos
+
+---
+
+## 7. CDK stack topology
+
+Parent stack owns the stateful resources. Two nested stacks absorb handler Lambdas to stay under the 500-resource CloudFormation cap.
+
+```
+TaskManagementStack (parent, ~475/500 resources)
+├── DynamoDB Table + 2 GSI + PITR       ← stateful
+├── Cognito UserPool + Client + PreTokenTrigger  ← stateful
+├── S3 Bucket + CloudFront Distribution  ← stateful
+├── API Gateway RestApi + Authorizer     ← owns api.root
+├── WAFv2 WebACL + Association           ← regional rate-limit
+├── 5 CloudWatch Alarms
+├── Project/Task/User/Comment/Activity/Upload/Task-update Lambdas + routes
+├── Health + Platform (suspension) Lambdas + routes
+├── Stale-session sweeper + AI-summary scheduled jobs
+└── Org.NestedStack (OrgNestedStack)
+    ├── Signup, by-slug, accept-invite  (public)
+    ├── Current-org, update-settings, invites, roles, pipelines, audit, transfer
+    ├── Retention sweeper (nightly 03:00 UTC)
+    └── Seat reconciliation (nightly 03:30 UTC)
+└── Workflow.NestedStack (WorkflowNestedStack)
+    ├── Attendance handlers (5)
+    └── Day-off handlers (7)
+```
+
+### Why nested stacks
+Parent was at 499/500 before the refactor. Moving context handlers into nested stacks gives each nested stack its own 500-resource budget. Stateful resources (Table, UserPool, bucket, CloudFront) **stay in parent** — moving them would trigger DELETE+CREATE under CloudFormation semantics.
+
+### Cross-stack references
+CDK generates CFN `Fn::ImportValue` / `Fn::GetAtt` automatically when you pass a parent-owned object (`api`, `table`, `user_pool`) into a nested-stack constructor. No manual wiring.
+
+---
+
+## 8. Frontend architecture
+
+### App Router route groups
+```
+app/
+├── (auth)/              # Unauth pages
+│   ├── login/
+│   ├── signup/
+│   ├── invite/[token]/
+│   └── verify-email/
+└── (dashboard)/         # Authenticated pages
+    ├── layout.tsx       # Auth gate + suspend gate + verify-email gate + sidebar
+    ├── dashboard/
+    ├── projects/
+    ├── my-tasks/
+    ├── reports/
+    ├── attendance/
+    ├── day-offs/
+    ├── admin/users/
+    └── settings/
+        ├── organization/
+        ├── roles/
+        ├── pipelines/
+        ├── plan/
+        ├── audit/
+        └── transfer-ownership/
+```
+
+### State management
+- **TanStack React Query** for server state (stale-while-revalidate, 10s staleTime)
+- **Context providers** for cross-cutting concerns: `AuthProvider`, `TenantProvider`, `ThemeProvider`, `ToastProvider`
+- **Local state** (useState) for form + UI state
+
+### Tenant provider
+`TenantProvider` hydrates `current` from `GET /orgs/current` after login, applies CSS-variable theme (`applyTenantTheme`), and listens for the `taskflow:org-suspended` window event to refetch when a mid-session 403 fires.
+
+### API client
+Single `apiClient` wrapper around `fetch` at [frontend/src/lib/api/client.ts](frontend/src/lib/api/client.ts):
+- Auto-attaches `Bearer` token from localStorage
+- Transforms camelCase → snake_case on outbound, snake → camel on inbound
+- Auto-redirects to `/login` on 401
+- Dispatches window event on `ORG_SUSPENDED` error code
+- Surfaces `code` field to callers via `ApiClientError`
+
+---
+
+## 9. Security model
+
+| Layer | Implementation |
+|---|---|
+| Auth | Cognito SRP — password never leaves the browser |
+| Token transport | Bearer in `Authorization` header; HTTPS enforced, TLS 1.3 minimum on desktop |
+| Token storage (web) | `localStorage` (short ID-token TTL + refresh flow) |
+| Token storage (desktop) | Windows DPAPI + Credential Manager |
+| Role authority | DynamoDB is source of truth; JWT is advisory; re-read on every request |
+| Permission check | `require()` fails closed (unknown role = empty permission set) |
+| Cross-tenant isolation | ContextVar-scoped repos + moto-backed contract tests in CI |
+| File uploads | S3 presigned URLs; presign handler refuses keys outside `orgs/{orgId}/` prefix |
+| Secrets | AWS Secrets Manager (Gmail SMTP, Groq API key) |
+| Signup abuse | WAFv2 per-IP signup rate-limit (5 / 5min) + optional hCaptcha |
+| Suspension | Platform-operator env allowlist; fail-closed when unset |
+| Email verification | Signup creates `email_verified=false`; frontend + defense-in-depth helper |
+| Activity monitoring | Consent-gated; event counts only (no keystrokes); 5s screenshot warning |
+| Day-off approval | Self-approval blocked at API layer |
+
+---
+
+## 10. Observability
+
+### Logging
+- Every Lambda writes to CloudWatch Logs
+- Log retention: 3 months on staging, 1 year on prod (configured per nested stack)
+- Parent-stack Lambdas use CloudWatch default (never-expire) — applying retention there emits Custom::LogRetention helper resources that would push past the 500-resource cap
+
+### Alarms
+Five CloudWatch alarms:
+1. **Api5xxRate** — 5xx% > 5% over two 5-minute windows
+2. **Api4xxSpike** — 4xx count > 500 (prod) in 5 minutes over 3 periods
+3. **ApiLatencyP95** — p95 > 3s for 15 minutes
+4. **DdbUserErrors** — > 50 ConditionalCheckFailed / 5 minutes (suggests broken invariant)
+5. **DdbThrottles** — > 10 throttled requests / 5 minutes (hot partition)
+
+SNS action not yet wired — alarms are visible in the console. When `config["ops_sns_topic_arn"]` is set, they'll page.
+
+### Audit log
+Every sensitive mutation (`role.updated`, `ownership.transferred`, `org.suspended`, `plan.upgraded`, etc.) writes to `PK=ORG#{org}#AUDIT` via `shared_kernel/audit.record()`. Best-effort — never breaks the primary action if the audit put fails. Reader endpoint is live; UI viewer page is backlog.
+
+### Sentry
+Scaffolded but dormant. Activates when `SENTRY_DSN` env var is set + `sentry-sdk[aws_lambda]` is in the Lambda deps layer (backend) or `@sentry/browser` is installed (frontend). No-op otherwise.
+
+### Health check
+`GET /health` — unauthed, DDB `describe_table` reachability probe. Returns 200 on success, 503 on DDB failure.
+
+---
+
+## 11. Scheduled jobs
+
+| Job | Schedule (UTC) | Purpose |
+|---|---|---|
+| Daily AI summary generation | 18:00 | Groq-generated per-user productivity summary for previous day |
+| Retention sweeper | 03:00 | Delete ACTIVITY rows older than `plan.retention_days` per-org |
+| Seat reconciliation | 03:30 | Detect seat overflow post-race; audit via "system:reconciliation" actor |
+| Stale session sweeper | every 5 min | Close abandoned desktop attendance sessions |
+
+---
+
+## 12. Testing
+
+### Backend
+- **pytest** (`backend/pytest.ini`, testpaths=tests, pythonpath=src)
+- Domain unit tests (User, Task, Pipeline entities)
+- Attendance sweep use-case tests with fake repos
+- **Multitenancy contract tests** ([backend/tests/test_multitenancy.py](backend/tests/test_multitenancy.py)) — moto-backed DynamoDB, two orgs in one table, assert cross-tenant reads return None/empty
+- Current count: 33 tests, passing
+
+### Frontend
+- No test harness yet. Backlog — add Vitest / React Testing Library when a feature regression forces it.
+
+### CI
+- **backend-ci.yml** — pytest on push/PR to `main` / `saas-migration` (path-filtered to `backend/**`)
+- **frontend-ci.yml** — lint + production build on push/PR (path-filtered to `frontend/**`)
+- Both cancel in-progress runs on new pushes to the same branch
+
+---
+
+## 13. Deployment & cutover
+
+### Current deploy commands
+```bash
+# Staging (personal profile, default)
+cd backend/cdk && cdk deploy --app "python app_staging.py"
+
+# Production — NEUROSTACK (currently live users)
+cd backend/cdk && cdk deploy --app "python app.py" --profile company
+```
+
+### Prod cutover rehearsal (outstanding)
+1. Snapshot prod DynamoDB
+2. Run `backfill_neurostack.py --dry-run` against snapshot
+3. Inspect item counts, spot-check 10 items
+4. Run real backfill during maintenance window
+5. Deploy CDK to company account
+6. Flip Vercel env vars to point at prod API
+7. Monitor for 24h before closing the cutover ticket
+
+### Rollback
+- DynamoDB PITR gives 35-day point-in-time recovery on prod
+- CDK stack rollback via CloudFormation UpdateStack revert
+- Vercel: redeploy previous commit
+
+---
+
+## 14. Known gaps & deferred work
+
+See [SAAS-STATUS.md](SAAS-STATUS.md) for the full living status. Highlights:
+
+| Category | Gap | Why deferred |
+|---|---|---|
+| Lifecycle | Org deletion w/ 30-day soft-delete | Design pass needed; low urgency at 1-3 tenants |
+| Platform | API custom domain (`api.taskflow.neurostack.in`) | Purely cosmetic under Option B; revisit for 3rd-party API consumers |
+| Migration | Prod backfill rehearsal | Awaiting your go-ahead |
+| Auth | 2FA via Cognito TOTP | Needs careful MFA-challenge handling in signIn |
+| Auth | Change-email flow | Low value; can be operator-assisted |
+| Email | SES migration from Gmail SMTP | Gmail works at current scale |
+| Roles | `ProjectRole` → per-org records | 4+ hour refactor; deserves own session |
+| Desktop | macOS build + code-signing | Needs Mac host + CA certs |
+| Billing | Stripe integration | Plan tier set manually today |
+
+---
+
+## 15. Further reading
+
+- [SAAS-MIGRATION.md](SAAS-MIGRATION.md) — original phased plan for multi-tenant conversion
+- [SAAS-PROGRESS.md](SAAS-PROGRESS.md) — running log of what each phase shipped
+- [SAAS-STATUS.md](SAAS-STATUS.md) — current state against the P0/P1/P2 roadmap
+- [docs/RBAC-DOCUMENTATION.md](docs/RBAC-DOCUMENTATION.md) — system roles vs. project roles, permission matrix
+- [docs/TIMER-ARCHITECTURE.md](docs/TIMER-ARCHITECTURE.md) — timer state machine across web + desktop
+- [backend/API.md](backend/API.md) — endpoint reference
+- [CLAUDE.md](CLAUDE.md) — the authoritative codebase conventions file

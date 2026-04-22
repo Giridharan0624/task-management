@@ -1,349 +1,224 @@
 # TaskFlow
 
-**Serverless Task Management & Time Tracking Platform**
+**Multi-tenant SaaS for team task management, attendance, and activity monitoring.**
 
-A full-stack application for organizations to manage projects, assign tasks, track work hours, monitor employee activity, and generate AI-powered productivity reports. Features a web dashboard and a cross-platform desktop companion app (Windows, Linux, macOS).
+Any organization signs up at `taskflow.neurostack.in/signup`, picks a workspace code, and gets an isolated tenant with configurable branding, roles, pipelines, terminology, and feature toggles. Full web dashboard plus a Windows/Linux/macOS desktop companion for timer + activity capture.
 
-[Live Demo](https://taskflow-ns.vercel.app) | [Desktop App (Windows)](https://github.com/Giridharan0624/taskflow-desktop/releases/latest) | [Desktop App (Linux)](https://github.com/Giridharan0624/taskflow-desktop/releases/latest) | [Desktop App (macOS)](https://github.com/Giridharan0624/taskflow-desktop/releases/latest)
+📄 [PRD](PRD.md) · [TDD](TDD.md) · [Shipped vs. not](SAAS-STATUS.md) · [Conventions](CLAUDE.md)
 
 ---
 
 ## Architecture
 
 ```
-                    ┌──────────────────────────────────────┐
-                    │            AWS Cloud (ap-south-1)     │
-                    │                                      │
-┌──────────┐       │  ┌────────┐   ┌──────────────────┐   │       ┌──────────────┐
-│  Web App  │──────│──│  API    │───│  Lambda (32 fn)  │   │───────│  Desktop App  │
-│ Next.js 16│  JWT │  │ Gateway │   │  Python 3.12     │   │  JWT  │  Wails v2/Go │
-│  Vercel   │──────│──│  REST   │───│  DDD Architecture│   │───────│  Windows     │
-└──────────┘       │  └────────┘   └────────┬─────────┘   │       └──────┬───────┘
-                    │                        │              │              │
-                    │  ┌─────────┐  ┌────────┴─────────┐   │   Screenshots & Activity
-                    │  │ Cognito │  │    DynamoDB       │   │   Heartbeats (5 min)
-                    │  │  Auth   │  │  Single Table     │   │
-                    │  └─────────┘  └──────────────────┘   │
-                    │                                      │
-                    │  ┌─────────────┐  ┌──────────────┐   │
-                    │  │ S3 + CDN    │  │ Groq AI      │   │
-                    │  │ Avatars,    │  │ LLaMA 3.3    │   │
-                    │  │ Screenshots │  │ Work Summary │   │
-                    │  └─────────────┘  └──────────────┘   │
-                    └──────────────────────────────────────┘
+           ┌─────────────────────────────────────────────────┐
+           │              AWS (ap-south-1)                   │
+           │                                                 │
+ ┌──────┐  │  ┌─────┐   ┌───────────────────────────┐       │   ┌──────────┐
+ │ Web  │──┼──│ API │───│ Lambda (~50 fn, parent +  │       │   │ Desktop  │
+ │Next  │  │  │ GW  │   │   Org + Workflow nested)  │       │───│ Wails v2 │
+ │Vercel│──┼──│REST │───│ Python 3.12 + DDD          │       │   │ Go+Preact│
+ └──────┘  │  └─┬───┘   └──┬──────┬───────┬─────────┘       │   └──────────┘
+           │    │ WAFv2    │      │       │                  │
+           │  ┌─┴──────┐ ┌─▼────┐ │  ┌────▼────┐             │
+           │  │Cognito │ │DynamoDB│ │  │ S3 +    │             │
+           │  │(pooled)│ │1 table │ │  │ CDN     │             │
+           │  │+PreTok │ │+2 GSI  │ │  │         │             │
+           │  │ trigger│ │ PITR   │ │  │         │             │
+           │  └────────┘ └────────┘ │  └─────────┘             │
+           │                        │                          │
+           │  ┌──────────┐   ┌──────▼──────┐  ┌──────────┐     │
+           │  │ CWatch   │   │ Secrets Mgr │  │ Groq AI  │     │
+           │  │ 5 alarms │   │ Gmail, Groq │  │ summaries│     │
+           │  └──────────┘   └─────────────┘  └──────────┘     │
+           └─────────────────────────────────────────────────┘
 ```
+
+See [TDD.md](TDD.md) for the full system design.
+
+---
+
+## Multi-tenancy at a glance
+
+- **Pooled isolation**: one DynamoDB table, one Cognito pool, one S3 bucket. Every tenant-scoped PK prefixes `ORG#{org_id}#`.
+- **No per-tenant subdomains**: login is email + password; workspace is resolved from the JWT's `custom:orgId` claim.
+- **Auto-scoped repos**: `AuthContext.org_id` stamps a ContextVar; every repo instantiated later in the request is scoped to the right tenant automatically.
+- **CI gate**: [backend/tests/test_multitenancy.py](backend/tests/test_multitenancy.py) asserts cross-tenant reads return empty even with handcrafted PKs.
 
 ---
 
 ## Features
 
-### Web Application
+### Product
+| Area | What ships |
+|---|---|
+| **Tenant signup** | Slug claim, two-phase Cognito + DynamoDB create with rollback, hCaptcha (optional), email-verification gate |
+| **Auth** | Cognito SRP, email+password, 8+ char password policy, SDK-based email-verification challenge |
+| **Invites** | Single-use 7-day tokens, email via Gmail SMTP, accept flow sets own password |
+| **Roles & permissions** | 35-permission catalog, per-org role records, matrix editor UI, cache invalidation on edit |
+| **Projects & tasks** | Per-org pipelines (named, ordered, colored statuses), kanban + list views, comments, attachments |
+| **Attendance & timer** | Live timer (web + desktop), task switching, meeting mode, mandatory descriptions |
+| **Activity monitoring** | Desktop keyboard/mouse counts + screenshots (opt-in per tenant via feature flag) |
+| **Day-offs** | Request/approve/reject, per-org leave types, self-approval blocked |
+| **Reports** | Summary/detailed/weekly/activity, Recharts + CSV export, AI summaries via Groq |
+| **Branding** | Per-org colors (CSS vars), logo + favicon, terminology overrides (`useT()` hook) |
+| **Ownership** | OWNER-only transfer with typed-email confirmation + forced token refresh |
+| **Suspension** | Platform-operator env-allowlist endpoint + fullscreen SuspendedScreen |
+| **Audit log** | Every sensitive mutation written to `PK=ORG#{org}#AUDIT` |
 
-| Feature | Description |
-|---------|-------------|
-| **Role-Based Access** | 3-tier system RBAC (OWNER > ADMIN > MEMBER) + 4-tier project roles |
-| **Project Management** | 4 domains (Development, Designing, Management, Research) with custom pipelines |
-| **Task Pipelines** | Domain-specific stages (e.g., To Do > In Progress > Code Review > Testing > Done) |
-| **Time Tracking** | Live timer with task switching, meeting mode, mandatory descriptions |
-| **Attendance** | Team attendance dashboard, monthly reports, CSV export |
-| **Day-Off Management** | Request/approve/reject workflow with self-approval prevention |
-| **Reports** | Summary, Detailed, Weekly, and Activity views with charts |
-| **AI Work Summary** | Groq LLaMA 3.3 generates daily productivity analysis from activity data |
-| **Real-Time Sync** | Polling-based updates (10-30s intervals) with optimistic mutations |
-| **Dark Mode** | Comprehensive theme system with 100+ CSS variable overrides |
-| **Desktop Download** | In-app installer download for the desktop companion |
-
-### Desktop Application (Windows)
-
-| Feature | Description |
-|---------|-------------|
-| **Timer** | Same functionality as web — start/stop/switch tasks |
-| **Activity Monitoring** | Keyboard/mouse event counts, active app tracking (while timer is ON only) |
-| **Screenshots** | Every 10 minutes with 5-second warning, skips locked screens |
-| **System Tray** | Background operation, red dot when timer active, right-click menu |
-| **Security** | DPAPI-encrypted tokens, TLS 1.3 enforced, consent-based monitoring |
-| **Auto-Update** | Checks GitHub releases on startup, one-click install |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.12, AWS Lambda, DDD architecture |
-| Infrastructure | AWS CDK (Python), CloudFormation |
-| API | API Gateway REST + Cognito JWT authorizer |
-| Database | DynamoDB (single-table design, 2 GSIs, PITR enabled) |
-| Auth | AWS Cognito (SRP authentication) |
-| Storage | S3 + CloudFront CDN (avatars, screenshots, downloads) |
-| AI | Groq API (LLaMA 3.3 70B) for work summaries |
-| Secrets | AWS Secrets Manager (Gmail SMTP, Groq API key) |
-| Web Frontend | Next.js 16, TypeScript, Tailwind CSS, React Query, Recharts |
-| Desktop | Go 1.22, Wails v2, Preact, kbinani/screenshot, fyne.io/systray |
-| Desktop Installers | NSIS (Windows), AppImage (Linux), DMG (macOS) |
-| Desktop CI/CD | GitHub Actions (builds all 3 platforms on tag push) |
-| Deployment | Vercel (web), AWS CDK (backend), S3/CloudFront (desktop) |
+### Platform
+| Area | What ships |
+|---|---|
+| **Observability** | 5 CloudWatch alarms (5xx rate, 4xx spike, p95 latency, DDB user errors, DDB throttles), Sentry scaffold (dormant until DSN) |
+| **Rate limiting** | WAFv2 regional ACL — per-workspace header + per-IP + per-IP-signup |
+| **Data protection** | DynamoDB PITR (7d staging / 35d prod), S3 encryption, presigned uploads scoped to `orgs/{orgId}/` |
+| **CI** | GitHub Actions: backend pytest + frontend lint/build, path-filtered |
+| **Scheduled jobs** | Nightly retention sweeper, seat reconciliation, daily AI summaries, 5-min stale session sweeper |
+| **Plans** | FREE (10u/3p/30d), PRO (50u/50p/365d), ENTERPRISE (unlimited). Enforced at create sites. |
 
 ---
 
-## RBAC Permissions
+## Repository layout
 
-### System Roles
-
-| Permission | OWNER | ADMIN | MEMBER |
-|------------|-------|-------|--------|
-| Create users | ADMIN + MEMBER | ADMIN + MEMBER | No |
-| Change roles | Yes | No | No |
-| Delete users | Anyone | MEMBER only | No |
-| Approve day-offs | Any request | Any (not own) | No |
-| Request day-offs | No | Yes | Yes |
-| Manage projects | Yes | Yes | No |
-| View all users | Yes | Yes | No |
-| View reports | Yes | Yes | No |
-| Track time | No | Yes | Yes |
-
-### Project Roles
-
-| Permission | ADMIN | PROJECT_MANAGER | TEAM_LEAD | MEMBER |
-|------------|-------|-----------------|-----------|--------|
-| Create/delete tasks | Yes | Yes | Yes | No |
-| Update any task | Yes | Yes | Yes | No |
-| Update own status | Yes | Yes | Yes | Yes |
-| Manage members | Yes | Yes | Yes | No |
-| View all tasks | Yes | Yes | Yes | Assigned only |
+```
+task-management/
+├── backend/             Python 3.12 Lambda monolith + AWS CDK
+│   ├── cdk/             Infrastructure-as-code (parent + 2 nested stacks)
+│   ├── src/
+│   │   ├── contexts/    DDD bounded contexts (user/project/task/org/...)
+│   │   └── shared_kernel/   Cross-cutting (auth, tenant_keys, permissions, audit)
+│   ├── tests/           pytest suite (includes multitenancy isolation contract)
+│   └── scripts/         backfills (backfill_phase4_phase5.py, etc.)
+│
+├── frontend/            Next.js 16 web app (Vercel)
+│   └── src/
+│       ├── app/
+│       │   ├── (auth)/          login, signup, invite/[token], verify-email
+│       │   └── (dashboard)/     All authenticated pages + settings/*
+│       ├── components/          UI + tenant + auth + domain components
+│       ├── lib/                 api client, hooks, tenant + auth providers
+│       └── types/               TS types
+│
+├── desktop/             (GITIGNORED — separate repo for Wails v2 + Go + Preact)
+│
+├── .github/workflows/   Backend + frontend CI
+├── PRD.md               Product requirements (user-facing)
+├── TDD.md               Technical design (engineer-facing)
+├── SAAS-STATUS.md       Current state vs. P0/P1/P2 roadmap
+├── SAAS-MIGRATION.md    Original phased migration plan
+├── SAAS-PROGRESS.md     Running log of shipped changes
+├── CLAUDE.md            Authoritative codebase conventions
+└── docs/                Per-feature docs (RBAC, timer, API, migrations)
+```
 
 ---
 
-## Getting Started
+## Quickstart
 
 ### Prerequisites
-
-- AWS CLI (configured with credentials)
+- AWS CLI (two profiles: `default` for staging, `company` for prod)
 - AWS CDK CLI (`npm install -g aws-cdk`)
-- Python 3.12+
-- Node.js 18+
-- Go 1.22+ (for desktop app only)
-- Wails v2 CLI (for desktop app only)
+- Python 3.12
+- Node.js 20+
 
-### 1. Deploy Backend
+### Backend
 
 ```bash
-cd backend/cdk
-pip install -r requirements.txt
-cdk bootstrap    # First time only
-cdk deploy       # Production
+cd backend
+pip install -r requirements.txt -r requirements-dev.txt
+pytest                                    # 33 tests
+
+cd cdk
+cdk deploy --app "python app_staging.py"  # staging (personal profile)
+cdk deploy --app "python app.py" --profile company    # prod (NEUROSTACK)
 ```
 
-For staging environment:
-```bash
-cdk deploy --app "python app_staging.py"
-```
+CDK outputs API URL, Cognito User Pool + Client ID, table name.
 
-CDK outputs the API URL, Cognito User Pool ID, and Client ID.
-
-### 2. Run Web Frontend
+### Frontend
 
 ```bash
 cd frontend
 npm install
+npm run dev                               # localhost:3000
+npm run build                             # production build
 ```
 
-Create `.env.local` with values from CDK output:
+`.env.local`:
 ```env
-NEXT_PUBLIC_API_URL=https://<api-id>.execute-api.ap-south-1.amazonaws.com/prod
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=<user-pool-id>
-NEXT_PUBLIC_COGNITO_CLIENT_ID=<client-id>
+NEXT_PUBLIC_API_URL=<from CDK output>
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=<from CDK output>
+NEXT_PUBLIC_COGNITO_CLIENT_ID=<from CDK output>
 NEXT_PUBLIC_AWS_REGION=ap-south-1
+
+# Optional — hCaptcha widget (signup)
+NEXT_PUBLIC_HCAPTCHA_SITE_KEY=
+
+# Optional — Sentry (dynamic-imports @sentry/browser if present)
+NEXT_PUBLIC_SENTRY_DSN=
 ```
 
-```bash
-npm run dev      # Development
-npm run build    # Production build
-```
+### Operator flags (optional systems)
 
-### 3. Build Desktop App
-
-```bash
-cd desktop
-wails dev        # Development mode
-wails build      # Production build
-```
-
-Build the installer:
-```powershell
-powershell -File build-installer.ps1
-```
-
-Output: `desktop/build/windows/installer/TaskFlowDesktop-Setup-1.0.0.exe`
+| Flag | Where | Effect |
+|---|---|---|
+| `platform_admin_user_ids` | CDK stage config | Comma-separated Cognito subs allowed to call `POST /platform/orgs/{orgId}/status` (suspension). Empty = nobody (fail-closed). |
+| `hcaptcha_secret` | CDK stage config | Enables server-side hCaptcha verify on signup |
+| `NEXT_PUBLIC_HCAPTCHA_SITE_KEY` | Vercel | Renders the hCaptcha widget on the signup form |
+| `SENTRY_DSN` | Lambda env | Activates backend Sentry (requires `sentry-sdk[aws_lambda]` in deps layer) |
+| `NEXT_PUBLIC_SENTRY_DSN` | Vercel | Activates frontend Sentry (requires `npm install @sentry/browser`) |
 
 ---
 
-## Project Structure
-
-```
-task-management/
-├── backend/
-│   ├── cdk/                          # AWS CDK infrastructure
-│   │   ├── app.py                    # Production entry point
-│   │   ├── app_staging.py            # Staging entry point
-│   │   └── stack.py                  # Stack definition (all resources)
-│   ├── src/
-│   │   ├── contexts/                 # Bounded contexts (DDD)
-│   │   │   ├── user/                 # User management context
-│   │   │   │   ├── domain/           # Entities, value objects, interfaces
-│   │   │   │   ├── application/      # Use cases (business logic + RBAC)
-│   │   │   │   ├── infrastructure/   # DynamoDB repo, Cognito, Gmail
-│   │   │   │   └── handlers/         # Lambda entry points
-│   │   │   ├── project/              # Project management context
-│   │   │   ├── task/                 # Task management context
-│   │   │   ├── attendance/           # Time tracking context
-│   │   │   ├── dayoff/               # Day-off request context
-│   │   │   ├── comment/              # Task comments context
-│   │   │   ├── taskupdate/           # Daily work updates context
-│   │   │   ├── activity/             # Desktop activity monitoring + AI
-│   │   │   └── upload/               # S3 file upload context
-│   │   └── shared_kernel/            # Cross-cutting concerns
-│   │       ├── auth_context.py       # JWT extraction + DynamoDB role lookup
-│   │       ├── response.py           # API response builder
-│   │       ├── validate_body.py      # Pydantic body validation
-│   │       ├── errors.py             # Shared exception classes
-│   │       └── dynamo_client.py      # DynamoDB table reference
-│   └── tests/                        # Pytest test suite
-│
-├── frontend/                         # Next.js 16 web application
-│   ├── public/                       # Static assets (logo)
-│   └── src/
-│       ├── app/                      # App Router pages
-│       │   ├── (auth)/               # Login page
-│       │   └── (dashboard)/          # All dashboard pages
-│       ├── components/               # React components
-│       │   ├── ui/                   # Base UI (20+ custom components)
-│       │   ├── attendance/           # Timer, attendance table
-│       │   ├── task/                 # Kanban, task detail, create modal
-│       │   ├── project/              # Project cards, member list
-│       │   └── reports/              # Charts, activity reports
-│       ├── lib/                      # Utilities
-│       │   ├── api/                  # API client modules
-│       │   ├── auth/                 # Cognito auth provider
-│       │   ├── hooks/                # React Query hooks
-│       │   └── utils/                # Helpers (formatting, colors, etc.)
-│       └── types/                    # TypeScript type definitions
-│
-├── desktop/                          # Wails v2 desktop app
-│   ├── internal/                     # Go backend
-│   │   ├── auth/                     # Cognito + DPAPI encryption
-│   │   ├── api/                      # HTTP client (TLS 1.3)
-│   │   ├── monitor/                  # Activity, screenshots, notifications
-│   │   ├── tray/                     # System tray (Win32 API)
-│   │   └── updater/                  # Auto-update via GitHub releases
-│   ├── frontend/                     # Preact UI
-│   └── build/                        # Build artifacts + NSIS installer
-│
-└── docs/                             # Documentation
-    ├── task-management-prd.md        # Product requirements document
-    ├── RBAC-DOCUMENTATION.md         # Complete permission reference
-    ├── TIMER-ARCHITECTURE.md         # Timer implementation details
-    └── ...                           # Migration guides, roadmaps
-```
-
-### Backend Architecture (DDD Bounded Contexts)
-
-Each bounded context is self-contained with its own domain, application, infrastructure, and handler layers:
-
-```
-contexts/{context}/
-├── domain/           # Entities, value objects, repository interfaces
-├── application/      # Use cases (business logic + authorization)
-├── infrastructure/   # DynamoDB repository, mappers, external services
-└── handlers/         # Lambda entry points (API request/response)
-```
-
----
-
-## Database Design
-
-Single-table DynamoDB with composite keys:
+## Data model (single table)
 
 | Entity | PK | SK |
-|--------|----|----|
-| User | `USER#{userId}` | `PROFILE` |
-| Project | `PROJECT#{projectId}` | `METADATA` |
-| Project Member | `PROJECT#{projectId}` | `MEMBER#{userId}` |
-| Task | `PROJECT#{projectId}` | `TASK#{taskId}` |
-| Comment | `TASK#{taskId}` | `COMMENT#{ts}#{id}` |
-| Attendance | `USER#{userId}` | `ATTENDANCE#{date}` |
-| Day Off | `USER#{userId}` | `DAYOFF#{ts}#{id}` |
-| Task Update | `TASKUPDATE#{date}` | `USER#{userId}` |
-| Activity | `USER#{userId}` | `ACTIVITY#{date}` |
-| AI Summary | `USER#{userId}` | `SUMMARY#{date}` |
+|---|---|---|
+| Organization | `ORG#{org}` | `ORG` |
+| Org settings | `ORG#{org}` | `SETTINGS` |
+| Org plan | `ORG#{org}` | `PLAN` |
+| Role | `ORG#{org}` | `ROLE#{role_id}` |
+| Pipeline | `ORG#{org}` | `PIPELINE#{pipeline_id}` |
+| Invite | `ORG#{org}` | `INVITE#{token}` |
+| User | `ORG#{org}#USER#{userId}` | `PROFILE` |
+| Project | `ORG#{org}#PROJECT#{pid}` | `METADATA` |
+| Project member | `ORG#{org}#PROJECT#{pid}` | `MEMBER#{userId}` |
+| Task | `ORG#{org}#PROJECT#{pid}` | `TASK#{taskId}` |
+| Audit event | `ORG#{org}#AUDIT` | `EVENT#{ts}#{eventId}` |
+| Slug resolver | `SLUG#{slug}` | `ORG` (global) |
+| Invite-token lookup | `INVITE_TOKEN#{token}` | `LOOKUP` (global) |
 
-**GSI1**: Email lookups, date-based queries
-**GSI2**: Employee ID lookups
+**GSI1**: global email uniqueness (`GSI1PK=USER_EMAIL#{email}`)
+**GSI2**: per-tenant employee ID lookup (`GSI2PK=ORG#{org}#EMPLOYEE#{eid}`)
 
----
-
-## API Endpoints
-
-| Category | Count | Examples |
-|----------|-------|---------|
-| Users | 11 | CRUD, role management, profile, progress |
-| Projects | 9 | CRUD, members, status/health |
-| Tasks | 6 | CRUD, assign, direct tasks |
-| Comments | 2 | Create, list per task |
-| Attendance | 5 | Sign in/out, today, reports |
-| Day-Offs | 7 | Request, approve, reject, cancel |
-| Task Updates | 3 | Submit, list, my status |
-| Activity | 6 | Heartbeat, report, AI summary |
-| Uploads | 1 | S3 presigned URLs |
-| Public | 1 | Employee ID resolution |
-
-**Total: 51 endpoints** across 32 Lambda functions.
-
----
-
-## Security
-
-| Area | Implementation |
-|------|---------------|
-| Authentication | AWS Cognito JWT with SRP flow (password never sent to server) |
-| Authorization | RBAC enforced from DynamoDB role (not stale JWT claims) |
-| Role sync | Backend reads role from DB on every request; frontend polls every 15s |
-| Token storage (desktop) | Windows DPAPI encryption + Credential Manager |
-| API transport | HTTPS enforced, TLS 1.3 minimum (desktop) |
-| File uploads | S3 presigned URLs (no AWS credentials in frontend) |
-| Secrets | AWS Secrets Manager for API keys and SMTP credentials |
-| Activity monitoring | Consent required, only event counts (no keystrokes), 5s screenshot warning |
-| Day-off approval | Self-approval blocked at API level |
-| Password policy | 8+ characters, uppercase, lowercase, digits |
+Key construction is centralized in [backend/src/shared_kernel/tenant_keys.py](backend/src/shared_kernel/tenant_keys.py). Repositories never string-format PKs inline.
 
 ---
 
 ## Environments
 
-| Environment | API | Web | Desktop Config |
-|-------------|-----|-----|----------------|
-| Production | `3syc4x99a7.../prod` | [taskflow-ns.vercel.app](https://taskflow-ns.vercel.app) | `config.json` → prod |
-| Staging | `4saz9agwdi.../staging` | `localhost:3000` | `config.json` → staging |
+| Environment | API | Web | AWS profile | CDK entry |
+|---|---|---|---|---|
+| **Staging** | `4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/` | `localhost:3000` / Vercel preview | default (personal) | `app_staging.py` |
+| **Production** | (company account) | `taskflow.neurostack.in` | `company` | `app.py` / `app_company.py` |
 
-Both environments have identical infrastructure (32 Lambdas, full API routes, S3, CloudFront, Secrets Manager).
-
----
-
-## Deployment
-
-| Component | Command | Target |
-|-----------|---------|--------|
-| Backend (prod) | `cd backend/cdk && cdk deploy` | AWS Lambda + API Gateway |
-| Backend (staging) | `cd backend/cdk && cdk deploy --app "python app_staging.py"` | Separate AWS stack |
-| Frontend | `git push` to main | Vercel auto-deploy |
-| Desktop | `cd desktop && wails build` | Local exe |
-| Installer | `powershell -File build-installer.ps1` | NSIS installer |
-| Upload installer | `aws s3 cp ... s3://taskflow-uploads-prod/downloads/` | S3 + CloudFront |
+Deployment rule (from `CLAUDE.md`): **no prod deploy until the full change is verified end-to-end on staging.** All SaaS-migration work is on staging only until the cutover ticket opens.
 
 ---
 
-## Author
+## Status
 
-Developed by **Giridharan S** at **NEUROSTACK**
+P0 SaaS substrate is **functionally complete on staging**. See [SAAS-STATUS.md](SAAS-STATUS.md) for the live checklist.
 
-Copyright 2026 NEUROSTACK. All rights reserved.
+The only remaining P0-adjacent gates before prod cutover are:
+1. Prod backfill rehearsal
+2. Org-deletion design pass
+
+P1 backlog (desktop code-signing, macOS build, 2FA, SES, bulk CSV import, `ProjectRole` refactor) is deliberately not being worked until tenant feedback forces priority.
+
+---
+
+## License & ownership
+
+Developed by **Giridharan S** at **NEUROSTACK**.
+Copyright © 2026 NEUROSTACK. All rights reserved.
