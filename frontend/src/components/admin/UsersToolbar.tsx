@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, X, Download, UserPlus, Shield, Users, Mail } from 'lucide-react'
+import { Search, X, Download, Upload, UserPlus, Shield, Users, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import {
@@ -40,6 +40,9 @@ interface UsersToolbarProps {
   onExportCSV: () => void
   onAddUser: () => void
   onInvite?: () => void
+  /** OWNER-only bulk import from CSV. Optional — renders the button
+   *  only when provided. */
+  onBulkImport?: () => void
   addLabel: string
 }
 
@@ -68,6 +71,7 @@ export function UsersToolbar({
   onExportCSV,
   onAddUser,
   onInvite,
+  onBulkImport,
   addLabel,
 }: UsersToolbarProps) {
   return (
@@ -228,6 +232,17 @@ export function UsersToolbar({
           <Download className="h-3.5 w-3.5" />
           Export
         </Button>
+        {onBulkImport && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onBulkImport}
+            className="h-9 gap-1.5"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Import CSV
+          </Button>
+        )}
         {onInvite && (
           <Button
             variant="secondary"

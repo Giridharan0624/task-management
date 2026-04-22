@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { useProjects } from '@/lib/hooks/useProjects'
-import { useMyTasks } from '@/lib/hooks/useUsers'
+import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
 
 interface CommandItem {
@@ -19,6 +19,7 @@ interface CommandItem {
 const NAV_ICON = <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 const PROJECT_ICON = <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
 const TASK_ICON = <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+const USER_ICON = <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
@@ -29,6 +30,10 @@ export function CommandPalette() {
   const { user } = useAuth()
   const { data: projects } = useProjects()
   const { data: tasks } = useMyTasks()
+  // `useUsers` is always called (can't conditionally call hooks) but
+  // the query itself is gated below so we only surface user results to
+  // OWNER/ADMIN — MEMBERs shouldn't be able to enumerate the team.
+  const { data: users } = useUsers()
 
   // Toggle with Cmd+K / Ctrl+K
   useEffect(() => {
@@ -78,8 +83,24 @@ export function CommandPalette() {
       action: () => router.push(`/projects/${t.projectId}`), category: 'Tasks',
     }))
 
-    return [...nav, ...projectItems, ...taskItems]
-  }, [projects, tasks, isPrivileged, router])
+    // Users — privileged only. Excludes the caller so the palette never
+    // shows "myself" as a navigable item (they have Profile already).
+    const userItems: CommandItem[] = isPrivileged
+      ? (users ?? [])
+          .filter((u) => u.userId !== user?.userId)
+          .slice(0, 20)
+          .map((u) => ({
+            id: `user-${u.userId}`,
+            label: u.name || u.email,
+            description: `${u.email} · ${u.systemRole}`,
+            icon: USER_ICON,
+            action: () => router.push(`/admin/users?focus=${encodeURIComponent(u.userId)}`),
+            category: 'People',
+          }))
+      : []
+
+    return [...nav, ...projectItems, ...taskItems, ...userItems]
+  }, [projects, tasks, users, isPrivileged, user?.userId, router])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items.slice(0, 10)

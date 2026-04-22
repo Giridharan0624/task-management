@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/AuthProvider'
 import {
   useUsers,
@@ -37,6 +38,7 @@ import {
 import { UserStatStrip } from '@/components/admin/UserStatStrip'
 import { RoleDropdown, ROLE_STYLES } from '@/components/admin/RoleDropdown'
 import { UserActionsMenu } from '@/components/admin/UserActionsMenu'
+import { BulkImportUsersModal } from '@/components/admin/BulkImportUsersModal'
 import { orgsApi } from '@/lib/api/orgsApi'
 import { buildCsvName } from '@/lib/utils/csvFilename'
 import { getLocalToday } from '@/lib/utils/date'
@@ -54,9 +56,11 @@ export default function UsersPage() {
   const updateRole = useUpdateUserRole()
   const confirm = useConfirm()
   const toast = useToast()
+  const queryClient = useQueryClient()
 
   const [showAddUser, setShowAddUser] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
+  const [showBulkImport, setShowBulkImport] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member')
   const [inviteSending, setInviteSending] = useState(false)
@@ -358,6 +362,7 @@ export default function UsersPage() {
         onExportCSV={exportUsersCSV}
         onAddUser={() => setShowAddUser(true)}
         onInvite={isOwner ? () => setShowInvite(true) : undefined}
+        onBulkImport={isOwner ? () => setShowBulkImport(true) : undefined}
         addLabel={isOwner ? 'Add user' : 'Add member'}
       />
 
@@ -687,6 +692,16 @@ export default function UsersPage() {
           />
         )}
       </Modal>
+
+      <BulkImportUsersModal
+        open={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onComplete={() => {
+          // Trigger a user-list refetch so the newly-created rows show
+          // up in the table without a manual reload.
+          void queryClient.invalidateQueries({ queryKey: ['users'] })
+        }}
+      />
     </div>
   )
 }

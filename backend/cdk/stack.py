@@ -366,6 +366,33 @@ class TaskManagementStack(Stack):
         create_user_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
         create_user_fn.add_environment("APP_URL", config["app_url"])
         gmail_secret.grant_read(create_user_fn)
+
+        # ─── Bulk user import (CSV-driven) ───────────────────────────────
+        # Iterates the single-user CreateUserUseCase in a loop; longer
+        # timeout because 200 users × ~200ms Cognito+DDB each ≈ 40s.
+        # Same IAM permissions as create_user — reuses its flow.
+        users_bulk = users.add_resource("bulk")
+        bulk_create_fn = _lambda.Function(
+            self, "BulkCreateUsers",
+            handler="contexts.user.handlers.bulk_create_users.handler",
+            **{**lambda_defaults, "timeout": Duration.seconds(60)},
+        )
+        table.grant_read_write_data(bulk_create_fn)
+        bulk_create_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["cognito-idp:AdminCreateUser"],
+                resources=[user_pool.user_pool_arn],
+            )
+        )
+        bulk_create_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
+        bulk_create_fn.add_environment("APP_URL", config["app_url"])
+        gmail_secret.grant_read(bulk_create_fn)
+        users_bulk.add_method(
+            "POST",
+            apigw.LambdaIntegration(bulk_create_fn),
+            authorizer=authorizer,
+            authorization_type=apigw.AuthorizationType.COGNITO,
+        )
         add_api_lambda(
             "DeleteUser",
             "contexts.user.handlers.delete_user.handler",
@@ -555,6 +582,21 @@ class TaskManagementStack(Stack):
         add_api_lambda("SubmitTaskUpdate", "contexts.taskupdate.handlers.submit_update.handler", "POST", task_updates)
         add_api_lambda("ListTaskUpdates", "contexts.taskupdate.handlers.list_updates.handler", "GET", task_updates)
         add_api_lambda("MyTaskUpdate", "contexts.taskupdate.handlers.my_update.handler", "GET", task_updates_me)
+
+        # ─── Weekly rollup (AI-assisted digest of task updates) ────────────
+        # Reuses the Groq secret already provisioned above for the activity
+        # summary. Longer timeout than the default 10s because the call
+        # chain is: DynamoDB range-query (7 days) → Groq completion → parse.
+        task_updates_weekly = task_updates.add_resource("weekly-rollup")
+        weekly_rollup_fn = add_api_lambda(
+            "WeeklyRollup",
+            "contexts.taskupdate.handlers.weekly_rollup.handler",
+            "GET",
+            task_updates_weekly,
+        )
+        weekly_rollup_fn.add_environment("GROQ_SECRET_ARN", groq_secret.secret_arn)
+        groq_secret.grant_read(weekly_rollup_fn)
+        weekly_rollup_fn.node.default_child.add_property_override("Timeout", 60)
 
         # ─── WAFv2 — per-tenant + per-IP rate limits (Phase 6) ──────────────
         # Skipped in staging to keep us under the 500-resource CFN cap and

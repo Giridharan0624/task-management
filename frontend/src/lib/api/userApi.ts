@@ -56,6 +56,41 @@ export function createUser(data: { email: string; name: string; systemRole: stri
   return apiClient.post<User>('/users', data)
 }
 
+export interface BulkUserRow {
+  email: string
+  name: string
+  systemRole: 'ADMIN' | 'MEMBER'
+  department?: string
+  dateOfJoining?: string
+}
+
+export interface BulkCreateResult {
+  created: Array<{
+    row: number
+    email: string
+    userId: string
+    employeeId: string
+    otp: string
+  }>
+  failed: Array<{
+    row: number
+    email: string
+    error: string
+  }>
+  summary: {
+    requested: number
+    created: number
+    failed: number
+  }
+}
+
+/** POST /users/bulk — backend iterates the single-user create flow
+ *  per row. Always resolves with a 200 response; row-level errors are
+ *  in `failed[]`. Max 200 rows per request. */
+export function bulkCreateUsers(users: BulkUserRow[]): Promise<BulkCreateResult> {
+  return apiClient.post<BulkCreateResult>('/users/bulk', { users })
+}
+
 export function deleteUser(userId: string): Promise<void> {
   return apiClient.del<void>(`/users/${userId}`)
 }
