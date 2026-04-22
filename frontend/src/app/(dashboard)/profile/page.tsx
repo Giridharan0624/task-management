@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import {
   Pencil,
@@ -244,8 +245,14 @@ export default function ProfilePage() {
             <h2 className="truncate text-2xl font-bold tracking-tight text-foreground">
               {dp.name || dp.email}
             </h2>
-            <p className="mt-0.5 truncate text-sm text-muted-foreground">
+            <p className="mt-0.5 flex items-center gap-2 truncate text-sm text-muted-foreground">
               {dp.email}
+              <Link
+                href="/profile/change-email"
+                className="text-[11px] font-semibold text-primary hover:underline"
+              >
+                Change
+              </Link>
             </p>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">

@@ -77,6 +77,22 @@ class OrgNestedStack(NestedStack):
         app_url: str,
         log_retention: logs.RetentionDays = logs.RetentionDays.THREE_MONTHS,
         hcaptcha_secret_value: str = "",
+        uploads_bucket=None,
+        # User-context resources that live under /users/* in the parent
+        # tree but whose methods live here for CFN budget reasons.
+        users_bulk_resource: apigw.IResource | None = None,
+        users_me_email_resource: apigw.IResource | None = None,
+        # Health + platform resources — same pattern, parent owns the
+        # resource, the nested stack owns the Lambda + method.
+        health_resource: apigw.IResource | None = None,
+        platform_org_status_resource: apigw.IResource | None = None,
+        platform_admin_user_ids: str = "",
+        # Task-update resources — /task-updates and /task-updates/me.
+        task_updates_resource: apigw.IResource | None = None,
+        task_updates_me_resource: apigw.IResource | None = None,
+        # /uploads/presign resource.
+        uploads_presign_resource: apigw.IResource | None = None,
+        cdn_domain: str = "",
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -292,6 +308,221 @@ class OrgNestedStack(NestedStack):
             "POST",
             orgs_current_transfer,
             cognito_policies=["cognito-idp:AdminUpdateUserAttributes"],
+        )
+
+        # ── Soft-delete lifecycle (owner-initiated) ──────────────────
+        # delete → marks PENDING_DELETION, 30-day grace
+        # undelete → clears within the grace window
+        # export → JSON dump to S3 + presigned URL
+        orgs_current_delete = orgs_current.add_resource("delete")
+        add_api_lambda(
+            "DeleteOrg",
+            "contexts.org.handlers.delete_org.handler",
+            "POST",
+            orgs_current_delete,
+        )
+        orgs_current_undelete = orgs_current.add_resource("undelete")
+        add_api_lambda(
+            "UndeleteOrg",
+            "contexts.org.handlers.undelete_org.handler",
+            "POST",
+            orgs_current_undelete,
+        )
+        orgs_current_export = orgs_current.add_resource("export")
+        export_fn = _lambda.Function(
+            self,
+            "ExportOrg",
+            handler="contexts.org.handlers.export_org.handler",
+            # Small tenants take <30s; generous cap leaves headroom
+            # for mid-sized. Enterprise needs an async pattern later.
+            **{**lambda_defaults, "timeout": Duration.minutes(5)},
+        )
+        table.grant_read_data(export_fn)
+        if uploads_bucket is not None:
+            uploads_bucket.grant_put(export_fn)
+            uploads_bucket.grant_read(export_fn)
+            export_fn.add_environment(
+                "UPLOADS_BUCKET", uploads_bucket.bucket_name,
+            )
+        orgs_current_export.add_method(
+            "POST",
+            apigw.LambdaIntegration(export_fn),
+            authorizer=authorizer,
+            authorization_type=apigw.AuthorizationType.COGNITO,
+        )
+
+        # ── User-context cross-stack attachments ───────────────────
+        # Methods on parent-owned resources; the method + its Lambda
+        # live here for CFN budget reasons. The parent creates the
+        # Resource nodes so api.root.resource_for_path still works in
+        # other callers.
+        if users_bulk_resource is not None:
+            bulk_create_fn = _lambda.Function(
+                self,
+                "BulkCreateUsers",
+                handler="contexts.user.handlers.bulk_create_users.handler",
+                **{**lambda_defaults, "timeout": Duration.seconds(60)},
+            )
+            table.grant_read_write_data(bulk_create_fn)
+            bulk_create_fn.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["cognito-idp:AdminCreateUser"],
+                    resources=[user_pool.user_pool_arn],
+                )
+            )
+            bulk_create_fn.add_environment(
+                "GMAIL_SECRET_ARN", gmail_secret.secret_arn,
+            )
+            bulk_create_fn.add_environment("APP_URL", app_url)
+            gmail_secret.grant_read(bulk_create_fn)
+            users_bulk_resource.add_method(
+                "POST",
+                apigw.LambdaIntegration(bulk_create_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        if users_me_email_resource is not None:
+            sync_email_fn = _lambda.Function(
+                self,
+                "SyncEmail",
+                handler="contexts.user.handlers.sync_email.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_write_data(sync_email_fn)
+            users_me_email_resource.add_method(
+                "PUT",
+                apigw.LambdaIntegration(sync_email_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        # Health check — unauthenticated DDB probe.
+        if health_resource is not None:
+            health_fn = _lambda.Function(
+                self,
+                "HealthCheck",
+                handler="contexts.system.handlers.health.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_data(health_fn)
+            health_resource.add_method(
+                "GET",
+                apigw.LambdaIntegration(health_fn),
+                authorization_type=apigw.AuthorizationType.NONE,
+            )
+
+        # Task-update endpoints — attach methods to parent-owned
+        # /task-updates and /task-updates/me resources.
+        if task_updates_resource is not None and task_updates_me_resource is not None:
+            submit_fn = _lambda.Function(
+                self,
+                "SubmitTaskUpdate",
+                handler="contexts.taskupdate.handlers.submit_update.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_write_data(submit_fn)
+            task_updates_resource.add_method(
+                "POST",
+                apigw.LambdaIntegration(submit_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+            list_updates_fn = _lambda.Function(
+                self,
+                "ListTaskUpdates",
+                handler="contexts.taskupdate.handlers.list_updates.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_data(list_updates_fn)
+            task_updates_resource.add_method(
+                "GET",
+                apigw.LambdaIntegration(list_updates_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+            my_update_fn = _lambda.Function(
+                self,
+                "MyTaskUpdate",
+                handler="contexts.taskupdate.handlers.my_update.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_data(my_update_fn)
+            task_updates_me_resource.add_method(
+                "GET",
+                apigw.LambdaIntegration(my_update_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        # S3 presign endpoint — scoped to uploads_bucket via CDK grants.
+        if uploads_presign_resource is not None and uploads_bucket is not None:
+            presign_fn = _lambda.Function(
+                self,
+                "GetPresignedUrl",
+                handler="contexts.upload.handlers.presign.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_data(presign_fn)
+            uploads_bucket.grant_put(presign_fn)
+            presign_fn.add_environment(
+                "UPLOADS_BUCKET", uploads_bucket.bucket_name,
+            )
+            presign_fn.add_environment("CDN_DOMAIN", cdn_domain)
+            uploads_presign_resource.add_method(
+                "GET",
+                apigw.LambdaIntegration(presign_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        # Platform-operator suspension endpoint — env-allowlist gated.
+        if platform_org_status_resource is not None:
+            set_status_fn = _lambda.Function(
+                self,
+                "SetOrgStatus",
+                handler="contexts.org.handlers.set_org_status.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_write_data(set_status_fn)
+            set_status_fn.add_environment(
+                "PLATFORM_ADMIN_USER_IDS", platform_admin_user_ids,
+            )
+            platform_org_status_resource.add_method(
+                "POST",
+                apigw.LambdaIntegration(set_status_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        # ── Scheduled: nightly hard-delete sweeper ────────────────────
+        # Runs at 04:00 UTC (after retention + seat-reconciliation).
+        # Physically removes every tenant-scoped row + Cognito users
+        # for orgs past the 30-day grace period.
+        hard_delete_fn = _lambda.Function(
+            self,
+            "HardDeleteSweeper",
+            handler="contexts.org.handlers.hard_delete_sweeper.handler",
+            **{**lambda_defaults, "timeout": Duration.minutes(15)},
+        )
+        table.grant_read_write_data(hard_delete_fn)
+        hard_delete_fn.add_environment("USER_POOL_ID", user_pool.user_pool_id)
+        hard_delete_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "cognito-idp:AdminDeleteUser",
+                    "cognito-idp:ListUsers",
+                ],
+                resources=[user_pool.user_pool_arn],
+            )
+        )
+        events.Rule(
+            self,
+            "HardDeleteSweeperSchedule",
+            schedule=events.Schedule.cron(hour="4", minute="0"),
+            targets=[events_targets.LambdaFunction(hard_delete_fn)],
         )
 
         # ── Scheduled: nightly retention sweeper ──────────────────────

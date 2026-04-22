@@ -181,6 +181,57 @@ export function changePassword(oldPassword: string, newPassword: string): Promis
   })
 }
 
+/** Start a change-email flow.
+ *
+ *  Cognito's `updateAttributes` on the `email` attribute does three
+ *  things in one call:
+ *    1. Stages the new email on the user record
+ *    2. Sets `email_verified=false` (the new address is unverified)
+ *    3. Mails a 6-digit verification code to the NEW address
+ *
+ *  After a successful resolve, the caller has to show the user a code
+ *  input and call `verifyEmailCode(code)` to commit the change. Until
+ *  that code is verified, the user's sign-in email is STILL the old
+ *  one — Cognito stages the change but doesn't swap until verification.
+ *
+ *  Rejects if the new email is already in use elsewhere in the pool
+ *  (Cognito enforces global email uniqueness because email is a
+ *  sign-in alias).
+ */
+export function requestEmailChange(newEmail: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        reject(new Error('Session expired. Please sign in again.'))
+        return
+      }
+      const attributes = [
+        {
+          Name: 'email',
+          Value: newEmail.trim().toLowerCase(),
+        },
+      ]
+      // `amazon-cognito-identity-js` types want CognitoUserAttribute
+      // instances here, but the SDK also accepts plain {Name,Value}
+      // objects and that's what works at runtime. Cast through unknown
+      // to keep TS happy.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      currentUser.updateAttributes(attributes as any, (e) => {
+        if (e) {
+          reject(e)
+          return
+        }
+        resolve()
+      })
+    })
+  })
+}
+
 /** Ask Cognito to email a 6-digit verification code to the current
  *  user's email address. Used by the /verify-email flow for accounts
  *  created via /signup (which deliberately leave `email_verified=false`).

@@ -2,10 +2,12 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
-  KanbanSquare,
-  Clock,
+  ArrowRight,
   BarChart3,
+  Clock,
+  KanbanSquare,
   ShieldCheck,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -20,9 +22,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      // Unverified-email accounts go through the verification gate
-      // first instead of bouncing through the dashboard. `=== false`
-      // because undefined (legacy token) is treated as verified.
       if (user.emailVerified === false) {
         router.replace('/verify-email')
         return
@@ -46,112 +45,144 @@ export default function LoginPage() {
   if (user) return null
 
   const features = [
-    {
-      name: 'Task Pipeline',
-      desc: 'Domain-specific workflows',
-      Icon: KanbanSquare,
-    },
-    {
-      name: 'Time Tracking',
-      desc: 'Live session timer',
-      Icon: Clock,
-    },
-    {
-      name: 'Reports & Analytics',
-      desc: 'Attendance & progress',
-      Icon: BarChart3,
-    },
-    {
-      name: 'Role-Based Access',
-      desc: '3-tier permission system',
-      Icon: ShieldCheck,
-    },
+    { name: 'Task pipelines', Icon: KanbanSquare },
+    { name: 'Live time tracking', Icon: Clock },
+    { name: 'Cross-project reports', Icon: BarChart3 },
+    { name: 'Role-based access', Icon: ShieldCheck },
   ]
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Left — branding panel */}
-      <div className="relative hidden w-[55%] items-center justify-center overflow-hidden border-r border-border bg-gradient-to-br from-primary/5 via-background to-primary/10 p-16 lg:flex">
-        {/* Floating orbs */}
-        <div className="absolute left-[15%] top-[10%] h-72 w-72 animate-float rounded-full bg-primary/15 blur-3xl" />
+      {/* ─── Left — sophisticated dark brand panel ────────────────── */}
+      <div className="relative hidden w-[52%] flex-col justify-between overflow-hidden bg-[#0a0a14] p-12 text-white lg:flex xl:p-16">
+        {/* Single subtle colour wash in the top-right; no saturated fill */}
         <div
-          className="absolute bottom-[15%] right-[10%] h-64 w-64 animate-float rounded-full bg-accent/15 blur-3xl"
-          style={{ animationDelay: '2s' }}
-        />
-        <div
-          className="absolute left-[55%] top-[45%] h-48 w-48 animate-float rounded-full bg-primary/10 blur-3xl"
-          style={{ animationDelay: '4s' }}
-        />
-
-        {/* Dot grid */}
-        <div
-          className="absolute inset-0 opacity-[0.06]"
+          aria-hidden
+          className="pointer-events-none absolute -right-40 -top-40 h-[620px] w-[620px] rounded-full blur-3xl"
           style={{
-            backgroundImage: `radial-gradient(circle, rgb(var(--color-primary)) 1px, transparent 1px)`,
-            backgroundSize: '32px 32px',
+            background:
+              'radial-gradient(circle, rgba(99,102,241,0.28) 0%, rgba(99,102,241,0) 70%)',
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-32 -left-32 h-[520px] w-[520px] rounded-full blur-3xl"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(217,70,239,0.14) 0%, rgba(217,70,239,0) 70%)',
           }}
         />
 
-        <div className="relative z-10 max-w-lg">
-          <Logo size="xl" hideSubline className="mb-10" />
+        {/* Very fine grid — barely visible, adds texture without noise */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+          }}
+        />
 
-          <h1 className="mb-5 animate-fade-in text-[42px] font-bold leading-[1.1] tracking-tight text-foreground text-balance">
-            Manage your team&apos;s work,{' '}
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              effortlessly.
-            </span>
-          </h1>
+        {/* Top edge highlight — quietly anchors the panel */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+        />
 
-          <p className="mb-10 animate-fade-in-delay-1 text-[15px] leading-relaxed text-muted-foreground">
-            Track projects, assign tasks, monitor time, and keep your entire
-            team in sync — all in one place.
-          </p>
+        {/* Top row — logo */}
+        <div className="relative z-10">
+          <Logo size="lg" hideSubline onDark />
+        </div>
 
-          <div className="grid animate-fade-in-delay-2 grid-cols-2 gap-3">
-            {features.map((feature) => (
-              <Card
-                key={feature.name}
-                className="flex items-start gap-3 p-3.5 transition-all duration-200 hover:border-primary/30 hover:shadow-card-hover"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <feature.Icon
-                    className="h-5 w-5 text-primary"
-                    strokeWidth={1.8}
-                  />
-                </div>
-                <div>
-                  <p className="text-[13px] font-bold text-foreground">
-                    {feature.name}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {feature.desc}
-                  </p>
-                </div>
-              </Card>
-            ))}
+        {/* Middle — editorial typography; no decorative gradient on text */}
+        <div className="relative z-10 flex max-w-lg flex-col gap-12">
+          <div>
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/50">
+              Workspace login
+            </p>
+            <h1 className="animate-fade-in text-[48px] font-semibold leading-[1.05] tracking-tight text-white text-balance">
+              The operating system for teams that ship.
+            </h1>
+            <p className="mt-6 max-w-md animate-fade-in-delay-1 text-[15px] leading-relaxed text-white/65">
+              Projects, tasks, time, and daily reporting — consolidated into
+              a single workspace, built for accountability.
+            </p>
           </div>
 
+          {/* Feature rail — thin hairline chips, no heavy glass cards */}
+          <ul className="grid animate-fade-in-delay-2 grid-cols-2 gap-x-4 gap-y-3">
+            {features.map((f) => (
+              <li
+                key={f.name}
+                className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-inset ring-white/10">
+                  <f.Icon className="h-4 w-4 text-white/90" strokeWidth={1.8} />
+                </div>
+                <span className="text-[13px] font-semibold text-white/85">
+                  {f.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Bottom row — small, restrained */}
+        <div className="relative z-10 flex items-center justify-between text-[11px] text-white/50">
+          <span>© {new Date().getFullYear()} TaskFlow</span>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/privacy"
+              className="transition-colors hover:text-white/80"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="transition-colors hover:text-white/80"
+            >
+              Terms
+            </Link>
+            <Link
+              href="/security"
+              className="transition-colors hover:text-white/80"
+            >
+              Security
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Right — login form */}
+      {/* ─── Right — clean light surface, quiet and crisp ─────────── */}
       <div className="flex flex-1 items-center justify-center bg-background px-6 py-12">
         <div className="w-full max-w-sm animate-fade-in">
-          <div className="mb-8 flex justify-center lg:hidden">
+          {/* Mobile-only logo bar */}
+          <div className="mb-10 flex justify-center lg:hidden">
             <Logo size="lg" hideSubline />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-8">
             <NeedsPwHeading />
           </div>
 
-          <Card className="p-6 shadow-card">
+          <Card className="border-border/70 p-6 shadow-[0_4px_32px_-8px_rgba(10,10,30,0.08)]">
             <LoginForm />
           </Card>
 
-          <p className="mt-6 text-center text-[10px] text-muted-foreground">
-            Secure sign-in via AWS Cognito
-          </p>
+          <div className="mt-6 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="h-3 w-3" />
+              Secured by AWS Cognito
+            </span>
+            <Link
+              href="/signup"
+              className="group inline-flex items-center gap-1 font-semibold text-primary transition-colors hover:text-primary/80"
+            >
+              Create workspace
+              <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -163,22 +194,22 @@ function NeedsPwHeading() {
   if (needsPasswordChange) {
     return (
       <>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          Create Your Password
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">
+          Create your password
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Please set a new password to continue
+        <p className="mt-2 text-sm text-muted-foreground">
+          Please set a new password to continue.
         </p>
       </>
     )
   }
   return (
     <>
-      <h2 className="text-2xl font-bold tracking-tight text-foreground">
+      <h2 className="text-3xl font-bold tracking-tight text-foreground">
         Welcome back
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Sign in to continue to your workspace
+      <p className="mt-2 text-sm text-muted-foreground">
+        Sign in to continue to your workspace.
       </p>
     </>
   )

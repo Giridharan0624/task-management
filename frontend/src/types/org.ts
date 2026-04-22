@@ -17,10 +17,14 @@ export interface OrgDetail {
   slug: string
   name: string
   ownerUserId: string
-  status: 'ACTIVE' | 'SUSPENDED'
+  status: 'ACTIVE' | 'SUSPENDED' | 'PENDING_DELETION'
   planTier: 'FREE' | 'PRO' | 'ENTERPRISE'
   createdAt: string
   updatedAt: string
+  /** Set when the owner has scheduled deletion. 30 days from this
+   *  timestamp the sweeper hard-deletes everything. Cleared by the
+   *  undelete flow. */
+  deletedAt?: string | null
 }
 
 export interface OrgSettings {

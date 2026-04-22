@@ -182,4 +182,37 @@ export const orgsApi = {
   }> {
     return apiClient.post('/orgs/current/transfer-ownership', req)
   },
+
+  // OWNER only — schedule the workspace for deletion. 30-day grace
+  // window; owner can call undelete() at any point during it. Typed-
+  // slug confirmation is the typo guard (matches the typed-email
+  // pattern on transfer-ownership). Response includes the updated
+  // org record with status=PENDING_DELETION and deleted_at set.
+  async deleteWorkspace(confirmSlug: string): Promise<{
+    org: { status: string; deletedAt: string | null }
+    alreadyPending?: boolean
+  }> {
+    return apiClient.post('/orgs/current/delete', { confirmSlug })
+  },
+
+  // OWNER only — reverse a pending deletion. Only valid while status
+  // is PENDING_DELETION; backend returns 400 otherwise.
+  async undeleteWorkspace(): Promise<{
+    org: { status: string; deletedAt: string | null }
+  }> {
+    return apiClient.post('/orgs/current/undelete', {})
+  },
+
+  // OWNER only — generate a JSON export of every tenant-scoped row
+  // (config + tenant data + audit log). Response includes a 24h-TTL
+  // presigned GET URL. Sync endpoint — may take tens of seconds on
+  // large tenants.
+  async exportWorkspace(): Promise<{
+    downloadUrl: string
+    expiresInSeconds: number
+    sizeBytes: number
+    itemCount: number
+  }> {
+    return apiClient.post('/orgs/current/export', {})
+  },
 }

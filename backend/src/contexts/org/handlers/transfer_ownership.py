@@ -28,6 +28,7 @@ from shared_kernel.errors import AuthorizationError, NotFoundError, ValidationEr
 from shared_kernel.permissions import (
     invalidate_role_cache,
     require,
+    require_email_verified,
     require_not_suspended,
 )
 from shared_kernel.response import build_error, build_success
@@ -43,6 +44,10 @@ def handler(event, context):
     try:
         auth = extract_auth_context(event)
         require_not_suspended(auth)
+        # Ownership transfer is irreversible without the new owner's
+        # cooperation — require the current owner to prove they own
+        # their own email before they can hand the keys off.
+        require_email_verified(auth)
         # Only OWNER can transfer — guarded explicitly even though
         # role.manage is OWNER-only by default, because the stakes are
         # higher here (irreversible without the new owner cooperating).

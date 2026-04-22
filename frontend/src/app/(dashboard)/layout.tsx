@@ -48,6 +48,7 @@ import { NotificationCenter } from '@/components/ui/NotificationCenter'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
 import { SuspendedScreen } from '@/components/tenant/SuspendedScreen'
+import { PendingDeletionBanner } from '@/components/tenant/PendingDeletionBanner'
 import { cn } from '@/lib/utils'
 import type { User } from '@/types/user'
 
@@ -558,6 +559,13 @@ export default function DashboardLayout({
 
         {/* Main content */}
         <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col lg:ml-[260px]">
+          {currentTenant?.org?.status === 'PENDING_DELETION' &&
+            currentTenant.org.deletedAt && (
+              <PendingDeletionBanner
+                deletedAt={currentTenant.org.deletedAt}
+                isOwner={user.systemRole === 'OWNER'}
+              />
+            )}
           <OfflineBanner />
           {/* Mobile top bar */}
           <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/80 px-4 py-3 backdrop-blur-lg lg:hidden">

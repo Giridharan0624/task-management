@@ -91,6 +91,18 @@ export function bulkCreateUsers(users: BulkUserRow[]): Promise<BulkCreateResult>
   return apiClient.post<BulkCreateResult>('/users/bulk', { users })
 }
 
+/** PUT /users/me/email — tell the backend our JWT email has changed
+ *  so the DDB User record gets rewritten. Cognito handles the actual
+ *  email mutation + verification via SDK calls; this is the sync
+ *  follow-up called after `refreshSession()`. */
+export function syncEmail(): Promise<{
+  email: string
+  updated: boolean
+  previousEmail?: string
+}> {
+  return apiClient.put('/users/me/email', {})
+}
+
 export function deleteUser(userId: string): Promise<void> {
   return apiClient.del<void>(`/users/${userId}`)
 }

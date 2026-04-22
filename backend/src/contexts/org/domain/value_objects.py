@@ -11,6 +11,11 @@ class PlanTier(str, Enum):
 class OrgStatus(str, Enum):
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
+    # Owner initiated deletion; `deleted_at` is set. Mutation handlers
+    # block via `require_not_suspended` (which covers both states so
+    # pending-deletion orgs go read-only). A nightly sweeper hard-deletes
+    # every tenant-scoped row 30 days after `deleted_at`.
+    PENDING_DELETION = "PENDING_DELETION"
 
 
 RESERVED_SLUGS = frozenset(

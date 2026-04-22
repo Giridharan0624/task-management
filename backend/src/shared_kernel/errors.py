@@ -48,3 +48,20 @@ class EmailNotVerifiedError(AuthorizationError):
         message: str = "Please verify your email before continuing.",
     ):
         super().__init__(message, code="EMAIL_NOT_VERIFIED")
+
+
+class OrgPendingDeletionError(AuthorizationError):
+    """Raised when the caller's tenant is scheduled for deletion. Every
+    mutation handler blocks via `require_not_suspended` (which now
+    covers both SUSPENDED and PENDING_DELETION) so the user has a
+    read-only view with a visible "recover workspace" affordance
+    during the 30-day grace period."""
+
+    def __init__(
+        self,
+        message: str = (
+            "This workspace is scheduled for deletion. Recover it within "
+            "the 30-day grace period to restore access."
+        ),
+    ):
+        super().__init__(message, code="ORG_PENDING_DELETION")

@@ -67,7 +67,7 @@ def require_not_suspended(ctx: AuthContext) -> None:
     fail-open for the primary action, fail-closed for the audit side.
     """
     from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
-    from shared_kernel.errors import OrgSuspendedError
+    from shared_kernel.errors import OrgPendingDeletionError, OrgSuspendedError
 
     try:
         org = OrgDynamoRepository().find_by_id(ctx.org_id)
@@ -82,6 +82,12 @@ def require_not_suspended(ctx: AuthContext) -> None:
             "This workspace is currently suspended. "
             "Contact the platform operator to resume activity.",
         )
+    # Soft-deleted tenants are also read-only. The owner-initiated
+    # delete path deliberately bypasses this check (handled in the
+    # handler itself) so the OWNER can still trigger undelete / export
+    # during the grace period.
+    if status_value == "PENDING_DELETION":
+        raise OrgPendingDeletionError()
 
 
 def role_has(role_id_or_system_role: str, permission: str) -> bool:

@@ -17,6 +17,10 @@ class Organization(BaseModel):
     plan_tier: PlanTier = PlanTier.FREE
     created_at: str
     updated_at: str
+    # Set when the owner initiates deletion. 30 days after this
+    # timestamp the nightly sweeper hard-deletes every tenant-scoped
+    # row. Cleared by `reactivate()` during the grace period.
+    deleted_at: Optional[str] = None
 
     @classmethod
     def create(
@@ -45,9 +49,23 @@ class Organization(BaseModel):
         })
 
     def reactivate(self) -> "Organization":
+        """Return an ACTIVE copy. Also clears `deleted_at` so an
+        owner-initiated undelete fully reverses the prior delete."""
         return self.model_copy(update={
             "status": OrgStatus.ACTIVE,
+            "deleted_at": None,
             "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    def mark_pending_deletion(self) -> "Organization":
+        """Owner-initiated soft-delete. Sets `deleted_at` so the sweeper
+        can hard-delete 30 days from now. Keeps the ORG record around
+        so the undelete path can restore without losing anything."""
+        now = datetime.now(timezone.utc).isoformat()
+        return self.model_copy(update={
+            "status": OrgStatus.PENDING_DELETION,
+            "deleted_at": now,
+            "updated_at": now,
         })
 
     def to_dict(self) -> dict:
@@ -60,6 +78,7 @@ class Organization(BaseModel):
             "plan_tier": self.plan_tier.value,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "deleted_at": self.deleted_at,
         }
 
 

@@ -13,6 +13,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -325,6 +326,13 @@ export default function OrgSettingsPage() {
           icon={Key}
           title="Transfer ownership"
           subtitle="Hand off OWNER to another member."
+          danger
+        />
+        <AdminLink
+          href="/settings/delete-workspace"
+          icon={Trash2}
+          title="Delete workspace"
+          subtitle="Schedule permanent deletion or export data."
           danger
         />
       </div>

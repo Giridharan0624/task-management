@@ -12,7 +12,7 @@ class OrgMapper:
     # ------------------------------------------------------------------
     @staticmethod
     def org_to_dynamo(org: Organization) -> dict:
-        return {
+        item: dict = {
             "PK": tenant_keys.org_pk(org.org_id),
             "SK": tenant_keys.org_sk(),
             "org_id": org.org_id,
@@ -24,6 +24,12 @@ class OrgMapper:
             "created_at": org.created_at,
             "updated_at": org.updated_at,
         }
+        # Only write `deleted_at` when set. Keeps the attribute absent
+        # on active orgs so `attribute_exists(deleted_at)` scans in the
+        # sweeper are tight.
+        if org.deleted_at:
+            item["deleted_at"] = org.deleted_at
+        return item
 
     @staticmethod
     def org_to_domain(item: dict) -> Organization:
@@ -36,6 +42,7 @@ class OrgMapper:
             plan_tier=PlanTier(item.get("plan_tier", PlanTier.FREE.value)),
             created_at=item["created_at"],
             updated_at=item["updated_at"],
+            deleted_at=item.get("deleted_at"),
         )
 
     @staticmethod

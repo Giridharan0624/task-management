@@ -353,6 +353,12 @@ class TaskManagementStack(Stack):
         add_api_lambda("GetProfile", "contexts.user.handlers.get_profile.handler", "GET", users_me)
         add_api_lambda("UpdateProfile", "contexts.user.handlers.update_profile.handler", "PUT", users_me, cognito_policies=["cognito-idp:AdminUpdateUserAttributes"])
         add_api_lambda("MyTasks", "contexts.user.handlers.my_tasks.handler", "GET", users_me_tasks)
+        # /users/me/email resource lives here (attaches to the
+        # parent-owned users_me tree); the PUT method + its Lambda live
+        # in the Org nested stack to stay under the 500-resource cap.
+        users_me_email = users_me.add_resource("email")
+        # /users/bulk resource — same pattern as /users/me/email.
+        users_bulk = users.add_resource("bulk")
         add_api_lambda("ListUsers", "contexts.user.handlers.list_users.handler", "GET", users)
 
         # ─── User management (with Cognito admin permissions) ────────────────
@@ -367,32 +373,8 @@ class TaskManagementStack(Stack):
         create_user_fn.add_environment("APP_URL", config["app_url"])
         gmail_secret.grant_read(create_user_fn)
 
-        # ─── Bulk user import (CSV-driven) ───────────────────────────────
-        # Iterates the single-user CreateUserUseCase in a loop; longer
-        # timeout because 200 users × ~200ms Cognito+DDB each ≈ 40s.
-        # Same IAM permissions as create_user — reuses its flow.
-        users_bulk = users.add_resource("bulk")
-        bulk_create_fn = _lambda.Function(
-            self, "BulkCreateUsers",
-            handler="contexts.user.handlers.bulk_create_users.handler",
-            **{**lambda_defaults, "timeout": Duration.seconds(60)},
-        )
-        table.grant_read_write_data(bulk_create_fn)
-        bulk_create_fn.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["cognito-idp:AdminCreateUser"],
-                resources=[user_pool.user_pool_arn],
-            )
-        )
-        bulk_create_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
-        bulk_create_fn.add_environment("APP_URL", config["app_url"])
-        gmail_secret.grant_read(bulk_create_fn)
-        users_bulk.add_method(
-            "POST",
-            apigw.LambdaIntegration(bulk_create_fn),
-            authorizer=authorizer,
-            authorization_type=apigw.AuthorizationType.COGNITO,
-        )
+        # /users/bulk POST method + BulkCreateUsers Lambda are wired
+        # in the Org nested stack (see OrgNestedStack __init__).
         add_api_lambda(
             "DeleteUser",
             "contexts.user.handlers.delete_user.handler",
@@ -422,41 +404,23 @@ class TaskManagementStack(Stack):
             authorization_type=apigw.AuthorizationType.NONE,
         )
 
-        # ─── Health check (no auth) — liveness/readiness probe ─────────
-        # Uptime monitors and load balancers hit this. Uses the same
-        # Lambda defaults as the rest, so a cold start still resolves
-        # in the same time as any other handler.
+        # Health check + platform routes: resources live here (attached
+        # to api.root) but their methods + Lambdas live in the Org
+        # nested stack to stay under the 500-resource CFN cap.
         health_resource = api.root.add_resource("health")
-        health_fn = _lambda.Function(
-            self, "HealthCheck",
-            handler="contexts.system.handlers.health.handler",
-            **lambda_defaults,
-        )
-        table.grant_read_data(health_fn)
-        health_resource.add_method(
-            "GET",
-            apigw.LambdaIntegration(health_fn),
-            authorization_type=apigw.AuthorizationType.NONE,
-        )
-
-        # ─── Platform-operator endpoints (auth required + env allowlist)
-        # These are NOT tenant-facing — only a human operator at Anthropic
-        # should ever hit these. Access gated by PLATFORM_ADMIN_USER_IDS
-        # (comma-separated Cognito sub list). Empty env = nobody can call.
-        platform_admin_ids = config.get("platform_admin_user_ids", "")
         platform = api.root.add_resource("platform")
         platform_orgs = platform.add_resource("orgs")
         platform_org = platform_orgs.add_resource("{orgId}")
         platform_org_status = platform_org.add_resource("status")
-        set_status_fn = add_api_lambda(
-            "SetOrgStatus",
-            "contexts.org.handlers.set_org_status.handler",
-            "POST",
-            platform_org_status,
-        )
-        set_status_fn.add_environment(
-            "PLATFORM_ADMIN_USER_IDS", platform_admin_ids,
-        )
+
+        # Task-update resources — declared here (before OrgNestedStack)
+        # so we can pass them through as kwargs. Methods + Lambdas are
+        # wired in OrgNestedStack to stay under the CFN cap.
+        task_updates = api.root.add_resource("task-updates")
+        task_updates_me = task_updates.add_resource("me")
+        # /uploads/presign — same pattern.
+        uploads = api.root.add_resource("uploads")
+        uploads_presign = uploads.add_resource("presign")
 
         # ─── Organization (multi-tenant) handlers — nested stack ────────────
         # Every org-context Lambda + admin handler lives in its own
@@ -479,6 +443,16 @@ class TaskManagementStack(Stack):
             app_url=config["app_url"],
             log_retention=log_retention,
             hcaptcha_secret_value=config.get("hcaptcha_secret", ""),
+            uploads_bucket=uploads_bucket,
+            users_bulk_resource=users_bulk,
+            users_me_email_resource=users_me_email,
+            health_resource=health_resource,
+            platform_org_status_resource=platform_org_status,
+            platform_admin_user_ids=config.get("platform_admin_user_ids", ""),
+            task_updates_resource=task_updates,
+            task_updates_me_resource=task_updates_me,
+            uploads_presign_resource=uploads_presign,
+            cdn_domain=cdn.distribution_domain_name,
         )
 
         # ─── Attendance + Day-off handlers (nested) ─────────────────────────
@@ -566,22 +540,12 @@ class TaskManagementStack(Stack):
             targets=[events_targets.LambdaFunction(sweep_fn)],
         )
 
-        # ─── Upload handlers (S3 presigned URLs) ──────────────────────────
-        uploads = api.root.add_resource("uploads")
-        uploads_presign = uploads.add_resource("presign")
+        # /uploads/presign resource — method + Lambda moved to Org
+        # nested stack (passed via constructor) for CFN budget.
 
-        presign_fn = add_api_lambda("GetPresignedUrl", "contexts.upload.handlers.presign.handler", "GET", uploads_presign)
-        presign_fn.add_environment("UPLOADS_BUCKET", uploads_bucket.bucket_name)
-        presign_fn.add_environment("CDN_DOMAIN", cdn.distribution_domain_name)
-        uploads_bucket.grant_put(presign_fn)
-
-        # ─── Task Update handlers ──────────────────────────────────────────
-        task_updates = api.root.add_resource("task-updates")
-        task_updates_me = task_updates.add_resource("me")
-
-        add_api_lambda("SubmitTaskUpdate", "contexts.taskupdate.handlers.submit_update.handler", "POST", task_updates)
-        add_api_lambda("ListTaskUpdates", "contexts.taskupdate.handlers.list_updates.handler", "GET", task_updates)
-        add_api_lambda("MyTaskUpdate", "contexts.taskupdate.handlers.my_update.handler", "GET", task_updates_me)
+        # task_updates + task_updates_me resources are declared above
+        # (before OrgNestedStack) so they can be passed through as
+        # kwargs. Methods + Lambdas live in OrgNestedStack.
 
         # ─── Weekly rollup (AI-assisted digest of task updates) ────────────
         # Reuses the Groq secret already provisioned above for the activity
