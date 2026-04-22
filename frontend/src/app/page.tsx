@@ -228,7 +228,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:py-28">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:px-8 lg:py-24">
           <div>
             <Reveal direction="up">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
@@ -250,7 +250,7 @@ function Hero() {
             </Reveal>
 
             <Reveal direction="up" delay={160}>
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
                 Plan work, track hours, approve day-offs, and see what your team
                 shipped today — without juggling four tools. Free to start,
                 ships with a desktop companion for real time-tracking.
@@ -258,7 +258,7 @@ function Hero() {
             </Reveal>
 
             <Reveal direction="up" delay={240}>
-              <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/signup"
                   className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
@@ -276,7 +276,7 @@ function Hero() {
             </Reveal>
 
             <Reveal direction="up" delay={320}>
-              <p className="mt-6 text-xs text-muted-foreground">
+              <p className="mt-5 text-xs text-muted-foreground">
                 No credit card required · Set up your workspace in 60 seconds
               </p>
             </Reveal>
@@ -329,16 +329,12 @@ function ProblemSection() {
   return (
     <section
       id="problem"
-      className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-20 sm:py-28"
+      className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-14 sm:py-20"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-32 top-20 h-[420px] w-[420px] rounded-full bg-rose-500/5 blur-3xl animate-drift-slow"
-      />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur">
               Before TaskFlow
             </div>
           </Reveal>
@@ -349,7 +345,7 @@ function ProblemSection() {
           </Reveal>
         </div>
 
-        <ul className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <ul className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
           {pains.map((p, i) => (
             <Reveal key={p.title} direction="up" delay={i * 80}>
               <li className="group relative h-full rounded-3xl border border-border/70 bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-lg">
@@ -374,7 +370,7 @@ function ProblemSection() {
         </ul>
 
         <Reveal direction="up" delay={320}>
-          <p className="mx-auto mt-14 max-w-2xl text-center text-lg font-semibold text-foreground/80">
+          <p className="mx-auto mt-10 max-w-2xl text-center text-base font-semibold text-foreground/80 sm:text-lg">
             TaskFlow collapses the four into{' '}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               one
@@ -417,7 +413,7 @@ function SolutionPillars() {
   ]
 
   return (
-    <section className="relative border-b border-border/60 py-20 sm:py-28">
+    <section className="relative border-b border-border/60 py-14 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
@@ -429,18 +425,18 @@ function SolutionPillars() {
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
-            <p className="mt-4 text-base text-muted-foreground">
+            <p className="mt-3 text-base text-muted-foreground">
               Everything a small team needs to plan work, see what&apos;s
               happening, and prove it — without four subscriptions.
             </p>
           </Reveal>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
           {pillars.map((p, i) => (
             <Reveal key={p.title} direction="up" delay={i * 100}>
               <TiltCard maxTilt={4} className="h-full">
-                <div className="group relative h-full overflow-hidden rounded-3xl border border-border/70 bg-card p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
+                <div className="group relative h-full overflow-hidden rounded-3xl border border-border/70 bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
                   <span
                     aria-hidden
                     className={cn(
@@ -456,16 +452,16 @@ function SolutionPillars() {
                   <div className="relative">
                     <div
                       className={cn(
-                        'mb-5 flex h-14 w-14 items-center justify-center rounded-2xl ring-1 ring-inset ring-white/20 shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6',
+                        'mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-inset ring-white/20 shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6',
                         p.iconTint
                       )}
                     >
-                      <p.icon className="h-7 w-7" strokeWidth={1.8} />
+                      <p.icon className="h-6 w-6" strokeWidth={1.8} />
                     </div>
-                    <h3 className="text-2xl font-bold tracking-tight text-foreground">
+                    <h3 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
                       {p.title}
                     </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       {p.body}
                     </p>
                   </div>
@@ -487,46 +483,57 @@ function Differentiator() {
   return (
     <section
       id="differentiator"
-      className="relative overflow-hidden border-b border-border/60 py-20 sm:py-28"
+      className="relative overflow-hidden border-b border-border/60 py-14 sm:py-20"
     >
+      {/* Very subtle background wash so the section has its own identity
+          without adding another drifting blob. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-40 top-40 h-[500px] w-[500px] rounded-full bg-primary/5 blur-3xl animate-drift-slow"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-40 bottom-20 h-[500px] w-[500px] rounded-full bg-accent/5 blur-3xl animate-drift-slower"
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.025] via-transparent to-accent/[0.025]"
       />
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-20 max-w-2xl text-center">
+        <div className="mx-auto mb-14 max-w-2xl text-center">
           <Reveal direction="up">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
               <Sparkles className="h-3 w-3" />
               What makes it different
             </div>
           </Reveal>
           <Reveal direction="up" delay={80}>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Built for teams that actually ship.
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+              Built for teams that{' '}
+              <span
+                className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
+                style={{ backgroundSize: '200% 200%' }}
+              >
+                actually ship.
+              </span>
             </h2>
           </Reveal>
           <Reveal direction="up" delay={160}>
-            <p className="mt-4 text-base text-muted-foreground">
+            <p className="mt-3 text-base text-muted-foreground">
               Three capabilities that separate TaskFlow from the generic
               &ldquo;task tracker&rdquo; shelf.
             </p>
           </Reveal>
         </div>
 
-        <div className="space-y-24 lg:space-y-32">
-          {/* Row 1: Activity tracking */}
+        <div className="space-y-16 lg:space-y-20">
           <DemoRow
+            step="01"
             badge="Live telemetry"
             badgeIcon={Activity}
-            badgeColor="text-fuchsia-600 dark:text-fuchsia-300"
-            title="Know when focus is real."
-            blurb="The desktop companion watches keystroke and mouse-event counters — never contents — and reports them alongside your timer. Low activity for an hour? It shows up on the dashboard. High activity during a meeting block? Also caught."
+            theme={{
+              badge:
+                'text-fuchsia-700 dark:text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/20',
+              chip: 'bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300 ring-fuchsia-500/20',
+              gradient: 'from-fuchsia-500 via-pink-500 to-rose-500',
+              halo: 'bg-fuchsia-500/15',
+            }}
+            titleLead="Know when"
+            titleAccent="focus is real."
+            blurb="The desktop companion watches keystroke and mouse-event counters — never contents — and reports them alongside your timer. Low activity for an hour? It shows up on the dashboard."
             bullets={[
               'Per-session activity score, not vague "hours tracked"',
               'Runs in the background — no separate focus app',
@@ -535,14 +542,21 @@ function Differentiator() {
             visual={<ActivityDemo />}
           />
 
-          {/* Row 2: AI summaries */}
           <DemoRow
             reverse
+            step="02"
             badge="Groq-powered"
             badgeIcon={Brain}
-            badgeColor="text-purple-600 dark:text-purple-300"
-            title="The daily update writes itself."
-            blurb="An LLM reads the raw session log — tasks touched, hours per task, comments — and generates the end-of-day summary admins actually want to read. Nobody has to remember what they did at 11 AM anymore."
+            theme={{
+              badge:
+                'text-purple-700 dark:text-purple-300 bg-purple-500/10 border-purple-500/20',
+              chip: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 ring-purple-500/20',
+              gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
+              halo: 'bg-purple-500/15',
+            }}
+            titleLead="The daily update"
+            titleAccent="writes itself."
+            blurb="An LLM reads the raw session log — tasks touched, hours per task, comments — and generates the end-of-day summary admins actually want to read. Nobody has to remember what they did at 11 AM."
             bullets={[
               'Natural-language recap grouped by project',
               'Runs server-side at sign-out; frontend never holds the key',
@@ -551,15 +565,22 @@ function Differentiator() {
             visual={<AiDemo />}
           />
 
-          {/* Row 3: Screenshots */}
           <DemoRow
+            step="03"
             badge="Private by default"
             badgeIcon={Camera}
-            badgeColor="text-blue-600 dark:text-blue-300"
-            title="Proof, without micro-management."
-            blurb="Every few minutes while a session is running, the desktop app captures a compressed screenshot and uploads it to your tenant's S3 prefix. Admins spot-check a day's work without interrupting the person doing it."
+            theme={{
+              badge:
+                'text-blue-700 dark:text-blue-300 bg-blue-500/10 border-blue-500/20',
+              chip: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-blue-500/20',
+              gradient: 'from-sky-500 via-blue-500 to-indigo-500',
+              halo: 'bg-blue-500/15',
+            }}
+            titleLead="Proof, without"
+            titleAccent="micro-management."
+            blurb="Every few minutes while a session is running, the desktop app captures a compressed screenshot and uploads it to your tenant's S3 prefix. Admins spot-check without interrupting."
             bullets={[
-              "Stored under your org prefix — zero cross-tenant access",
+              'Stored under your org prefix — zero cross-tenant access',
               'Compressed; a full day is under a few megabytes',
               'Captures pause instantly when the timer stops',
             ]}
@@ -571,11 +592,26 @@ function Differentiator() {
   )
 }
 
+interface DemoRowTheme {
+  /** Badge text + bg + border (applied to the pill above the headline). */
+  badge: string
+  /** Bullet-chip tint — applied to each checkmark+bullet card. */
+  chip: string
+  /** Tailwind gradient classes for the step-number treatment. */
+  gradient: string
+  /** Halo tint behind the demo frame — sells the color identity of the row. */
+  halo: string
+}
+
 interface DemoRowProps {
+  /** "01" · "02" · "03" — numbered rhythm for the sequence of three. */
+  step: string
   badge: string
   badgeIcon: typeof Activity
-  badgeColor: string
-  title: string
+  theme: DemoRowTheme
+  /** Title split into a neutral lead + gradient-accented tail. */
+  titleLead: string
+  titleAccent: string
   blurb: string
   bullets: string[]
   visual: React.ReactNode
@@ -583,10 +619,12 @@ interface DemoRowProps {
 }
 
 function DemoRow({
+  step,
   badge,
   badgeIcon: BadgeIcon,
-  badgeColor,
-  title,
+  theme,
+  titleLead,
+  titleAccent,
   blurb,
   bullets,
   visual,
@@ -595,41 +633,67 @@ function DemoRow({
   return (
     <div
       className={cn(
-        'grid grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_1fr] lg:gap-16',
+        'grid grid-cols-1 items-center gap-8 lg:grid-cols-[1fr_1fr] lg:gap-12',
         reverse && 'lg:grid-flow-dense'
       )}
     >
-      <div className={cn(reverse && 'lg:col-start-2')}>
+      <div className={cn('relative', reverse && 'lg:col-start-2')}>
+        {/* Big decorative step number — anchors the copy side visually and
+            gives the sequence a rhythm the eye follows down the page. */}
         <Reveal direction={reverse ? 'right' : 'left'}>
           <div
+            aria-hidden
             className={cn(
-              'mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider backdrop-blur',
-              badgeColor
+              'mb-4 bg-gradient-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent sm:text-6xl',
+              theme.gradient
+            )}
+            style={{ backgroundSize: '200% 200%' }}
+          >
+            {step}
+          </div>
+        </Reveal>
+        <Reveal direction={reverse ? 'right' : 'left'} delay={60}>
+          <div
+            className={cn(
+              'mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider backdrop-blur',
+              theme.badge
             )}
           >
             <BadgeIcon className="h-3 w-3" />
             {badge}
           </div>
         </Reveal>
-        <Reveal direction={reverse ? 'right' : 'left'} delay={80}>
-          <h3 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            {title}
+        <Reveal direction={reverse ? 'right' : 'left'} delay={120}>
+          <h3 className="text-2xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-3xl lg:text-4xl">
+            {titleLead}{' '}
+            <span
+              className={cn(
+                'bg-gradient-to-r bg-clip-text text-transparent',
+                theme.gradient
+              )}
+              style={{ backgroundSize: '200% 200%' }}
+            >
+              {titleAccent}
+            </span>
           </h3>
         </Reveal>
-        <Reveal direction={reverse ? 'right' : 'left'} delay={160}>
+        <Reveal direction={reverse ? 'right' : 'left'} delay={180}>
           <p className="mt-3 text-base leading-relaxed text-muted-foreground">
             {blurb}
           </p>
         </Reveal>
         <Reveal direction={reverse ? 'right' : 'left'} delay={240}>
-          <ul className="mt-5 space-y-2.5">
+          <ul className="mt-5 space-y-2">
             {bullets.map((b) => (
               <li
                 key={b}
-                className="flex items-start gap-2 text-sm text-foreground/90"
+                className={cn(
+                  'flex items-start gap-2.5 rounded-xl px-3 py-2 text-sm ring-1 ring-inset transition-colors',
+                  theme.chip
+                )}
               >
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>{b}</span>
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                <span className="text-foreground/90">{b}</span>
               </li>
             ))}
           </ul>
@@ -639,8 +703,17 @@ function DemoRow({
       <Reveal
         direction={reverse ? 'left' : 'right'}
         delay={120}
-        className={cn(reverse && 'lg:col-start-1 lg:row-start-1')}
+        className={cn('relative', reverse && 'lg:col-start-1 lg:row-start-1')}
       >
+        {/* Per-row colored halo — subtle and blurred, gives the demo a sense
+            of "belonging" to this row's theme without adding a hard border. */}
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute -inset-8 -z-10 rounded-[40px] blur-3xl opacity-70',
+            theme.halo
+          )}
+        />
         <TiltCard maxTilt={4}>{visual}</TiltCard>
       </Reveal>
     </div>
@@ -649,10 +722,11 @@ function DemoRow({
 
 function DemoFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card shadow-elevated">
+    <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card shadow-2xl shadow-black/5 dark:shadow-black/30">
+      {/* Soft top-edge highlight — cheap way to sell the "device" feel. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute -inset-20 -z-10 rounded-[40px] bg-gradient-to-br from-primary/20 via-accent/10 to-transparent blur-3xl animate-drift-slow"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/20"
       />
       {children}
     </div>
@@ -860,25 +934,7 @@ const FEATURES: FeatureCardData[] = [
 
 function FeatureGrid() {
   return (
-    <section
-      className="relative overflow-hidden border-b border-border/60 py-20 sm:py-28"
-      style={{
-        background:
-          'linear-gradient(180deg, rgba(99,102,241,0.03) 0%, transparent 100%)',
-      }}
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 opacity-40"
-        style={{
-          backgroundImage:
-            'radial-gradient(rgb(var(--color-primary) / 0.2) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-          maskImage:
-            'radial-gradient(ellipse at center, black 30%, transparent 80%)',
-        }}
-      />
-
+    <section className="relative overflow-hidden border-b border-border/60 bg-muted/10 py-14 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
@@ -887,14 +943,14 @@ function FeatureGrid() {
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
-            <p className="mt-4 text-base text-muted-foreground">
+            <p className="mt-3 text-base text-muted-foreground">
               The toolkit that usually costs four SaaS subscriptions, shipped as
               one.
             </p>
           </Reveal>
         </div>
 
-        <ul className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f, i) => (
             <Reveal key={f.title} direction="up" delay={i * 40}>
               <li className="group relative h-full overflow-hidden rounded-3xl border border-border/70 bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-border hover:shadow-xl">
@@ -977,7 +1033,7 @@ function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="relative overflow-hidden border-b border-border/60 py-20 sm:py-28"
+      className="relative overflow-hidden border-b border-border/60 py-14 sm:py-20"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
@@ -987,14 +1043,14 @@ function HowItWorks() {
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
-            <p className="mt-4 text-base text-muted-foreground">
+            <p className="mt-3 text-base text-muted-foreground">
               No demo calls, no sales funnel. Sign up and you&apos;re productive
               inside an hour.
             </p>
           </Reveal>
         </div>
 
-        <ol className="relative mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <ol className="relative mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div
             aria-hidden
             className="pointer-events-none absolute left-0 right-0 top-12 hidden h-px bg-gradient-to-r from-transparent via-border to-transparent md:block"
@@ -1046,27 +1102,18 @@ function Pricing() {
   return (
     <section
       id="pricing"
-      className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-20 sm:py-28"
+      className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-14 sm:py-20"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-40 top-20 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl animate-drift-slow"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-40 bottom-10 h-[460px] w-[460px] rounded-full bg-accent/10 blur-3xl animate-drift-slower"
-      />
-
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
               <Sparkles className="h-3 w-3" />
               Pricing
             </div>
           </Reveal>
           <Reveal direction="up" delay={80}>
-            <h2 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
               Free for every team.{' '}
               <span className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent">
                 Forever.
@@ -1074,41 +1121,40 @@ function Pricing() {
             </h2>
           </Reveal>
           <Reveal direction="up" delay={160}>
-            <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
-              No seat limits. No feature tiers. The desktop app, the AI
-              summaries, the reports — all included. Paid tiers will exist one
-              day for larger teams and compliance add-ons; existing workspaces
-              stay on Free.
+            <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
+              No seat limits. No feature tiers. Desktop app, AI summaries,
+              reports — all included. Paid tiers will exist one day for larger
+              teams and compliance add-ons; existing workspaces stay on Free.
             </p>
           </Reveal>
         </div>
 
         <Reveal direction="up" delay={240}>
           <TiltCard maxTilt={3}>
-            <div className="relative mt-14 overflow-hidden rounded-3xl border border-border/80 bg-card shadow-elevated">
+            <div className="relative mt-10 overflow-hidden rounded-3xl border border-border/80 bg-card shadow-elevated">
               <span
                 aria-hidden
                 className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-fuchsia-500"
               />
-              <div className="grid grid-cols-1 gap-8 p-8 sm:p-12 md:grid-cols-[1fr_auto] md:gap-12">
+              <div className="grid grid-cols-1 gap-6 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:gap-10 md:p-10">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     The Free plan
                   </p>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-6xl font-black tracking-tighter text-foreground">
+                  <div className="mt-1.5 flex items-baseline gap-2">
+                    <span className="text-5xl font-black tracking-tighter text-foreground sm:text-6xl">
                       $0
                     </span>
                     <span className="text-sm text-muted-foreground">
                       / workspace / forever
                     </span>
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground">
+                  <p className="mt-2 text-sm text-muted-foreground">
                     Everything in TaskFlow is in the box. No credit card at
                     signup, no feature-gated upsell banners inside the app.
                   </p>
 
-                  <ul className="mt-6 grid grid-cols-1 gap-y-2 sm:grid-cols-2">
+                  <ul className="mt-5 grid grid-cols-1 gap-y-1.5 sm:grid-cols-2">
                     {includes.map((item) => (
                       <li
                         key={item}
@@ -1121,10 +1167,10 @@ function Pricing() {
                   </ul>
                 </div>
 
-                <div className="flex flex-col items-stretch justify-center gap-3 md:items-end md:justify-end">
+                <div className="flex flex-col items-stretch justify-center gap-2 md:items-end md:justify-end">
                   <Link
                     href="/signup"
-                    className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     Start free
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -1177,48 +1223,90 @@ function Faq() {
   return (
     <section
       id="faq"
-      className="relative overflow-hidden border-b border-border/60 py-20 sm:py-28"
+      className="relative overflow-hidden border-b border-border/60 py-14 sm:py-20"
     >
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-12 text-center">
-          <Reveal direction="up">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Questions, answered.
-            </h2>
-          </Reveal>
-          <Reveal direction="up" delay={80}>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Can&apos;t find what you need? Email us at{' '}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Two-column split so the heading + support CTA stick to the left
+            while the scrollable list of Q&As fills the right. Stacks on
+            mobile so the Q&As never disappear under the sticky column. */}
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+          <aside className="lg:sticky lg:top-24 lg:self-start">
+            <Reveal direction="up">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+                <Sparkles className="h-3 w-3" />
+                FAQ
+              </div>
+            </Reveal>
+            <Reveal direction="up" delay={80}>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+                Questions,{' '}
+                <span
+                  className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
+                  style={{ backgroundSize: '200% 200%' }}
+                >
+                  answered.
+                </span>
+              </h2>
+            </Reveal>
+            <Reveal direction="up" delay={160}>
+              <p className="mt-3 text-sm text-muted-foreground">
+                The things we get asked most. Can&apos;t find what you&apos;re
+                looking for? We reply within a business day.
+              </p>
+            </Reveal>
+            <Reveal direction="up" delay={240}>
               <a
                 href="mailto:support@neurostack.in"
-                className="font-semibold text-primary hover:underline"
+                className="mt-6 flex items-start gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               >
-                support@neurostack.in
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <MessageSquare className="h-5 w-5" strokeWidth={1.8} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    Still stuck?
+                  </p>
+                  <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                    support@neurostack.in
+                  </p>
+                </div>
+                <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </a>
-              .
-            </p>
-          </Reveal>
-        </div>
-
-        <div className="space-y-3">
-          {FAQS.map((item, i) => (
-            <Reveal key={item.q} direction="up" delay={i * 40}>
-              <details className="group rounded-2xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-md">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left font-semibold text-foreground">
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-primary opacity-50 transition-opacity group-open:opacity-100" />
-                    {item.q}
-                  </span>
-                  <span className="text-lg font-light text-muted-foreground transition-transform duration-300 group-open:rotate-45">
-                    +
-                  </span>
-                </summary>
-                <p className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">
-                  {item.a}
-                </p>
-              </details>
             </Reveal>
-          ))}
+          </aside>
+
+          <div className="space-y-2.5">
+            {FAQS.map((item, i) => (
+              <Reveal key={item.q} direction="up" delay={i * 40}>
+                <details className="group rounded-2xl border border-border bg-card transition-all hover:border-primary/40 open:border-primary/50 open:bg-gradient-to-br open:from-primary/[0.04] open:to-accent/[0.04] open:shadow-lg">
+                  <summary className="flex cursor-pointer list-none items-start gap-4 px-5 py-4 text-left">
+                    <span
+                      className={cn(
+                        'shrink-0 font-mono text-[11px] font-bold tabular-nums text-muted-foreground/70 transition-colors group-open:text-primary'
+                      )}
+                    >
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span className="flex-1 font-semibold text-foreground">
+                      {item.q}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-all group-open:bg-primary group-open:text-primary-foreground"
+                    >
+                      <span className="absolute h-2.5 w-[1.5px] bg-current transition-transform duration-300 group-open:rotate-90" />
+                      <span className="absolute h-[1.5px] w-2.5 bg-current" />
+                    </span>
+                  </summary>
+                  <div className="overflow-hidden">
+                    <p className="px-5 pb-5 pl-[54px] text-sm leading-relaxed text-muted-foreground">
+                      {item.a}
+                    </p>
+                  </div>
+                </details>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -1231,7 +1319,7 @@ function Faq() {
 
 function FinalCTA() {
   return (
-    <section className="relative overflow-hidden border-b border-border/60 py-20 sm:py-28">
+    <section className="relative overflow-hidden border-b border-border/60 py-14 sm:py-20">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-accent/10"
@@ -1254,13 +1342,13 @@ function FinalCTA() {
 
       <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         <Reveal direction="up">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
             <Sparkles className="h-3 w-3 animate-pulse-soft" />
             Ready when you are
           </div>
         </Reveal>
         <Reveal direction="up" delay={80}>
-          <h2 className="text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+          <h2 className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Your team&apos;s next week{' '}
             <span
               className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
@@ -1271,24 +1359,24 @@ function FinalCTA() {
           </h2>
         </Reveal>
         <Reveal direction="up" delay={160}>
-          <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
             Create a workspace, invite your team, install the desktop app.
             You&apos;ll see the first daily update by tomorrow morning.
           </p>
         </Reveal>
 
         <Reveal direction="up" delay={240}>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="/signup"
-              className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
             >
               Start free
-              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/login"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/70 px-6 py-4 text-base font-semibold text-foreground backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/70 px-5 py-3 text-sm font-semibold text-foreground backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
             >
               Sign in
             </Link>
@@ -1296,7 +1384,7 @@ function FinalCTA() {
         </Reveal>
 
         <Reveal direction="up" delay={320}>
-          <p className="mt-6 text-xs text-muted-foreground">
+          <p className="mt-5 text-xs text-muted-foreground">
             No credit card required · Set up in 60 seconds · Cancel the moment
             you want
           </p>
@@ -1312,7 +1400,7 @@ function FinalCTA() {
 
 function LandingFooter() {
   return (
-    <footer className="relative overflow-hidden bg-muted/30 py-12">
+    <footer className="relative overflow-hidden bg-muted/30 py-10">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
@@ -1410,7 +1498,7 @@ function LandingFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-muted-foreground sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-muted-foreground sm:flex-row">
           <p>© {new Date().getFullYear()} TaskFlow. All rights reserved.</p>
           <p>
             Built by{' '}

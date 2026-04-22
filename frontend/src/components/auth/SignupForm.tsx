@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, Building2, Check, Mail, User as UserIcon } from 'lucide-react'
 
 import { orgsApi } from '@/lib/api/orgsApi'
 import { Button } from '@/components/ui/Button'
@@ -20,21 +20,74 @@ interface SignupFormValues {
   password: string
 }
 
-export function SignupForm() {
+interface SignupFormProps {
+  slug: string
+  onSlugChange: (s: string) => void
+  slugTouched: boolean
+  onSlugTouchedChange: (t: boolean) => void
+}
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 30)
+
+export function SignupForm({
+  slug,
+  onSlugChange,
+  slugTouched,
+  onSlugTouchedChange,
+}: SignupFormProps) {
   const router = useRouter()
-  const [slug, setSlug] = useState('')
+  const [step, setStep] = useState<1 | 2>(1)
   const [serverError, setServerError] = useState<string | null>(null)
+
   const {
     register,
     handleSubmit,
+    trigger,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormValues>({ mode: 'onTouched' })
+
+  const orgName = watch('orgName') ?? ''
+  const password = watch('password') ?? ''
+
+  const handleOrgNameChange = (value: string) => {
+    if (!slugTouched) {
+      onSlugChange(slugify(value))
+    }
+  }
+
+  const onSlugEdit = (next: string) => {
+    onSlugChange(next)
+    if (!slugTouched) onSlugTouchedChange(true)
+  }
+
+  const strength = usePasswordStrength(password)
+
+  const goNext = async () => {
+    const ok = await trigger(['orgName'])
+    const slugClean = slug.trim().toLowerCase()
+    if (!slugClean) {
+      setServerError('Workspace code is required')
+      return
+    }
+    setServerError(null)
+    if (!ok) return
+    setStep(2)
+  }
 
   const onSubmit = async (values: SignupFormValues) => {
     setServerError(null)
     const normalizedSlug = slug.trim().toLowerCase()
     if (!normalizedSlug) {
       setServerError('Workspace code is required')
+      setStep(1)
       return
     }
 
@@ -54,82 +107,240 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-      <Input
-        label="Company name"
-        type="text"
-        placeholder="Acme Inc"
-        autoFocus
-        error={errors.orgName?.message}
-        {...register('orgName', {
-          required: 'Company name is required',
-          maxLength: { value: 100, message: 'Max 100 characters' },
-        })}
-      />
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+      <StepIndicator step={step} />
 
-      <WorkspaceField value={slug} onChange={setSlug} mode="signup" />
+      {step === 1 && (
+        <div className="flex flex-col gap-4 animate-fade-in">
+          <Input
+            label="Company name"
+            type="text"
+            placeholder="Acme Inc"
+            autoFocus
+            leftIcon={<Building2 />}
+            error={errors.orgName?.message}
+            {...register('orgName', {
+              required: 'Company name is required',
+              maxLength: { value: 100, message: 'Max 100 characters' },
+              onChange: (e) => handleOrgNameChange(e.target.value),
+            })}
+          />
 
-      <Input
-        label="Your name"
-        type="text"
-        placeholder="Jane Doe"
-        error={errors.ownerName?.message}
-        {...register('ownerName', { required: 'Your name is required' })}
-      />
+          <WorkspaceField
+            value={slug}
+            onChange={onSlugEdit}
+            mode="signup"
+          />
 
-      <Input
-        label="Email"
-        type="email"
-        placeholder="you@acme.com"
-        error={errors.ownerEmail?.message}
-        {...register('ownerEmail', {
-          required: 'Email is required',
-          pattern: { value: /.+@.+\..+/, message: 'Invalid email address' },
-        })}
-      />
+          {serverError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          )}
 
-      <PasswordInput
-        label="Password"
-        placeholder="Create a password"
-        error={errors.password?.message}
-        {...register('password', {
-          required: 'Password is required',
-          minLength: { value: 8, message: 'At least 8 characters' },
-          validate: {
-            upper: (v) =>
-              /[A-Z]/.test(v) || 'Must contain an uppercase letter',
-            lower: (v) =>
-              /[a-z]/.test(v) || 'Must contain a lowercase letter',
-            digit: (v) => /[0-9]/.test(v) || 'Must contain a number',
-          },
-        })}
-      />
+          <Button
+            type="button"
+            onClick={goNext}
+            className="w-full"
+            size="lg"
+            disabled={!orgName?.trim() || !slug.trim()}
+          >
+            Continue
+            <ArrowRight className="h-4 w-4" />
+          </Button>
 
-      {serverError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{serverError}</AlertDescription>
-        </Alert>
+          <p className="text-center text-xs text-muted-foreground">
+            Already have an account?{' '}
+            <Link
+              href="/login"
+              className="font-semibold text-primary hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
       )}
 
-      <Button
-        type="submit"
-        loading={isSubmitting}
-        className="w-full"
-        size="lg"
-      >
-        Create workspace
-      </Button>
+      {step === 2 && (
+        <div className="flex flex-col gap-4 animate-fade-in">
+          <Input
+            label="Your name"
+            type="text"
+            placeholder="Jane Doe"
+            autoFocus
+            leftIcon={<UserIcon />}
+            error={errors.ownerName?.message}
+            {...register('ownerName', { required: 'Your name is required' })}
+          />
 
-      <p className="text-center text-xs text-muted-foreground">
-        Already have an account?{' '}
-        <Link
-          href="/login"
-          className="font-semibold text-primary hover:underline"
-        >
-          Sign in
-        </Link>
-      </p>
+          <Input
+            label="Email"
+            type="email"
+            placeholder="you@acme.com"
+            leftIcon={<Mail />}
+            error={errors.ownerEmail?.message}
+            {...register('ownerEmail', {
+              required: 'Email is required',
+              pattern: { value: /.+@.+\..+/, message: 'Invalid email address' },
+            })}
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <PasswordInput
+              label="Password"
+              placeholder="Create a password"
+              error={errors.password?.message}
+              {...register('password', {
+                required: 'Password is required',
+                minLength: { value: 8, message: 'At least 8 characters' },
+                validate: {
+                  upper: (v) =>
+                    /[A-Z]/.test(v) || 'Must contain an uppercase letter',
+                  lower: (v) =>
+                    /[a-z]/.test(v) || 'Must contain a lowercase letter',
+                  digit: (v) => /[0-9]/.test(v) || 'Must contain a number',
+                },
+              })}
+            />
+            <PasswordStrength strength={strength} />
+          </div>
+
+          {serverError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              onClick={() => setStep(1)}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              className="flex-1"
+              size="lg"
+            >
+              Create workspace
+            </Button>
+          </div>
+
+          <p className="text-center text-[11px] text-muted-foreground">
+            By continuing you agree to our terms and privacy policy.
+          </p>
+        </div>
+      )}
     </form>
+  )
+}
+
+function StepIndicator({ step }: { step: 1 | 2 }) {
+  const labels = ['Workspace', 'Your account']
+  return (
+    <div className="flex items-center gap-3">
+      {labels.map((label, i) => {
+        const index = (i + 1) as 1 | 2
+        const active = step === index
+        const done = step > index
+        return (
+          <div key={label} className="flex flex-1 items-center gap-3">
+            <div
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors ${
+                done
+                  ? 'bg-primary text-primary-foreground'
+                  : active
+                    ? 'bg-primary/10 text-primary ring-2 ring-primary/30'
+                    : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {done ? <Check className="h-3.5 w-3.5" /> : index}
+            </div>
+            <span
+              className={`truncate text-xs font-semibold ${active ? 'text-foreground' : 'text-muted-foreground'}`}
+            >
+              {label}
+            </span>
+            {i < labels.length - 1 && (
+              <span
+                className={`h-px flex-1 ${done ? 'bg-primary' : 'bg-border'}`}
+              />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+interface Strength {
+  score: 0 | 1 | 2 | 3 | 4
+  checks: { label: string; pass: boolean }[]
+}
+
+function usePasswordStrength(password: string): Strength {
+  return useMemo(() => {
+    const checks = [
+      { label: '8+ characters', pass: password.length >= 8 },
+      { label: 'Uppercase letter', pass: /[A-Z]/.test(password) },
+      { label: 'Lowercase letter', pass: /[a-z]/.test(password) },
+      { label: 'Number', pass: /[0-9]/.test(password) },
+    ]
+    const score = checks.filter((c) => c.pass).length as 0 | 1 | 2 | 3 | 4
+    return { score, checks }
+  }, [password])
+}
+
+function PasswordStrength({ strength }: { strength: Strength }) {
+  const { score, checks } = strength
+  const colors = [
+    'bg-muted',
+    'bg-destructive',
+    'bg-amber-500',
+    'bg-yellow-500',
+    'bg-emerald-500',
+  ]
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong']
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 gap-1">
+          {[1, 2, 3, 4].map((i) => (
+            <span
+              key={i}
+              className={`h-1 flex-1 rounded-full transition-colors ${
+                score >= i ? colors[score] : 'bg-muted'
+              }`}
+            />
+          ))}
+        </div>
+        {score > 0 && (
+          <span className="text-[11px] font-semibold text-muted-foreground">
+            {labels[score]}
+          </span>
+        )}
+      </div>
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {checks.map((c) => (
+          <li
+            key={c.label}
+            className={`flex items-center gap-1.5 text-[11px] ${c.pass ? 'text-emerald-600' : 'text-muted-foreground'}`}
+          >
+            <Check
+              className={`h-3 w-3 transition-opacity ${c.pass ? 'opacity-100' : 'opacity-30'}`}
+            />
+            {c.label}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

@@ -15,7 +15,7 @@ Branch `saas-migration` vs `main`: **231 files · +29,382 / −6,714 lines** acr
 | Prod rollout | Wildcard cert, Route53, stack splitting | ⏳ Not started |
 | Billing | Stripe + plan enforcement | ⏳ Not started |
 
-**Staging**: deployed and verified — stack `task-management-staging`, 494/500 resources, NEUROSTACK backfilled (role matrix + pipelines + `features.screenshots: true`).
+**Staging**: deployed and verified — stack `task-management-staging` split into parent (458/500) + `OrgNestedStack` (47) + `WorkflowNestedStack` (37). NEUROSTACK backfilled (role matrix + pipelines + `features.screenshots: true`). 42 resources of headroom on parent.
 
 **Prod**: untouched, live users, stays on current version until staging gate passes.
 
@@ -329,11 +329,14 @@ All visible changes shipped across phases:
 ## Staging deployment
 
 - [x] Deployed end-to-end — stack `task-management-staging`, API URL `https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/`
-- [x] Deploy run verified (148s, exit 0, CloudFormation clean)
-- [x] AWS identity confirmed: `giri-dev` account `013484737418` (personal/staging)
-- [x] Backfills applied — 3 role records populated (owner=35 perms, admin=31, member=9), 4 default pipelines inserted (DEVELOPMENT / DESIGNING / MANAGEMENT / RESEARCH)
-- [x] `features.screenshots: true` live for NEUROSTACK (desktop gate passes)
-- [x] CDK synth clean — **494 / 500 resources** (6 headroom before stack-splitting required)
+- [x] AWS identity: `giri-dev` account `013484737418` (personal/staging)
+- [x] Backfills applied — 3 role records populated (owner=35 perms, admin=31, member=9), 4 default pipelines inserted
+- [x] `features.screenshots: true` live for NEUROSTACK
+- [x] **Nested-stack refactor deployed** — parent split into:
+  - **Parent**: 458/500 resources (data: Table, UserPool, S3, CloudFront, API Gateway + 21 task/project/comment/user/upload Lambdas)
+  - **`OrgNestedStack`**: 47 resources — every org-context Lambda + new admin handlers (audit viewer, pipelines CRUD, transfer ownership, retention sweeper, seat reconciliation)
+  - **`WorkflowNestedStack`**: 37 resources — attendance + day-off handlers
+  - **Headroom**: 42 resources on parent, ~450 each on the nested stacks
 
 ---
 

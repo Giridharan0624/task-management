@@ -15,11 +15,16 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
+    aws_cloudwatch as cloudwatch,
     aws_events as events,
     aws_events_targets as events_targets,
+    aws_logs as logs,
     aws_wafv2 as wafv2,
 )
 from constructs import Construct
+
+from nested.org_stack import OrgNestedStack
+from nested.workflow_stack import WorkflowNestedStack
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 LAMBDA_SRC = str(BACKEND_DIR / "src")
@@ -58,6 +63,12 @@ class TaskManagementStack(Stack):
         )
 
         # ─── DynamoDB ────────────────────────────────────────────────────────
+        # PITR: enabled on both stages. Staging gets a shorter retention
+        # (7 days) because it's disposable; prod keeps the 35-day max for
+        # real recovery scenarios. `pointInTimeRecoverySpecification` is
+        # the non-deprecated form — `point_in_time_recovery=True` still
+        # works but emits a warning on every synth.
+        pitr_days = 7 if is_staging else 35
         table = dynamodb.Table(
             self,
             "Table",
@@ -65,7 +76,10 @@ class TaskManagementStack(Stack):
             partition_key=dynamodb.Attribute(name="PK", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="SK", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
-            point_in_time_recovery=True,
+            point_in_time_recovery_specification=dynamodb.PointInTimeRecoverySpecification(
+                point_in_time_recovery_enabled=True,
+                recovery_period_in_days=pitr_days,
+            ),
             removal_policy=data_removal_policy,
         )
 
@@ -216,6 +230,19 @@ class TaskManagementStack(Stack):
             "ALLOWED_ORIGIN": config["allowed_origin"],
         }
 
+        # Log retention policy: 90 days on staging, 365 days on prod.
+        # Passed into the nested stacks so every handler that lives there
+        # gets a retention-bounded log group automatically. NOT applied
+        # on parent-side Lambdas: each `log_retention` kwarg emits a
+        # `Custom::LogRetention` helper resource, and 40 of those would
+        # push the parent over the 500-resource CFN cap. Parent-side
+        # Lambdas fall back to the CloudWatch default (never-expire) —
+        # accept until they move into a future nested stack.
+        log_retention = (
+            logs.RetentionDays.THREE_MONTHS if is_staging
+            else logs.RetentionDays.ONE_YEAR
+        )
+
         lambda_defaults = dict(
             runtime=_lambda.Runtime.PYTHON_3_12,
             code=_lambda.Code.from_asset(LAMBDA_SRC),
@@ -364,176 +391,43 @@ class TaskManagementStack(Stack):
             authorization_type=apigw.AuthorizationType.NONE,
         )
 
-        # ─── Organization (multi-tenant) handlers ───────────────────────────
-        # Public: POST /signup creates a new tenant and its first owner
-        # Public: GET /orgs/by-slug/{slug} resolves a workspace code for the login page
-        # Authed: GET /orgs/current returns the caller's full org + settings + plan
-        signup_resource = api.root.add_resource("signup")
-        signup_fn = _lambda.Function(
+        # ─── Organization (multi-tenant) handlers — nested stack ────────────
+        # Every org-context Lambda + admin handler lives in its own
+        # NestedStack so the parent stays well under the 500-resource
+        # CloudFormation cap. The parent owns the data resources (table,
+        # user pool, bucket) and the API Gateway construct; the nested
+        # stack adds Lambdas + routes via api.root.add_resource(...) which
+        # CDK wires across stacks automatically through CFN imports.
+        OrgNestedStack(
             self,
-            "SignupOrg",
-            handler="contexts.org.handlers.signup_org.handler",
-            **{**lambda_defaults, "timeout": Duration.seconds(15)},
-        )
-        table.grant_read_write_data(signup_fn)
-        # Grant Cognito admin permissions so the signup handler can create
-        # the first OWNER user with a permanent password.
-        signup_fn.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "cognito-idp:AdminCreateUser",
-                    "cognito-idp:AdminSetUserPassword",
-                    "cognito-idp:AdminDeleteUser",  # for rollback on DynamoDB failure
-                ],
-                resources=[user_pool.user_pool_arn],
-            )
-        )
-        signup_resource.add_method(
-            "POST",
-            apigw.LambdaIntegration(signup_fn),
-            authorization_type=apigw.AuthorizationType.NONE,
+            "Org",
+            api=api,
+            authorizer=authorizer,
+            table=table,
+            user_pool=user_pool,
+            deps_layer=deps_layer,
+            lambda_src=LAMBDA_SRC,
+            lambda_env=lambda_env,
+            gmail_secret=gmail_secret,
+            app_url=config["app_url"],
+            log_retention=log_retention,
         )
 
-        orgs = api.root.add_resource("orgs")
-        orgs_by_slug = orgs.add_resource("by-slug").add_resource("{slug}")
-        get_by_slug_fn = _lambda.Function(
+        # ─── Attendance + Day-off handlers (nested) ─────────────────────────
+        # Same pattern as OrgNestedStack: free CFN resource budget by
+        # putting these context handlers in their own nested stack.
+        WorkflowNestedStack(
             self,
-            "GetOrgBySlug",
-            handler="contexts.org.handlers.get_org_by_slug.handler",
-            **lambda_defaults,
+            "Workflow",
+            api=api,
+            authorizer=authorizer,
+            table=table,
+            user_pool=user_pool,
+            deps_layer=deps_layer,
+            lambda_src=LAMBDA_SRC,
+            lambda_env=lambda_env,
+            log_retention=log_retention,
         )
-        table.grant_read_data(get_by_slug_fn)
-        orgs_by_slug.add_method(
-            "GET",
-            apigw.LambdaIntegration(get_by_slug_fn),
-            authorization_type=apigw.AuthorizationType.NONE,
-        )
-
-        orgs_current = orgs.add_resource("current")
-        add_api_lambda(
-            "GetCurrentOrg",
-            "contexts.org.handlers.get_current_org.handler",
-            "GET",
-            orgs_current,
-        )
-
-        # Org settings update (Phase 3 — OWNER can edit branding/terminology/features)
-        orgs_current_settings = orgs_current.add_resource("settings")
-        add_api_lambda(
-            "UpdateOrgSettings",
-            "contexts.org.handlers.update_settings.handler",
-            "PUT",
-            orgs_current_settings,
-        )
-
-        # Invite routes (Phase 2 — team onboarding flow)
-        orgs_current_invites = orgs_current.add_resource("invites")
-        send_invite_fn = add_api_lambda(
-            "SendInvite",
-            "contexts.org.handlers.send_invite.handler",
-            "POST",
-            orgs_current_invites,
-        )
-        send_invite_fn.add_environment("GMAIL_SECRET_ARN", gmail_secret.secret_arn)
-        send_invite_fn.add_environment("APP_URL", config["app_url"])
-        gmail_secret.grant_read(send_invite_fn)
-
-        add_api_lambda(
-            "ListInvites",
-            "contexts.org.handlers.list_invites.handler",
-            "GET",
-            orgs_current_invites,
-        )
-
-        orgs_current_invite_by_token = orgs_current_invites.add_resource("{token}")
-        add_api_lambda(
-            "RevokeInvite",
-            "contexts.org.handlers.revoke_invite.handler",
-            "DELETE",
-            orgs_current_invite_by_token,
-        )
-
-        # Public accept-invite route — no auth, the token itself is the credential
-        invites_root = api.root.add_resource("invites")
-        invite_by_token = invites_root.add_resource("{token}")
-        accept_invite_resource = invite_by_token.add_resource("accept")
-        accept_invite_fn = _lambda.Function(
-            self,
-            "AcceptInvite",
-            handler="contexts.org.handlers.accept_invite.handler",
-            **{**lambda_defaults, "timeout": Duration.seconds(15)},
-        )
-        table.grant_read_write_data(accept_invite_fn)
-        accept_invite_fn.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "cognito-idp:AdminCreateUser",
-                    "cognito-idp:AdminSetUserPassword",
-                    "cognito-idp:AdminDeleteUser",  # for rollback
-                ],
-                resources=[user_pool.user_pool_arn],
-            )
-        )
-        accept_invite_resource.add_method(
-            "POST",
-            apigw.LambdaIntegration(accept_invite_fn),
-            authorization_type=apigw.AuthorizationType.NONE,
-        )
-
-        # Roles routes (Phase 4) — collapsed into one Lambda router so we
-        # stay under the 500-resource CFN cap. The router dispatches by
-        # httpMethod + pathParameters; see roles_router.py.
-        #
-        # We bind GET via add_api_lambda (creates the Lambda + permission),
-        # then ANY for the other methods on the same resource. Using ANY
-        # keeps it to one Method + one Permission per resource instead of
-        # 4 of each — meaningful when we're 10 resources from the cap.
-        orgs_current_roles = orgs_current.add_resource("roles")
-        roles_router_fn = add_api_lambda(
-            "RolesRouter",
-            "contexts.org.handlers.roles_router.handler",
-            "ANY",
-            orgs_current_roles,
-        )
-        orgs_current_role_by_id = orgs_current_roles.add_resource("{roleId}")
-        orgs_current_role_by_id.add_method(
-            "ANY", apigw.LambdaIntegration(roles_router_fn)
-        )
-
-        # Pipelines (Phase 5) — folded into GET /orgs/current to save a
-        # route + Lambda. See get_current_org.py for the merged response.
-
-        # ─── Attendance handlers ────────────────────────────────────────────
-        attendance = api.root.add_resource("attendance")
-        attendance_sign_in = attendance.add_resource("sign-in")
-        attendance_sign_out = attendance.add_resource("sign-out")
-        attendance_me = attendance.add_resource("me")
-        attendance_today = attendance.add_resource("today")
-
-        add_api_lambda("AttendanceSignIn", "contexts.attendance.handlers.sign_in.handler", "POST", attendance_sign_in)
-        add_api_lambda("AttendanceSignOut", "contexts.attendance.handlers.sign_out.handler", "PUT", attendance_sign_out)
-        add_api_lambda("GetMyAttendance", "contexts.attendance.handlers.get_my_attendance.handler", "GET", attendance_me)
-        add_api_lambda("ListTodayAttendance", "contexts.attendance.handlers.list_today_attendance.handler", "GET", attendance_today)
-        attendance_report = attendance.add_resource("report")
-        add_api_lambda("GetAttendanceReport", "contexts.attendance.handlers.get_report.handler", "GET", attendance_report)
-
-        # ─── Day Off handlers ──────────────────────────────────────────────
-        dayoffs = api.root.add_resource("day-offs")
-        dayoffs_my = dayoffs.add_resource("my")
-        dayoffs_pending = dayoffs.add_resource("pending")
-        dayoffs_all = dayoffs.add_resource("all")
-        dayoff_by_id = dayoffs.add_resource("{requestId}")
-        dayoff_approve = dayoff_by_id.add_resource("approve")
-        dayoff_reject = dayoff_by_id.add_resource("reject")
-        dayoff_cancel = dayoff_by_id.add_resource("cancel")
-
-        add_api_lambda("CreateDayOff", "contexts.dayoff.handlers.create_request.handler", "POST", dayoffs)
-        add_api_lambda("MyDayOffs", "contexts.dayoff.handlers.my_requests.handler", "GET", dayoffs_my)
-        add_api_lambda("PendingDayOffs", "contexts.dayoff.handlers.pending_approvals.handler", "GET", dayoffs_pending)
-        add_api_lambda("AllDayOffs", "contexts.dayoff.handlers.all_requests.handler", "GET", dayoffs_all)
-        add_api_lambda("ApproveDayOff", "contexts.dayoff.handlers.approve.handler", "PUT", dayoff_approve)
-        add_api_lambda("RejectDayOff", "contexts.dayoff.handlers.reject.handler", "PUT", dayoff_reject)
-        add_api_lambda("CancelDayOff", "contexts.dayoff.handlers.cancel.handler", "PUT", dayoff_cancel)
 
         # ─── Activity handlers (desktop app heartbeats) ───────────────────
         activity = api.root.add_resource("activity")
@@ -765,6 +659,14 @@ class TaskManagementStack(Stack):
                 ),
             )
 
+        # ─── CloudWatch alarms (ops visibility) ─────────────────────────────
+        # All alarms use the same default-empty action list on staging
+        # (they just appear in the console) and an SNS topic on prod
+        # (configure via `config["ops_sns_topic_arn"]` when ready).
+        # Keep the set small and load-bearing — each alarm is one more
+        # thing to silence if it fires spuriously.
+        self._add_cloudwatch_alarms(api=api, table=table, is_staging=is_staging)
+
         # ─── Outputs ─────────────────────────────────────────────────────────
         CfnOutput(self, "ApiUrl", value=api.url, description="API Gateway endpoint URL")
         CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id, description="Cognito User Pool ID")
@@ -772,3 +674,135 @@ class TaskManagementStack(Stack):
         CfnOutput(self, "TableName", value=table.table_name, description="DynamoDB Table Name")
         CfnOutput(self, "UploadsBucketName", value=uploads_bucket.bucket_name, description="S3 uploads bucket")
         CfnOutput(self, "CDNDomain", value=cdn.distribution_domain_name, description="CloudFront CDN domain")
+
+    # ------------------------------------------------------------------
+    # Ops
+    # ------------------------------------------------------------------
+
+    def _add_cloudwatch_alarms(
+        self,
+        *,
+        api: apigw.RestApi,
+        table: dynamodb.ITable,
+        is_staging: bool,
+    ) -> None:
+        """Create the core set of ops alarms.
+
+        Thresholds are deliberately conservative so they don't page on
+        normal traffic bumps. Staging alarms are information-only (no
+        SNS action); prod alarms can be wired to an ops topic by setting
+        `config["ops_sns_topic_arn"]` and plumbing it through here.
+        """
+
+        # 1. API 5xx rate — gross metric for "something's broken."
+        # Threshold: 5% of requests over 5 minutes, two consecutive
+        # periods. A single spike isn't paged, sustained is.
+        api_5xx = cloudwatch.MathExpression(
+            expression="(m5xx / totalReq) * 100",
+            using_metrics={
+                "m5xx": api.metric_server_error(
+                    period=Duration.minutes(5),
+                    statistic="Sum",
+                ),
+                "totalReq": api.metric_count(
+                    period=Duration.minutes(5),
+                    statistic="Sum",
+                ),
+            },
+            label="API 5xx %",
+            period=Duration.minutes(5),
+        )
+        cloudwatch.Alarm(
+            self,
+            "Api5xxRateAlarm",
+            metric=api_5xx,
+            threshold=5,
+            evaluation_periods=2,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+            alarm_description=(
+                "API Gateway 5xx rate >5% over two 5-min windows. "
+                "Usually means a Lambda is throwing uncaught exceptions."
+            ),
+        )
+
+        # 2. API 4xx rate — high 4xx means auth breakage or bad client
+        # deploys. More lenient threshold because some 4xx is normal.
+        cloudwatch.Alarm(
+            self,
+            "Api4xxSpikeAlarm",
+            metric=api.metric_client_error(
+                period=Duration.minutes(5),
+                statistic="Sum",
+            ),
+            threshold=100 if is_staging else 500,
+            evaluation_periods=3,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+            alarm_description=(
+                "API Gateway 4xx count spike. Check for an auth "
+                "regression, a rate-limit storm, or a broken frontend deploy."
+            ),
+        )
+
+        # 3. API p95 latency — anything above 3s is a bad UX regardless
+        # of the cause (cold start, DDB throttle, external call timeout).
+        cloudwatch.Alarm(
+            self,
+            "ApiLatencyP95Alarm",
+            metric=api.metric_latency(
+                period=Duration.minutes(5),
+                statistic="p95",
+            ),
+            threshold=3000,  # milliseconds
+            evaluation_periods=3,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+            alarm_description=(
+                "API p95 latency >3s for 15 min. Could be cold starts, "
+                "DDB throttle, or a slow downstream call."
+            ),
+        )
+
+        # 4. DynamoDB user errors — mostly ConditionalCheckFailed on
+        # idempotent writes, which is expected. A sudden spike suggests
+        # a broken invariant (e.g. writing the wrong PK shape).
+        cloudwatch.Alarm(
+            self,
+            "DdbUserErrorsAlarm",
+            metric=table.metric_user_errors(
+                period=Duration.minutes(5),
+                statistic="Sum",
+            ),
+            threshold=50,
+            evaluation_periods=2,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+            alarm_description=(
+                "DynamoDB user errors >50 in 5 min. Often a broken "
+                "ConditionExpression; check recent writes for bad PK shapes."
+            ),
+        )
+
+        # 5. DynamoDB throttled requests — hitting per-partition limits.
+        # Pay-per-request normally has no limit, but a hot PK can still
+        # throttle. Non-zero is always worth investigating.
+        cloudwatch.Alarm(
+            self,
+            "DdbThrottlesAlarm",
+            metric=table.metric_throttled_requests_for_operations(
+                operations=[
+                    dynamodb.Operation.PUT_ITEM,
+                    dynamodb.Operation.GET_ITEM,
+                    dynamodb.Operation.UPDATE_ITEM,
+                    dynamodb.Operation.DELETE_ITEM,
+                    dynamodb.Operation.QUERY,
+                    dynamodb.Operation.SCAN,
+                ],
+                period=Duration.minutes(5),
+                statistic="Sum",
+            ),
+            threshold=10,
+            evaluation_periods=2,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+            alarm_description=(
+                "DynamoDB throttled requests >10 in 5 min. Usually a "
+                "hot partition — look for an aggregate PK or a loop."
+            ),
+        )
