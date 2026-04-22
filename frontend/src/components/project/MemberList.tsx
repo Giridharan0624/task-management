@@ -7,6 +7,8 @@ import type { Task } from '@/types/task'
 import { addProjectMember, removeProjectMember, updateMemberRole } from '@/lib/api/projectApi'
 import { projectKeys } from '@/lib/hooks/useProjects'
 import { useUsers } from '@/lib/hooks/useUsers'
+import { useRoles } from '@/lib/hooks/useRoles'
+import { useFormat } from '@/lib/tenant/useFormat'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Avatar } from '@/components/ui/AvatarUpload'
@@ -38,13 +40,39 @@ const ROLE_BADGE: Record<ProjectRole, string> = {
   MEMBER: 'bg-blue-100 text-blue-700 border-blue-200',
 }
 
+// Translations between the canonical project role_id strings and the
+// legacy enum values. Used when a member row has only one of the two
+// (old record missing projectRoleId, or the dropdown returns role_id
+// and we need the matching badge palette).
+const ROLE_ID_TO_LEGACY: Record<string, ProjectRole> = {
+  project_admin: 'ADMIN',
+  project_manager: 'PROJECT_MANAGER',
+  team_lead: 'TEAM_LEAD',
+  project_member: 'MEMBER',
+}
+
+const LEGACY_ENUM_TO_ROLE_ID: Record<string, string> = {
+  ADMIN: 'project_admin',
+  PROJECT_MANAGER: 'project_manager',
+  TEAM_LEAD: 'team_lead',
+  MEMBER: 'project_member',
+}
+
 export function MemberList({ projectId, members, tasks = [], canManageMembers, callerProjectRole, callerSystemRole }: MemberListProps) {
   const queryClient = useQueryClient()
   const { data: allUsers, isLoading: usersLoading, isError: usersError } = useUsers()
+  // Project-scope roles from the org's role records — includes the
+  // 4 seeded defaults (project_admin / project_manager / team_lead /
+  // project_member) plus any tenant-defined custom project roles.
+  const { roles: projectRoles } = useRoles({ scope: 'project' })
+  const fmt = useFormat()
   const [showAddModal, setShowAddModal] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [selectedUserId, setSelectedUserId] = useState('')
-  const [selectedRole, setSelectedRole] = useState<ProjectRole>('MEMBER')
+  // Canonical role_id (lowercase, e.g. 'project_member'). Seeded default
+  // fallback keeps existing behavior when custom roles aren't fetched
+  // yet.
+  const [selectedRoleId, setSelectedRoleId] = useState<string>('project_member')
   const [addError, setAddError] = useState('')
   const [search, setSearch] = useState('')
 
@@ -86,16 +114,21 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
   }, [members, search])
 
   const addMemberMutation = useMutation({
-    mutationFn: (data: { userId: string; projectRole: ProjectRole }) => addProjectMember(projectId, data),
+    mutationFn: (data: { userId: string; projectRoleId: string }) =>
+      addProjectMember(projectId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
-      setShowAddModal(false); setSelectedUserId(''); setSelectedRole('MEMBER'); setAddError('')
+      setShowAddModal(false)
+      setSelectedUserId('')
+      setSelectedRoleId('project_member')
+      setAddError('')
     },
     onError: (err: Error) => setAddError(err.message || 'Failed to add member'),
   })
 
   const changeRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: ProjectRole }) => updateMemberRole(projectId, userId, role),
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      updateMemberRole(projectId, userId, roleId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) }),
   })
 
@@ -113,14 +146,31 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
   const handleAdd = async () => {
     if (!selectedUserId) { setAddError('Please select a user'); return }
     setAddError('')
-    await addMemberMutation.mutateAsync({ userId: selectedUserId, projectRole: selectedRole })
+    await addMemberMutation.mutateAsync({
+      userId: selectedUserId,
+      projectRoleId: selectedRoleId,
+    })
   }
 
-  const roleOptions = [
-    { value: 'MEMBER', label: 'Member' },
-    { value: 'PROJECT_MANAGER', label: 'Project Manager' },
-    ...(!hasTeamLead ? [{ value: 'TEAM_LEAD', label: 'Team Lead' }] : []),
-  ]
+  // Build the role picker options from the API, dropping Team Lead
+  // when the project already has one (backend enforces the uniqueness
+  // gate too, but surfacing the restriction in the UI avoids a
+  // confusing 400). Falls back to the 4 seeded defaults if the roles
+  // fetch hasn't landed yet.
+  const roleOptions = useMemo(() => {
+    const source = projectRoles.length > 0
+      ? projectRoles.map((r) => ({
+          value: r.roleId,
+          label: r.name,
+        }))
+      : [
+          { value: 'project_member', label: 'Member' },
+          { value: 'project_manager', label: 'Project Manager' },
+          { value: 'team_lead', label: 'Team Lead' },
+          { value: 'project_admin', label: 'Project Admin' },
+        ]
+    return source.filter((o) => o.value !== 'team_lead' || !hasTeamLead)
+  }, [projectRoles, hasTeamLead])
 
   return (
     <div className="space-y-4">
@@ -195,22 +245,68 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
                     </div>
                   </div>
 
-                  {/* Role — inline change or badge */}
+                  {/* Role — inline change or badge. Prefer the new
+                      projectRoleId when the backend provides it; fall
+                      back to translating the legacy `projectRole`
+                      enum for pre-refactor responses. */}
                   <div>
                     {canManageMembers && isPrivileged ? (
                       <FilterSelect
-                        value={member.projectRole}
-                        onChange={v => changeRoleMutation.mutate({ userId: member.userId, role: v as ProjectRole })}
-                        options={[
-                          ...roleOptions,
-                          ...(member.projectRole === 'TEAM_LEAD' && hasTeamLead ? [{ value: 'TEAM_LEAD', label: 'Team Lead' }] : []),
-                        ]}
-                        className="max-w-[110px]"
+                        value={
+                          member.projectRoleId ??
+                          LEGACY_ENUM_TO_ROLE_ID[member.projectRole] ??
+                          'project_member'
+                        }
+                        onChange={v =>
+                          changeRoleMutation.mutate({
+                            userId: member.userId,
+                            roleId: v,
+                          })
+                        }
+                        options={(() => {
+                          // Ensure the member's current role is always
+                          // visible, even when it's a Team Lead (which
+                          // the generic options list hides when taken).
+                          const currentId =
+                            member.projectRoleId ??
+                            LEGACY_ENUM_TO_ROLE_ID[member.projectRole] ??
+                            'project_member'
+                          if (roleOptions.some((o) => o.value === currentId)) {
+                            return roleOptions
+                          }
+                          const currentLabel =
+                            projectRoles.find((r) => r.roleId === currentId)?.name ??
+                            ROLE_LABEL[member.projectRole] ??
+                            currentId
+                          return [...roleOptions, { value: currentId, label: currentLabel }]
+                        })()}
+                        className="max-w-[130px]"
                       />
                     ) : (
-                      <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold border ${ROLE_BADGE[member.projectRole]}`}>
-                        {ROLE_LABEL[member.projectRole] || member.projectRole}
-                      </span>
+                      (() => {
+                        const displayEnum =
+                          member.projectRole ??
+                          (ROLE_ID_TO_LEGACY[
+                            member.projectRoleId ?? ''
+                          ] as ProjectRole | undefined)
+                        const label =
+                          (displayEnum && ROLE_LABEL[displayEnum]) ??
+                          projectRoles.find(
+                            (r) => r.roleId === member.projectRoleId,
+                          )?.name ??
+                          member.projectRoleId ??
+                          member.projectRole
+                        const badge = displayEnum
+                          ? ROLE_BADGE[displayEnum]
+                          : 'bg-slate-100 text-slate-700 border-slate-200'
+                        return (
+                          <span
+                            className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold border ${badge}`}
+                          >
+                            {label}
+                          </span>
+                        )
+                      })()
                     )}
                   </div>
 
@@ -230,7 +326,7 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
 
                   {/* Joined */}
                   <span className="text-[11px] text-muted-foreground/70 tabular-nums">
-                    {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {fmt.date(member.joinedAt, { month: 'short', day: 'numeric' })}
                   </span>
 
                   {/* Actions */}
@@ -278,7 +374,11 @@ export function MemberList({ projectId, members, tasks = [], canManageMembers, c
             {!isPrivileged ? (
               <p className="rounded-lg border border-border/80 bg-muted/40 px-3 py-2 text-sm text-foreground/85">Member</p>
             ) : (
-              <Select value={selectedRole} onChange={v => setSelectedRole(v as ProjectRole)} options={roleOptions} />
+              <Select
+                value={selectedRoleId}
+                onChange={(v) => setSelectedRoleId(v)}
+                options={roleOptions}
+              />
             )}
           </div>
           <div className="flex justify-end gap-2 pt-2">

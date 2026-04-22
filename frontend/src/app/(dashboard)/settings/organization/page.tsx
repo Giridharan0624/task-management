@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
+  Webhook,
 } from 'lucide-react'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -320,6 +321,12 @@ export default function OrgSettingsPage() {
           icon={ClipboardList}
           title="Audit log"
           subtitle="Who changed what, when."
+        />
+        <AdminLink
+          href="/settings/webhooks"
+          icon={Webhook}
+          title="Webhooks"
+          subtitle="HMAC-signed event delivery to your endpoints."
         />
         <AdminLink
           href="/settings/transfer-ownership"

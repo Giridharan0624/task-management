@@ -13,7 +13,11 @@ export interface CreateProjectData {
 
 export interface AddMemberData {
   userId: string
-  projectRole: ProjectRole
+  /** Canonical role_id (e.g. 'project_manager') — preferred. */
+  projectRoleId?: string
+  /** Legacy enum — still accepted by the backend for backward
+   *  compatibility. New code should set `projectRoleId` instead. */
+  projectRole?: ProjectRole
 }
 
 export async function getProjects(): Promise<Project[]> {
@@ -54,9 +58,21 @@ export async function removeProjectMember(projectId: string, userId: string): Pr
 export async function updateMemberRole(
   projectId: string,
   userId: string,
-  projectRole: ProjectRole
+  role: string,
 ): Promise<ProjectMember> {
-  return apiClient.put<ProjectMember>(`/projects/${projectId}/members/${userId}/role`, { projectRole })
+  // `role` can be either a canonical role_id ('project_manager',
+  // 'team_lead', or any tenant-defined custom project role) or a
+  // legacy enum value ('ADMIN', 'PROJECT_MANAGER', 'TEAM_LEAD',
+  // 'MEMBER'). Backend accepts either; we route new IDs through
+  // `projectRoleId` and legacy strings through `projectRole` so
+  // existing request-body validation doesn't need changing.
+  const body = /^[a-z_]+$/.test(role)
+    ? { projectRoleId: role }
+    : { projectRole: role as ProjectRole }
+  return apiClient.put<ProjectMember>(
+    `/projects/${projectId}/members/${userId}/role`,
+    body,
+  )
 }
 
 export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {

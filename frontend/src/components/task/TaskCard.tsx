@@ -2,6 +2,7 @@
 
 import type { Task, TaskStatus } from '@/types/task'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
+import { useFormat } from '@/lib/tenant/useFormat'
 
 interface TaskCardProps {
   task: Task
@@ -23,12 +24,10 @@ const PRIORITY_LABEL: Record<Task['priority'], string> = {
 
 export function TaskCard({ task, onClick, resolveName }: TaskCardProps) {
   const resolve = resolveName ?? ((id: string) => id)
+  const fmt = useFormat()
 
   const deadlineFormatted = task.deadline
-    ? new Date(task.deadline).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      })
+    ? fmt.date(task.deadline, { month: 'short', day: 'numeric' })
     : null
 
   const isOverdue = checkOverdue(task.deadline, task.status)

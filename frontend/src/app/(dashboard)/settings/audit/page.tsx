@@ -31,7 +31,53 @@ const ACTION_FILTERS: { label: string; prefix: string }[] = [
   { label: 'Pipelines', prefix: 'pipeline.' },
   { label: 'Organization', prefix: 'org.' },
   { label: 'Plan', prefix: 'plan.' },
+  { label: 'Webhooks', prefix: 'webhook.' },
+  { label: 'Platform', prefix: 'platform.' },
 ]
+
+/** Human-friendly labels for known action strings. Keys match the
+ *  constants in `shared_kernel/audit.py` + ad-hoc action strings
+ *  used by newer handlers (webhooks, platform admin, MFA reset).
+ *  Falls back to the raw action name when no mapping exists so the
+ *  viewer never hides an event — just reveals it unmapped. */
+const ACTION_LABEL: Record<string, string> = {
+  // Roles
+  'role.created': 'Role created',
+  'role.updated': 'Role updated',
+  'role.deleted': 'Role deleted',
+  // Settings
+  'settings.updated': 'Settings updated',
+  // Users
+  'user.invited': 'User invited',
+  'user.created': 'User created',
+  'user.role_changed': 'User role changed',
+  'user.deleted': 'User deleted',
+  'user.suspended': 'User suspended',
+  'user.mfa_reset': '2FA reset',
+  // Pipelines
+  'pipeline.created': 'Pipeline created',
+  'pipeline.updated': 'Pipeline updated',
+  'pipeline.deleted': 'Pipeline deleted',
+  // Org lifecycle
+  'org.suspended': 'Workspace suspended',
+  'org.resumed': 'Workspace resumed',
+  'org.deleted': 'Workspace deletion scheduled',
+  'org.ownership_transferred': 'Ownership transferred',
+  'org.exported': 'Workspace data exported',
+  // Plan
+  'plan.upgraded': 'Plan upgraded',
+  'plan.downgraded': 'Plan downgraded',
+  // Webhooks (Session 5)
+  'webhook.created': 'Webhook registered',
+  'webhook.updated': 'Webhook updated',
+  'webhook.deleted': 'Webhook removed',
+  // Platform operator
+  'platform.features_updated': 'Features toggled by platform operator',
+}
+
+function labelForAction(action: string): string {
+  return ACTION_LABEL[action] || action
+}
 
 export default function AuditLogPage() {
   const { user } = useAuth()
@@ -230,8 +276,11 @@ function AuditRow({ event }: { event: AuditEvent }) {
             <Badge variant="outline" className="text-[10px]">
               {domain}
             </Badge>
-            <code className="text-[10px] font-mono text-muted-foreground">
-              {event.action}
+            <code
+              className="text-[10px] font-mono text-muted-foreground"
+              title={event.action}
+            >
+              {labelForAction(event.action)}
             </code>
           </div>
           <p className="mt-0.5 text-sm text-foreground/85">{event.summary}</p>
