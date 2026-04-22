@@ -2,7 +2,9 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import {
   Activity,
+  Apple,
   ArrowRight,
+  ArrowUpRight,
   BarChart3,
   Brain,
   Calendar,
@@ -11,16 +13,21 @@ import {
   Clock,
   Download,
   FileText,
+  Globe,
   KanbanSquare,
   Layers,
+  Mail,
   MessageSquare,
+  Monitor,
   Shuffle,
   ShieldCheck,
   Sparkles,
+  Terminal,
   TrendingDown,
   Users,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { LandingHeader } from '@/components/landing/LandingHeader'
 import { MaybeRedirectIfAuthed } from '@/components/landing/MaybeRedirectIfAuthed'
 import { Reveal } from '@/components/landing/Reveal'
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter'
@@ -38,30 +45,30 @@ import { cn } from '@/lib/utils'
  * ──────────────────────────────────────────────────────────────────── */
 
 export const metadata: Metadata = {
-  title: 'TaskFlow — Tasks, time, and daily updates for small teams',
+  title: 'TaskFlow — Unified task, time, and team operations platform',
   description:
-    'Plan work, track time, approve day-offs, and see what your team shipped today — all in one workspace. Free to start, works alongside a desktop companion app.',
+    'Plan work, track time, manage attendance and time off, and review daily output in a single workspace. Provision in minutes; includes a desktop companion for accurate time capture.',
   keywords: [
     'task management',
     'time tracking',
     'attendance',
     'daily standups',
-    'small team',
+    'team operations',
     'project management',
     'SaaS',
   ],
   openGraph: {
-    title: 'TaskFlow — Tasks, time, and daily updates for small teams',
+    title: 'TaskFlow — Unified task, time, and team operations platform',
     description:
-      'One workspace for tasks, attendance, daily summaries, and day-offs. Free to start.',
+      'A single workspace for tasks, attendance, daily summaries, and time off. Free to start.',
     type: 'website',
     siteName: 'TaskFlow',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TaskFlow — Tasks, time, and daily updates for small teams',
+    title: 'TaskFlow — Unified task, time, and team operations platform',
     description:
-      'One workspace for tasks, attendance, daily summaries, and day-offs.',
+      'A single workspace for tasks, attendance, daily summaries, and time off.',
   },
 }
 
@@ -77,7 +84,7 @@ const structuredData = {
     priceCurrency: 'USD',
   },
   description:
-    'Task management, time tracking, attendance, and daily updates for small teams.',
+    'An integrated platform for task management, time tracking, attendance, and daily reporting.',
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -113,6 +120,7 @@ export default function LandingPage() {
         <SolutionPillars />
         <Differentiator />
         <FeatureGrid />
+        <DesktopDownload />
         <HowItWorks />
         <Pricing />
         <Faq />
@@ -121,80 +129,6 @@ export default function LandingPage() {
 
       <LandingFooter />
     </div>
-  )
-}
-
-/* ────────────────────────────────────────────────────────────────────
- * Header
- * ──────────────────────────────────────────────────────────────────── */
-
-function LandingHeader() {
-  const navLinks = [
-    { href: '#problem', label: 'Why TaskFlow' },
-    { href: '#differentiator', label: 'Features' },
-    { href: '#pricing', label: 'Pricing' },
-    { href: '#faq', label: 'FAQ' },
-  ]
-  return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Logo size="md" hideSubline />
-        <nav
-          aria-label="Primary"
-          className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex"
-        >
-          {navLinks.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="rounded-md transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              {l.label}
-            </a>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/login"
-            className="hidden rounded-lg px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/signup"
-            className="group inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:shadow-md hover:shadow-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Start free
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </div>
-      </div>
-
-      {/* Mobile anchor row — horizontally scrollable pill bar so section
-          jumps stay reachable without a hamburger. */}
-      <nav aria-label="Sections" className="border-t border-border/60 md:hidden">
-        <ul className="-mb-px flex overflow-x-auto px-2 py-2 text-[11px] font-semibold [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {navLinks.map((l) => (
-            <li key={l.href} className="shrink-0">
-              <a
-                href={l.href}
-                className="inline-flex items-center rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {l.label}
-              </a>
-            </li>
-          ))}
-          <li className="shrink-0">
-            <Link
-              href="/login"
-              className="inline-flex items-center rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Sign in
-            </Link>
-          </li>
-        </ul>
-      </nav>
-    </header>
   )
 }
 
@@ -233,27 +167,28 @@ function Hero() {
             <Reveal direction="up">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
                 <Sparkles className="h-3 w-3 animate-pulse-soft" />
-                One workspace per team
+                A unified workspace for modern teams
               </div>
             </Reveal>
 
             <Reveal direction="up" delay={80}>
               <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Tasks, time, and daily updates{' '}
+                Tasks, time, and team operations{' '}
                 <span
                   className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
                   style={{ backgroundSize: '200% 200%' }}
                 >
-                  in one place.
+                  unified in one platform.
                 </span>
               </h1>
             </Reveal>
 
             <Reveal direction="up" delay={160}>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-                Plan work, track hours, approve day-offs, and see what your team
-                shipped today — without juggling four tools. Free to start,
-                ships with a desktop companion for real time-tracking.
+                Plan projects, capture working hours, manage time-off requests,
+                and review team output — all from a single platform. Replace
+                four disconnected tools with one integrated workspace, backed
+                by a desktop companion for precise time tracking.
               </p>
             </Reveal>
 
@@ -277,7 +212,7 @@ function Hero() {
 
             <Reveal direction="up" delay={320}>
               <p className="mt-5 text-xs text-muted-foreground">
-                No credit card required · Set up your workspace in 60 seconds
+                No credit card required · Workspace provisioned in under a minute
               </p>
             </Reveal>
           </div>
@@ -299,27 +234,27 @@ function ProblemSection() {
   const pains = [
     {
       icon: Shuffle,
-      title: 'Four tabs open, none of them talking.',
+      title: 'Fragmented tooling erodes productivity.',
       blurb:
-        'Task app here, timer there, leave requests in email, reports in a spreadsheet. Context switching eats more of the day than the work.',
+        'A dedicated task tool, a separate timer, an inbox for leave requests, and a spreadsheet for reporting. Context switching between them routinely consumes more time than the underlying work.',
       tone: 'text-rose-600 dark:text-rose-300',
       ring: 'ring-rose-500/20',
       bg: 'bg-rose-500/10',
     },
     {
       icon: MessageSquare,
-      title: 'Chasing Slack for "what got done today?"',
+      title: 'Daily visibility relies on memory.',
       blurb:
-        'Daily standups become a nightly search for context nobody will use again. Half the team forgot what they worked on at 11 AM.',
+        'Standups become end-of-day recall exercises. By the time leadership assembles a picture of the day, the detail that matters has already faded.',
       tone: 'text-amber-600 dark:text-amber-300',
       ring: 'ring-amber-500/20',
       bg: 'bg-amber-500/10',
     },
     {
       icon: TrendingDown,
-      title: 'Timesheets that reflect wishful thinking.',
+      title: 'Timesheets rarely reflect reality.',
       blurb:
-        "Hours typed into a form vs. hours of actual focus. Admins can't tell them apart — until a billing dispute surfaces the gap.",
+        'Manually entered hours are negotiable; hours of actual focused work are not. Without objective data, both sides lose confidence when a billing review surfaces the discrepancy.',
       tone: 'text-slate-600 dark:text-slate-300',
       ring: 'ring-slate-500/20',
       bg: 'bg-slate-500/10',
@@ -335,12 +270,12 @@ function ProblemSection() {
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur">
-              Before TaskFlow
+              The current state
             </div>
           </Reveal>
           <Reveal direction="up" delay={80}>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Running a small team shouldn&apos;t feel like this.
+              Operating a team should not require four disconnected systems.
             </h2>
           </Reveal>
         </div>
@@ -371,9 +306,9 @@ function ProblemSection() {
 
         <Reveal direction="up" delay={320}>
           <p className="mx-auto mt-10 max-w-2xl text-center text-base font-semibold text-foreground/80 sm:text-lg">
-            TaskFlow collapses the four into{' '}
+            TaskFlow consolidates all four into{' '}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              one
+              one integrated platform
             </span>
             .
           </p>
@@ -391,22 +326,22 @@ function SolutionPillars() {
   const pillars = [
     {
       icon: Clock,
-      title: 'Track.',
-      body: 'Timers, activity counters, screenshots. The desktop app does the heavy lifting so nobody has to log anything manually.',
+      title: 'Capture.',
+      body: 'Objective time and activity data is recorded automatically by the desktop companion — session timers, activity signals, and periodic screenshots — eliminating reliance on manual entry.',
       tint: 'from-primary/20 via-primary/5 to-transparent',
       iconTint: 'bg-primary/15 text-primary',
     },
     {
       icon: Brain,
-      title: 'Know.',
-      body: "AI-written daily updates. Who's in, who's out, which tasks are overdue — a dashboard that answers the question before you ask it.",
+      title: 'Understand.',
+      body: 'AI-generated daily summaries consolidate task progress, attendance, and ownership into one operational view. Leadership sees the answers before the questions are asked.',
       tint: 'from-accent/20 via-accent/5 to-transparent',
       iconTint: 'bg-accent/15 text-accent',
     },
     {
       icon: BarChart3,
       title: 'Report.',
-      body: 'Cross-project hours, per-member leaderboards, CSV exports, deep-linkable filters. Every slice of the week is a URL away.',
+      body: 'Cross-project hours, per-member performance, CSV exports, and deep-linkable filters. Every view of the week is shareable through a persistent URL.',
       tint: 'from-fuchsia-500/20 via-fuchsia-500/5 to-transparent',
       iconTint: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-300',
     },
@@ -418,16 +353,17 @@ function SolutionPillars() {
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              One workspace.{' '}
+              One platform.{' '}
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Three superpowers.
+                Three core capabilities.
               </span>
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
             <p className="mt-3 text-base text-muted-foreground">
-              Everything a small team needs to plan work, see what&apos;s
-              happening, and prove it — without four subscriptions.
+              Every capability a modern team needs to plan, observe, and
+              report — delivered as a single integrated product rather than
+              four separate subscriptions.
             </p>
           </Reveal>
         </div>
@@ -497,24 +433,24 @@ function Differentiator() {
           <Reveal direction="up">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
               <Sparkles className="h-3 w-3" />
-              What makes it different
+              Capabilities that set us apart
             </div>
           </Reveal>
           <Reveal direction="up" delay={80}>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              Built for teams that{' '}
+              Built for organizations with{' '}
               <span
                 className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
                 style={{ backgroundSize: '200% 200%' }}
               >
-                actually ship.
+                real accountability requirements.
               </span>
             </h2>
           </Reveal>
           <Reveal direction="up" delay={160}>
             <p className="mt-3 text-base text-muted-foreground">
-              Three capabilities that separate TaskFlow from the generic
-              &ldquo;task tracker&rdquo; shelf.
+              Three capabilities that distinguish TaskFlow from general-purpose
+              task trackers.
             </p>
           </Reveal>
         </div>
@@ -522,7 +458,7 @@ function Differentiator() {
         <div className="space-y-16 lg:space-y-20">
           <DemoRow
             step="01"
-            badge="Live telemetry"
+            badge="Objective activity signals"
             badgeIcon={Activity}
             theme={{
               badge:
@@ -531,13 +467,13 @@ function Differentiator() {
               gradient: 'from-fuchsia-500 via-pink-500 to-rose-500',
               halo: 'bg-fuchsia-500/15',
             }}
-            titleLead="Know when"
-            titleAccent="focus is real."
-            blurb="The desktop companion watches keystroke and mouse-event counters — never contents — and reports them alongside your timer. Low activity for an hour? It shows up on the dashboard."
+            titleLead="Measure focused work"
+            titleAccent="with objective data."
+            blurb="The desktop companion records aggregate keystroke and mouse-event counters — never content — and reports them alongside each timer session. Periods of low activity are surfaced on the dashboard automatically, without subjective assessment."
             bullets={[
-              'Per-session activity score, not vague "hours tracked"',
-              'Runs in the background — no separate focus app',
-              'Counters are numbers only. Zero keylogging.',
+              'Per-session activity score replaces subjective time reporting',
+              'Runs silently in the background with no additional monitoring software',
+              'Counters record event frequency only; no content is captured or stored',
             ]}
             visual={<ActivityDemo />}
           />
@@ -545,7 +481,7 @@ function Differentiator() {
           <DemoRow
             reverse
             step="02"
-            badge="Groq-powered"
+            badge="AI-generated summaries"
             badgeIcon={Brain}
             theme={{
               badge:
@@ -554,20 +490,20 @@ function Differentiator() {
               gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
               halo: 'bg-purple-500/15',
             }}
-            titleLead="The daily update"
-            titleAccent="writes itself."
-            blurb="An LLM reads the raw session log — tasks touched, hours per task, comments — and generates the end-of-day summary admins actually want to read. Nobody has to remember what they did at 11 AM."
+            titleLead="Daily summaries"
+            titleAccent="generated automatically."
+            blurb="A large language model processes each member's structured session log — tasks completed, hours per task, and comments — and produces the end-of-day report that leadership receives. Manual recall is eliminated from the reporting loop."
             bullets={[
-              'Natural-language recap grouped by project',
-              'Runs server-side at sign-out; frontend never holds the key',
-              'Members can edit before it sends. Nothing is final until they confirm.',
+              'Structured natural-language recap, organized by project',
+              'Generated server-side at sign-out; credentials never reach the browser',
+              'Members may review and revise the draft before submission',
             ]}
             visual={<AiDemo />}
           />
 
           <DemoRow
             step="03"
-            badge="Private by default"
+            badge="Tenant-scoped storage"
             badgeIcon={Camera}
             theme={{
               badge:
@@ -576,13 +512,13 @@ function Differentiator() {
               gradient: 'from-sky-500 via-blue-500 to-indigo-500',
               halo: 'bg-blue-500/15',
             }}
-            titleLead="Proof, without"
-            titleAccent="micro-management."
-            blurb="Every few minutes while a session is running, the desktop app captures a compressed screenshot and uploads it to your tenant's S3 prefix. Admins spot-check without interrupting."
+            titleLead="Verifiable output"
+            titleAccent="without intrusive oversight."
+            blurb="The desktop application captures compressed screenshots at regular intervals during active sessions and uploads them exclusively to your organization's S3 prefix. Leadership performs periodic spot checks without disrupting the individual contributor."
             bullets={[
-              'Stored under your org prefix — zero cross-tenant access',
-              'Compressed; a full day is under a few megabytes',
-              'Captures pause instantly when the timer stops',
+              'Storage is scoped to your organization prefix; cross-tenant access is architecturally prevented',
+              'Captures are compressed; a full working day typically consumes a few megabytes',
+              'Capture halts immediately when the timer stops',
             ]}
             visual={<ScreenshotDemo />}
           />
@@ -742,7 +678,7 @@ function ActivityDemo() {
             Activity today
           </p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">
-            <AnimatedCounter to={87} suffix="%" /> focus
+            <AnimatedCounter to={87} suffix="%" /> active
           </p>
         </div>
         <div className="flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
@@ -772,7 +708,7 @@ function AiDemo() {
         <div className="mb-4 flex items-center gap-2">
           <Brain className="h-4 w-4 text-purple-500" />
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Generated summary · Apr 21
+            Daily summary · April 21
           </p>
         </div>
         <TypewriterText
@@ -780,16 +716,16 @@ function AiDemo() {
           speed={18}
           linePause={160}
           lines={[
-            '> Analyzing 3 sessions across 2 projects…',
+            '> Processing 3 sessions across 2 projects…',
             '',
             '✓ Payments · Stripe Connect onboarding (2h 9m)',
-            '  — Shipped the branching onboarding form, wired',
-            '    KYC redirect, left error handling for PR.',
+            '  — Completed the branching onboarding form and',
+            '    integrated KYC redirect. Error handling in review.',
             '',
-            '✓ Marketing · Refresh hero imagery (1h 53m)',
-            '  — 3 draft variants; picking tomorrow with @priya.',
+            '✓ Marketing · Hero imagery refresh (1h 53m)',
+            '  — Prepared three variants; final selection with @priya.',
             '',
-            'Total focus · 87%   Screenshots · 42   Submitted ✓',
+            'Activity · 87%   Screenshots · 42   Status · Submitted',
           ]}
         />
       </div>
@@ -812,7 +748,7 @@ function ScreenshotDemo() {
           </div>
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
             <ShieldCheck className="h-3 w-3" />
-            Tenant S3 only
+            Tenant-scoped S3
           </span>
         </div>
 
@@ -860,9 +796,9 @@ interface FeatureCardData {
 const FEATURES: FeatureCardData[] = [
   {
     icon: KanbanSquare,
-    title: 'Projects & Kanban',
+    title: 'Projects and Kanban',
     blurb:
-      'List, board, group by priority or deadline. Bulk-assign, bulk-mark-done, save filter presets.',
+      'List and board views with grouping by priority or deadline. Bulk assignment, bulk status updates, and reusable filter presets.',
     tint: 'from-indigo-500/15',
     iconClass: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300',
   },
@@ -870,23 +806,23 @@ const FEATURES: FeatureCardData[] = [
     icon: Clock,
     title: 'Time tracking',
     blurb:
-      'Clock in from web or desktop. Cross-project reports, CSV exports, per-member leaderboards.',
+      'Start sessions from the web or desktop application. Cross-project reporting, CSV exports, and per-member performance summaries.',
     tint: 'from-emerald-500/15',
     iconClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
   },
   {
     icon: FileText,
-    title: 'Daily updates',
+    title: 'Daily reporting',
     blurb:
-      'Submitted, missing, overdue — all in one view. Copy emails for a nudge, spot the week at a glance.',
+      'Submitted, pending, and overdue reports in a single view. Copy-ready reminders and a clear weekly overview.',
     tint: 'from-amber-500/15',
     iconClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
   },
   {
     icon: Calendar,
-    title: 'Day-off requests',
+    title: 'Time-off management',
     blurb:
-      'Past dates blocked, duplicates rejected, auto-approver picked. One-click approve.',
+      'Calendar-aware validation, duplicate protection, automatic approver routing, and one-click approval workflows.',
     tint: 'from-rose-500/15',
     iconClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-300',
   },
@@ -894,31 +830,31 @@ const FEATURES: FeatureCardData[] = [
     icon: Layers,
     title: 'Custom pipelines',
     blurb:
-      'Design your own task workflow — different stages per project domain, each with its own colors.',
+      'Design task workflows specific to each project domain. Configure stages and assign colors to reflect real status.',
     tint: 'from-teal-500/15',
     iconClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-300',
   },
   {
     icon: Users,
-    title: 'Per-tenant workspaces',
+    title: 'Multi-tenant workspaces',
     blurb:
-      'Workspace-code isolation. Terminology, feature toggles, branding, locale. No cross-tenant leakage.',
+      'Workspace-level isolation with configurable terminology, feature toggles, branding, and locale. No cross-tenant data exposure.',
     tint: 'from-violet-500/15',
     iconClass: 'bg-violet-500/15 text-violet-600 dark:text-violet-300',
   },
   {
     icon: ShieldCheck,
-    title: 'Owned by you',
+    title: 'Data ownership',
     blurb:
-      'CSV exports everywhere. Three-tier roles. SRP auth — passwords never leave the browser.',
+      'CSV export on every view. Three-tier role-based access. Secure Remote Password authentication keeps credentials in the browser.',
     tint: 'from-cyan-500/15',
     iconClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
   },
   {
     icon: BarChart3,
-    title: 'Cross-project reports',
+    title: 'Cross-project reporting',
     blurb:
-      'Hours by project, by member, by week. Deep-link any filter — saved views survive a reload or share.',
+      'Hours by project, by member, and by week. Deep-linkable filters and saved views persist across reloads and shared links.',
     tint: 'from-orange-500/15',
     iconClass: 'bg-orange-500/15 text-orange-600 dark:text-orange-300',
   },
@@ -926,7 +862,7 @@ const FEATURES: FeatureCardData[] = [
     icon: Download,
     title: 'Signed desktop installers',
     blurb:
-      'Native apps for Windows, macOS, Linux. Auto-updater, offline resilience. Not a browser tab.',
+      'Native applications for Windows, macOS, and Linux. Automatic updates and offline resilience — not a browser tab.',
     tint: 'from-lime-500/15',
     iconClass: 'bg-lime-500/15 text-lime-600 dark:text-lime-300',
   },
@@ -934,18 +870,21 @@ const FEATURES: FeatureCardData[] = [
 
 function FeatureGrid() {
   return (
-    <section className="relative overflow-hidden border-b border-border/60 bg-muted/10 py-14 sm:py-20">
+    <section
+      id="features"
+      className="relative overflow-hidden border-b border-border/60 bg-muted/10 py-14 sm:py-20"
+    >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Plus everything you&apos;d expect.
+              The complete operational toolkit.
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
             <p className="mt-3 text-base text-muted-foreground">
-              The toolkit that usually costs four SaaS subscriptions, shipped as
-              one.
+              The capabilities typically distributed across four separate
+              subscriptions, delivered in a single integrated platform.
             </p>
           </Reveal>
         </div>
@@ -1005,6 +944,204 @@ function FeatureGrid() {
 }
 
 /* ────────────────────────────────────────────────────────────────────
+ * Desktop download — dedicated section promoting the native companion
+ * ──────────────────────────────────────────────────────────────────── */
+
+function DesktopDownload() {
+  const platforms = [
+    {
+      Icon: Monitor,
+      name: 'Windows',
+      tint: 'from-sky-500/20 via-blue-500/10 to-transparent',
+      iconTint: 'bg-sky-500/15 text-sky-600 dark:text-sky-300',
+      ring: 'ring-sky-500/20',
+    },
+    {
+      Icon: Apple,
+      name: 'macOS',
+      tint: 'from-slate-500/20 via-zinc-500/10 to-transparent',
+      iconTint: 'bg-slate-500/15 text-slate-700 dark:text-slate-200',
+      ring: 'ring-slate-500/20',
+    },
+    {
+      Icon: Terminal,
+      name: 'Linux',
+      tint: 'from-amber-500/20 via-orange-500/10 to-transparent',
+      iconTint: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+      ring: 'ring-amber-500/20',
+    },
+  ]
+
+  const benefits = [
+    'Accurate session timer available from the system tray',
+    'Aggregate activity capture with no content logging',
+    'Automatic daily summaries submitted at sign-out',
+    'Offline resilient — sessions sync on reconnection',
+  ]
+
+  return (
+    <section
+      id="desktop"
+      className="relative overflow-hidden border-b border-border/60 py-14 sm:py-20"
+    >
+      {/* Layered background accents — consistent with the rest of the page
+          but distinct enough to give this section its own mood. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/[0.025] to-transparent"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-primary/15 blur-3xl animate-drift-slow"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-20 bottom-0 h-64 w-64 rounded-full bg-accent/15 blur-3xl animate-drift-slower"
+      />
+
+      <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:gap-14 lg:px-8">
+        {/* Left — copy + CTA */}
+        <div>
+          <Reveal direction="up">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+              <Download className="h-3 w-3" />
+              Desktop companion
+            </div>
+          </Reveal>
+
+          <Reveal direction="up" delay={80}>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+              The capabilities that matter{' '}
+              <span
+                className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
+                style={{ backgroundSize: '200% 200%' }}
+              >
+                live in the native app.
+              </span>
+            </h2>
+          </Reveal>
+
+          <Reveal direction="up" delay={160}>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Install the TaskFlow desktop companion for accurate time tracking,
+              automatic activity capture, and AI-generated daily summaries.
+              Signed installers are available for every major operating system.
+            </p>
+          </Reveal>
+
+          <Reveal direction="up" delay={220}>
+            <ul className="mt-6 space-y-2">
+              {benefits.map((b) => (
+                <li
+                  key={b}
+                  className="flex items-start gap-2.5 text-sm text-foreground/90"
+                >
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                  {b}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+
+          <Reveal direction="up" delay={280}>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link
+                href="/download"
+                className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary to-primary/90 px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[0_1px_0_0_rgba(255,255,255,0.18)_inset,0_10px_20px_-8px_rgba(99,102,241,0.55)] transition-all hover:-translate-y-0.5 hover:shadow-[0_1px_0_0_rgba(255,255,255,0.22)_inset,0_14px_28px_-10px_rgba(99,102,241,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {/* Sweeping shine */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                />
+                <Download className="relative h-4 w-4" />
+                <span className="relative">Download TaskFlow Desktop</span>
+                <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <p className="text-xs text-muted-foreground">
+                Free · Signed installers · Auto-updates
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal direction="up" delay={340}>
+            <p className="mt-5 text-[11px] font-medium text-muted-foreground">
+              Available for Windows 10+, macOS 12+, and major Linux
+              distributions.
+            </p>
+          </Reveal>
+        </div>
+
+        {/* Right — layered platform cards, subtly 3D */}
+        <Reveal direction="left" delay={200} className="relative">
+          <div className="relative mx-auto max-w-md">
+            {/* Decorative glow ring behind the card stack */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -inset-8 -z-10 rounded-[40px] bg-gradient-to-br from-primary/20 via-accent/15 to-fuchsia-500/15 blur-3xl"
+            />
+
+            <div className="relative grid grid-cols-1 gap-4">
+              {platforms.map((p, i) => (
+                <div
+                  key={p.name}
+                  className={cn(
+                    'group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl',
+                    // Stagger each card slightly on the X axis so they feel
+                    // like a stack rather than a plain vertical list.
+                    i === 0 && 'lg:ml-6',
+                    i === 1 && 'lg:ml-0',
+                    i === 2 && 'lg:ml-10'
+                  )}
+                  style={{ animationDelay: `${i * 120}ms` }}
+                >
+                  {/* Tinted wash specific to the platform */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80',
+                      p.tint
+                    )}
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/20"
+                  />
+
+                  <div className="relative flex items-center gap-4">
+                    <div
+                      className={cn(
+                        'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3',
+                        p.iconTint,
+                        p.ring
+                      )}
+                    >
+                      <p.Icon className="h-6 w-6" strokeWidth={1.6} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Native build
+                      </p>
+                      <p className="text-lg font-bold tracking-tight text-foreground">
+                        {p.name}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Ready
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+/* ────────────────────────────────────────────────────────────────────
  * How it works
  * ──────────────────────────────────────────────────────────────────── */
 
@@ -1012,21 +1149,21 @@ function HowItWorks() {
   const steps = [
     {
       n: '01',
-      title: 'Create your workspace',
+      title: 'Provision your workspace',
       blurb:
-        'Pick a workspace code (what teammates use to sign in). Customize colors and terminology to match your team.',
+        'Choose a workspace code your team will use to sign in. Configure branding, terminology, and core settings to align with your organization.',
     },
     {
       n: '02',
       title: 'Invite your team',
       blurb:
-        'Send invites by email. They choose a password, land on their dashboard. Role-based access decides what they see.',
+        'Send email invitations. Invitees set a password and land directly on their dashboard. Role-based access governs visibility and permissions.',
     },
     {
       n: '03',
-      title: 'Install the desktop app',
+      title: 'Deploy the desktop companion',
       blurb:
-        'The timer lives there. It counts activity, snaps occasional screenshots, and submits end-of-day summaries automatically.',
+        'Time tracking, activity capture, and end-of-day summaries run in the desktop application. A single installation enables automatic session recording and reporting.',
     },
   ]
 
@@ -1039,13 +1176,13 @@ function HowItWorks() {
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Get running in three steps.
+              Operational in three steps.
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
             <p className="mt-3 text-base text-muted-foreground">
-              No demo calls, no sales funnel. Sign up and you&apos;re productive
-              inside an hour.
+              No sales calls and no onboarding projects. Provision a workspace
+              and your team is productive within the hour.
             </p>
           </Reveal>
         </div>
@@ -1090,13 +1227,13 @@ function HowItWorks() {
 function Pricing() {
   const includes = [
     'Unlimited workspaces',
-    'Unlimited members',
-    'Unlimited projects & tasks',
-    'AI daily summaries (Groq-powered)',
-    'Activity tracking + screenshot evidence',
-    'Cross-project reports + CSV exports',
-    'Desktop app (Windows, macOS, Linux)',
-    'SRP authentication + role-based permissions',
+    'Unlimited team members',
+    'Unlimited projects and tasks',
+    'AI-generated daily summaries (Groq)',
+    'Activity tracking and periodic screenshot capture',
+    'Cross-project reporting and CSV export',
+    'Desktop applications for Windows, macOS, and Linux',
+    'Secure Remote Password authentication and role-based permissions',
   ]
 
   return (
@@ -1116,15 +1253,16 @@ function Pricing() {
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
               Free for every team.{' '}
               <span className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent">
-                Forever.
+                Permanently.
               </span>
             </h2>
           </Reveal>
           <Reveal direction="up" delay={160}>
             <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
-              No seat limits. No feature tiers. Desktop app, AI summaries,
-              reports — all included. Paid tiers will exist one day for larger
-              teams and compliance add-ons; existing workspaces stay on Free.
+              No seat limits and no feature gating. The desktop application,
+              AI summaries, and reporting are fully included. Paid tiers are
+              planned for enterprise-scale deployments and compliance add-ons;
+              workspaces provisioned today remain on the Free plan indefinitely.
             </p>
           </Reveal>
         </div>
@@ -1146,12 +1284,13 @@ function Pricing() {
                       $0
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      / workspace / forever
+                      per workspace, permanent
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Everything in TaskFlow is in the box. No credit card at
-                    signup, no feature-gated upsell banners inside the app.
+                    Every TaskFlow capability is included. No credit card is
+                    required at signup, and the product contains no upgrade
+                    prompts or feature paywalls.
                   </p>
 
                   <ul className="mt-5 grid grid-cols-1 gap-y-1.5 sm:grid-cols-2">
@@ -1176,7 +1315,7 @@ function Pricing() {
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                   <p className="text-center text-[11px] text-muted-foreground md:text-right">
-                    60-second setup · No card required
+                    Sub-minute provisioning · No card required
                   </p>
                 </div>
               </div>
@@ -1194,28 +1333,28 @@ function Pricing() {
 
 const FAQS: { q: string; a: string }[] = [
   {
-    q: 'Is TaskFlow really free?',
-    a: 'The workspace, invites, projects, tasks, reports, and the desktop app are all free. We plan paid tiers for larger teams and compliance features down the road — existing workspaces stay on the free tier.',
+    q: 'Is TaskFlow genuinely free?',
+    a: 'Yes. Workspaces, invitations, projects, tasks, reporting, and the desktop application are all included at no cost. Paid tiers are planned for larger organizations and compliance add-ons; workspaces provisioned today remain on the Free plan.',
   },
   {
-    q: 'Can I host TaskFlow on my own infrastructure?',
-    a: "Self-hosting isn't officially supported yet. The backend is Python Lambda + DynamoDB on AWS CDK — the infra is open enough that a technical team could bring their own AWS account, but we don't provide a one-click self-host installer at the moment.",
+    q: 'Can TaskFlow be hosted on our own infrastructure?',
+    a: 'Self-hosting is not formally supported at this time. The backend runs on Python Lambda, DynamoDB, and AWS CDK, so a technical team can adapt the infrastructure to run in its own AWS account. A packaged self-hosting option is on our roadmap.',
   },
   {
-    q: 'Do I own my data? Can I export it?',
-    a: 'Yes. Every list view has a CSV export. A full-workspace export (users, projects, tasks, attendance, day-offs in JSON + CSV) is on the roadmap.',
+    q: 'Do we own our data, and can we export it?',
+    a: 'Yes. Every list view supports CSV export. A full-workspace export covering users, projects, tasks, attendance, and time-off records in both JSON and CSV formats is on the product roadmap.',
   },
   {
-    q: 'How is my team isolated from other tenants?',
-    a: 'Every database key is prefixed with your org id. Every authenticated request re-reads your role from DynamoDB (not just the JWT claim). Uploads live under your org prefix in S3 and the presigned-URL handler refuses any key outside it.',
+    q: 'How is our data isolated from other tenants?',
+    a: 'Every database record is prefixed with your organization identifier. Each authenticated request re-reads the requesting user’s role from DynamoDB rather than trusting the JWT claim alone. Uploads reside under your organization’s S3 prefix, and the presigned-URL handler rejects any key outside that scope.',
   },
   {
-    q: 'Does TaskFlow support multiple teams in one workspace?',
-    a: 'One workspace = one team. Inside it you can have any number of projects with their own members and roles. If you run several businesses, create a workspace per business — data stays isolated.',
+    q: 'Does TaskFlow support multiple teams within a single workspace?',
+    a: 'One workspace corresponds to one team. Within a workspace you can create any number of projects, each with its own membership and roles. Organizations operating multiple business units should provision a separate workspace per unit to maintain full data isolation.',
   },
   {
-    q: 'What happens when I sign out of the desktop app?',
-    a: 'Your running session closes at sign-out. Hours are attributed to the day you clocked in. If you force-kill the app, a nightly sweeper closes any orphaned sessions so your timesheet stays clean.',
+    q: 'What happens when a user signs out of the desktop application?',
+    a: 'Active sessions are finalized at sign-out, and recorded hours are attributed to the day of clock-in. If the application is force-closed, a nightly process closes any orphaned sessions so timesheets remain accurate.',
   },
 ]
 
@@ -1250,8 +1389,8 @@ function Faq() {
             </Reveal>
             <Reveal direction="up" delay={160}>
               <p className="mt-3 text-sm text-muted-foreground">
-                The things we get asked most. Can&apos;t find what you&apos;re
-                looking for? We reply within a business day.
+                The questions we are asked most often. If you cannot find what
+                you are looking for, our team responds within one business day.
               </p>
             </Reveal>
             <Reveal direction="up" delay={240}>
@@ -1264,7 +1403,7 @@ function Faq() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground">
-                    Still stuck?
+                    Need further assistance?
                   </p>
                   <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
                     support@neurostack.in
@@ -1349,19 +1488,20 @@ function FinalCTA() {
         </Reveal>
         <Reveal direction="up" delay={80}>
           <h2 className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Your team&apos;s next week{' '}
+            Run your team&apos;s next week{' '}
             <span
               className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
               style={{ backgroundSize: '200% 200%' }}
             >
-              runs here.
+              on TaskFlow.
             </span>
           </h2>
         </Reveal>
         <Reveal direction="up" delay={160}>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
-            Create a workspace, invite your team, install the desktop app.
-            You&apos;ll see the first daily update by tomorrow morning.
+            Provision a workspace, invite your team, and deploy the desktop
+            companion. Your first daily summary will be ready by tomorrow
+            morning.
           </p>
         </Reveal>
 
@@ -1385,8 +1525,8 @@ function FinalCTA() {
 
         <Reveal direction="up" delay={320}>
           <p className="mt-5 text-xs text-muted-foreground">
-            No credit card required · Set up in 60 seconds · Cancel the moment
-            you want
+            No credit card required · Provisioned in under a minute · Cancel
+            at any time
           </p>
         </Reveal>
       </div>
@@ -1399,110 +1539,201 @@ function FinalCTA() {
  * ──────────────────────────────────────────────────────────────────── */
 
 function LandingFooter() {
+  const columns: {
+    title: string
+    links: {
+      label: string
+      href: string
+      external?: boolean
+      isRoute?: boolean
+    }[]
+  }[] = [
+    {
+      title: 'Product',
+      links: [
+        { label: 'Why TaskFlow', href: '#problem' },
+        { label: 'Capabilities', href: '#differentiator' },
+        { label: 'Features', href: '#features' },
+        { label: 'Pricing', href: '#pricing' },
+        {
+          label: 'Desktop download',
+          href: '/download',
+          isRoute: true,
+        },
+      ],
+    },
+    {
+      title: 'Account',
+      links: [
+        { label: 'Create workspace', href: '/signup', isRoute: true },
+        { label: 'Sign in', href: '/login', isRoute: true },
+        { label: 'Frequently asked', href: '#faq' },
+      ],
+    },
+    {
+      title: 'Company',
+      links: [
+        {
+          label: 'Contact support',
+          href: 'mailto:support@neurostack.in',
+        },
+        {
+          label: 'NEUROSTACK',
+          href: 'https://neurostack.in',
+          external: true,
+        },
+      ],
+    },
+  ]
+
+  const socials = [
+    {
+      label: 'Website',
+      href: 'https://neurostack.in',
+      Icon: Globe,
+    },
+    {
+      label: 'Email support',
+      href: 'mailto:support@neurostack.in',
+      Icon: Mail,
+    },
+    {
+      label: 'Product support',
+      href: 'mailto:support@neurostack.in',
+      Icon: MessageSquare,
+    },
+  ]
+
+  const legal = [
+    { label: 'Privacy', href: '/privacy' },
+    { label: 'Terms', href: '/terms' },
+    { label: 'Security', href: '/security' },
+    { label: 'Status', href: '/status' },
+  ]
+
   return (
-    <footer className="relative overflow-hidden bg-muted/30 py-10">
+    <footer className="relative overflow-hidden border-t border-border/60 bg-gradient-to-b from-muted/40 via-muted/20 to-background">
+      {/* Decorative top gradient line */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
       />
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          <div className="col-span-2 md:col-span-1">
+      {/* Soft corner orb — adds depth without a hard shape */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-20 top-16 h-64 w-64 rounded-full bg-primary/10 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-accent/10 blur-3xl"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+        {/* Top grid — brand block takes the full two columns on md so the
+            three link columns sit on the right half. */}
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-6 lg:gap-14">
+          <div className="md:col-span-3 lg:col-span-3">
             <Logo size="md" hideSubline />
-            <p className="mt-3 max-w-xs text-xs text-muted-foreground">
-              One workspace for tasks, time, daily updates, and day-offs. Built
-              for small teams.
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              A unified workspace for tasks, time tracking, daily summaries,
+              and time-off management. Built for modern teams that value
+              accountability and operational clarity.
             </p>
-          </div>
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Product
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <a
-                  href="#problem"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Why TaskFlow
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#differentiator"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Features
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#pricing"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Pricing
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://github.com/Giridharan0624/taskflow-desktop/releases/latest"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Desktop download
-                </a>
-              </li>
+            {/* Availability strip — immediately communicates multi-platform */}
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground backdrop-blur">
+              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Available on Web, Windows, macOS, and Linux
+            </div>
+
+            {/* Social row */}
+            <ul className="mt-5 flex items-center gap-2">
+              {socials.map((s) => (
+                <li key={s.label}>
+                  <a
+                    href={s.href}
+                    target={s.href.startsWith('http') ? '_blank' : undefined}
+                    rel={s.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    aria-label={s.label}
+                    className="group inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <s.Icon className="h-4 w-4" strokeWidth={1.8} />
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Account
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <Link
-                  href="/signup"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Start free
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/login"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Sign in
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Company
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <a
-                  href="mailto:support@neurostack.in"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Contact
-                </a>
-              </li>
-            </ul>
-          </div>
+          {/* Link columns */}
+          {columns.map((col) => (
+            <div key={col.title} className="md:col-span-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-foreground">
+                {col.title}
+              </p>
+              <ul className="mt-4 space-y-2.5 text-sm">
+                {col.links.map((l) => {
+                  const className =
+                    'group inline-flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none'
+                  if (l.isRoute) {
+                    return (
+                      <li key={l.label}>
+                        <Link href={l.href} className={className}>
+                          {l.label}
+                        </Link>
+                      </li>
+                    )
+                  }
+                  return (
+                    <li key={l.label}>
+                      <a
+                        href={l.href}
+                        target={l.external ? '_blank' : undefined}
+                        rel={l.external ? 'noopener noreferrer' : undefined}
+                        className={className}
+                      >
+                        {l.label}
+                        {l.external && (
+                          <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-70" />
+                        )}
+                      </a>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[11px] text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} TaskFlow. All rights reserved.</p>
+        {/* Bottom bar */}
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border/60 pt-6 text-[12px] text-muted-foreground sm:flex-row sm:items-center">
           <p>
-            Built by{' '}
-            <span className="font-semibold text-foreground/70">NEUROSTACK</span>
+            © {new Date().getFullYear()} TaskFlow. All rights reserved.
+          </p>
+
+          <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {legal.map((l) => (
+              <li key={l.label}>
+                <Link
+                  href={l.href}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          <p className="flex items-center gap-1.5">
+            Crafted by
+            <a
+              href="https://neurostack.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold text-foreground/80 transition-colors hover:text-primary"
+            >
+              NEUROSTACK
+              <ArrowUpRight className="h-3 w-3 opacity-70" />
+            </a>
           </p>
         </div>
       </div>

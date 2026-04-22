@@ -417,7 +417,7 @@ export default function UsersPage() {
                   <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60 bg-card">
+              <tbody className="divide-y divide-border/60 bg-card stagger-up">
                 {displayedUsers.map((u) => {
                   const att = attendanceByUserId.get(u.userId)
                   const isOnline = onlineUserIds.has(u.userId)

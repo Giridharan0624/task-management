@@ -1,18 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Download, Monitor, Apple } from 'lucide-react'
+import { Download, Monitor, Apple, Terminal } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { cn } from '@/lib/utils'
 
 interface Release {
   version: string
   released_at?: string
-  downloads: Record<string, string>
+  downloads?: Record<string, string>
 }
-
-const FALLBACK_URL =
-  'https://github.com/Giridharan0624/taskflow-desktop/releases/latest'
 
 function detectOS(): 'windows' | 'linux' | 'macos' {
   if (typeof navigator === 'undefined') return 'windows'
@@ -22,9 +19,58 @@ function detectOS(): 'windows' | 'linux' | 'macos' {
   return 'windows'
 }
 
+interface PlatformCard {
+  key: 'windows' | 'linux' | 'macos'
+  label: string
+  ext: string
+  size: string
+  href: string
+  Icon: React.ComponentType<{ className?: string }>
+  alt?: { label: string; href: string }
+}
+
+// Mirrors the /download page. All links go through /api/download/[platform]
+// which resolves to the current GitHub release asset and 302-redirects the
+// browser into a direct download. Linux takes a ?format override so the
+// primary button downloads the .deb while the secondary link fetches the
+// AppImage for other distributions.
+const PLATFORMS: PlatformCard[] = [
+  {
+    key: 'windows',
+    label: 'Windows',
+    ext: '.exe',
+    size: '~5 MB',
+    href: '/api/download/windows',
+    Icon: Monitor,
+  },
+  {
+    key: 'linux',
+    label: 'Linux',
+    ext: '.deb',
+    size: '~6 MB',
+    href: '/api/download/linux?format=deb',
+    Icon: Terminal,
+    alt: {
+      label: 'AppImage',
+      href: '/api/download/linux?format=appimage',
+    },
+  },
+  {
+    key: 'macos',
+    label: 'macOS',
+    ext: '.dmg',
+    size: '~11 MB',
+    href: '/api/download/macos',
+    Icon: Apple,
+  },
+]
+
 export function DesktopAppCard() {
   const [latest, setLatest] = useState<Release | null>(null)
 
+  // Version label is the only thing we still pull from the release manifest;
+  // actual download URLs go through our API route so we always get the most
+  // recent asset even if the manifest isn't up to date.
   useEffect(() => {
     fetch('https://dp2uotzxlo5a5.cloudfront.net/releases/latest.json')
       .then((r) => (r.ok ? r.json() : null))
@@ -36,17 +82,6 @@ export function DesktopAppCard() {
 
   const userOS = detectOS()
   const version = latest?.version ?? '1.0.0'
-  const platforms: {
-    key: 'windows' | 'linux' | 'macos'
-    label: string
-    ext: string
-    size: string
-    Icon: React.ComponentType<{ className?: string }>
-  }[] = [
-    { key: 'windows', label: 'Windows', ext: '.exe', size: '~5 MB', Icon: Monitor },
-    { key: 'linux', label: 'Linux', ext: '.AppImage', size: '~6 MB', Icon: Monitor },
-    { key: 'macos', label: 'macOS', ext: '.dmg', size: '~11 MB', Icon: Apple },
-  ]
 
   return (
     <Card className="overflow-hidden p-0">
@@ -65,51 +100,60 @@ export function DesktopAppCard() {
           companion app.
         </p>
         <div className="grid grid-cols-3 gap-2">
-          {platforms.map((p) => {
-            const url = latest?.downloads?.[p.key] ?? FALLBACK_URL
+          {PLATFORMS.map((p) => {
             const isUserOS = p.key === userOS
             return (
-              <a
-                key={p.key}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'group relative flex flex-col items-center gap-2 rounded-xl border px-3 py-3 transition-all hover:-translate-y-0.5 hover:shadow-card-hover',
-                  isUserOS
-                    ? 'border-primary/30 bg-primary/5'
-                    : 'border-border hover:border-border/80 hover:bg-muted/40'
-                )}
-              >
-                {isUserOS && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-primary-foreground">
-                    For you
-                  </span>
-                )}
-                <p.Icon
+              <div key={p.key} className="flex flex-col gap-1.5">
+                <a
+                  href={p.href}
+                  download
                   className={cn(
-                    'h-6 w-6 transition-colors',
+                    'group relative flex flex-col items-center gap-2 rounded-xl border px-3 py-3 transition-all hover:-translate-y-0.5 hover:shadow-card-hover',
                     isUserOS
-                      ? 'text-primary'
-                      : 'text-muted-foreground group-hover:text-primary'
+                      ? 'border-primary/30 bg-primary/5'
+                      : 'border-border hover:border-border/80 hover:bg-muted/40'
                   )}
-                />
-                <div className="text-center">
-                  <p
+                >
+                  {isUserOS && (
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-primary-foreground">
+                      For you
+                    </span>
+                  )}
+                  <p.Icon
                     className={cn(
-                      'text-xs font-bold',
+                      'h-6 w-6 transition-colors',
                       isUserOS
                         ? 'text-primary'
-                        : 'text-foreground group-hover:text-primary'
+                        : 'text-muted-foreground group-hover:text-primary'
                     )}
+                  />
+                  <div className="text-center">
+                    <p
+                      className={cn(
+                        'text-xs font-bold',
+                        isUserOS
+                          ? 'text-primary'
+                          : 'text-foreground group-hover:text-primary'
+                      )}
+                    >
+                      {p.label}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {p.ext} · {p.size}
+                    </p>
+                  </div>
+                </a>
+                {p.alt && (
+                  <a
+                    href={p.alt.href}
+                    download
+                    className="inline-flex items-center justify-center gap-1 rounded-md border border-dashed border-border/80 bg-background/40 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
                   >
-                    {p.label}
-                  </p>
-                  <p className="text-[9px] text-muted-foreground">
-                    {p.ext} · {p.size}
-                  </p>
-                </div>
-              </a>
+                    <Download className="h-3 w-3" />
+                    {p.alt.label}
+                  </a>
+                )}
+              </div>
             )
           })}
         </div>

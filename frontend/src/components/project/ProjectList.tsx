@@ -234,7 +234,7 @@ export function ProjectList() {
           />
         )
       ) : view === 'grid' ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-fade stagger-up">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-rise">
           {visible.map((project) => (
             <ProjectCard
               key={project.projectId}
@@ -247,14 +247,16 @@ export function ProjectList() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-          {visible.map((project) => (
-            <ProjectListRow
-              key={project.projectId}
-              project={project}
-              canDeleteProject={systemPerms.canCreateProject}
-              onDelete={handleDelete}
-            />
-          ))}
+          <div className="stagger-up">
+            {visible.map((project) => (
+              <ProjectListRow
+                key={project.projectId}
+                project={project}
+                canDeleteProject={systemPerms.canCreateProject}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
         </div>
       )}
 

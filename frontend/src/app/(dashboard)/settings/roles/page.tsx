@@ -223,7 +223,7 @@ export default function RolesSettingsPage() {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 stagger-rise">
           {state.roles.map((r) => (
             <RoleCard
               key={r.roleId}
@@ -352,7 +352,7 @@ function RoleCard({
       : 0
 
   return (
-    <Card className="flex flex-col gap-4 p-5 transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
+    <Card className="group flex flex-col gap-4 p-5 transition-all hover:-translate-y-0.5 hover:shadow-card-hover hover-lift-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
           <div

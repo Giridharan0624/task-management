@@ -258,7 +258,7 @@ export default function TaskUpdatesPage() {
             }
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 stagger-up">
+          <div className="grid gap-4 sm:grid-cols-2 stagger-rise">
             {filteredSubmitted.map((u) => (
               <SubmittedUpdateCard
                 key={u.updateId}

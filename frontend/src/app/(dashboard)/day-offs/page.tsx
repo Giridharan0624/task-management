@@ -612,7 +612,7 @@ export default function DayOffsPage() {
                 description="All requests have been reviewed. You're all caught up."
               />
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 stagger-up">
                 {pendingDayOffs.map((req) => (
                   <PendingRequestRow
                     key={req.requestId}
@@ -772,7 +772,7 @@ export default function DayOffsPage() {
                 }
               />
             ) : (
-              <Card className="overflow-hidden p-0">
+              <Card className="overflow-hidden p-0 hover-lift-sm">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -784,7 +784,7 @@ export default function DayOffsPage() {
                       <TableHead className="text-right">Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="stagger-up">
                     {filteredAll.map((req) => {
                       const scoreData = getDayOffScore(
                         req.userId,
@@ -895,7 +895,7 @@ export default function DayOffsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <Card className="overflow-hidden p-0">
+                <Card className="overflow-hidden p-0 hover-lift-sm">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -907,7 +907,7 @@ export default function DayOffsPage() {
                         <TableHead className="w-[100px]" />
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="stagger-up">
                       {sortedMyDayOffs.map((req) => (
                         <TableRow key={req.requestId}>
                           <TableCell className="font-semibold text-foreground">

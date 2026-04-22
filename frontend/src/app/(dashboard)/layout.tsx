@@ -21,6 +21,7 @@ import {
   Download,
   Monitor,
   Apple,
+  Terminal,
   X,
 } from 'lucide-react'
 import { Spinner } from '@/components/ui/Spinner'
@@ -95,7 +96,9 @@ const memberNav: NavItem[] = [
   { nameKey: 'nav.dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { nameKey: 'nav.my_tasks', name: 'My Tasks', href: '/my-tasks', icon: CheckSquare },
   { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare },
-  { nameKey: 'nav.attendance', name: 'Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
+  // Members land on MyAttendanceView — label mirrors that scoping so
+  // they don't expect a team roster behind this link.
+  { nameKey: 'nav.my_attendance', name: 'My Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
   { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
 ]
 
@@ -121,7 +124,6 @@ function getOS(): 'windows' | 'linux' | 'macos' {
 function DesktopDownloadLink() {
   const [latest, setLatest] = useState<{
     version: string
-    downloads: Record<string, string>
   } | null>(null)
   const userOS = getOS()
 
@@ -135,14 +137,34 @@ function DesktopDownloadLink() {
   }, [])
 
   const version = latest?.version || '1.0.0'
+  // All three icons go through /api/download/[platform] — same direct-
+  // download pipeline the /download page uses. Linux defaults to .deb;
+  // a tiny "All formats" link at the bottom routes to /download for
+  // users who want the AppImage or a specific distribution.
   const platforms: {
     key: 'windows' | 'linux' | 'macos'
     label: string
+    href: string
     Icon: React.ComponentType<{ className?: string }>
   }[] = [
-    { key: 'windows', label: 'Windows', Icon: Monitor },
-    { key: 'linux', label: 'Linux', Icon: Monitor },
-    { key: 'macos', label: 'macOS', Icon: Apple },
+    {
+      key: 'windows',
+      label: 'Windows',
+      href: '/api/download/windows',
+      Icon: Monitor,
+    },
+    {
+      key: 'linux',
+      label: 'Linux',
+      href: '/api/download/linux?format=deb',
+      Icon: Terminal,
+    },
+    {
+      key: 'macos',
+      label: 'macOS',
+      href: '/api/download/macos',
+      Icon: Apple,
+    },
   ]
 
   return (
@@ -156,18 +178,14 @@ function DesktopDownloadLink() {
           v{version}
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-1 px-2 pb-2">
+      <div className="grid grid-cols-3 gap-1 px-2 pb-1.5">
         {platforms.map((p) => {
-          const url =
-            latest?.downloads?.[p.key] ||
-            `https://github.com/Giridharan0624/taskflow-desktop/releases/latest`
           const isUserOS = p.key === userOS
           return (
             <a
               key={p.key}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={p.href}
+              download
               className={cn(
                 'group relative flex flex-col items-center gap-1 rounded-lg py-2.5 transition-all',
                 isUserOS
@@ -200,6 +218,12 @@ function DesktopDownloadLink() {
           )
         })}
       </div>
+      <Link
+        href="/download"
+        className="block border-t border-primary/10 px-3 py-1.5 text-center text-[9px] font-semibold uppercase tracking-wider text-primary/70 transition-colors hover:bg-primary/10 hover:text-primary"
+      >
+        All formats and system requirements →
+      </Link>
     </div>
   )
 }

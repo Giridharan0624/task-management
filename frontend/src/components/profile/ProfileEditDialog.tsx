@@ -14,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
-import { Checkbox } from '@/components/ui/Checkbox'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import type { User } from '@/types/user'
@@ -47,8 +46,6 @@ export function ProfileEditDialog({
   const [areaOfInterest, setAreaOfInterest] = useState('')
   const [hobby, setHobby] = useState('')
   const [skillsText, setSkillsText] = useState('')
-  const [companyPrefix, setCompanyPrefix] = useState('NS')
-  const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState('')
 
   // Seed form state from profile whenever the dialog opens
@@ -64,8 +61,6 @@ export function ProfileEditDialog({
     setAreaOfInterest(profile.areaOfInterest || '')
     setHobby(profile.hobby || '')
     setSkillsText((profile.skills ?? []).join(', '))
-    setCompanyPrefix(profile.companyPrefix || 'NS')
-    setConfirmed(false)
     setError('')
   }, [open, profile])
 
@@ -91,7 +86,6 @@ export function ProfileEditDialog({
         areaOfInterest,
         hobby,
         skills,
-        ...(isOwner && companyPrefix ? { companyPrefix } : {}),
       })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save profile')
@@ -118,7 +112,8 @@ export function ProfileEditDialog({
         )}
 
         {isOwner ? (
-          // OWNER has a simpler form: company name + prefix only
+          // OWNER has a simpler form — company name only. The Employee ID
+          // prefix lives on the Organization settings page.
           <div className="flex flex-col gap-4">
             <Input
               label={nameLabel}
@@ -126,24 +121,6 @@ export function ProfileEditDialog({
               onChange={(e) => setName(e.target.value)}
               placeholder="Your company name"
             />
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-foreground">
-                Employee ID prefix
-              </label>
-              <Input
-                value={companyPrefix}
-                onChange={(e) =>
-                  setCompanyPrefix(
-                    e.target.value
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9]/g, '')
-                      .slice(0, 6)
-                  )
-                }
-                className="font-mono uppercase"
-                hint={`Format: ${companyPrefix || 'NS'}-DEPT-YXXXX`}
-              />
-            </div>
           </div>
         ) : (
           <Tabs defaultValue="basic" className="w-full">
@@ -240,21 +217,14 @@ export function ProfileEditDialog({
           </Tabs>
         )}
 
-        <DialogFooter className="items-center">
-          <label className="mr-auto flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-            <Checkbox
-              checked={confirmed}
-              onCheckedChange={(v) => setConfirmed(!!v)}
-            />
-            I confirm the above details are correct.
-          </label>
+        <DialogFooter>
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             loading={isSaving}
-            disabled={!confirmed || !name.trim()}
+            disabled={!name.trim()}
           >
             Save changes
           </Button>

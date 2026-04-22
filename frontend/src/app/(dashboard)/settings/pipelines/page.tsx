@@ -116,7 +116,7 @@ export default function PipelinesSettingsPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 stagger-rise">
           {pipelines.map((p) => (
             <PipelineCard
               key={p.pipelineId}
@@ -166,7 +166,7 @@ function PipelineCard({
   onSetDefault: () => void
 }) {
   return (
-    <Card className="flex flex-col gap-3 p-5 transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
+    <Card className="group flex flex-col gap-3 p-5 transition-all hover:-translate-y-0.5 hover:shadow-card-hover hover-lift-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

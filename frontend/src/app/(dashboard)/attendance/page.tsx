@@ -16,6 +16,7 @@ import {
   useMyAttendance,
 } from '@/lib/hooks/useAttendance'
 import { useUsers } from '@/lib/hooks/useUsers'
+import { MyAttendanceView } from '@/components/attendance/MyAttendanceView'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -120,6 +121,20 @@ const SORT_LABELS: Record<SortKey, string> = {
 }
 
 export default function AttendancePage() {
+  const { user } = useAuth()
+
+  // Members get a self-focused view. The team-wide KPIs, leaderboard and
+  // member-card grid in TeamAttendanceView are admin/owner surfaces —
+  // members wouldn't see anyone but themselves anyway (backend scopes
+  // the report endpoint per-caller when ATTENDANCE_REPORT_VIEW is absent).
+  // Split into a separate component so its hooks only mount for admins.
+  if (user?.systemRole === 'MEMBER') {
+    return <MyAttendanceView />
+  }
+  return <TeamAttendanceView />
+}
+
+function TeamAttendanceView() {
   const { user } = useAuth()
   const now = new Date()
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
@@ -594,7 +609,7 @@ export default function AttendancePage() {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-up">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-rise">
               {visibleSummaries.map((member) => {
                 const share =
                   totalHours > 0

@@ -42,12 +42,11 @@ export function Logo({
   const tenant = useTenant()
   const orgName =
     tenant.summary?.displayName || tenant.current?.org?.name || ''
-  // On public pages (hideSubline=true) we intentionally ignore any
-  // tenant-provided logo so the default TaskFlow mark is shown instead
-  // of whatever the fallback tenant happens to have configured.
-  const logoUrl = hideSubline
-    ? '/logo.png'
-    : (tenant.summary?.logoUrl ?? '/logo.png')
+  // Product brand is always TaskFlow. The icon never changes per tenant —
+  // the workspace name still renders as the subline so admins know which
+  // workspace they're in, but the mark itself stays consistent across the
+  // whole product (dashboard, auth, landing, legal, everywhere).
+  const logoUrl = '/logo.png'
   // Don't repeat the org name when the tenant is the default fallback
   // (no real tenant resolved yet) or when the org happens to be named
   // "TaskFlow" already.

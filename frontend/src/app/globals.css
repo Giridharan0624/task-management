@@ -97,7 +97,6 @@
   }
 
   html {
-    @apply scroll-smooth;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -487,10 +486,97 @@
     transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .icon-pop { transition: transform 220ms ease; transform-origin: center; }
+
+  /* Page transition — keyed on pathname in <PageTransition>. A short
+     fade + rise + subtle scale tween so navigation feels intentional
+     without slowing the user down. Respects prefers-reduced-motion. */
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.992);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  .page-enter {
+    animation: page-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: opacity, transform;
+  }
+
+  /* Number count-in — used by <AnimatedNumber> when the tween is
+     skipped (reduced motion or static fallback). */
+  @keyframes number-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-number-in { animation: number-in 260ms ease-out forwards; }
+
+  /* Active row / card — gentle pulse for rows that just mutated
+     (e.g. a task status changed). One-shot, 600ms. */
+  @keyframes row-flash {
+    0%   { background-color: rgb(var(--color-primary) / 0.12); }
+    100% { background-color: transparent; }
+  }
+  .animate-row-flash { animation: row-flash 600ms ease-out; }
+
+  /* Chip flash — a ring pulse that fades out. Works on top of any
+     background color, so it's safe to apply to already-colored
+     badges. Use when a field value changes server-side and you
+     want a subtle "just saved" cue without disrupting layout. */
+  @keyframes chip-flash {
+    0%   { box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.35); }
+    100% { box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0); }
+  }
+  .animate-chip-flash { animation: chip-flash 700ms ease-out; }
+
+  /* Sidebar nav active indicator — slides vertically between items
+     when combined with `position: absolute` on a sibling span. */
+  .nav-indicator {
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 180ms ease;
+  }
+
+  /* Card hover-lift variants — small and medium shadow depths */
+  .hover-lift-sm {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+  .hover-lift-sm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Pressable — works with any button or clickable surface.
+     Combined with Tailwind active:scale — this only adds the
+     transition timing so the release feels soft, not bouncy. */
+  .pressable { transition: transform 120ms ease, box-shadow 120ms ease; }
+  .pressable:active { transform: scale(0.97); }
+
+  /* Staggered grid rise — like stagger-up but with a 2D offset so
+     grid children feel like they land instead of sliding linearly. */
+  @media (prefers-reduced-motion: no-preference) {
+    .stagger-rise > * {
+      opacity: 0;
+      animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .stagger-rise > *:nth-child(1)  { animation-delay: 20ms; }
+    .stagger-rise > *:nth-child(2)  { animation-delay: 60ms; }
+    .stagger-rise > *:nth-child(3)  { animation-delay: 100ms; }
+    .stagger-rise > *:nth-child(4)  { animation-delay: 140ms; }
+    .stagger-rise > *:nth-child(5)  { animation-delay: 180ms; }
+    .stagger-rise > *:nth-child(6)  { animation-delay: 220ms; }
+    .stagger-rise > *:nth-child(7)  { animation-delay: 260ms; }
+    .stagger-rise > *:nth-child(8)  { animation-delay: 300ms; }
+    .stagger-rise > *:nth-child(9)  { animation-delay: 340ms; }
+    .stagger-rise > *:nth-child(10) { animation-delay: 380ms; }
+    .stagger-rise > *:nth-child(n+11) { animation-delay: 420ms; }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .stagger-up > *,
+  .stagger-rise > *,
   .animate-breathe,
   .animate-drift,
   .animate-drift-slow,
@@ -507,10 +593,16 @@
   .animate-fade-in,
   .animate-fade-in-scale,
   .animate-slide-in-left,
-  .animate-slide-in-right {
+  .animate-slide-in-right,
+  .animate-number-in,
+  .animate-row-flash,
+  .animate-chip-flash,
+  .page-enter {
     animation: none !important;
   }
-  .stagger-up > * { opacity: 1; }
+  .stagger-up > *, .stagger-rise > * { opacity: 1; }
+  .hover-lift:hover, .hover-lift-sm:hover { transform: none; }
+  .pressable:active { transform: none; }
 }
 
 /* Touch-only devices can't `:hover`, so anything we hide behind a

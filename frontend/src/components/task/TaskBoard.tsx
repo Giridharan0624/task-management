@@ -73,7 +73,7 @@ export function TaskBoard({ tasks, onSelectTask }: TaskBoardProps) {
   return (
     <div className="kanban-scroll -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
       <div
-        className="grid auto-cols-[minmax(280px,1fr)] grid-flow-col gap-3 stagger-up"
+        className="grid auto-cols-[minmax(280px,1fr)] grid-flow-col gap-3 stagger-rise"
         style={{ minWidth: `${columns.length * 288}px` }}
       >
         {columns.map((col) => (
@@ -130,7 +130,7 @@ function BoardColumn({
           </span>
         </div>
       </div>
-      <div className="flex flex-col gap-2 p-2">
+      <div className="flex flex-col gap-2 p-2 stagger-up">
         {column.tasks.map((task) => (
           <BoardCard
             key={task.taskId}
@@ -157,7 +157,7 @@ function BoardCard({
       onClick={onClick}
       onMouseEnter={() => prefetchTask(task.projectId, task.taskId)}
       onFocus={() => prefetchTask(task.projectId, task.taskId)}
-      className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ring pressable"
     >
       <div className="flex items-start gap-2">
         <span

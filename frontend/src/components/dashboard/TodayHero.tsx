@@ -13,14 +13,14 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useMyTasks } from '@/lib/hooks/useUsers'
 import { usePendingDayOffs } from '@/lib/hooks/useDayOffs'
-import { useTodayAttendance } from '@/lib/hooks/useAttendance'
-import { useTaskUpdates } from '@/lib/hooks/useTaskUpdates'
+import { useTodayAttendance, useMyAttendance } from '@/lib/hooks/useAttendance'
+import { useTaskUpdates, useMyTaskUpdate } from '@/lib/hooks/useTaskUpdates'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import { cn } from '@/lib/utils'
 
 interface TodayHeroProps {
   userName?: string
-  role: 'OWNER' | 'ADMIN'
+  role: 'OWNER' | 'ADMIN' | 'MEMBER'
 }
 
 type Tone = 'danger' | 'warning' | 'info'
@@ -57,11 +57,18 @@ const toneStyles: Record<Tone, { bg: string; border: string; icon: string; text:
 }
 
 export function TodayHero({ userName, role }: TodayHeroProps) {
+  const isMember = role === 'MEMBER'
   const { data: myTasks } = useMyTasks()
   const { data: todayAttendance } = useTodayAttendance()
   const today = new Date().toISOString().slice(0, 10)
+  // Admin-only queries — skipped for members via `enabled: false` downstream
+  // wouldn't work here since the hooks don't take that param; instead we
+  // just don't read the data on the member branch.
   const { data: todayUpdates } = useTaskUpdates(today)
   const { data: pendingDayOffs } = usePendingDayOffs()
+  // Member-only: has the user submitted today's own daily update?
+  const { data: myUpdate } = useMyTaskUpdate()
+  const { data: myAttendance } = useMyAttendance()
 
   const overdueCount = useMemo(
     () =>
@@ -79,35 +86,70 @@ export function TodayHero({ userName, role }: TodayHeroProps) {
 
   const dayOffCount = pendingDayOffs?.length ?? 0
 
-  const prompts: ActionPrompt[] = [
-    overdueCount > 0 && {
-      key: 'overdue',
-      tone: 'danger' as Tone,
-      icon: AlertTriangle,
-      message: `${overdueCount} task${overdueCount === 1 ? '' : 's'} overdue`,
-      cta: 'Review now',
-      href: '/my-tasks',
-      count: overdueCount,
-    },
-    pendingUpdatesCount > 0 && {
-      key: 'updates',
-      tone: 'warning' as Tone,
-      icon: FileText,
-      message: `${pendingUpdatesCount} team member${pendingUpdatesCount === 1 ? "" : "s"} missing today's update`,
-      cta: 'Nudge team',
-      href: '/task-updates',
-      count: pendingUpdatesCount,
-    },
-    dayOffCount > 0 && {
-      key: 'dayoff',
-      tone: 'info' as Tone,
-      icon: CalendarCheck,
-      message: `${dayOffCount} day-off request${dayOffCount === 1 ? '' : 's'} awaiting approval`,
-      cta: 'Approve',
-      href: '/day-offs',
-      count: dayOffCount,
-    },
-  ].filter(Boolean) as ActionPrompt[]
+  // Member: has any sessions today but no update submitted yet.
+  // getMyTaskUpdate returns TaskUpdate (submitted) | PendingTaskUpdate | null.
+  // Discriminated by whether `updateId` is present.
+  const memberNeedsUpdate = useMemo(() => {
+    if (!isMember) return false
+    const hasSessionsToday = Boolean(
+      myAttendance?.sessions && myAttendance.sessions.length > 0
+    )
+    const submittedToday = Boolean(myUpdate && 'updateId' in myUpdate)
+    return hasSessionsToday && !submittedToday
+  }, [isMember, myAttendance, myUpdate])
+
+  const prompts: ActionPrompt[] = (
+    isMember
+      ? [
+          overdueCount > 0 && {
+            key: 'overdue',
+            tone: 'danger' as Tone,
+            icon: AlertTriangle,
+            message: `${overdueCount} task${overdueCount === 1 ? '' : 's'} overdue`,
+            cta: 'Review now',
+            href: '/my-tasks',
+            count: overdueCount,
+          },
+          memberNeedsUpdate && {
+            key: 'my-update',
+            tone: 'warning' as Tone,
+            icon: FileText,
+            message: "You haven't submitted today's daily update",
+            cta: 'Submit now',
+            href: '/task-updates',
+            count: 1,
+          },
+        ]
+      : [
+          overdueCount > 0 && {
+            key: 'overdue',
+            tone: 'danger' as Tone,
+            icon: AlertTriangle,
+            message: `${overdueCount} task${overdueCount === 1 ? '' : 's'} overdue`,
+            cta: 'Review now',
+            href: '/my-tasks',
+            count: overdueCount,
+          },
+          pendingUpdatesCount > 0 && {
+            key: 'updates',
+            tone: 'warning' as Tone,
+            icon: FileText,
+            message: `${pendingUpdatesCount} team member${pendingUpdatesCount === 1 ? '' : 's'} missing today's update`,
+            cta: 'Nudge team',
+            href: '/task-updates',
+            count: pendingUpdatesCount,
+          },
+          dayOffCount > 0 && {
+            key: 'dayoff',
+            tone: 'info' as Tone,
+            icon: CalendarCheck,
+            message: `${dayOffCount} day-off request${dayOffCount === 1 ? '' : 's'} awaiting approval`,
+            cta: 'Approve',
+            href: '/day-offs',
+            count: dayOffCount,
+          },
+        ]
+  ).filter(Boolean) as ActionPrompt[]
 
   const firstName = userName?.split(' ')[0] ?? 'there'
   const greeting = getGreeting()

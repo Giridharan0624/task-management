@@ -49,7 +49,7 @@ export function MemberAttendanceCard({
       type="button"
       onClick={onClick}
       className={cn(
-        'group flex w-full flex-col gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-all',
+        'group flex w-full flex-col gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-all pressable',
         'hover:-translate-y-0.5 hover:border-border/70 hover:shadow-card-hover',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
       )}

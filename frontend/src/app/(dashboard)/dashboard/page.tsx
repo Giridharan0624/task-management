@@ -20,16 +20,18 @@ export default function DashboardPage() {
 
   const role = user.systemRole
 
-  // Members keep their existing action-first view.
+  // Members get the same shell as admin/owner with role-scoped content —
+  // TodayHero, TeamPulseStrip, QuickActions all accept role='MEMBER' and
+  // render member-appropriate prompts/metrics/actions. Member-specific
+  // pieces (daily-update submission, top-5 task list) live below the shell.
   if (role === 'MEMBER') {
     return <MemberDashboard user={user} />
   }
 
-  // ADMIN and OWNER get the redesigned 5-section layout.
   const dashboardRole: 'OWNER' | 'ADMIN' = role === 'OWNER' ? 'OWNER' : 'ADMIN'
 
   return (
-    <div className="flex w-full max-w-6xl flex-col gap-5 animate-fade-in">
+    <div className="flex w-full max-w-6xl flex-col gap-5 animate-fade-in stagger-up">
       {/* Plan-limit banner — OWNER-only; self-hides when well below caps. */}
       <PlanLimitBanner />
 
@@ -47,7 +49,7 @@ export default function DashboardPage() {
       <TeamPulseStrip role={dashboardRole} />
 
       {/* 3. Attendance row — who's in vs who's out today. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-up">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 stagger-rise">
         <WhoIsWorking />
         <OnLeaveToday />
       </div>

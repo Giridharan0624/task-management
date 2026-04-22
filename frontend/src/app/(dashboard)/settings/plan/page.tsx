@@ -21,6 +21,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { cn } from '@/lib/utils'
 
 const TIER_META: Record<
@@ -144,7 +145,7 @@ export default function PlanSettingsPage() {
       </Card>
 
       {/* Usage grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 stagger-rise">
         {rows.map((row) => (
           <UsageCard key={row.label} {...row} />
         ))}
@@ -203,11 +204,11 @@ function UsageCard({
   const isAtCap = !unlimited && used !== null && used >= (limit ?? 0)
 
   return (
-    <Card className="flex flex-col gap-3 p-5">
+    <Card className="flex flex-col gap-3 p-5 hover-lift-sm">
       <div className="flex items-center gap-2">
         <div
           className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-lg',
+            'flex h-8 w-8 items-center justify-center rounded-lg icon-pop',
             isAtCap
               ? 'bg-destructive/10 text-destructive'
               : isNearCap
@@ -229,7 +230,7 @@ function UsageCard({
         <>
           <div className="flex items-baseline justify-between">
             <p className="text-2xl font-bold tabular-nums text-foreground leading-none">
-              {used}
+              <AnimatedNumber value={used} />
             </p>
             <p className="text-[11px] text-muted-foreground">
               {unlimited ? 'of Unlimited' : `of ${limit}`}

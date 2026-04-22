@@ -629,7 +629,7 @@ function SummaryView({
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 stagger-up">
         {/* Bar chart */}
-        <Card className="relative overflow-hidden p-5">
+        <Card className="relative overflow-hidden p-5 hover-lift-sm">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
             aria-hidden
@@ -732,7 +732,7 @@ function SummaryView({
         </Card>
 
         {/* Pie chart */}
-        <Card className="relative overflow-hidden p-5">
+        <Card className="relative overflow-hidden p-5 hover-lift-sm">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent"
             aria-hidden

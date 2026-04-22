@@ -178,8 +178,8 @@ export default function AuditLogPage() {
           </div>
         </Card>
       ) : (
-        <Card className="overflow-hidden p-0">
-          <ul className="divide-y divide-border/60">
+        <Card className="overflow-hidden p-0 hover-lift-sm">
+          <ul className="divide-y divide-border/60 stagger-up">
             {filtered.map((e) => (
               <AuditRow key={e.eventId} event={e} />
             ))}

@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Progress } from '@/components/ui/Progress'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/Tooltip'
 import { usePrefetchTask } from '@/lib/hooks/usePrefetchTask'
+import { useValueFlash } from '@/lib/hooks/useValueFlash'
 import { getProjectColor } from '@/lib/utils/projectColor'
 import { parseDeadline, isOverdue as checkOverdue } from '@/lib/utils/deadline'
 import {
@@ -93,7 +94,7 @@ export function TaskListView({
               : undefined
           }
         />
-        <ul className="divide-y divide-border/60">
+        <ul className="divide-y divide-border/60 stagger-up">
           {tasks.map((task) => (
             <TaskRow
               key={task.taskId}
@@ -173,7 +174,7 @@ function CollapsibleGroup({
                 : undefined
             }
           />
-          <ul className="divide-y divide-border/60">
+          <ul className="divide-y divide-border/60 stagger-up">
             {group.tasks.map((task) => (
               <TaskRow
                 key={task.taskId}
@@ -255,6 +256,7 @@ function TaskRow({
     (task.domain as TaskDomain) || 'DEVELOPMENT'
   )
   const prefetchTask = usePrefetchTask()
+  const statusFlash = useValueFlash(task.status)
 
   const gridCols = selection
     ? showAssignee
@@ -289,10 +291,7 @@ function TaskRow({
       {selection && (
         <div
           className="hidden md:flex items-center"
-          onClick={(e) => {
-            e.stopPropagation()
-            selection.toggle()
-          }}
+          onClick={(e) => e.stopPropagation()}
         >
           <Checkbox
             checked={selection.isSelected}
@@ -306,10 +305,7 @@ function TaskRow({
         {selection && (
           <div
             className="pt-0.5"
-            onClick={(e) => {
-              e.stopPropagation()
-              selection.toggle()
-            }}
+            onClick={(e) => e.stopPropagation()}
           >
             <Checkbox
               checked={selection.isSelected}
@@ -398,7 +394,8 @@ function TaskRow({
         <span
           className={cn(
             'inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold',
-            TASK_STATUS_COLORS[task.status] || 'bg-muted text-muted-foreground'
+            TASK_STATUS_COLORS[task.status] || 'bg-muted text-muted-foreground',
+            statusFlash
           )}
         >
           {labelOf(task.status)}

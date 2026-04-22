@@ -12,7 +12,12 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
-import { useTodayAttendance, useAttendanceReport } from '@/lib/hooks/useAttendance'
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
+import {
+  useTodayAttendance,
+  useAttendanceReport,
+  useMyAttendance,
+} from '@/lib/hooks/useAttendance'
 import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
@@ -32,7 +37,7 @@ interface Metric {
 }
 
 interface TeamPulseStripProps {
-  role: 'OWNER' | 'ADMIN'
+  role: 'OWNER' | 'ADMIN' | 'MEMBER'
 }
 
 export function TeamPulseStrip({ role }: TeamPulseStripProps) {
@@ -40,6 +45,7 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
   const { data: myTasks } = useMyTasks()
   const { data: users } = useUsers()
   const { data: projects } = useProjects()
+  const { data: myAttendance } = useMyAttendance()
 
   // 7-day report for week-over-week trends (owner only)
   const dates = useMemo(() => {
@@ -80,6 +86,25 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
   const overdueCount = useMemo(
     () =>
       (myTasks ?? []).filter((t) => checkOverdue(t.deadline, t.status)).length,
+    [myTasks]
+  )
+
+  // Member-specific: hours the user personally clocked today (from their
+  // own attendance, not the team-wide sum). Sessions without a signOut
+  // use computeLiveHours so an active timer keeps ticking.
+  const myHoursToday = useMemo(() => {
+    return (myAttendance?.sessions ?? []).reduce(
+      (s, se) =>
+        s + (se.hours ?? computeLiveHours(se.signInAt, se.signOutAt)),
+      0
+    )
+  }, [myAttendance])
+
+  const myActiveCount = useMemo(
+    () =>
+      (myTasks ?? []).filter(
+        (t) => t.status !== 'DONE' && !checkOverdue(t.deadline, t.status)
+      ).length,
     [myTasks]
   )
 
@@ -148,53 +173,89 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
                 : 'text-muted-foreground bg-muted',
           },
         ]
-      : [
-          {
-            key: 'working',
-            label: 'Working now',
-            value: workingNow,
-            icon: Users,
-            accent: 'text-emerald-600 bg-emerald-50',
-            live: workingNow > 0,
-          },
-          {
-            key: 'today-hours',
-            label: 'Hours today',
-            value: formatHours(hoursToday),
-            icon: Clock,
-            accent: 'text-blue-600 bg-blue-50',
-          },
-          {
-            key: 'completed',
-            label: 'Completed today',
-            value: completedToday,
-            icon: CheckCircle2,
-            accent: 'text-indigo-600 bg-indigo-50',
-          },
-          {
-            key: 'overdue',
-            label: 'Overdue',
-            value: overdueCount,
-            icon: AlertOctagon,
-            accent:
-              overdueCount > 0
-                ? 'text-destructive bg-destructive/10'
-                : 'text-muted-foreground bg-muted',
-          },
-        ]
+      : role === 'MEMBER'
+        ? [
+            {
+              // Member's own hours, not team sum — ties to useMyAttendance.
+              key: 'my-hours-today',
+              label: 'My hours today',
+              value: formatHours(myHoursToday),
+              icon: Clock,
+              accent: 'text-blue-600 bg-blue-50',
+              live: myAttendance?.status === 'SIGNED_IN',
+            },
+            {
+              key: 'my-active',
+              label: 'Active tasks',
+              value: myActiveCount,
+              icon: Users,
+              accent: 'text-indigo-600 bg-indigo-50',
+            },
+            {
+              key: 'my-completed',
+              label: 'Completed today',
+              value: completedToday,
+              icon: CheckCircle2,
+              accent: 'text-emerald-600 bg-emerald-50',
+            },
+            {
+              key: 'my-overdue',
+              label: 'Overdue',
+              value: overdueCount,
+              icon: AlertOctagon,
+              accent:
+                overdueCount > 0
+                  ? 'text-destructive bg-destructive/10'
+                  : 'text-muted-foreground bg-muted',
+            },
+          ]
+        : [
+            {
+              key: 'working',
+              label: 'Working now',
+              value: workingNow,
+              icon: Users,
+              accent: 'text-emerald-600 bg-emerald-50',
+              live: workingNow > 0,
+            },
+            {
+              key: 'today-hours',
+              label: 'Hours today',
+              value: formatHours(hoursToday),
+              icon: Clock,
+              accent: 'text-blue-600 bg-blue-50',
+            },
+            {
+              key: 'completed',
+              label: 'Completed today',
+              value: completedToday,
+              icon: CheckCircle2,
+              accent: 'text-indigo-600 bg-indigo-50',
+            },
+            {
+              key: 'overdue',
+              label: 'Overdue',
+              value: overdueCount,
+              icon: AlertOctagon,
+              accent:
+                overdueCount > 0
+                  ? 'text-destructive bg-destructive/10'
+                  : 'text-muted-foreground bg-muted',
+            },
+          ]
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 stagger-up">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 stagger-rise">
       {metrics.map((m) => {
         const Icon = m.icon
         return (
           <Card
             key={m.key}
-            className="flex items-center gap-3 p-4 transition-all hover:shadow-card-hover"
+            className="group flex items-center gap-3 p-4 transition-all hover:shadow-card-hover hover-lift-sm"
           >
             <div
               className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform icon-pop',
                 m.accent
               )}
             >
@@ -203,7 +264,11 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">
                 <p className="text-xl font-bold tabular-nums text-foreground">
-                  {m.value}
+                  {typeof m.value === 'number' ? (
+                    <AnimatedNumber value={m.value} />
+                  ) : (
+                    m.value
+                  )}
                 </p>
                 {m.live && (
                   <span className="relative flex h-1.5 w-1.5 shrink-0">

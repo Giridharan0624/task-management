@@ -19,6 +19,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
 import { applyTenantTheme } from '@/lib/tenant/theme'
 import { orgsApi, type UpdateSettingsRequest } from '@/lib/api/orgsApi'
+import { getProfile, updateProfile } from '@/lib/api/userApi'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -47,6 +48,10 @@ interface BrandingState {
   displayName: string
   primaryColor: string
   accentColor: string
+  /** Per-tenant prefix on generated employee IDs. Stored on the owner's
+   *  user profile (not org settings), but edited here alongside the other
+   *  workspace-identity fields because that's where owners expect it. */
+  companyPrefix: string
 }
 
 const DEFAULT_LOCALE: LocaleState = {
@@ -84,6 +89,7 @@ export default function OrgSettingsPage() {
     displayName: '',
     primaryColor: DEFAULT_PRIMARY,
     accentColor: DEFAULT_ACCENT,
+    companyPrefix: 'NS',
   })
   const [terminology, setTerminology] = useState<Record<string, string>>({})
   const [features, setFeatures] = useState<Record<string, boolean>>({})
@@ -108,6 +114,25 @@ export default function OrgSettingsPage() {
     }
   }, [user, router])
 
+  // Hydrate the employee ID prefix from the owner's profile. It lives on
+  // the user record rather than on org settings, so we fetch separately.
+  useEffect(() => {
+    let cancelled = false
+    getProfile()
+      .then((profile) => {
+        if (cancelled) return
+        const prefix = profile.companyPrefix || 'NS'
+        setBranding((b) => ({ ...b, companyPrefix: prefix }))
+        setSavedBranding((b) => ({ ...b, companyPrefix: prefix }))
+      })
+      .catch(() => {
+        // Non-fatal — leave the default 'NS' in place.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   // Hydrate form from TenantContext when settings arrive
   useEffect(() => {
     if (!current?.settings) {
@@ -119,6 +144,9 @@ export default function OrgSettingsPage() {
       displayName: s.displayName ?? '',
       primaryColor: s.primaryColor ?? DEFAULT_PRIMARY,
       accentColor: s.accentColor ?? DEFAULT_ACCENT,
+      // companyPrefix is hydrated from the owner's user profile in the
+      // effect below — preserve whatever value is already in state.
+      companyPrefix: branding.companyPrefix,
     }
     const initialTerminology = s.terminology ?? {}
     const initialFeatures = s.features ?? {}
@@ -191,6 +219,15 @@ export default function OrgSettingsPage() {
           // values the backend may still hold for this tenant.
           primaryColor: branding.primaryColor,
           accentColor: branding.accentColor,
+        }
+        // Prefix lives on the owner's user profile. Only send a profile
+        // update when the value actually changed, so we don't churn the
+        // profile record on every branding save.
+        if (branding.companyPrefix !== savedBranding.companyPrefix) {
+          const normalized = branding.companyPrefix.trim().toUpperCase()
+          if (normalized) {
+            await updateProfile({ companyPrefix: normalized })
+          }
         }
       } else if (tab === 'terminology') {
         payload = { terminology }
@@ -334,6 +371,23 @@ export default function OrgSettingsPage() {
                   setBranding((b) => ({ ...b, displayName: e.target.value }))
                 }
                 placeholder="Acme Inc"
+              />
+              <Input
+                label="Employee ID prefix"
+                type="text"
+                value={branding.companyPrefix}
+                onChange={(e) =>
+                  setBranding((b) => ({
+                    ...b,
+                    companyPrefix: e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, '')
+                      .slice(0, 6),
+                  }))
+                }
+                placeholder="NS"
+                className="font-mono uppercase"
+                hint="Used at the start of every generated employee ID."
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <ColorField

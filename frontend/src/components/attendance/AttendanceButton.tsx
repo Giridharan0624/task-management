@@ -109,7 +109,7 @@ export function AttendanceButton() {
 
   const groupedTasks = useMemo(() => groupSessionsByTask(sessions), [sessions])
 
-  if (isLoading) return <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center justify-center"><Spinner /></div>
+  if (isLoading) return <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center justify-center animate-fade-in"><Spinner /></div>
 
   /* ─── ACTIVE (timer running from desktop) ─── */
   if (active && attendance) {
@@ -117,7 +117,7 @@ export function AttendanceButton() {
     const curSession = sessions.find(s => !s.signOutAt)
 
     return (
-      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/30 shadow-sm overflow-hidden">
+      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/30 shadow-sm overflow-hidden animate-fade-in-scale">
         {/* Running timer display */}
         <div className="px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
@@ -142,7 +142,7 @@ export function AttendanceButton() {
 
         {/* Session list (read-only) */}
         {groupedTasks.length > 0 && (
-          <div className="border-t border-emerald-200/50 bg-card/50 divide-y divide-border/60">
+          <div className="border-t border-emerald-200/50 bg-card/50 divide-y divide-border/60 stagger-up">
             {groupedTasks.map((t, i) => (
               <SessionRow key={i} task={t} />
             ))}
@@ -163,7 +163,7 @@ export function AttendanceButton() {
   const hasSessions = groupedTasks.length > 0
 
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden animate-fade-in-scale">
       {hasSessions ? (
         <>
           {/* Header with total */}
@@ -176,7 +176,7 @@ export function AttendanceButton() {
           </div>
 
           {/* Sessions */}
-          <div className="divide-y divide-border/60">
+          <div className="divide-y divide-border/60 stagger-up">
             {groupedTasks.map((t, i) => (
               <SessionRow key={i} task={t} />
             ))}
