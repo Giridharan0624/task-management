@@ -13,6 +13,8 @@ interface LogoProps {
    * into the header of what's really a generic TaskFlow page.
    */
   hideSubline?: boolean
+  /** Render the wordmark in light colours for dark backgrounds. */
+  onDark?: boolean
   className?: string
 }
 
@@ -31,6 +33,7 @@ export function Logo({
   size = 'md',
   showText = true,
   hideSubline = false,
+  onDark = false,
   className,
 }: LogoProps) {
   const s = config[size]
@@ -73,8 +76,17 @@ export function Logo({
               'font-extrabold tracking-tight select-none'
             )}
           >
-            <span className="text-foreground">{PRODUCT_HEAD}</span>
-            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <span className={onDark ? 'text-white' : 'text-foreground'}>
+              {PRODUCT_HEAD}
+            </span>
+            <span
+              className={cn(
+                'bg-clip-text text-transparent',
+                onDark
+                  ? 'bg-gradient-to-r from-indigo-300 to-fuchsia-300'
+                  : 'bg-gradient-to-r from-primary to-primary/70'
+              )}
+            >
               {PRODUCT_TAIL}
             </span>
           </span>
@@ -82,7 +94,8 @@ export function Logo({
             <span
               className={cn(
                 s.sub,
-                'font-semibold uppercase tracking-wider text-muted-foreground select-none -mt-0.5'
+                'font-semibold uppercase tracking-wider select-none -mt-0.5',
+                onDark ? 'text-white/60' : 'text-muted-foreground'
               )}
             >
               {orgName}

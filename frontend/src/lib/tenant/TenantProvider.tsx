@@ -17,13 +17,13 @@ const STORAGE_KEY = 'taskflow_workspace'
 interface TenantContextValue {
   /** The active workspace code, or '' when unknown.
    *
-   *  Option-B model: login is email+password only, not scoped to a
-   *  workspace. The slug is resolved *after* login from the JWT's
-   *  org claim (via refreshCurrent()). Pre-login the slug is almost
-   *  always empty — a generic TaskFlow login screen with no tenant
-   *  theming. The URL query `?workspace=acme` is still honored when
-   *  present (e.g. invite links, signup links) to pre-theme the
-   *  screen, but it's not required. */
+   *  Login is email+password only — the workspace is never part of the
+   *  credential. The slug is resolved *after* login from the JWT's org
+   *  claim (via refreshCurrent()). Pre-login the slug is almost always
+   *  empty, which renders a generic TaskFlow login screen with no
+   *  tenant theming. Returning users get pre-themed on subsequent
+   *  visits via the slug that was cached in localStorage after their
+   *  previous session. */
   slug: string
   /** Public branding data from GET /orgs/by-slug/{slug}. Null
    *  whenever slug is empty — we don't fetch without an explicit
@@ -42,18 +42,13 @@ interface TenantContextValue {
 
 const TenantContext = createContext<TenantContextValue | null>(null)
 
-/** Only honor a workspace slug that came in explicitly via `?workspace=`
- *  or a previously-authenticated session's localStorage hint. Empty
- *  string means "no tenant yet" — login screen renders generic. */
+/** The slug is only remembered from a previously-authenticated session
+ *  via localStorage. Pre-auth theming via `?workspace=` query param has
+ *  been retired — first-time visitors see a generic login screen, and
+ *  the real tenant is resolved from the JWT once the user is signed in.
+ *  Empty string means "no tenant yet". */
 function readInitialSlug(): string {
   if (typeof window === 'undefined') return ''
-  const params = new URLSearchParams(window.location.search)
-  const fromQuery = params.get('workspace')
-  if (fromQuery) {
-    const normalized = fromQuery.trim().toLowerCase()
-    localStorage.setItem(STORAGE_KEY, normalized)
-    return normalized
-  }
   return localStorage.getItem(STORAGE_KEY) ?? ''
 }
 

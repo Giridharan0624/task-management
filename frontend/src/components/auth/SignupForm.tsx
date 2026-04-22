@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
-import { WorkspaceField } from '@/components/tenant/WorkspaceField'
 import { HCaptchaWidget } from '@/components/auth/HCaptchaWidget'
 
 interface SignupFormValues {
@@ -20,13 +19,6 @@ interface SignupFormValues {
   ownerEmail: string
   password: string
   confirmPassword: string
-}
-
-interface SignupFormProps {
-  slug: string
-  onSlugChange: (s: string) => void
-  slugTouched: boolean
-  onSlugTouchedChange: (t: boolean) => void
 }
 
 const slugify = (value: string) =>
@@ -38,12 +30,17 @@ const slugify = (value: string) =>
     .replace(/-+/g, '-')
     .slice(0, 30)
 
-export function SignupForm({
-  slug,
-  onSlugChange,
-  slugTouched,
-  onSlugTouchedChange,
-}: SignupFormProps) {
+/** Append a short random suffix to avoid clashing with an existing slug.
+ *  We favour the human-readable base when it's available; the suffix is
+ *  only appended if the caller tells us the plain form was already taken. */
+function withRandomSuffix(base: string): string {
+  const suffix = Math.random().toString(36).slice(2, 6)
+  // Keep the combined length under the 30-char slug limit.
+  const trimmedBase = base.slice(0, 25).replace(/-+$/, '')
+  return `${trimmedBase || 'workspace'}-${suffix}`
+}
+
+export function SignupForm() {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2>(1)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -61,54 +58,61 @@ export function SignupForm({
   const orgName = watch('orgName') ?? ''
   const password = watch('password') ?? ''
 
-  const handleOrgNameChange = (value: string) => {
-    if (!slugTouched) {
-      onSlugChange(slugify(value))
-    }
-  }
-
-  const onSlugEdit = (next: string) => {
-    onSlugChange(next)
-    if (!slugTouched) onSlugTouchedChange(true)
-  }
-
   const strength = usePasswordStrength(password)
 
   const goNext = async () => {
     const ok = await trigger(['orgName'])
-    const slugClean = slug.trim().toLowerCase()
-    if (!slugClean) {
-      setServerError('Workspace code is required')
-      return
-    }
-    setServerError(null)
     if (!ok) return
+    setServerError(null)
     setStep(2)
   }
 
   const onSubmit = async (values: SignupFormValues) => {
     setServerError(null)
-    const normalizedSlug = slug.trim().toLowerCase()
-    if (!normalizedSlug) {
-      setServerError('Workspace code is required')
-      setStep(1)
-      return
-    }
     if (captchaEnabled && !captchaToken) {
       setServerError('Please complete the captcha to continue.')
       return
     }
 
+    const trimmedOrgName = values.orgName.trim()
+    const baseSlug = slugify(trimmedOrgName)
+    if (!baseSlug) {
+      setServerError('Please enter a valid company name.')
+      setStep(1)
+      return
+    }
+
+    // Pick a unique slug by probing the backend — simple collision
+    // handling so the user never has to think about it. First try the
+    // plain slugified name; on conflict, append a short random suffix
+    // and retry up to a handful of times.
+    let slug = baseSlug
+    let attempts = 0
+    while (attempts < 5) {
+      try {
+        await orgsApi.getBySlug(slug)
+        // 200 — slug is taken. Try again with a fresh suffix.
+        slug = withRandomSuffix(baseSlug)
+        attempts += 1
+      } catch (err: unknown) {
+        const status = (err as { status?: number })?.status
+        if (status === 404) break // slug is free
+        // Any other error: abort and let the backend reject signup with
+        // the real reason rather than silently continuing.
+        break
+      }
+    }
+
     try {
-      const result = await orgsApi.signup({
-        orgName: values.orgName.trim(),
-        slug: normalizedSlug,
+      await orgsApi.signup({
+        orgName: trimmedOrgName,
+        slug,
         ownerName: values.ownerName.trim(),
         ownerEmail: values.ownerEmail.trim().toLowerCase(),
         password: values.password,
         captchaToken: captchaToken ?? undefined,
       })
-      router.replace(`/login?workspace=${result.slug}&first_login=1`)
+      router.replace('/login?first_login=1')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Signup failed'
       setServerError(msg)
@@ -134,14 +138,7 @@ export function SignupForm({
             {...register('orgName', {
               required: 'Company name is required',
               maxLength: { value: 100, message: 'Max 100 characters' },
-              onChange: (e) => handleOrgNameChange(e.target.value),
             })}
-          />
-
-          <WorkspaceField
-            value={slug}
-            onChange={onSlugEdit}
-            mode="signup"
           />
 
           {serverError && (
@@ -156,7 +153,7 @@ export function SignupForm({
             onClick={goNext}
             className="w-full"
             size="lg"
-            disabled={!orgName?.trim() || !slug.trim()}
+            disabled={!orgName?.trim()}
           >
             Continue
             <ArrowRight className="h-4 w-4" />

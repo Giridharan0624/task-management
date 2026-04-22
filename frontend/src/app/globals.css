@@ -487,21 +487,69 @@
   }
   .icon-pop { transition: transform 220ms ease; transform-origin: center; }
 
-  /* Page transition — keyed on pathname in <PageTransition>. A short
-     fade + rise + subtle scale tween so navigation feels intentional
-     without slowing the user down. Respects prefers-reduced-motion. */
-  @keyframes page-enter {
-    from {
-      opacity: 0;
-      transform: translateY(14px) scale(0.992);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+  /* Page transitions — keyed on pathname in <PageTransition>. Multiple
+     variants are available so the feel can be tuned from a single
+     prop. All respect prefers-reduced-motion (neutralised below). */
+
+  /* 1) Rise — fade + subtle upward translate + micro scale. The default.
+     Feels intentional, doesn't slow down navigation. */
+  @keyframes page-rise {
+    from { opacity: 0; transform: translateY(14px) scale(0.992); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
   }
+  .page-enter-rise {
+    animation: page-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: opacity, transform;
+  }
+
+  /* 2) Fade — pure opacity. Cleanest, least movement. Good for pages
+     with heavy internal animation that would conflict with page motion. */
+  @keyframes page-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .page-enter-fade {
+    animation: page-fade 240ms ease-out forwards;
+    will-change: opacity;
+  }
+
+  /* 3) Slide — horizontal sweep from the right. Feels like mobile-app
+     navigation or Linear's pane swaps. */
+  @keyframes page-slide {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .page-enter-slide {
+    animation: page-slide 340ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: opacity, transform;
+  }
+
+  /* 4) Scale — blooms from 96% to 100%. Feels like a panel materialising. */
+  @keyframes page-scale {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .page-enter-scale {
+    animation: page-scale 300ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    transform-origin: center top;
+    will-change: opacity, transform;
+  }
+
+  /* 5) Blur-fade — opacity + filter blur ramp. Premium cinematic feel.
+     Slightly more GPU work than the others; keep duration tight. */
+  @keyframes page-blur {
+    from { opacity: 0; filter: blur(8px); transform: translateY(6px); }
+    to   { opacity: 1; filter: blur(0); transform: translateY(0); }
+  }
+  .page-enter-blur {
+    animation: page-blur 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: opacity, transform, filter;
+  }
+
+  /* Legacy alias — original callers used .page-enter. Keep it pointing
+     at the Rise variant so nothing regresses. */
   .page-enter {
-    animation: page-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: page-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     will-change: opacity, transform;
   }
 
@@ -597,8 +645,14 @@
   .animate-number-in,
   .animate-row-flash,
   .animate-chip-flash,
-  .page-enter {
+  .page-enter,
+  .page-enter-rise,
+  .page-enter-fade,
+  .page-enter-slide,
+  .page-enter-scale,
+  .page-enter-blur {
     animation: none !important;
+    filter: none !important;
   }
   .stagger-up > *, .stagger-rise > * { opacity: 1; }
   .hover-lift:hover, .hover-lift-sm:hover { transform: none; }
