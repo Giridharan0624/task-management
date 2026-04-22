@@ -253,6 +253,13 @@ export default function ProfilePage() {
               >
                 Change
               </Link>
+              <span className="text-muted-foreground/50">·</span>
+              <Link
+                href="/profile/mfa"
+                className="text-[11px] font-semibold text-primary hover:underline"
+              >
+                2FA
+              </Link>
             </p>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">

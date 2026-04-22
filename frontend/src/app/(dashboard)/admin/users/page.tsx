@@ -287,6 +287,26 @@ export default function UsersPage() {
     }
   }
 
+  const handleResetMfa = async (u: User) => {
+    const confirmed = await confirm({
+      title: `Reset 2FA for ${u.name || u.email}?`,
+      description:
+        "Their TOTP authenticator will be disabled so they can sign in with password alone. They'll be prompted to re-enroll from their profile afterwards.",
+      confirmLabel: 'Reset 2FA',
+      variant: 'danger',
+    })
+    if (!confirmed) return
+    try {
+      const { resetUserMfa } = await import('@/lib/api/userApi')
+      await resetUserMfa(u.userId)
+      toast.success(`2FA reset for ${u.name || u.email}.`)
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to reset 2FA.',
+      )
+    }
+  }
+
   const handleRoleChange = async (userId: string, role: string) => {
     try {
       await updateRole.mutateAsync({ userId, systemRole: role })
@@ -503,6 +523,11 @@ export default function UsersPage() {
                           onViewProfile={() => setViewUser(u)}
                           onViewProgress={() => setProgressUser(u.userId)}
                           onDelete={canDelete ? () => handleDelete(u) : undefined}
+                          onResetMfa={
+                            isOwner && u.userId !== currentUser?.userId
+                              ? () => handleResetMfa(u)
+                              : undefined
+                          }
                         />
                       </td>
                     </tr>

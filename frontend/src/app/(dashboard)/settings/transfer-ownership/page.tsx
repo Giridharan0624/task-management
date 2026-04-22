@@ -234,7 +234,7 @@ export default function TransferOwnershipPage() {
             Cancel
           </Button>
           <Button
-            variant="destructive"
+            variant="danger"
             onClick={onTransfer}
             loading={submitting}
             disabled={!canSubmit}

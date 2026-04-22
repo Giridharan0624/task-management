@@ -103,6 +103,21 @@ export function syncEmail(): Promise<{
   return apiClient.put('/users/me/email', {})
 }
 
+/** POST /users/{userId}/mfa/reset — OWNER-only. Disables the target's
+ *  TOTP factor in Cognito so they can sign in with password alone and
+ *  re-enroll from /profile/mfa. Recovery escape hatch for lost
+ *  authenticators. */
+export function resetUserMfa(userId: string): Promise<{
+  userId: string
+  email: string
+  mfaResetAt: string
+}> {
+  return apiClient.post(
+    `/users/${encodeURIComponent(userId)}/mfa/reset`,
+    {},
+  )
+}
+
 export function deleteUser(userId: string): Promise<void> {
   return apiClient.del<void>(`/users/${userId}`)
 }

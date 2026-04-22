@@ -93,6 +93,12 @@ class OrgNestedStack(NestedStack):
         # /uploads/presign resource.
         uploads_presign_resource: apigw.IResource | None = None,
         cdn_domain: str = "",
+        # /users/{userId}/mfa/reset resource — OWNER admin MFA reset.
+        user_mfa_reset_resource: apigw.IResource | None = None,
+        # User-list sub-routes that got relocated for CFN budget.
+        users_birthdays_resource: apigw.IResource | None = None,
+        users_admins_resource: apigw.IResource | None = None,
+        users_department_resource: apigw.IResource | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -474,6 +480,73 @@ class OrgNestedStack(NestedStack):
             uploads_presign_resource.add_method(
                 "GET",
                 apigw.LambdaIntegration(presign_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        # Small list endpoints relocated from the parent stack for
+        # CFN budget. Pure reads — no special IAM, just table access.
+        def _mount_authed(res, handler_path: str, method: str, name: str):
+            fn = _lambda.Function(
+                self, name, handler=handler_path, **lambda_defaults,
+            )
+            table.grant_read_data(fn)
+            res.add_method(
+                method,
+                apigw.LambdaIntegration(fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+            return fn
+
+        if users_birthdays_resource is not None:
+            _mount_authed(
+                users_birthdays_resource,
+                "contexts.user.handlers.get_birthdays.handler",
+                "GET",
+                "GetBirthdays",
+            )
+        if users_admins_resource is not None:
+            _mount_authed(
+                users_admins_resource,
+                "contexts.user.handlers.list_admins.handler",
+                "GET",
+                "ListAdmins",
+            )
+        if users_department_resource is not None:
+            dept_fn = _lambda.Function(
+                self, "UpdateUserDepartment",
+                handler="contexts.user.handlers.update_user_department.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_write_data(dept_fn)
+            users_department_resource.add_method(
+                "PUT",
+                apigw.LambdaIntegration(dept_fn),
+                authorizer=authorizer,
+                authorization_type=apigw.AuthorizationType.COGNITO,
+            )
+
+        # Admin MFA reset — OWNER disables a target user's TOTP factor
+        # so they can sign in with password alone and re-enroll.
+        if user_mfa_reset_resource is not None:
+            reset_mfa_fn = _lambda.Function(
+                self,
+                "AdminResetMfa",
+                handler="contexts.user.handlers.admin_reset_mfa.handler",
+                **lambda_defaults,
+            )
+            table.grant_read_data(reset_mfa_fn)
+            reset_mfa_fn.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["cognito-idp:AdminSetUserMFAPreference"],
+                    resources=[user_pool.user_pool_arn],
+                )
+            )
+            reset_mfa_fn.add_environment("USER_POOL_ID", user_pool.user_pool_id)
+            user_mfa_reset_resource.add_method(
+                "POST",
+                apigw.LambdaIntegration(reset_mfa_fn),
                 authorizer=authorizer,
                 authorization_type=apigw.AuthorizationType.COGNITO,
             )

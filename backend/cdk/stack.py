@@ -176,6 +176,13 @@ class TaskManagementStack(Stack):
                 ),
                 email_style=cognito.VerificationEmailStyle.CODE,
             ),
+            # Phase: 2FA (Session 3). OPTIONAL lets existing users keep
+            # single-factor login while new users can opt in from the
+            # /profile/mfa settings page. SMS is deliberately off —
+            # SIM-swap attacks make it a weak second factor for a SaaS
+            # with admin accounts. TOTP-only is the stronger baseline.
+            mfa=cognito.Mfa.OPTIONAL,
+            mfa_second_factor=cognito.MfaSecondFactor(otp=True, sms=False),
             removal_policy=data_removal_policy,
         )
 
@@ -319,6 +326,10 @@ class TaskManagementStack(Stack):
         users_me_tasks = users_me.add_resource("tasks")
         user_by_id = users.add_resource("{userId}")
         user_progress = user_by_id.add_resource("progress")
+        # /users/{userId}/reset-mfa — method + Lambda live in the Org
+        # nested stack for CFN budget; parent declares the resource.
+        # Shallow URL (not /mfa/reset) to save one CFN resource.
+        user_reset_mfa = user_by_id.add_resource("reset-mfa")
         users_role = users.add_resource("role")
         users_department = users.add_resource("department")
         users_admins = users.add_resource("admins")
@@ -390,9 +401,9 @@ class TaskManagementStack(Stack):
             cognito_policies=["cognito-idp:AdminUpdateUserAttributes"],
         )
         add_api_lambda("GetUserProgress", "contexts.user.handlers.get_user_progress.handler", "GET", user_progress)
-        add_api_lambda("UpdateUserDepartment", "contexts.user.handlers.update_user_department.handler", "PUT", users_department)
-        add_api_lambda("ListAdmins", "contexts.user.handlers.list_admins.handler", "GET", users_admins)
-        add_api_lambda("GetBirthdays", "contexts.user.handlers.get_birthdays.handler", "GET", users_birthdays)
+        # UpdateUserDepartment / ListAdmins / GetBirthdays — methods +
+        # Lambdas live in the Org nested stack for CFN budget. Parent
+        # declares the resources above.
 
         # ─── Public endpoint (no auth) — resolve employee ID to email for login
         resolve_employee = api.root.add_resource("resolve-employee")
@@ -453,6 +464,10 @@ class TaskManagementStack(Stack):
             task_updates_me_resource=task_updates_me,
             uploads_presign_resource=uploads_presign,
             cdn_domain=cdn.distribution_domain_name,
+            user_mfa_reset_resource=user_reset_mfa,
+            users_birthdays_resource=users_birthdays,
+            users_admins_resource=users_admins,
+            users_department_resource=users_department,
         )
 
         # ─── Attendance + Day-off handlers (nested) ─────────────────────────

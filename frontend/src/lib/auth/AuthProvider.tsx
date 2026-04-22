@@ -6,6 +6,7 @@ import type { User } from '@/types/user'
 import {
   signIn as cognitoSignIn,
   completeNewPassword as cognitoCompleteNewPassword,
+  completeMfaChallenge as cognitoCompleteMfaChallenge,
   signOut as cognitoSignOut,
   changePassword as cognitoChangePassword,
   refreshSession as cognitoRefreshSession,
@@ -18,13 +19,23 @@ interface PendingPasswordChange {
   userAttributes: Record<string, string>
 }
 
+interface PendingMfaChallenge {
+  cognitoUser: CognitoUser
+}
+
 interface AuthContextValue {
   user: User | null
   token: string | null
   isLoading: boolean
   needsPasswordChange: boolean
+  /** True while sign-in is paused on a TOTP MFA challenge. The
+   *  LoginForm flips to a 6-digit code input while this is set. */
+  needsMfaChallenge: boolean
   signIn: (email: string, password: string) => Promise<void>
   completePasswordChange: (newPassword: string) => Promise<void>
+  /** Submit the authenticator code to finish sign-in when the user
+   *  has TOTP MFA enabled. */
+  completeMfaChallenge: (code: string) => Promise<void>
   signOut: () => void
   updateUser: (updates: Partial<User>) => void
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>
@@ -77,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [pendingPasswordChange, setPendingPasswordChange] = useState<PendingPasswordChange | null>(null)
+  const [pendingMfaChallenge, setPendingMfaChallenge] = useState<PendingMfaChallenge | null>(null)
 
   // Pull tenant.refreshCurrent() up here so signIn can call it after the
   // token is stored. Without this, the dashboard renders before
@@ -85,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { refreshCurrent: refreshTenant, clearWorkspace } = useTenant()
 
   const needsPasswordChange = pendingPasswordChange !== null
+  const needsMfaChallenge = pendingMfaChallenge !== null
 
   // Check token on load
   useEffect(() => {
@@ -157,6 +170,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    if (result.type === 'SOFTWARE_TOKEN_MFA') {
+      // TOTP enrolled — pause the login flow and let the form
+      // collect the authenticator code. `completeMfaChallenge` below
+      // finishes the sign-in with the collected code.
+      setPendingMfaChallenge({ cognitoUser: result.cognitoUser })
+      return
+    }
+
     // Normal success
     const idToken = result.tokens.idToken
     localStorage.setItem('auth_token', idToken)
@@ -171,6 +192,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore — TenantProvider's effect will fall back to /orgs/by-slug
     }
   }, [refreshTenant])
+
+  const completeMfaChallenge = useCallback(async (code: string) => {
+    if (!pendingMfaChallenge) throw new Error('No pending MFA challenge')
+    const tokens = await cognitoCompleteMfaChallenge(
+      pendingMfaChallenge.cognitoUser,
+      code.trim(),
+    )
+    const idToken = tokens.idToken
+    localStorage.setItem('auth_token', idToken)
+    setToken(idToken)
+    setUser(decodeJwtForUser(idToken))
+    setPendingMfaChallenge(null)
+    try {
+      await refreshTenant()
+    } catch {
+      // ignore — TenantProvider falls back to public branding
+    }
+  }, [pendingMfaChallenge, refreshTenant])
 
   const completePasswordChange = useCallback(async (newPassword: string) => {
     if (!pendingPasswordChange) throw new Error('No pending password change')
@@ -198,6 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null)
     setUser(null)
     setPendingPasswordChange(null)
+    setPendingMfaChallenge(null)
     // Drop the cached workspace slug too — a second user on the same
     // device should not see the previous user's org branding on the
     // login screen.
@@ -224,8 +264,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, isLoading, needsPasswordChange,
-      signIn, completePasswordChange, signOut, updateUser,
+      user, token, isLoading,
+      needsPasswordChange, needsMfaChallenge,
+      signIn, completePasswordChange, completeMfaChallenge,
+      signOut, updateUser,
       changePassword: changePasswordFn,
       refreshSession,
     }}>

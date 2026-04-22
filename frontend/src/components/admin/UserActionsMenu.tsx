@@ -1,6 +1,6 @@
 'use client'
 
-import { MoreHorizontal, BarChart3, Trash2, User } from 'lucide-react'
+import { MoreHorizontal, BarChart3, ShieldOff, Trash2, User } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
   DropdownMenu,
@@ -15,12 +15,17 @@ interface UserActionsMenuProps {
   onViewProfile: () => void
   onViewProgress: () => void
   onDelete?: () => void
+  /** OWNER-only — reset the target user's 2FA (disable their TOTP
+   *  factor) so they can sign in with password alone after losing
+   *  their authenticator. */
+  onResetMfa?: () => void
 }
 
 export function UserActionsMenu({
   onViewProfile,
   onViewProgress,
   onDelete,
+  onResetMfa,
 }: UserActionsMenuProps) {
   return (
     <DropdownMenu>
@@ -43,6 +48,12 @@ export function UserActionsMenu({
           <BarChart3 className="h-4 w-4" />
           View progress
         </DropdownMenuItem>
+        {onResetMfa && (
+          <DropdownMenuItem onClick={onResetMfa}>
+            <ShieldOff className="h-4 w-4" />
+            Reset 2FA
+          </DropdownMenuItem>
+        )}
         {onDelete && (
           <>
             <DropdownMenuSeparator />

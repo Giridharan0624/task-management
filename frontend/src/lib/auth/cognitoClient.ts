@@ -24,12 +24,22 @@ export interface NewPasswordRequired {
   userAttributes: Record<string, string>
 }
 
+export interface SoftwareTokenMfaRequired {
+  type: 'SOFTWARE_TOKEN_MFA'
+  /** Pass back to `completeMfaChallenge()` with the user's 6-digit
+   *  authenticator code to finish sign-in. */
+  cognitoUser: CognitoUser
+}
+
 export interface SignInSuccess {
   type: 'SUCCESS'
   tokens: AuthTokens
 }
 
-export type SignInResult = SignInSuccess | NewPasswordRequired
+export type SignInResult =
+  | SignInSuccess
+  | NewPasswordRequired
+  | SoftwareTokenMfaRequired
 
 export function signIn(identifier: string, password: string): Promise<SignInResult> {
   const username = identifier.trim()
@@ -69,7 +79,44 @@ export function signIn(identifier: string, password: string): Promise<SignInResu
           userAttributes,
         })
       },
+      // TOTP MFA challenge — user has enrolled an authenticator app
+      // and Cognito needs the 6-digit code to complete sign-in.
+      totpRequired: () => {
+        resolve({
+          type: 'SOFTWARE_TOKEN_MFA',
+          cognitoUser,
+        })
+      },
     })
+  })
+}
+
+/** Respond to the TOTP MFA challenge returned by `signIn`.
+ *
+ *  The caller passes the `cognitoUser` handle from the
+ *  SoftwareTokenMfaRequired result and the 6-digit code the user
+ *  read from their authenticator app. On success Cognito issues
+ *  tokens just like a normal sign-in — no further challenges.
+ */
+export function completeMfaChallenge(
+  cognitoUser: CognitoUser,
+  code: string,
+): Promise<AuthTokens> {
+  return new Promise((resolve, reject) => {
+    cognitoUser.sendMFACode(
+      code,
+      {
+        onSuccess: (session: CognitoUserSession) => {
+          resolve({
+            idToken: session.getIdToken().getJwtToken(),
+            accessToken: session.getAccessToken().getJwtToken(),
+            refreshToken: session.getRefreshToken().getToken(),
+          })
+        },
+        onFailure: (err) => reject(err),
+      },
+      'SOFTWARE_TOKEN_MFA',
+    )
   })
 }
 
@@ -287,6 +334,149 @@ export function verifyEmailCode(code: string): Promise<void> {
     })
   })
 }
+
+// ──────────────────────────────────────────────────────────────────
+// TOTP enrollment (Session 3)
+// ──────────────────────────────────────────────────────────────────
+
+/** Start TOTP enrollment. Returns the shared secret the authenticator
+ *  app needs (scan the QR built from this + username, or enter
+ *  manually). The associated token is NOT yet enabled — the caller
+ *  must call `verifyTotpEnrollment()` with the first 6-digit code
+ *  the app generates, which commits the enrollment. If the user
+ *  abandons the flow before verifying, nothing changes server-side.
+ */
+export function associateTotp(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        reject(new Error('Session expired. Please sign in again.'))
+        return
+      }
+      currentUser.associateSoftwareToken({
+        associateSecretCode: (secretCode: string) => resolve(secretCode),
+        onFailure: (e) => reject(e),
+      })
+    })
+  })
+}
+
+/** Verify the first authenticator code + commit TOTP as the user's
+ *  preferred MFA. After this, every future sign-in will return a
+ *  `SOFTWARE_TOKEN_MFA` challenge that must be satisfied via
+ *  `completeMfaChallenge()`.
+ *
+ *  `friendlyDeviceName` shows up in Cognito console and
+ *  `listDevices` responses — pass something human-readable like
+ *  "iPhone" or "Authy" so the user recognises it later.
+ */
+export function verifyTotpEnrollment(
+  code: string,
+  friendlyDeviceName: string = 'Authenticator',
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        reject(new Error('Session expired. Please sign in again.'))
+        return
+      }
+      currentUser.verifySoftwareToken(code, friendlyDeviceName, {
+        onSuccess: () => {
+          // Flip the user's preferred MFA to TOTP so subsequent
+          // sign-ins actually challenge. Without this call the
+          // associated token sits unused.
+          currentUser.setUserMfaPreference(
+            null,
+            { PreferredMfa: true, Enabled: true },
+            (prefErr) => {
+              if (prefErr) {
+                reject(prefErr)
+                return
+              }
+              resolve()
+            },
+          )
+        },
+        onFailure: (e) => reject(e),
+      })
+    })
+  })
+}
+
+/** Turn off TOTP for the current user. Cognito leaves the associated
+ *  software token in place but ignores it on future logins. The user
+ *  can re-enable later without re-associating (calling
+ *  `verifyTotpEnrollment` again with any valid code). */
+export function disableTotp(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      reject(new Error('No user session found. Please sign in again.'))
+      return
+    }
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        reject(new Error('Session expired. Please sign in again.'))
+        return
+      }
+      currentUser.setUserMfaPreference(
+        null,
+        { PreferredMfa: false, Enabled: false },
+        (prefErr) => {
+          if (prefErr) {
+            reject(prefErr)
+            return
+          }
+          resolve()
+        },
+      )
+    })
+  })
+}
+
+/** Read the current MFA status from Cognito. Returns true when the
+ *  user has a TOTP factor actively enrolled and selected as their
+ *  preferred MFA. Used by the settings page to branch between
+ *  "Enable 2FA" and "Disable 2FA" UI. */
+export function isTotpEnabled(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const currentUser = userPool.getCurrentUser()
+    if (!currentUser) {
+      resolve(false)
+      return
+    }
+    currentUser.getSession((err: Error | null) => {
+      if (err) {
+        resolve(false)
+        return
+      }
+      currentUser.getUserData((dataErr, data) => {
+        if (dataErr || !data) {
+          resolve(false)
+          return
+        }
+        const preferred = (data.PreferredMfaSetting || '').toUpperCase()
+        const list = (data.UserMFASettingList || []).map((s) => s.toUpperCase())
+        resolve(
+          preferred === 'SOFTWARE_TOKEN_MFA' ||
+            list.includes('SOFTWARE_TOKEN_MFA'),
+        )
+      })
+    })
+  })
+}
+
+// ──────────────────────────────────────────────────────────────────
 
 export function signOut(): void {
   const currentUser = userPool.getCurrentUser()

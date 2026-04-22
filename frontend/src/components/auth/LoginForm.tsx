@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Circle } from 'lucide-react'
 
+import { KeyRound, ShieldCheck } from 'lucide-react'
+
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { forgotPassword, confirmForgotPassword } from '@/lib/auth/cognitoClient'
 import { Input } from '@/components/ui/Input'
@@ -21,10 +23,20 @@ interface LoginFormValues {
 type Phase = 'login' | 'newPassword' | 'forgotEmail' | 'forgotCode'
 
 export function LoginForm() {
-  const { signIn, needsPasswordChange, completePasswordChange } = useAuth()
+  const {
+    signIn,
+    needsPasswordChange,
+    completePasswordChange,
+    needsMfaChallenge,
+    completeMfaChallenge,
+  } = useAuth()
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('login')
+
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaSubmitting, setMfaSubmitting] = useState(false)
+  const [mfaError, setMfaError] = useState<string | null>(null)
 
   const {
     register,
@@ -245,6 +257,81 @@ export function LoginForm() {
           </div>
         ))}
       </div>
+    )
+  }
+
+  const onMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMfaError(null)
+    const trimmed = mfaCode.trim()
+    if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) {
+      setMfaError('Enter the 6-digit code from your authenticator app.')
+      return
+    }
+    setMfaSubmitting(true)
+    try {
+      await completeMfaChallenge(trimmed)
+      router.replace('/dashboard')
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : 'Verification failed. Try again.'
+      if (
+        msg.includes('CodeMismatchException') ||
+        msg.toLowerCase().includes('code')
+      ) {
+        setMfaError('Code did not match. Check the app and re-enter.')
+      } else {
+        setMfaError(msg)
+      }
+      setMfaCode('')
+      setMfaSubmitting(false)
+    }
+  }
+
+  if (needsMfaChallenge) {
+    return (
+      <form onSubmit={onMfaSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <ShieldCheck className="h-6 w-6 text-primary" />
+          </div>
+          <p className="text-base font-semibold text-foreground">
+            Two-factor verification
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Enter the 6-digit code from your authenticator app to finish
+            signing in.
+          </p>
+        </div>
+        <Input
+          label="Authenticator code"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          placeholder="123456"
+          value={mfaCode}
+          onChange={(e) =>
+            setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+          }
+          maxLength={6}
+          autoFocus
+        />
+        <ErrorBanner msg={mfaError} />
+        <Button
+          type="submit"
+          loading={mfaSubmitting}
+          disabled={mfaCode.length !== 6}
+          className="w-full"
+          size="lg"
+        >
+          <KeyRound className="h-4 w-4" />
+          Verify + sign in
+        </Button>
+        <p className="text-center text-[11px] text-muted-foreground">
+          Lost access to your authenticator? Ask your workspace owner to
+          reset 2FA from the admin Users page.
+        </p>
+      </form>
     )
   }
 
