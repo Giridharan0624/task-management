@@ -90,6 +90,16 @@ async function request<T>(
     } catch {
       // ignore JSON parse errors
     }
+
+    // Platform operator suspended this tenant mid-session. Dispatch a
+    // browser event so the TenantProvider refreshes /orgs/current and
+    // the dashboard layout flips to the SuspendedScreen. Swallowing
+    // nothing — the original error still propagates so callers see
+    // the 403.
+    if (errorCode === 'ORG_SUSPENDED' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('taskflow:org-suspended'))
+    }
+
     throw new ApiClientError(errorMessage, response.status, errorCode)
   }
 

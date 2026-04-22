@@ -12,12 +12,14 @@ import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { WorkspaceField } from '@/components/tenant/WorkspaceField'
+import { HCaptchaWidget } from '@/components/auth/HCaptchaWidget'
 
 interface SignupFormValues {
   orgName: string
   ownerName: string
   ownerEmail: string
   password: string
+  confirmPassword: string
 }
 
 interface SignupFormProps {
@@ -45,6 +47,8 @@ export function SignupForm({
   const router = useRouter()
   const [step, setStep] = useState<1 | 2>(1)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const captchaEnabled = !!process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY
 
   const {
     register,
@@ -90,6 +94,10 @@ export function SignupForm({
       setStep(1)
       return
     }
+    if (captchaEnabled && !captchaToken) {
+      setServerError('Please complete the captcha to continue.')
+      return
+    }
 
     try {
       const result = await orgsApi.signup({
@@ -98,11 +106,15 @@ export function SignupForm({
         ownerName: values.ownerName.trim(),
         ownerEmail: values.ownerEmail.trim().toLowerCase(),
         password: values.password,
+        captchaToken: captchaToken ?? undefined,
       })
       router.replace(`/login?workspace=${result.slug}&first_login=1`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Signup failed'
       setServerError(msg)
+      // Reset captcha so the user can retry — one-shot tokens expire on
+      // a failed signup.
+      setCaptchaToken(null)
     }
   }
 
@@ -206,6 +218,24 @@ export function SignupForm({
             <PasswordStrength strength={strength} />
           </div>
 
+          <PasswordInput
+            label="Re-enter password"
+            placeholder="Confirm your password"
+            error={errors.confirmPassword?.message}
+            {...register('confirmPassword', {
+              required: 'Please confirm your password',
+              validate: (v) =>
+                v === password || 'Passwords do not match',
+            })}
+          />
+
+          {captchaEnabled && (
+            <HCaptchaWidget
+              onVerify={(t) => setCaptchaToken(t)}
+              onExpire={() => setCaptchaToken(null)}
+            />
+          )}
+
           {serverError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -229,6 +259,7 @@ export function SignupForm({
               loading={isSubmitting}
               className="flex-1"
               size="lg"
+              disabled={captchaEnabled && !captchaToken}
             >
               Create workspace
             </Button>

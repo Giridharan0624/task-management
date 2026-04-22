@@ -76,6 +76,7 @@ class OrgNestedStack(NestedStack):
         gmail_secret: secretsmanager.ISecret,
         app_url: str,
         log_retention: logs.RetentionDays = logs.RetentionDays.THREE_MONTHS,
+        hcaptcha_secret_value: str = "",
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -147,6 +148,11 @@ class OrgNestedStack(NestedStack):
             apigw.LambdaIntegration(signup_fn),
             authorization_type=apigw.AuthorizationType.NONE,
         )
+        # Optional hCaptcha — only wired when the operator passes a
+        # non-empty secret string. Local/staging can run without it;
+        # prod flips it on by setting the value in the app entry point.
+        if hcaptcha_secret_value:
+            signup_fn.add_environment("HCAPTCHA_SECRET", hcaptcha_secret_value)
 
         # ── Public org lookup by slug (pre-login branding) ─────────────
         orgs = api.root.add_resource("orgs")

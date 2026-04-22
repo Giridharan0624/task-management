@@ -149,6 +149,18 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
   }, [slug, setSlug])
 
+  // Listen for mid-session suspension events fired by the API client
+  // (ORG_SUSPENDED error code). Triggers a refetch so `current.org.status`
+  // flips to SUSPENDED and the dashboard layout swaps to SuspendedScreen
+  // immediately.
+  useEffect(() => {
+    const onSuspended = () => {
+      void refreshCurrent()
+    }
+    window.addEventListener('taskflow:org-suspended', onSuspended)
+    return () => window.removeEventListener('taskflow:org-suspended', onSuspended)
+  }, [refreshCurrent])
+
   return (
     <TenantContext.Provider
       value={{

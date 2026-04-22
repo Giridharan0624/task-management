@@ -167,4 +167,19 @@ export const orgsApi = {
       req,
     )
   },
+
+  // OWNER only — POST /orgs/current/transfer-ownership. Promotes the
+  // target user to OWNER and demotes the current OWNER to ADMIN.
+  // Irreversible without the new owner's cooperation — the UI triple-
+  // confirms (target selection, typed email, explicit button).
+  async transferOwnership(req: {
+    newOwnerUserId: string
+    confirmEmail: string
+  }): Promise<{
+    previousOwnerId: string
+    newOwnerId: string
+    transferredAt: string
+  }> {
+    return apiClient.post('/orgs/current/transfer-ownership', req)
+  },
 }

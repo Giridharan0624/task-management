@@ -23,10 +23,13 @@ def build_success(status_code: int, data) -> dict:
 
 def build_error(error: Exception) -> dict:
     if isinstance(error, AppError):
+        body: dict = {"error": error.message}
+        if getattr(error, "code", None):
+            body["code"] = error.code
         return {
             "statusCode": error.status_code,
             "headers": CORS_HEADERS,
-            "body": json.dumps({"error": error.message}),
+            "body": json.dumps(body),
         }
     logger.error("Unhandled error: %s", str(error), exc_info=True)
     return {

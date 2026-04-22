@@ -46,6 +46,8 @@ import { Walkthrough } from '@/components/ui/Walkthrough'
 import { NotificationCenter } from '@/components/ui/NotificationCenter'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
+import { PageTransition } from '@/components/ui/PageTransition'
+import { SuspendedScreen } from '@/components/tenant/SuspendedScreen'
 import { cn } from '@/lib/utils'
 import type { User } from '@/types/user'
 
@@ -321,15 +323,15 @@ function SidebarContent({
               href={item.href}
               onClick={onNavClick}
               className={cn(
-                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200',
+                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200 pressable',
                 isActive
                   ? 'bg-sidebar-active text-primary nav-glow'
-                  : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-hover'
+                  : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-hover hover:translate-x-0.5'
               )}
             >
               <Icon
                 className={cn(
-                  'h-[18px] w-[18px] shrink-0 transition-colors',
+                  'h-[18px] w-[18px] shrink-0 transition-colors icon-pop',
                   isActive
                     ? 'text-primary'
                     : 'text-sidebar-muted group-hover:text-sidebar-foreground'
@@ -449,6 +451,14 @@ export default function DashboardLayout({
 
   if (!user) return null
 
+  // Tenant-level kill switch. If the org is suspended by a platform
+  // operator, every dashboard route renders a single block instead of
+  // the normal shell — avoids half-working states where reads succeed
+  // but every write returns 403.
+  if (currentTenant?.org?.status === 'SUSPENDED') {
+    return <SuspendedScreen orgName={currentTenant.org.name} />
+  }
+
   const navItems = getNavItems(user.systemRole)
   const features = tenantFeatures
   const closeSidebar = () => setSidebarOpen(false)
@@ -546,7 +556,9 @@ export default function DashboardLayout({
             tabIndex={-1}
             className="w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 focus-visible:outline-none"
           >
-            <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
+            <ErrorBoundary resetKey={pathname}>
+              <PageTransition>{children}</PageTransition>
+            </ErrorBoundary>
           </main>
         </div>
 

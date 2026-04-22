@@ -1,0 +1,66 @@
+name: Backend CI
+
+# Runs pytest on every push + PR to main / saas-migration that touches
+# backend code. Path filter keeps the budget down — frontend-only
+# changes don't burn a backend runner.
+on:
+  push:
+    branches: [main, saas-migration]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main, saas-migration]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+# Cancel in-progress runs for the same branch on a new push.
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pytest (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Only test on the runtime we ship (Lambda Python 3.12). Expand
+        # the matrix only if we ever need cross-version support.
+        python-version: ['3.12']
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run pytest
+        # Dummy AWS credentials for moto — mock_aws intercepts real calls,
+        # but boto3 still needs *something* in the env or it raises
+        # NoCredentialsError before moto can catch it.
+        env:
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: testing
+          AWS_SECRET_ACCESS_KEY: testing
+          AWS_SESSION_TOKEN: testing
+          TABLE_NAME: TaskManagementTable-test
+        run: pytest -v

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ClipboardList,
   KanbanSquare,
+  Key,
   RotateCcw,
   ShieldCheck,
   Sparkles,
@@ -282,6 +283,13 @@ export default function OrgSettingsPage() {
           title="Audit log"
           subtitle="Who changed what, when."
         />
+        <AdminLink
+          href="/settings/transfer-ownership"
+          icon={Key}
+          title="Transfer ownership"
+          subtitle="Hand off OWNER to another member."
+          danger
+        />
       </div>
 
       {error && (
@@ -438,18 +446,30 @@ function AdminLink({
   icon: Icon,
   title,
   subtitle,
+  danger = false,
 }: {
   href: string
   icon: typeof ShieldCheck
   title: string
   subtitle: string
+  danger?: boolean
 }) {
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
+      className={
+        danger
+          ? 'group flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.03] p-3.5 transition-all hover:-translate-y-0.5 hover:border-destructive/60 hover:shadow-card-hover'
+          : 'group flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover'
+      }
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div
+        className={
+          danger
+            ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive'
+            : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'
+        }
+      >
         <Icon className="h-4.5 w-4.5" />
       </div>
       <div className="min-w-0 flex-1">

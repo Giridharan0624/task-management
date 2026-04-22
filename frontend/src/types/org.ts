@@ -70,6 +70,9 @@ export interface SignupRequest {
   ownerName: string
   ownerEmail: string
   password: string
+  /** hCaptcha token from the widget. Optional — backend verification
+   *  is skipped when HCAPTCHA_SECRET is unset (dev/staging). */
+  captchaToken?: string
 }
 
 export interface SignupResponse {

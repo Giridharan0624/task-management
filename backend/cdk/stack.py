@@ -391,6 +391,42 @@ class TaskManagementStack(Stack):
             authorization_type=apigw.AuthorizationType.NONE,
         )
 
+        # ─── Health check (no auth) — liveness/readiness probe ─────────
+        # Uptime monitors and load balancers hit this. Uses the same
+        # Lambda defaults as the rest, so a cold start still resolves
+        # in the same time as any other handler.
+        health_resource = api.root.add_resource("health")
+        health_fn = _lambda.Function(
+            self, "HealthCheck",
+            handler="contexts.system.handlers.health.handler",
+            **lambda_defaults,
+        )
+        table.grant_read_data(health_fn)
+        health_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(health_fn),
+            authorization_type=apigw.AuthorizationType.NONE,
+        )
+
+        # ─── Platform-operator endpoints (auth required + env allowlist)
+        # These are NOT tenant-facing — only a human operator at Anthropic
+        # should ever hit these. Access gated by PLATFORM_ADMIN_USER_IDS
+        # (comma-separated Cognito sub list). Empty env = nobody can call.
+        platform_admin_ids = config.get("platform_admin_user_ids", "")
+        platform = api.root.add_resource("platform")
+        platform_orgs = platform.add_resource("orgs")
+        platform_org = platform_orgs.add_resource("{orgId}")
+        platform_org_status = platform_org.add_resource("status")
+        set_status_fn = add_api_lambda(
+            "SetOrgStatus",
+            "contexts.org.handlers.set_org_status.handler",
+            "POST",
+            platform_org_status,
+        )
+        set_status_fn.add_environment(
+            "PLATFORM_ADMIN_USER_IDS", platform_admin_ids,
+        )
+
         # ─── Organization (multi-tenant) handlers — nested stack ────────────
         # Every org-context Lambda + admin handler lives in its own
         # NestedStack so the parent stays well under the 500-resource
@@ -411,6 +447,7 @@ class TaskManagementStack(Stack):
             gmail_secret=gmail_secret,
             app_url=config["app_url"],
             log_retention=log_retention,
+            hcaptcha_secret_value=config.get("hcaptcha_secret", ""),
         )
 
         # ─── Attendance + Day-off handlers (nested) ─────────────────────────

@@ -48,7 +48,7 @@ def require_not_suspended(ctx: AuthContext) -> None:
     fail-open for the primary action, fail-closed for the audit side.
     """
     from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
-    from shared_kernel.errors import AuthorizationError
+    from shared_kernel.errors import OrgSuspendedError
 
     try:
         org = OrgDynamoRepository().find_by_id(ctx.org_id)
@@ -59,9 +59,9 @@ def require_not_suspended(ctx: AuthContext) -> None:
     status = getattr(org, "status", None)
     status_value = status.value if hasattr(status, "value") else str(status)
     if status_value == "SUSPENDED":
-        raise AuthorizationError(
+        raise OrgSuspendedError(
             "This workspace is currently suspended. "
-            "Contact the workspace owner to resume activity.",
+            "Contact the platform operator to resume activity.",
         )
 
 

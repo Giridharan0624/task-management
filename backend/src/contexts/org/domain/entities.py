@@ -38,6 +38,18 @@ class Organization(BaseModel):
             updated_at=now,
         )
 
+    def suspend(self) -> "Organization":
+        return self.model_copy(update={
+            "status": OrgStatus.SUSPENDED,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    def reactivate(self) -> "Organization":
+        return self.model_copy(update={
+            "status": OrgStatus.ACTIVE,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+
     def to_dict(self) -> dict:
         return {
             "org_id": self.org_id,

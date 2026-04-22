@@ -57,6 +57,11 @@ class SignupRequest(BaseModel):
     owner_name: str
     owner_email: str
     password: str
+    # hCaptcha token from the client widget. Verified in the handler
+    # via shared_kernel.captcha.verify_captcha. When HCAPTCHA_SECRET is
+    # unset (local/test), verification is skipped and this field is
+    # ignored.
+    captcha_token: Optional[str] = None
 
 
 class CreateOrganizationUseCase:
