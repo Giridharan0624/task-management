@@ -256,7 +256,7 @@ export default function DeleteWorkspacePage() {
           )}
 
           <Button
-            variant="destructive"
+            variant="danger"
             onClick={onDelete}
             disabled={!canDelete}
             loading={deleting}

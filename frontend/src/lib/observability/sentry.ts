@@ -39,10 +39,13 @@ export async function initSentry(): Promise<void> {
       tracesSampleRate: Number(
         process.env.NEXT_PUBLIC_SENTRY_TRACES_RATE ?? '0.1',
       ),
-      beforeSend(event) {
+      beforeSend(event: { request?: { url?: string } }) {
         // Drop obvious local-dev noise so the self-hosted instance
         // doesn't fill up during `npm run dev`. Prod will never have
         // a localhost URL.
+        // Structural param type because @sentry/browser is an
+        // optional peer dep — we can't import Sentry.Event without
+        // re-triggering the @ts-expect-error from the import line.
         if (event.request?.url?.includes('localhost')) return null
         return event
       },
