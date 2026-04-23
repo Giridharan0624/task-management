@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useMyAttendance } from './useAttendance'
 import { startTimerWorker, stopTimerWorker } from '@/lib/utils/timerWorker'
+import { serverNow } from '@/lib/utils/serverClock'
 
 function formatElapsed(totalSeconds: number): string {
   const sec = Math.max(0, Math.floor(totalSeconds))
@@ -90,7 +91,12 @@ export function useTimerTitle() {
     setTimerFavicon(true)
 
     const tick = () => {
-      const diff = Math.max(0, Math.floor((Date.now() - start) / 1000))
+      // Use serverNow() — Date.now() reflects the local OS clock which
+      // routinely drifts seconds ahead/behind NTP. The desktop app and
+      // dashboard widget both compute against the server's clock; using
+      // it here keeps the tab title in sync with them instead of
+      // racing ahead by whatever OS skew the user has.
+      const diff = Math.max(0, Math.floor((serverNow() - start) / 1000))
       document.title = `${formatElapsed(diff)} · ${taskName} — TaskFlow`
     }
 

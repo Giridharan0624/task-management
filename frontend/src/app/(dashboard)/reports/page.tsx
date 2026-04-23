@@ -786,47 +786,34 @@ function SummaryView({
                         <Cell key={e.name} fill={colorMap[e.name] || COLORS[0]} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null
-                        const e = payload[0]
-                        const v = Number(e.value)
-                        const pct = percentageMap[String(e.name)] ?? 0
-                        return (
-                          <div className="rounded-xl border border-border bg-popover p-3 text-sm shadow-lg">
-                            <div className="mb-1 flex items-center gap-2">
-                              <div
-                                className="h-2.5 w-2.5 rounded-full"
-                                style={{ backgroundColor: e.payload?.fill }}
-                              />
-                              <span className="font-semibold text-foreground">
-                                {e.name}
-                              </span>
-                            </div>
-                            <p className="text-muted-foreground">
-                              {formatDuration(v)}
-                            </p>
-                            <p className="font-bold text-primary">{pct}%</p>
-                          </div>
-                        )
-                      }}
-                    />
+                    {/* No <Tooltip> — the centre label + highlighted
+                        legend row already show hover state cleanly. A
+                        floating tooltip on top of the centre card
+                        produced stacked duplicate text (SELECTED, name,
+                        duration twice, percent, name again). */}
                   </PieChart>
                 </ResponsiveContainer>
-                {/* Center total label */}
+                {/* Centre label — sole source of hover feedback inside
+                    the donut. Shows TOTAL at rest, SELECTED + duration
+                    + percentage + project name on hover. */}
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
                     {activePieIndex >= 0 ? 'Selected' : 'Total'}
                   </span>
-                  <span className="mt-0.5 text-base font-bold leading-tight tabular-nums text-foreground">
+                  <span className="mt-1 text-base font-bold leading-tight tabular-nums text-foreground">
                     {activePieIndex >= 0
                       ? formatDuration(pieData[activePieIndex].value)
                       : formatDuration(totalHours)}
                   </span>
                   {activePieIndex >= 0 && (
-                    <span className="mt-0.5 max-w-[110px] truncate px-2 text-[10px] text-muted-foreground/80">
-                      {pieData[activePieIndex].name}
-                    </span>
+                    <>
+                      <span className="mt-0.5 font-mono text-xs font-bold tabular-nums text-primary">
+                        {percentageMap[pieData[activePieIndex].name] ?? 0}%
+                      </span>
+                      <span className="mt-1 max-w-[120px] truncate px-2 text-[10px] text-muted-foreground/80">
+                        {pieData[activePieIndex].name}
+                      </span>
+                    </>
                   )}
                 </div>
               </div>

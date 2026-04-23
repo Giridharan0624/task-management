@@ -498,9 +498,17 @@ export default function UsersPage() {
                               size="md"
                             />
                             {isOnline && (
-                              <span className="absolute -bottom-0.5 -right-0.5 rounded-full ring-2 ring-card">
-                                <LiveDot size="md" />
-                              </span>
+                              // Explicit size + direct fill — the old
+                              // wrapper inherited its box from <LiveDot>
+                              // whose `animate-ping` element perturbed
+                              // the bounding box, so the ring rendered
+                              // as a visible slash across the avatar
+                              // edge. A fixed-size circle + its own
+                              // background is reliable and cheap.
+                              <span
+                                aria-label="Online"
+                                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card"
+                              />
                             )}
                           </div>
                           <div className="min-w-0">

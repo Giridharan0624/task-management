@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { Lexend } from 'next/font/google'
 import {
   Activity,
   Apple,
@@ -10,17 +11,20 @@ import {
   Calendar,
   Camera,
   CheckCircle2,
+  ClipboardList,
   Clock,
   Download,
   FileText,
   Globe,
   KanbanSquare,
+  KeyRound,
   Layers,
   Mail,
   MessageSquare,
   Monitor,
-  Shuffle,
+  Shield,
   ShieldCheck,
+  Shuffle,
   Sparkles,
   Terminal,
   TrendingDown,
@@ -39,6 +43,15 @@ import {
   TypewriterText,
 } from '@/components/landing/interactions'
 import { cn } from '@/lib/utils'
+
+// Landing page uses Lexend instead of the rest of the app's Outfit —
+// the marketing surface gets a calmer, more readable display face.
+// Loaded only on this route, so the dashboard bundle is unaffected.
+const lexend = Lexend({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800'],
+})
 
 /* ────────────────────────────────────────────────────────────────────
  * Page metadata + structured data
@@ -93,7 +106,7 @@ const structuredData = {
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden bg-background text-foreground">
+    <div className={cn(lexend.className, 'flex min-h-screen flex-col bg-background text-foreground')}>
       <MaybeRedirectIfAuthed />
 
       <a
@@ -113,10 +126,15 @@ export default function LandingPage() {
       <main
         id="main-content"
         tabIndex={-1}
-        // Compensates for the now-fixed LandingHeader:
+        // Compensates for the fixed LandingHeader:
         //  - base (mobile/tablet): 64px top bar + ~40px mobile pill row ≈ 104px
         //  - lg+: just the 64px bar (the pill row is lg:hidden)
-        className="flex-1 pt-[104px] focus-visible:outline-none lg:pt-16"
+        // `overflow-x-hidden` lives here (not on the outer wrapper) so the
+        // fixed LandingHeader stays viewport-anchored. Placing overflow on
+        // an ancestor of a fixed element creates a containing block in
+        // some browsers (notably Safari / iOS), which causes the "fixed"
+        // header to scroll with the page.
+        className="flex-1 overflow-x-hidden pt-[104px] focus-visible:outline-none lg:pt-16"
       >
         <Hero />
         <ProblemSection />
@@ -168,7 +186,7 @@ function Hero() {
         <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:px-8 lg:py-24">
           <div>
             <Reveal direction="up">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_20px_-8px_rgba(99,102,241,0.25)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
                 <Sparkles className="h-3 w-3 animate-pulse-soft" />
                 A unified workspace for modern teams
               </div>
@@ -206,7 +224,7 @@ function Hero() {
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/40 px-5 py-3 text-sm font-semibold text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_8px_24px_-12px_rgba(15,23,42,0.2)] backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10"
                 >
                   Sign in
                 </Link>
@@ -269,10 +287,26 @@ function ProblemSection() {
       id="problem"
       className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-14 sm:py-20"
     >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      {/* Atmosphere — soft coloured orbs so the glass cards below have
+          something to refract. Without this the glass would be invisible
+          against the flat muted background. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-12 -z-10 h-72 w-72 rounded-full bg-rose-400/15 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[10%] bottom-16 -z-10 h-64 w-64 rounded-full bg-amber-400/15 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[40%] top-[35%] -z-10 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
               The current state
             </div>
           </Reveal>
@@ -286,10 +320,15 @@ function ProblemSection() {
         <ul className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
           {pains.map((p, i) => (
             <Reveal key={p.title} direction="up" delay={i * 80}>
-              <li className="group relative h-full rounded-3xl border border-border/70 bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-lg">
+              <li className="group relative h-full overflow-hidden rounded-3xl border border-white/50 bg-white/40 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_14px_40px_-20px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all hover:-translate-y-1 hover:border-white/70 hover:bg-white/55 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_20px_50px_-20px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
+                {/* Top-edge shine — classic glass specular highlight */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/20"
+                />
                 <div
                   className={cn(
-                    'mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ring-inset',
+                    'mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ring-inset backdrop-blur-md',
                     p.bg,
                     p.ring
                   )}
@@ -736,18 +775,164 @@ function AiDemo() {
   )
 }
 
+/**
+ * Each screenshot mock gets its own palette so the row of captures
+ * reads like a real archive of different apps (doc, editor, chat,
+ * design tool…) rather than six identical coloured grids. The last
+ * tile is the freshest — marked LIVE with a pulse dot.
+ */
+const SCREENSHOT_TILES: {
+  bar: string
+  title: string
+  accent: string
+  line: string
+  block: string
+  age: string
+  live?: boolean
+}[] = [
+  {
+    bar: 'bg-rose-50',
+    title: 'bg-rose-200/80',
+    accent: 'bg-rose-200',
+    line: 'bg-rose-100',
+    block: 'bg-gradient-to-br from-rose-200 to-pink-200',
+    age: '2h ago',
+  },
+  {
+    bar: 'bg-amber-50',
+    title: 'bg-amber-200/80',
+    accent: 'bg-amber-200',
+    line: 'bg-amber-100',
+    block: 'bg-gradient-to-br from-amber-200 to-orange-200',
+    age: '1h 30m',
+  },
+  {
+    bar: 'bg-emerald-50',
+    title: 'bg-emerald-200/80',
+    accent: 'bg-emerald-200',
+    line: 'bg-emerald-100',
+    block: 'bg-gradient-to-br from-emerald-200 to-teal-200',
+    age: '45m ago',
+  },
+  {
+    bar: 'bg-sky-50',
+    title: 'bg-sky-200/80',
+    accent: 'bg-sky-200',
+    line: 'bg-sky-100',
+    block: 'bg-gradient-to-br from-sky-200 to-cyan-200',
+    age: '20m ago',
+  },
+  {
+    bar: 'bg-violet-50',
+    title: 'bg-violet-200/80',
+    accent: 'bg-violet-200',
+    line: 'bg-violet-100',
+    block: 'bg-gradient-to-br from-violet-200 to-fuchsia-200',
+    age: '5m ago',
+  },
+  {
+    bar: 'bg-primary/10',
+    title: 'bg-primary/30',
+    accent: 'bg-primary/25',
+    line: 'bg-primary/10',
+    block: 'bg-gradient-to-br from-primary/30 to-primary/15',
+    age: 'now',
+    live: true,
+  },
+]
+
+function ScreenshotTile({
+  tile,
+  index,
+}: {
+  tile: (typeof SCREENSHOT_TILES)[number]
+  index: number
+}) {
+  // Symmetric fan — leftmost and rightmost rotate outward; middle stays
+  // level. Dropping slightly ({translateY}) on the outer tiles gives a
+  // believable shelf-stack depth.
+  const offset = index - (SCREENSHOT_TILES.length - 1) / 2
+  const rotate = offset * 2.2
+  const translateY = Math.abs(offset) * 2
+  const zIndex = tile.live ? 20 : 10 - Math.abs(offset)
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div
+        className={cn(
+          'relative h-24 w-32 flex-shrink-0 overflow-hidden rounded-lg border border-border/80 bg-white shadow-md dark:bg-[var(--color-surface)]',
+          tile.live && 'ring-2 ring-primary/50',
+        )}
+        style={{
+          transform: `rotate(${rotate}deg) translateY(${translateY}px)`,
+          zIndex,
+        }}
+      >
+        {/* Window chrome */}
+        <div
+          className={cn(
+            'flex items-center gap-1 px-1.5 py-1 border-b border-border/40',
+            tile.bar,
+          )}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-400/70" />
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400/70" />
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" />
+          <span className={cn('ml-1 h-1.5 flex-1 rounded-full', tile.title)} />
+        </div>
+
+        {/* "Content" — rows of fake text + a hero block */}
+        <div className="space-y-1 px-2 py-1.5">
+          <span className={cn('block h-1 w-3/4 rounded-full', tile.line)} />
+          <span className={cn('block h-1 w-full rounded-full', tile.line)} />
+          <div className={cn('my-0.5 h-5 rounded', tile.block)} />
+          <span className={cn('block h-1 w-5/6 rounded-full', tile.line)} />
+          <span className={cn('block h-1 w-2/3 rounded-full', tile.line)} />
+        </div>
+
+        {/* LIVE badge on the freshest capture */}
+        {tile.live && (
+          <span className="absolute right-1 top-1 inline-flex items-center gap-0.5 rounded-full bg-primary px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-primary-foreground shadow">
+            <span className="relative flex h-1 w-1">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-foreground opacity-80" />
+              <span className="relative inline-flex h-1 w-1 rounded-full bg-primary-foreground" />
+            </span>
+            Live
+          </span>
+        )}
+      </div>
+
+      <span
+        className={cn(
+          'text-[9px] font-semibold tabular-nums transition-colors',
+          tile.live
+            ? 'text-primary'
+            : 'text-muted-foreground/70',
+        )}
+      >
+        {tile.age}
+      </span>
+    </div>
+  )
+}
+
 function ScreenshotDemo() {
   return (
     <DemoFrame>
       <div className="p-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-5 flex items-start justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               Captured this session
             </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-blue-600 dark:text-blue-300">
-              <AnimatedCounter to={42} />
-            </p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <p className="text-3xl font-bold tabular-nums text-blue-600 dark:text-blue-300">
+                <AnimatedCounter to={42} />
+              </p>
+              <span className="text-[11px] font-medium text-muted-foreground">
+                screenshots
+              </span>
+            </div>
           </div>
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
             <ShieldCheck className="h-3 w-3" />
@@ -755,28 +940,9 @@ function ScreenshotDemo() {
           </span>
         </div>
 
-        <div className="flex items-center justify-center gap-2 py-2">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg border border-border/80 bg-gradient-to-br from-primary/30 to-accent/20 shadow-sm"
-              style={{
-                transform: `rotate(${(i - 2.5) * 3}deg) translateY(${Math.abs(i - 2.5) * 3}px)`,
-                zIndex: 10 - Math.abs(i - 2.5),
-              }}
-            >
-              <div className="grid h-full grid-cols-5 gap-0.5 p-1.5 opacity-70">
-                {Array.from({ length: 15 }).map((_, k) => (
-                  <span
-                    key={k}
-                    className="rounded-[2px]"
-                    style={{
-                      backgroundColor: `hsl(${(i * 57 + k * 23) % 360}, 65%, 74%)`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+        <div className="flex items-end justify-center gap-2 py-3">
+          {SCREENSHOT_TILES.map((tile, i) => (
+            <ScreenshotTile key={i} tile={tile} index={i} />
           ))}
         </div>
       </div>
@@ -822,6 +988,14 @@ const FEATURES: FeatureCardData[] = [
     iconClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
   },
   {
+    icon: Brain,
+    title: 'AI weekly rollups',
+    blurb:
+      'Editorial digest of every task update from the last seven days — top contributors, themes, and concerns. Consistent with the math, never invents numbers.',
+    tint: 'from-purple-500/15',
+    iconClass: 'bg-purple-500/15 text-purple-600 dark:text-purple-300',
+  },
+  {
     icon: Calendar,
     title: 'Time-off management',
     blurb:
@@ -838,20 +1012,36 @@ const FEATURES: FeatureCardData[] = [
     iconClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-300',
   },
   {
+    icon: Shield,
+    title: 'Custom roles & permissions',
+    blurb:
+      'Define your own roles beyond owner / admin / member with fine-grained per-feature permissions. Per-tenant, scoped to your workspace.',
+    tint: 'from-cyan-500/15',
+    iconClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
+  },
+  {
+    icon: KeyRound,
+    title: 'Two-factor authentication',
+    blurb:
+      'Optional TOTP enforcement for any member, backed by Cognito. Recovery codes generated at enrolment for lockout safety.',
+    tint: 'from-fuchsia-500/15',
+    iconClass: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-300',
+  },
+  {
+    icon: ClipboardList,
+    title: 'Per-tenant audit log',
+    blurb:
+      'Every privileged action recorded with actor, target, and rule identifier. Filterable, exportable, retention-policied.',
+    tint: 'from-slate-500/15',
+    iconClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-300',
+  },
+  {
     icon: Users,
     title: 'Multi-tenant workspaces',
     blurb:
       'Workspace-level isolation with configurable terminology, feature toggles, branding, and locale. No cross-tenant data exposure.',
     tint: 'from-violet-500/15',
     iconClass: 'bg-violet-500/15 text-violet-600 dark:text-violet-300',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Data ownership',
-    blurb:
-      'CSV export on every view. Three-tier role-based access. Secure Remote Password authentication keeps credentials in the browser.',
-    tint: 'from-cyan-500/15',
-    iconClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
   },
   {
     icon: BarChart3,
@@ -877,7 +1067,27 @@ function FeatureGrid() {
       id="features"
       className="relative overflow-hidden border-b border-border/60 bg-muted/10 py-14 sm:py-20"
     >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      {/* Background atmosphere for the glass tiles to refract. The
+          staggered colours give the grid subtle rainbow depth without
+          reading as busy — each card picks up a different tint. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-16 -z-10 h-80 w-80 rounded-full bg-indigo-400/15 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[5%] top-[20%] -z-10 h-64 w-64 rounded-full bg-fuchsia-400/12 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[30%] bottom-[10%] -z-10 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[-5%] bottom-[20%] -z-10 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -895,21 +1105,22 @@ function FeatureGrid() {
         <ul className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f, i) => (
             <Reveal key={f.title} direction="up" delay={i * 40}>
-              <li className="group relative h-full overflow-hidden rounded-3xl border border-border/70 bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-border hover:shadow-xl">
+              <li className="group relative h-full overflow-hidden rounded-3xl border border-white/50 bg-white/35 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_16px_40px_-24px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all hover:-translate-y-1 hover:border-white/70 hover:bg-white/50 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_24px_56px_-24px_rgba(15,23,42,0.25)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]">
+                {/* Per-card gradient tint shows THROUGH the glass */}
                 <span
                   aria-hidden
                   className={cn(
-                    'pointer-events-none absolute inset-0 bg-gradient-to-br via-background to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-100',
+                    'pointer-events-none absolute inset-0 bg-gradient-to-br via-transparent to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-90',
                     f.tint
                   )}
                 />
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute -right-12 -bottom-12 h-32 w-32 rounded-full bg-primary/5 blur-2xl transition-all duration-500 group-hover:bg-primary/20"
+                  className="pointer-events-none absolute -right-12 -bottom-12 h-32 w-32 rounded-full bg-primary/10 blur-2xl transition-all duration-500 group-hover:bg-primary/25"
                 />
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/20"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/25"
                 />
 
                 <div className="relative flex h-full flex-col">
@@ -1175,7 +1386,17 @@ function HowItWorks() {
       id="how-it-works"
       className="relative overflow-hidden border-b border-border/60 py-14 sm:py-20"
     >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      {/* Soft atmosphere for the glass step cards */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[10%] top-10 -z-10 h-72 w-72 rounded-full bg-primary/15 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[15%] bottom-10 -z-10 h-72 w-72 rounded-full bg-accent/15 blur-3xl"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -1197,7 +1418,7 @@ function HowItWorks() {
           />
           {steps.map((s, i) => (
             <Reveal key={s.n} direction="up" delay={i * 100}>
-              <li className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
+              <li className="group relative h-full overflow-hidden rounded-2xl border border-white/55 bg-white/35 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_16px_40px_-24px_rgba(15,23,42,0.2)] backdrop-blur-xl transition-all hover:-translate-y-1 hover:border-white/75 hover:bg-white/50 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_24px_56px_-24px_rgba(99,102,241,0.3)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]">
                 <span
                   aria-hidden
                   className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-fuchsia-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -1228,15 +1449,34 @@ function HowItWorks() {
  * ──────────────────────────────────────────────────────────────────── */
 
 function Pricing() {
-  const includes = [
-    'Unlimited workspaces',
-    'Unlimited team members',
-    'Unlimited projects and tasks',
-    'AI-generated daily summaries (Groq)',
-    'Activity tracking and periodic screenshot capture',
-    'Cross-project reporting and CSV export',
-    'Desktop applications for Windows, macOS, and Linux',
-    'Secure Remote Password authentication and role-based permissions',
+  // Features grouped into three categories so the long list reads as
+  // structured value rather than a wall of bullets. Each group gets a
+  // small heading + 3-4 short items.
+  const featureGroups: { title: string; items: string[] }[] = [
+    {
+      title: 'Core',
+      items: [
+        'Unlimited workspaces, members, projects, and tasks',
+        'Cross-project reporting with CSV export',
+        'Desktop apps for Windows, macOS, and Linux',
+      ],
+    },
+    {
+      title: 'Intelligence',
+      items: [
+        'AI-generated daily summaries and weekly rollups',
+        'Activity tracking and periodic screenshot capture',
+        'Custom pipelines with per-project stages',
+      ],
+    },
+    {
+      title: 'Security & ownership',
+      items: [
+        'Two-factor authentication for every member',
+        'Per-tenant audit log with retention policy',
+        'Custom roles, SRP authentication, JSON export',
+      ],
+    },
   ]
 
   return (
@@ -1244,10 +1484,26 @@ function Pricing() {
       id="pricing"
       className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-14 sm:py-20"
     >
+      {/* Layered background halo — the glass card below refracts this
+          colour gradient, which is what makes the frosted surface read
+          as genuinely glass instead of a grey card with a blur filter. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[120px]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[20%] top-[20%] -z-10 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[10%] bottom-[10%] -z-10 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl"
+      />
+
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-xl dark:text-emerald-300">
               <Sparkles className="h-3 w-3" />
               Pricing
             </div>
@@ -1272,54 +1528,95 @@ function Pricing() {
 
         <Reveal direction="up" delay={240}>
           <TiltCard maxTilt={3}>
-            <div className="relative mt-10 overflow-hidden rounded-3xl border border-border/80 bg-card shadow-elevated">
+            <div className="relative mt-10 overflow-hidden rounded-3xl border border-white/60 bg-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_30px_90px_-30px_rgba(99,102,241,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_30px_90px_-30px_rgba(0,0,0,0.6)]">
+              {/* Outer glow ring — makes the glass card feel levitated
+                  above the halo behind it */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-white/70 via-transparent to-white/30 opacity-70 dark:from-white/15 dark:via-transparent dark:to-white/5"
+                style={{
+                  WebkitMask:
+                    'linear-gradient(#000, #000) content-box, linear-gradient(#000, #000)',
+                  WebkitMaskComposite: 'xor',
+                  maskComposite: 'exclude',
+                  padding: '1px',
+                }}
+              />
               <span
                 aria-hidden
                 className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-fuchsia-500"
               />
-              <div className="grid grid-cols-1 gap-6 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:gap-10 md:p-10">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    The Free plan
-                  </p>
-                  <div className="mt-1.5 flex items-baseline gap-2">
-                    <span className="text-5xl font-black tracking-tighter text-foreground sm:text-6xl">
+              {/* Left column — price hero + CTA. Right column — features
+                  grouped into three readable categories. The vertical
+                  divider on lg+ ties the two halves together visually. */}
+              <div className="grid grid-cols-1 gap-8 p-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12 lg:p-12">
+                {/* ─── LEFT: price + CTA ─── */}
+                <div className="flex flex-col">
+                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur dark:text-emerald-300">
+                    <Sparkles className="h-3 w-3" />
+                    Free forever
+                  </span>
+
+                  <div className="mt-6 flex items-baseline gap-3">
+                    <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/60 bg-clip-text text-7xl font-black leading-none tracking-tighter text-transparent sm:text-8xl">
                       $0
                     </span>
-                    <span className="text-sm text-muted-foreground">
-                      per workspace, permanent
+                    <span className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      / workspace
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Every TaskFlow capability is included. No credit card is
-                    required at signup, and the product contains no upgrade
-                    prompts or feature paywalls.
+
+                  <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted-foreground">
+                    Every TaskFlow capability is included. No credit card at
+                    signup, no feature paywalls inside the product, no
+                    countdown-to-trial-end emails.
                   </p>
 
-                  <ul className="mt-5 grid grid-cols-1 gap-y-1.5 sm:grid-cols-2">
-                    {includes.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-2 text-sm text-foreground/90"
-                      >
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center lg:mt-auto lg:flex-col lg:items-stretch lg:gap-4">
+                    <Link
+                      href="/signup"
+                      className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary to-primary/85 px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-[0_1px_0_0_rgba(255,255,255,0.18)_inset,0_14px_28px_-10px_rgba(99,102,241,0.7)] transition-all hover:-translate-y-0.5 hover:shadow-[0_1px_0_0_rgba(255,255,255,0.22)_inset,0_18px_36px_-12px_rgba(99,102,241,0.85)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                      />
+                      <span className="relative">Start free</span>
+                      <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground sm:flex-1 lg:flex-none">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      Sub-minute provisioning, no card required
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-stretch justify-center gap-2 md:items-end md:justify-end">
-                  <Link
-                    href="/signup"
-                    className="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    Start free
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                  <p className="text-center text-[11px] text-muted-foreground md:text-right">
-                    Sub-minute provisioning · No card required
+                {/* ─── RIGHT: grouped features ─── */}
+                <div className="relative lg:border-l lg:border-border/60 lg:pl-12">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                    What's included
                   </p>
+                  <div className="mt-5 flex flex-col gap-6">
+                    {featureGroups.map((group) => (
+                      <div key={group.title}>
+                        <p className="mb-2.5 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground">
+                          <span className="h-2.5 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
+                          {group.title}
+                        </p>
+                        <ul className="space-y-2">
+                          {group.items.map((item) => (
+                            <li
+                              key={item}
+                              className="flex items-start gap-2.5 text-[13px] leading-snug text-foreground/85"
+                            >
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1337,19 +1634,35 @@ function Pricing() {
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Is TaskFlow genuinely free?',
-    a: 'Yes. Workspaces, invitations, projects, tasks, reporting, and the desktop application are all included at no cost. Paid tiers are planned for larger organizations and compliance add-ons; workspaces provisioned today remain on the Free plan.',
+    a: 'Yes. Workspaces, invitations, projects, tasks, reporting, AI summaries, and the desktop application are all included at no cost. Paid tiers are planned for larger organizations and compliance add-ons; workspaces provisioned today remain on the Free plan.',
   },
   {
-    q: 'Can TaskFlow be hosted on our own infrastructure?',
-    a: 'Self-hosting is not formally supported at this time. The backend runs on Python Lambda, DynamoDB, and AWS CDK, so a technical team can adapt the infrastructure to run in its own AWS account. A packaged self-hosting option is on our roadmap.',
+    q: 'How does the AI weekly rollup work?',
+    a: 'Owners and admins can open the weekly digest from the Reports tab. The system aggregates every task update from the last seven days into deterministic metrics (hours, contributors, missing days), then asks an LLM to write a short editorial recap around those numbers. The AI is explicitly forbidden from inventing figures — it only writes prose around what the math has already produced.',
+  },
+  {
+    q: 'Is two-factor authentication supported?',
+    a: 'Yes. Members can enrol a TOTP authenticator (Google Authenticator, 1Password, Authy, etc.) from their profile. Owners can enforce 2FA workspace-wide. Recovery codes are generated at enrolment so a lost authenticator does not lock anyone out.',
+  },
+  {
+    q: 'Is there an audit log?',
+    a: 'Yes. Every privileged action — role changes, member removals, ownership transfers, settings edits — is recorded in a per-tenant audit log with the actor, target, and rule identifier. Filterable by user, action, and date range; exportable to CSV. Retention is policied by your plan.',
+  },
+  {
+    q: 'Can I define custom roles beyond owner / admin / member?',
+    a: 'Yes. The three-tier default is the starting point. Owners can clone any default role and edit its permission set field-by-field, or build a new role from scratch. Custom roles are scoped to your workspace and never affect other tenants.',
   },
   {
     q: 'Do we own our data, and can we export it?',
-    a: 'Yes. Every list view supports CSV export. A full-workspace export covering users, projects, tasks, attendance, and time-off records in both JSON and CSV formats is on the product roadmap.',
+    a: 'Yes. Every list view supports CSV export. A full-workspace export covering users, projects, tasks, attendance, time-off records, and audit log is available as a single JSON archive from the workspace settings page.',
   },
   {
     q: 'How is our data isolated from other tenants?',
     a: 'Every database record is prefixed with your organization identifier. Each authenticated request re-reads the requesting user’s role from DynamoDB rather than trusting the JWT claim alone. Uploads reside under your organization’s S3 prefix, and the presigned-URL handler rejects any key outside that scope.',
+  },
+  {
+    q: 'Can TaskFlow be hosted on our own infrastructure?',
+    a: 'Self-hosting is not formally supported at this time. The backend runs on Python Lambda, DynamoDB, and AWS CDK, so a technical team can adapt the infrastructure to run in its own AWS account. A packaged self-hosting option is on our roadmap.',
   },
   {
     q: 'Does TaskFlow support multiple teams within a single workspace?',
@@ -1420,7 +1733,7 @@ function Faq() {
           <div className="space-y-2.5">
             {FAQS.map((item, i) => (
               <Reveal key={item.q} direction="up" delay={i * 40}>
-                <details className="group rounded-2xl border border-border bg-card transition-all hover:border-primary/40 open:border-primary/50 open:bg-gradient-to-br open:from-primary/[0.04] open:to-accent/[0.04] open:shadow-lg">
+                <details className="group rounded-2xl border border-white/50 bg-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-xl transition-all hover:border-primary/40 hover:bg-white/50 open:border-primary/50 open:bg-gradient-to-br open:from-primary/[0.06] open:to-accent/[0.06] open:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_20px_50px_-20px_rgba(99,102,241,0.3)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
                   <summary className="flex cursor-pointer list-none items-start gap-4 px-5 py-4 text-left">
                     <span
                       className={cn(
@@ -1484,7 +1797,7 @@ function FinalCTA() {
 
       <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         <Reveal direction="up">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_6px_20px_-8px_rgba(99,102,241,0.3)] backdrop-blur-xl dark:border-white/15 dark:bg-white/5">
             <Sparkles className="h-3 w-3 animate-pulse-soft" />
             Ready when you are
           </div>
@@ -1519,7 +1832,7 @@ function FinalCTA() {
             </Link>
             <Link
               href="/login"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/70 px-5 py-3 text-sm font-semibold text-foreground backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/35 px-5 py-3 text-sm font-semibold text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_10px_28px_-14px_rgba(15,23,42,0.2)] backdrop-blur-2xl transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10"
             >
               Sign in
             </Link>

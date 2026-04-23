@@ -249,27 +249,83 @@ export function TimeReportCharts({
 
   const hasData = records.length > 0
 
-  // Custom tooltip for stacked bar
-  const CustomBarTooltip = ({ active, payload, label: tipLabel }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
+  // Custom tooltip for the stacked bar chart.
+  //
+  // Design notes:
+  // - Compact glass card (w-64) so it doesn't blanket the chart behind it.
+  // - Items sorted by value descending — biggest contributors first.
+  // - Only the top 6 show; a trailing "+N more (Xh)" line rolls up the rest
+  //   so a 15-project day still produces a reasonably-sized tooltip.
+  // - Left colour-stripe on each row (not a dot) — easier to match against
+  //   the colour-coded segments of the stacked bar.
+  // - Header shows the day label AND the stacked total on one line to save
+  //   vertical space; that also means when only one project is shown there
+  //   is no awkward duplicate-total row.
+  const CustomBarTooltip = ({
+    active,
+    payload,
+    label: tipLabel,
+  }: {
+    active?: boolean
+    payload?: Array<{ name: string; value: number; color: string }>
+    label?: string
+  }) => {
     if (!active || !payload?.length) return null
-    const items = payload.filter((p) => p.value > 0)
+    const items = payload
+      .filter((p) => p.value > 0)
+      .sort((a, b) => b.value - a.value)
     if (items.length === 0) return null
+
     const total = items.reduce((s, p) => s + p.value, 0)
+    const MAX_ROWS = 6
+    const visible = items.slice(0, MAX_ROWS)
+    const hidden = items.slice(MAX_ROWS)
+    const hiddenTotal = hidden.reduce((s, p) => s + p.value, 0)
+
     return (
-      <div className="bg-card rounded-xl border border-border/80 shadow-lg p-3 text-sm">
-        <p className="font-semibold text-foreground/95 mb-1.5">{tipLabel}</p>
-        {items.map((p) => (
-          <div key={p.name} className="flex items-center gap-2 py-0.5">
-            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
-            <span className="text-muted-foreground flex-1">{p.name}</span>
-            <span className="font-medium text-foreground/95 tabular-nums">{formatDuration(p.value)}</span>
-          </div>
-        ))}
-        {items.length > 1 && (
-          <div className="border-t border-border mt-1.5 pt-1.5 flex justify-between">
-            <span className="font-semibold text-foreground/85">Total</span>
-            <span className="font-bold text-indigo-700 tabular-nums">{formatDuration(total)}</span>
-          </div>
+      <div className="w-64 rounded-xl border border-white/60 bg-white/85 p-3 text-[12px] shadow-[0_20px_40px_-16px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/85">
+        {/* Header: date + total on the same row when there's a total worth
+            showing; otherwise just the date. */}
+        <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-border/60 pb-2">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            {tipLabel}
+          </span>
+          {items.length > 1 && (
+            <span className="font-mono text-sm font-bold tabular-nums text-primary">
+              {formatDuration(total)}
+            </span>
+          )}
+        </div>
+
+        {/* Rows: coloured left-stripe + name + value */}
+        <ul className="space-y-1">
+          {visible.map((p) => (
+            <li
+              key={p.name}
+              className="flex items-center gap-2 rounded-md py-0.5"
+            >
+              <span
+                aria-hidden
+                className="h-3 w-[3px] shrink-0 rounded-full"
+                style={{ backgroundColor: p.color }}
+              />
+              <span className="min-w-0 flex-1 truncate text-foreground/85">
+                {p.name}
+              </span>
+              <span className="shrink-0 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                {formatDuration(p.value)}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {hidden.length > 0 && (
+          <p className="mt-2 border-t border-border/60 pt-1.5 text-[11px] text-muted-foreground">
+            +{hidden.length} more ·{' '}
+            <span className="font-mono tabular-nums">
+              {formatDuration(hiddenTotal)}
+            </span>
+          </p>
         )}
       </div>
     )
@@ -432,38 +488,41 @@ export function TimeReportCharts({
                             <Cell key={entry.name} fill={colorMap[entry.name] || COLORS[0]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const entry = payload[0]
-                            const val = Number(entry.value)
-                            const pct = totalHours > 0 ? Math.round((val / totalHours) * 100) : 0
-                            return (
-                              <div className="bg-card rounded-xl border border-border/80 shadow-lg p-3 text-sm">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.payload?.fill }} />
-                                  <span className="font-semibold text-foreground/95">{entry.name}</span>
-                                </div>
-                                <p className="text-muted-foreground">{formatDuration(val)}</p>
-                                <p className="text-indigo-600 font-bold">{pct}%</p>
-                              </div>
-                            )
-                          }}
-                        />
+                        {/* No <Tooltip> — the donut's centre label and the
+                            highlighted legend row on the right already
+                            communicate the hovered slice. A floating
+                            tooltip on top of the centre label produced a
+                            visible overlap (duplicate values rendered on
+                            top of each other). */}
                       </PieChart>
                     </ResponsiveContainer>
-                    {/* Center total label */}
+                    {/* Center label — shows totals at rest, hovered-slice
+                        details on hover. Replaces the recharts Tooltip
+                        (which collided with this card). */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70">
+                      <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-muted-foreground/70">
                         {activePieIndex >= 0 ? 'Selected' : 'Total'}
                       </span>
-                      <span className="text-base font-bold text-foreground tabular-nums leading-tight mt-0.5">
-                        {activePieIndex >= 0 ? formatDuration(pieData[activePieIndex].value) : formatDuration(totalHours)}
+                      <span className="mt-1 text-base font-bold tabular-nums leading-tight text-foreground">
+                        {activePieIndex >= 0
+                          ? formatDuration(pieData[activePieIndex].value)
+                          : formatDuration(totalHours)}
                       </span>
                       {activePieIndex >= 0 && (
-                        <span className="text-[10px] text-muted-foreground/80 mt-0.5 max-w-[110px] truncate px-2">
-                          {pieData[activePieIndex].name}
-                        </span>
+                        <>
+                          <span className="mt-0.5 font-mono text-xs font-bold tabular-nums text-primary">
+                            {totalHours > 0
+                              ? Math.round(
+                                  (pieData[activePieIndex].value / totalHours) *
+                                    100,
+                                )
+                              : 0}
+                            %
+                          </span>
+                          <span className="mt-1 max-w-[110px] truncate px-2 text-[10px] text-muted-foreground/80">
+                            {pieData[activePieIndex].name}
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>

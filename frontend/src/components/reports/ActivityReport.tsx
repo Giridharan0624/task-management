@@ -19,6 +19,10 @@ import {
   Mouse,
   Layers,
   AlertTriangle,
+  Search,
+  X,
+  FileDown,
+  Users,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { Button } from '@/components/ui/Button'
@@ -26,8 +30,10 @@ import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FilterSelect } from '@/components/ui/FilterSelect'
+import { Input } from '@/components/ui/Input'
 import { Progress } from '@/components/ui/Progress'
 import { formatDuration } from '@/lib/utils/formatDuration'
+import { buildCsvName } from '@/lib/utils/csvFilename'
 import { cn } from '@/lib/utils'
 import { ScreenshotGallery } from './ScreenshotGallery'
 import type { UserActivity, DailySummary } from '@/lib/api/activityApi'
@@ -57,24 +63,120 @@ function toLocalDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** Pick the app the user spent the most seconds on. Returns null if empty. */
+function topAppFor(activity: UserActivity): { name: string; seconds: number } | null {
+  const entries = Object.entries(activity.appUsage)
+  if (entries.length === 0) return null
+  return entries.reduce(
+    (best, [name, seconds]) => (seconds > best.seconds ? { name, seconds } : best),
+    { name: entries[0][0], seconds: entries[0][1] },
+  )
+}
+
+function generateActivityCSV(
+  activities: UserActivity[],
+  users: { userId: string; employeeId?: string }[],
+): string {
+  const rows: string[][] = [
+    [
+      'Name',
+      'Email',
+      'Employee ID',
+      'Active (minutes)',
+      'Idle (minutes)',
+      'Activity score (%)',
+      'Keystrokes',
+      'Mouse events',
+      'Buckets',
+      'Top app',
+      'Top app (minutes)',
+    ],
+  ]
+  for (const a of activities) {
+    const userInfo = users.find((u) => u.userId === a.userId)
+    const kb = a.buckets.reduce((s, b) => s + (b.keyboardCount || 0), 0)
+    const ms = a.buckets.reduce((s, b) => s + (b.mouseCount || 0), 0)
+    const top = topAppFor(a)
+    rows.push([
+      a.userName || '',
+      a.userEmail || '',
+      userInfo?.employeeId || '',
+      String(Math.round(a.totalActiveMinutes)),
+      String(Math.round(a.totalIdleMinutes)),
+      String(Math.round(a.activityScore * 100)),
+      String(kb),
+      String(ms),
+      String(a.bucketCount),
+      top?.name || '',
+      top ? String(Math.round(top.seconds / 60)) : '',
+    ])
+  }
+  return rows
+    .map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+}
+
 export function ActivityReport() {
   const [date, setDate] = useState(() => toLocalDateStr(new Date()))
   const [selectedUser, setSelectedUser] = useState<string>(ALL_USERS)
+  const [search, setSearch] = useState('')
 
   const { data: activities, isLoading } = useActivityReport(date, date)
   const { data: users } = useUsers()
 
   const filteredActivities = useMemo(() => {
     if (!activities) return []
-    if (selectedUser !== ALL_USERS)
-      return activities.filter((a) => a.userId === selectedUser)
-    return activities
-  }, [activities, selectedUser])
+    const q = search.trim().toLowerCase()
+    return activities.filter((a) => {
+      if (selectedUser !== ALL_USERS && a.userId !== selectedUser) return false
+      if (q) {
+        const userInfo = (users ?? []).find((u) => u.userId === a.userId)
+        const hay =
+          `${a.userName ?? ''} ${a.userEmail ?? ''} ${userInfo?.employeeId ?? ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [activities, selectedUser, search, users])
 
   const userOptions = useMemo(
     () => (users ?? []).map((u) => ({ value: u.userId, label: u.name })),
     [users],
   )
+
+  /**
+   * Day-level summary — computed from ALL activities for the date, not
+   * the currently-filtered list. The strip is a page header, so the
+   * numbers should stay stable as the user narrows the card list below.
+   */
+  const daySummary = useMemo(() => {
+    const all = activities ?? []
+    const activeCount = all.filter(
+      (a) => a.totalActiveMinutes > 0 || a.bucketCount > 0,
+    ).length
+    const totalActiveHours = all.reduce(
+      (s, a) => s + a.totalActiveMinutes / 60,
+      0,
+    )
+    const avgScore =
+      all.length > 0
+        ? Math.round(
+            (all.reduce((s, a) => s + a.activityScore, 0) / all.length) * 100,
+          )
+        : 0
+    return { activeCount, totalActiveHours, avgScore }
+  }, [activities])
+
+  const handleExport = () => {
+    const rows = activities ?? []
+    if (rows.length === 0) return
+    const csv = generateActivityCSV(rows, users ?? [])
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = buildCsvName('activity', date, date)
+    a.click()
+  }
 
   const today = toLocalDateStr(new Date())
   const shiftDate = (by: number) => {
@@ -133,13 +235,50 @@ export function ActivityReport() {
           )}
         </div>
 
-        <FilterSelect
-          value={selectedUser}
-          onChange={setSelectedUser}
-          options={[{ value: ALL_USERS, label: 'All Members' }, ...userOptions]}
-          placeholder="Filter by member"
-          className="w-48"
-        />
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="min-w-[200px] max-w-[280px] flex-1">
+            <Input
+              type="text"
+              placeholder="Search by name, email, or ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              leftIcon={<Search />}
+              rightIcon={
+                search ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="pointer-events-auto rounded p-0.5 text-muted-foreground/70 hover:text-foreground"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : undefined
+              }
+              className="h-9"
+            />
+          </div>
+          <FilterSelect
+            value={selectedUser}
+            onChange={setSelectedUser}
+            options={[
+              { value: ALL_USERS, label: 'All Members' },
+              ...userOptions,
+            ]}
+            placeholder="Filter by member"
+            className="w-48"
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExport}
+            disabled={!(activities && activities.length > 0)}
+            className="h-9 gap-1.5"
+          >
+            <FileDown className="h-3.5 w-3.5" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {isLoading && (
@@ -149,10 +288,40 @@ export function ActivityReport() {
       )}
 
       {!isLoading && filteredActivities.length === 0 && (
-        <EmptyState
-          icon={<Clock className="h-7 w-7 text-muted-foreground/70" strokeWidth={1.5} />}
-          title="No activity data"
-          description={`Nothing was recorded on ${dateLabel}. The desktop app records activity while a timer is running.`}
+        (activities?.length ?? 0) > 0 ? (
+          <EmptyState
+            icon={<Search className="h-7 w-7 text-muted-foreground/70" strokeWidth={1.5} />}
+            title="No matches"
+            description="Try clearing your search or filter to see more members."
+            action={
+              (search || selectedUser !== ALL_USERS) ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setSearch('')
+                    setSelectedUser(ALL_USERS)
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<Clock className="h-7 w-7 text-muted-foreground/70" strokeWidth={1.5} />}
+            title="No activity data"
+            description={`Nothing was recorded on ${dateLabel}. The desktop app records activity while a timer is running.`}
+          />
+        )
+      )}
+
+      {(activities?.length ?? 0) > 0 && (
+        <DaySummary
+          activeCount={daySummary.activeCount}
+          totalActiveHours={daySummary.totalActiveHours}
+          avgScore={daySummary.avgScore}
         />
       )}
 
@@ -616,6 +785,80 @@ function SecondaryStat({
           {label}
         </p>
         <p className="truncate font-mono text-lg font-semibold tabular-nums text-foreground">
+          {value}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ═══ Day summary strip — team-wide totals for the selected date ═══ */
+
+function DaySummary({
+  activeCount,
+  totalActiveHours,
+  avgScore,
+}: {
+  activeCount: number
+  totalActiveHours: number
+  avgScore: number
+}) {
+  const scoreTone =
+    avgScore >= 70
+      ? 'text-emerald-600'
+      : avgScore >= 40
+        ? 'text-amber-700'
+        : 'text-destructive'
+
+  return (
+    <Card className="grid grid-cols-3 divide-x divide-border/60 overflow-hidden p-0">
+      <SummaryCell
+        icon={Users}
+        label="Members active"
+        value={String(activeCount)}
+        tone="text-primary"
+      />
+      <SummaryCell
+        icon={Clock}
+        label="Total active"
+        value={formatDuration(totalActiveHours)}
+      />
+      <SummaryCell
+        icon={Gauge}
+        label="Avg score"
+        value={`${avgScore}%`}
+        tone={scoreTone}
+      />
+    </Card>
+  )
+}
+
+function SummaryCell({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  label: string
+  value: string
+  tone?: string
+}) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <Icon className="h-4 w-4" strokeWidth={2} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+          {label}
+        </p>
+        <p
+          className={cn(
+            'truncate text-base font-bold tabular-nums',
+            tone ?? 'text-foreground',
+          )}
+        >
           {value}
         </p>
       </div>

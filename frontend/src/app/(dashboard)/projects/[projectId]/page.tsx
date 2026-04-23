@@ -200,8 +200,6 @@ export default function ProjectDetailPage() {
         completionPercent={completionPct}
       />
 
-      <ProjectUpcomingDeadlines tasks={tasks ?? []} />
-
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as TabKey)}
@@ -224,7 +222,12 @@ export default function ProjectDetailPage() {
           )}
         </TabsList>
 
-        <TabsContent value="tasks">
+        <TabsContent value="tasks" className="space-y-6">
+          {/* Upcoming deadlines belongs with the task view — it's a
+              filtered slice of the task list. Moved inside the Tasks
+              tab so the tab bar above is never buried by it. */}
+          <ProjectUpcomingDeadlines tasks={tasks ?? []} />
+
           {tasksLoading ? (
             <div className="flex items-center justify-center py-16">
               <Spinner size="lg" />
