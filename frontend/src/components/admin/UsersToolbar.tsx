@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, X, Download, Upload, UserPlus, Shield, Users, Mail } from 'lucide-react'
+import { Search, X, FileDown, Upload, UserPlus, Shield, Users, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import {
@@ -229,7 +229,7 @@ export function UsersToolbar({
           onClick={onExportCSV}
           className="h-9 gap-1.5"
         >
-          <Download className="h-3.5 w-3.5" />
+          <FileDown className="h-3.5 w-3.5" />
           Export
         </Button>
         {onBulkImport && (

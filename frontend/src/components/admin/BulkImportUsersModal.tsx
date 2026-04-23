@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
-  Download,
+  FileDown,
   FileSpreadsheet,
   Upload,
   X,
@@ -222,7 +222,7 @@ function UploadPhase({
           onClick={downloadTemplate}
           className="mt-2 h-7 gap-1.5 px-0 text-xs text-primary hover:underline"
         >
-          <Download className="h-3 w-3" />
+          <FileDown className="h-3 w-3" />
           Download template
         </Button>
       </div>

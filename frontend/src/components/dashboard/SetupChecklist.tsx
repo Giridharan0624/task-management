@@ -22,12 +22,14 @@ import { cn } from '@/lib/utils'
 
 const DISMISS_KEY = 'tf:setup-checklist:dismissed'
 const DESKTOP_FLAG_KEY = 'tf:setup:desktop-installed'
+const BRANDING_FLAG_KEY = 'tf:setup:branding-done'
 // Brand defaults we ship with — MUST match the backend OrgSettings seed
 // (`primary_color = "#4F46E5"`, `accent_color = "#10B981"` in
 // backend/src/contexts/org/domain/entities.py). When these values match
-// the tenant's settings, branding is considered "untouched" and the
-// checklist step stays un-ticked. Kept lowercase so comparisons are
-// case-insensitive against whatever the tenant may have re-saved.
+// the tenant's settings, branding looks "untouched" via auto-detection.
+// Kept lowercase so comparisons are case-insensitive against whatever
+// the tenant may have re-saved. Used as a fallback signal — the
+// authoritative source is the localStorage flag set by the user.
 const DEFAULT_PRIMARY = '#4f46e5'
 const DEFAULT_ACCENT = '#10b981'
 
@@ -60,12 +62,14 @@ export function SetupChecklist() {
   const [mounted, setMounted] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [desktopMarkedDone, setDesktopMarkedDone] = useState(false)
+  const [brandingMarkedDone, setBrandingMarkedDone] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     try {
       setDismissed(localStorage.getItem(DISMISS_KEY) === '1')
       setDesktopMarkedDone(localStorage.getItem(DESKTOP_FLAG_KEY) === '1')
+      setBrandingMarkedDone(localStorage.getItem(BRANDING_FLAG_KEY) === '1')
     } catch {
       // Storage disabled — treat as not-dismissed.
     }
@@ -75,13 +79,19 @@ export function SetupChecklist() {
   const hasTeammates = nonOwnerUsers.length > 0
   const hasProject = (projects ?? []).length > 0
   const settings = current?.settings
-  // Branding is considered set when the tenant has picked any color that
-  // differs from the backend-seeded defaults. Logo upload is no longer
-  // part of the UI, so it doesn't factor into this check anymore.
-  const hasBranding =
+  // Branding step is considered done when EITHER the user explicitly
+  // marked it (localStorage flag, set by the "Mark as done" button) OR
+  // the tenant has saved a colour that differs from the seeded defaults.
+  // The auto-detect alone was unreliable: clicking "Reset to defaults"
+  // or picking a colour that happened to equal the seed left this step
+  // permanently un-tickable. The explicit flag is now the primary source
+  // of truth; the colour heuristic stays as a courtesy auto-tick for
+  // users who customised before the flag existed.
+  const colorsCustomised =
     !!settings &&
     (settings.primaryColor?.toLowerCase() !== DEFAULT_PRIMARY ||
       settings.accentColor?.toLowerCase() !== DEFAULT_ACCENT)
+  const hasBranding = brandingMarkedDone || colorsCustomised
 
   const steps: Step[] = [
     {
@@ -142,15 +152,31 @@ export function SetupChecklist() {
       key: 'branding',
       title: 'Customize your workspace',
       description: 'Pick colors that match your brand.',
-      done: !!hasBranding,
+      done: hasBranding,
       icon: Palette,
       action: (
-        <Button asChild variant="primary" size="sm">
-          <Link href="/settings/organization">
-            Open settings
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              try {
+                localStorage.setItem(BRANDING_FLAG_KEY, '1')
+              } catch {
+                // Ignore.
+              }
+              setBrandingMarkedDone(true)
+            }}
+          >
+            Mark done
+          </Button>
+          <Button asChild variant="primary" size="sm">
+            <Link href="/settings/organization">
+              Open settings
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
       ),
     },
   ]

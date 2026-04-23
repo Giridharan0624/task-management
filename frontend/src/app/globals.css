@@ -491,15 +491,25 @@
      variants are available so the feel can be tuned from a single
      prop. All respect prefers-reduced-motion (neutralised below). */
 
+  /* NOTE on `transform: none` end states:
+     Page transitions live on a wrapper that sits above every route. If the
+     element retains ANY transform after the animation (even identity
+     `translateY(0) scale(1)`), it creates a containing block for fixed
+     descendants — meaning `position: fixed` on a child (e.g. the landing
+     header) would be relative to this wrapper instead of the viewport.
+     Each variant therefore ends at `transform: none`; browsers interpolate
+     `none` as the identity matrix so there's no visual difference. */
+
   /* 1) Rise — fade + subtle upward translate + micro scale. The default.
      Feels intentional, doesn't slow down navigation. */
   @keyframes page-rise {
     from { opacity: 0; transform: translateY(14px) scale(0.992); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 1; transform: none; }
   }
   .page-enter-rise {
     animation: page-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    will-change: opacity, transform;
+    /* will-change intentionally omitted — it promotes the element to its
+       own containing block, breaking position:fixed for descendants. */
   }
 
   /* 2) Fade — pure opacity. Cleanest, least movement. Good for pages
@@ -510,47 +520,50 @@
   }
   .page-enter-fade {
     animation: page-fade 240ms ease-out forwards;
-    will-change: opacity;
+    /* will-change intentionally omitted (see note above). */
   }
 
   /* 3) Slide — horizontal sweep from the right. Feels like mobile-app
      navigation or Linear's pane swaps. */
   @keyframes page-slide {
     from { opacity: 0; transform: translateX(24px); }
-    to   { opacity: 1; transform: translateX(0); }
+    to   { opacity: 1; transform: none; }
   }
   .page-enter-slide {
     animation: page-slide 340ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    will-change: opacity, transform;
+    /* will-change intentionally omitted — it promotes the element to its
+       own containing block, breaking position:fixed for descendants. */
   }
 
   /* 4) Scale — blooms from 96% to 100%. Feels like a panel materialising. */
   @keyframes page-scale {
     from { opacity: 0; transform: scale(0.96); }
-    to   { opacity: 1; transform: scale(1); }
+    to   { opacity: 1; transform: none; }
   }
   .page-enter-scale {
     animation: page-scale 300ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
     transform-origin: center top;
-    will-change: opacity, transform;
+    /* will-change intentionally omitted — it promotes the element to its
+       own containing block, breaking position:fixed for descendants. */
   }
 
   /* 5) Blur-fade — opacity + filter blur ramp. Premium cinematic feel.
      Slightly more GPU work than the others; keep duration tight. */
   @keyframes page-blur {
     from { opacity: 0; filter: blur(8px); transform: translateY(6px); }
-    to   { opacity: 1; filter: blur(0); transform: translateY(0); }
+    to   { opacity: 1; filter: blur(0); transform: none; }
   }
   .page-enter-blur {
     animation: page-blur 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    will-change: opacity, transform, filter;
+    /* will-change intentionally omitted (see note above). */
   }
 
   /* Legacy alias — original callers used .page-enter. Keep it pointing
      at the Rise variant so nothing regresses. */
   .page-enter {
     animation: page-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    will-change: opacity, transform;
+    /* will-change intentionally omitted — it promotes the element to its
+       own containing block, breaking position:fixed for descendants. */
   }
 
   /* Number count-in — used by <AnimatedNumber> when the tween is

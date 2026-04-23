@@ -358,73 +358,166 @@ function PlatformGrid() {
  * ──────────────────────────────────────────────────────────────────── */
 
 function Capabilities() {
+  // Per-card colour identity — keeps the grid monochrome at rest, but
+  // each card brightens to its own accent on hover. Borrowed pattern
+  // from the landing page's compliance + capability sections.
   const items = [
     {
       Icon: Clock,
       title: 'Accurate session timer',
       blurb:
         'Start and stop sessions from the system tray. Time is attributed to the workspace and project you select.',
+      tint: 'from-indigo-500/10 via-indigo-500/5',
+      iconTint: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300',
+      ring: 'ring-indigo-500/20',
+      glow: 'group-hover:bg-indigo-500/15',
+      bar: 'from-indigo-500 via-indigo-400 to-indigo-300',
     },
     {
       Icon: HardDrive,
       title: 'Aggregate activity capture',
       blurb:
         'Keystroke and mouse-event counters record frequency only — never content. A low-activity period surfaces automatically.',
+      tint: 'from-fuchsia-500/10 via-fuchsia-500/5',
+      iconTint: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-300',
+      ring: 'ring-fuchsia-500/20',
+      glow: 'group-hover:bg-fuchsia-500/15',
+      bar: 'from-fuchsia-500 via-pink-400 to-rose-400',
     },
     {
       Icon: Camera,
       title: 'Periodic screenshot evidence',
       blurb:
         'Compressed screenshots upload to your organization’s S3 prefix at regular intervals for lightweight spot checks.',
+      tint: 'from-sky-500/10 via-sky-500/5',
+      iconTint: 'bg-sky-500/10 text-sky-600 dark:text-sky-300',
+      ring: 'ring-sky-500/20',
+      glow: 'group-hover:bg-sky-500/15',
+      bar: 'from-sky-500 via-cyan-400 to-blue-400',
     },
     {
       Icon: Brain,
       title: 'Automatic daily summaries',
       blurb:
         'At sign-out the desktop application submits a structured session log that TaskFlow converts into an AI-written recap.',
+      tint: 'from-violet-500/10 via-violet-500/5',
+      iconTint: 'bg-violet-500/10 text-violet-600 dark:text-violet-300',
+      ring: 'ring-violet-500/20',
+      glow: 'group-hover:bg-violet-500/15',
+      bar: 'from-violet-500 via-purple-400 to-fuchsia-400',
     },
     {
       Icon: Wifi,
       title: 'Offline resilience',
       blurb:
         'Sessions continue locally during network loss and sync back to the cloud as soon as connectivity is restored.',
+      tint: 'from-emerald-500/10 via-emerald-500/5',
+      iconTint: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+      ring: 'ring-emerald-500/20',
+      glow: 'group-hover:bg-emerald-500/15',
+      bar: 'from-emerald-500 via-teal-400 to-cyan-400',
     },
     {
       Icon: ShieldCheck,
       title: 'Tenant-scoped storage',
       blurb:
         'All uploads are written under your organization prefix. Cross-tenant access is architecturally prevented at the presign layer.',
+      tint: 'from-amber-500/10 via-amber-500/5',
+      iconTint: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
+      ring: 'ring-amber-500/20',
+      glow: 'group-hover:bg-amber-500/15',
+      bar: 'from-amber-500 via-orange-400 to-rose-400',
     },
   ]
 
   return (
-    <section className="relative border-b border-border/60 bg-muted/20 py-14 sm:py-20">
+    <section className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-16 sm:py-24">
+      {/* Soft positional washes to break up the flat muted strip */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-32 top-20 -z-10 h-72 w-72 rounded-full bg-primary/5 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-32 bottom-10 -z-10 h-72 w-72 rounded-full bg-accent/5 blur-3xl"
+      />
+
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
+        <div className="mx-auto mb-12 max-w-3xl text-center">
           <Reveal direction="up">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+              Capabilities
+            </p>
+          </Reveal>
+          <Reveal direction="up" delay={80}>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               What the desktop application delivers
             </h2>
           </Reveal>
-          <Reveal direction="up" delay={80}>
-            <p className="mt-2 text-sm text-muted-foreground">
+          <Reveal direction="up" delay={160}>
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
               The capabilities that distinguish TaskFlow from generic task
               trackers all run in the native desktop companion.
             </p>
           </Reveal>
         </div>
 
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Pixel-grid mosaic: shared 1px dividers via gap-px on a bordered
+            parent — gives the section the enterprise-mosaic feel without
+            a halo on every card. */}
+        <ul className="grid grid-cols-1 gap-px overflow-hidden rounded-3xl border border-border/70 bg-border/70 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item, i) => (
-            <Reveal key={item.title} direction="up" delay={i * 40}>
-              <li className="h-full rounded-2xl border border-border/70 bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">
-                  <item.Icon className="h-5 w-5" strokeWidth={1.8} />
+            <Reveal key={item.title} direction="up" delay={i * 70}>
+              <li
+                className={cn(
+                  'group relative flex h-full flex-col overflow-hidden bg-card p-6 transition-all duration-300',
+                  'hover:-translate-y-0.5 hover:shadow-lg sm:p-7'
+                )}
+              >
+                {/* Top-edge gradient bar — invisible at rest, slides in on hover */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r opacity-0 transition-opacity duration-300 group-hover:opacity-100',
+                    item.bar
+                  )}
+                />
+                {/* Tinted background wash that fades in on hover */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    'pointer-events-none absolute inset-0 -z-0 bg-gradient-to-br to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100',
+                    item.tint
+                  )}
+                />
+                {/* Soft corner orb that brightens on hover */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    'pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-transparent blur-3xl transition-colors duration-500',
+                    item.glow
+                  )}
+                />
+
+                <div className="relative flex items-start justify-between gap-3">
+                  <span
+                    className={cn(
+                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset shadow-sm transition-all duration-300 group-hover:rotate-6 group-hover:scale-110',
+                      item.iconTint,
+                      item.ring
+                    )}
+                  >
+                    <item.Icon className="h-5 w-5" strokeWidth={1.8} />
+                  </span>
+                  <span className="font-mono text-[10px] font-bold tracking-[0.18em] text-muted-foreground/60">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
                 </div>
-                <h3 className="text-base font-bold tracking-tight text-foreground">
+
+                <h3 className="relative mt-5 text-base font-semibold tracking-tight text-foreground">
                   {item.title}
                 </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                <p className="relative mt-2 text-[13px] leading-relaxed text-muted-foreground">
                   {item.blurb}
                 </p>
               </li>

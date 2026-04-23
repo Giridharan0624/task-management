@@ -70,10 +70,36 @@ export function LandingHeader() {
     return () => observer.disconnect()
   }, [])
 
+  // Intercept in-page anchor clicks and scroll smoothly. CSS
+  // scroll-behavior:smooth was removed globally because it also
+  // animated Next.js route scroll-to-top. This is the scoped
+  // alternative — only in-page #anchor clicks get the easing, route
+  // changes stay snappy. Also updates the URL hash so copy-paste and
+  // back-button navigation still work.
+  const handleAnchorClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+  ) => {
+    if (!href.startsWith('#')) return
+    const target = document.getElementById(href.slice(1))
+    if (!target) return
+    e.preventDefault()
+    // Offset by the rendered header height so the section's heading
+    // doesn't land behind the fixed bar. Mobile has an extra pill row
+    // (lg:hidden) that adds ~40px.
+    const isMobile = window.matchMedia('(max-width: 1023px)').matches
+    const headerOffset = isMobile ? 104 : 64
+    const y =
+      target.getBoundingClientRect().top + window.scrollY - headerOffset
+    window.scrollTo({ top: y, behavior: 'smooth' })
+    // Keep the address-bar hash in sync without the default jump-to-top.
+    history.replaceState(null, '', href)
+  }
+
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 border-b transition-all duration-300',
+        'fixed inset-x-0 top-0 z-30 border-b transition-all duration-300',
         scrolled
           ? 'border-border/70 bg-background/90 shadow-[0_1px_0_0_rgba(0,0,0,0.02),0_6px_18px_-10px_rgba(0,0,0,0.12)] backdrop-blur-xl'
           : 'border-border/40 bg-background/70 backdrop-blur-md'
@@ -120,7 +146,11 @@ export function LandingHeader() {
                     {l.label}
                   </Link>
                 ) : (
-                  <a href={l.href} className={className}>
+                  <a
+                    href={l.href}
+                    className={className}
+                    onClick={(e) => handleAnchorClick(e, l.href)}
+                  >
                     {l.label}
                   </a>
                 )}
@@ -188,7 +218,11 @@ export function LandingHeader() {
                     {l.label}
                   </Link>
                 ) : (
-                  <a href={l.href} className={className}>
+                  <a
+                    href={l.href}
+                    className={className}
+                    onClick={(e) => handleAnchorClick(e, l.href)}
+                  >
                     {l.label}
                   </a>
                 )}

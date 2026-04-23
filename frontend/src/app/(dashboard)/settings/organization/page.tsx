@@ -25,6 +25,7 @@ import { getProfile, updateProfile } from '@/lib/api/userApi'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Spinner } from '@/components/ui/Spinner'
 import { Card } from '@/components/ui/Card'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { useToast } from '@/components/ui/Toast'
@@ -287,6 +288,19 @@ export default function OrgSettingsPage() {
   if (!user) return null
   if (user.systemRole !== 'OWNER') return null
 
+  // Hold the form back until the tenant settings finish loading. Without
+  // this, every controlled input renders empty for the first paint, and
+  // browsers pop their autofill suggestion the moment a user focuses a
+  // field — making it look like the saved data is missing when in fact
+  // the API just hadn't responded yet.
+  if (!current?.settings) {
+    return (
+      <div className="mx-auto flex h-64 w-full max-w-4xl items-center justify-center">
+        <Spinner />
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 pb-24 animate-fade-in">
       <PageHeader
@@ -381,6 +395,9 @@ export default function OrgSettingsPage() {
               <Input
                 label="Display name"
                 type="text"
+                // autoComplete=off so Chrome doesn't pop a suggestion that
+                // visually overrides the actual saved value.
+                autoComplete="off"
                 value={branding.displayName}
                 onChange={(e) =>
                   setBranding((b) => ({ ...b, displayName: e.target.value }))
@@ -390,6 +407,7 @@ export default function OrgSettingsPage() {
               <Input
                 label="Employee ID prefix"
                 type="text"
+                autoComplete="off"
                 value={branding.companyPrefix}
                 onChange={(e) =>
                   setBranding((b) => ({

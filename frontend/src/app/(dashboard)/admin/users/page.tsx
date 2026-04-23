@@ -48,7 +48,7 @@ import type { Attendance } from '@/types/attendance'
 export default function UsersPage() {
   const { user: currentUser } = useAuth()
   const systemPerms = useSystemPermission(currentUser?.systemRole)
-  const { data: users, isLoading } = useUsers()
+  const { data: users, isLoading, error: usersError } = useUsers()
   const { data: todayAttendance } = useTodayAttendance()
   const { data: allDayOffs } = useAllDayOffs()
   const createUserMutation = useCreateUser()
@@ -96,12 +96,16 @@ export default function UsersPage() {
     return { onlineUserIds: online, attendanceByUserId: byId }
   }, [todayAttendance])
 
-  // Scope-filtered users (admin ↔ member toggle)
+  // Scope-filtered users (admin ↔ member toggle).
+  // Management covers OWNER + ADMIN — the owner IS management and should
+  // appear under this tab, otherwise a fresh workspace reads as empty.
   const allVisibleUsers = useMemo(() => {
     const list = users ?? []
     if (!isOwner) return list.filter((u) => u.systemRole === 'MEMBER')
     return scope === 'management'
-      ? list.filter((u) => u.systemRole === 'ADMIN')
+      ? list.filter(
+          (u) => u.systemRole === 'ADMIN' || u.systemRole === 'OWNER',
+        )
       : list.filter((u) => u.systemRole === 'MEMBER')
   }, [users, isOwner, scope])
 
@@ -125,12 +129,17 @@ export default function UsersPage() {
       .filter((d) => d.count > 0 || d.value === deptFilter)
   }, [users, allVisibleUsers, deptFilter])
 
-  const adminCount = (users ?? []).filter((u) => u.systemRole === 'ADMIN').length
+  // Management count includes the OWNER so the Management pill matches
+  // the scope filter above (OWNER + ADMIN). Total reflects the whole
+  // workspace — never zero while the owner is logged in.
+  const adminCount = (users ?? []).filter(
+    (u) => u.systemRole === 'ADMIN' || u.systemRole === 'OWNER',
+  ).length
   const memberCount = (users ?? []).filter((u) => u.systemRole === 'MEMBER').length
   const onlineCount = (users ?? []).filter((u) =>
     onlineUserIds.has(u.userId)
   ).length
-  const totalCount = adminCount + memberCount
+  const totalCount = (users ?? []).length
 
   // Filter + sort
   const displayedUsers = useMemo(() => {
@@ -336,14 +345,32 @@ export default function UsersPage() {
     )
   }
 
+  // Surface API errors explicitly — previously the page rendered empty
+  // whenever /users failed, making "fetch broken" look like "no users".
+  if (usersError) {
+    return (
+      <div className="mx-auto w-full max-w-4xl py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load users:{' '}
+            {usersError instanceof Error ? usersError.message : 'Unknown error'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   const userMap = new Map(
     (users ?? []).map((u) => [u.userId, u.name || u.email])
   )
   if (currentUser)
     userMap.set(currentUser.userId, currentUser.name || currentUser.email)
 
+  // Subtitle label matches the scope pill: "management" covers OWNER +
+  // ADMIN, "members" covers MEMBER. Plural-s handled for the 0/1 cases.
   const pageDescription = isOwner
-    ? `${displayedUsers.length} ${scope === 'management' ? 'admin' : 'member'}${displayedUsers.length === 1 ? '' : 's'}${onlineCount > 0 ? ` · ${onlineCount} online now` : ''}`
+    ? `${displayedUsers.length} ${scope === 'management' ? 'in management' : `member${displayedUsers.length === 1 ? '' : 's'}`}${onlineCount > 0 ? ` · ${onlineCount} online now` : ''}`
     : `${displayedUsers.length} member${displayedUsers.length === 1 ? '' : 's'}${onlineCount > 0 ? ` · ${onlineCount} online now` : ''}`
 
   return (

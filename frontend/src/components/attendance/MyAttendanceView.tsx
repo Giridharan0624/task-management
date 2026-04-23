@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Clock, Download, Calendar as CalendarIcon } from 'lucide-react'
+import { Clock, FileDown, Calendar as CalendarIcon } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -233,7 +233,7 @@ export function MyAttendanceView() {
               disabled={!records.length}
               className="h-9 gap-1.5"
             >
-              <Download className="h-3.5 w-3.5" />
+              <FileDown className="h-3.5 w-3.5" />
               Export CSV
             </Button>
           </div>

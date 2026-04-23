@@ -217,7 +217,7 @@ function ActivityCard({
   return (
     <Card className="overflow-hidden p-0 hover-lift-sm">
       {/* Header — click anywhere to expand. Identity on the left, key
-          stats on the right. Secondary stats (KB/Mouse/Buckets) move
+          stats on the right. Secondary stats (KB/Mouse/Intervals) move
           into the expanded body so the header doesn't overflow. */}
       <button
         type="button"
@@ -283,51 +283,79 @@ function ActivityCard({
 
       {expanded && (
         <div className="animate-fade-in">
-          {/* Secondary stats row */}
-          <div className="grid grid-cols-3 divide-x divide-border/60 border-b border-border/60 bg-muted/20">
+          {/* Secondary stats row — tinted icon badges per metric so the
+              row reads as distinct tiles, not a uniform strip. */}
+          <div className="grid grid-cols-3 divide-x divide-border/60 border-b border-border/60 bg-muted/30">
             <SecondaryStat
               icon={Keyboard}
               label="Keystrokes"
               value={totalKeyboard.toLocaleString()}
+              tint="indigo"
             />
             <SecondaryStat
               icon={Mouse}
               label="Mouse events"
               value={totalMouse.toLocaleString()}
+              tint="fuchsia"
             />
             <SecondaryStat
               icon={Layers}
-              label="Buckets"
+              label="Intervals"
               value={String(activity.bucketCount)}
+              tint="sky"
             />
           </div>
 
-          {/* Charts */}
+          {/* Charts — wrapped in a light surface so the two panes read as
+              a matched pair rather than floating on the muted background. */}
           {appData.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 border-b border-border/60 p-5 md:grid-cols-2">
-              <div>
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  App usage (hours)
-                </p>
+            <div className="grid grid-cols-1 gap-px border-b border-border/60 bg-border/60 md:grid-cols-2">
+              {/* App usage */}
+              <div className="flex flex-col gap-3 bg-card p-5 sm:p-6">
+                <ChartHeader label="App usage" suffix="hours" />
                 <ResponsiveContainer
                   width="100%"
-                  height={Math.max(160, appData.length * 36)}
+                  height={Math.max(180, appData.length * 34)}
                 >
                   <BarChart
                     data={appData}
                     layout="vertical"
-                    margin={{ left: 10, right: 10, top: 0, bottom: 0 }}
+                    margin={{ left: 0, right: 12, top: 4, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="rgba(0,0,0,0.05)"
+                      horizontal={false}
+                    />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
                     <YAxis
                       dataKey="name"
                       type="category"
-                      tick={{ fontSize: 10 }}
+                      tick={{ fontSize: 11, fontWeight: 600 }}
                       width={110}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                    <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                    <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
+                    <Tooltip
+                      cursor={{ fill: 'rgba(99,102,241,0.06)' }}
+                      contentStyle={{
+                        fontSize: 11,
+                        borderRadius: 10,
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        boxShadow: '0 8px 24px -8px rgba(0,0,0,0.12)',
+                      }}
+                      formatter={(v) => `${v}h`}
+                    />
+                    <Bar
+                      dataKey="hours"
+                      radius={[0, 6, 6, 0]}
+                      animationDuration={700}
+                    >
                       {appData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
@@ -336,47 +364,83 @@ function ActivityCard({
                 </ResponsiveContainer>
               </div>
 
-              <div>
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Active vs Idle
-                </p>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie
-                      data={[
-                        {
-                          name: 'Active',
-                          value: Math.round(activity.totalActiveMinutes),
-                        },
-                        {
-                          name: 'Idle',
-                          value: Math.round(activity.totalIdleMinutes),
-                        },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={35}
-                      outerRadius={60}
-                      paddingAngle={4}
-                      dataKey="value"
-                    >
-                      <Cell fill="#34d399" />
-                      <Cell fill="#fbbf24" />
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ fontSize: 11, borderRadius: 8 }}
-                      formatter={(v) => `${v}m`}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="-mt-2 flex justify-center gap-4 text-[10px]">
-                  <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    Active {Math.round(activity.totalActiveMinutes)}m
+              {/* Active vs Idle donut + central label */}
+              <div className="flex flex-col gap-3 bg-card p-5 sm:p-6">
+                <ChartHeader label="Active vs Idle" suffix="minutes" />
+                <div className="relative mx-auto w-full max-w-[260px]">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          {
+                            name: 'Active',
+                            value: Math.round(activity.totalActiveMinutes),
+                          },
+                          {
+                            name: 'Idle',
+                            value: Math.round(activity.totalIdleMinutes),
+                          },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="transparent"
+                        animationDuration={700}
+                      >
+                        <Cell fill="#10b981" />
+                        <Cell fill="#f59e0b" />
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          fontSize: 11,
+                          borderRadius: 10,
+                          border: '1px solid rgba(0,0,0,0.08)',
+                          boxShadow: '0 8px 24px -8px rgba(0,0,0,0.12)',
+                        }}
+                        formatter={(v) => `${v}m`}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Central ratio label — sits in the donut hole */}
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                      {Math.round(
+                        (activity.totalActiveMinutes /
+                          Math.max(
+                            1,
+                            activity.totalActiveMinutes +
+                              activity.totalIdleMinutes,
+                          )) *
+                          100,
+                      )}
+                      <span className="text-base font-semibold text-muted-foreground">
+                        %
+                      </span>
+                    </p>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      active
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-1 flex items-center justify-center gap-5 text-[11px]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="font-semibold text-foreground">
+                      Active
+                    </span>
+                    <span className="font-mono tabular-nums text-muted-foreground">
+                      {Math.round(activity.totalActiveMinutes)}m
+                    </span>
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-amber-400" />
-                    Idle {Math.round(activity.totalIdleMinutes)}m
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                    <span className="font-semibold text-foreground">Idle</span>
+                    <span className="font-mono tabular-nums text-muted-foreground">
+                      {Math.round(activity.totalIdleMinutes)}m
+                    </span>
                   </span>
                 </div>
               </div>
@@ -388,14 +452,27 @@ function ActivityCard({
             <ScreenshotGallery screenshots={activity.screenshots} />
           )}
 
-          {/* AI Summary */}
-          <div className="space-y-3 p-5">
+          {/* AI Summary — sits on a soft tinted surface when a summary
+              exists, flat when empty. The top hairline is a gradient so
+              the block reads as a deliberate, distinct section. */}
+          <div
+            className={cn(
+              'relative space-y-4 p-5 sm:p-6',
+              summary &&
+                'bg-gradient-to-br from-primary/[0.03] via-card to-accent/[0.03]',
+            )}
+          >
+            {summary && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+              />
+            )}
+
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  AI work summary
-                </p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                <Sparkles className="h-3 w-3" />
+                AI work summary
               </div>
               <Button
                 variant={summary ? 'secondary' : 'primary'}
@@ -416,11 +493,14 @@ function ActivityCard({
             {summary ? (
               <SummaryDisplay summary={summary} />
             ) : (
-              <p className="text-xs italic text-muted-foreground">
-                {generateMutation.isPending
-                  ? 'AI is analysing activity data…'
-                  : 'Click "Generate summary" for an AI analysis of this work session.'}
-              </p>
+              <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border/80 bg-muted/30 p-4">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary/60" />
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
+                  {generateMutation.isPending
+                    ? 'Analysing activity data — headline, themes, and concerns usually take 10–30 seconds.'
+                    : 'Click Generate summary for an AI narrative of this work session. It covers what apps were used, focus patterns, and any concerns.'}
+                </p>
+              </div>
             )}
 
             {generateMutation.error && (
@@ -481,23 +561,61 @@ function HeaderStat({
   )
 }
 
+function ChartHeader({
+  label,
+  suffix,
+}: {
+  label: string
+  suffix?: string
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <span className="h-3 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
+          {label}
+        </p>
+      </div>
+      {suffix && (
+        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {suffix}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function SecondaryStat({
   icon: Icon,
   label,
   value,
+  tint = 'indigo',
 }: {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   label: string
   value: string
+  tint?: 'indigo' | 'fuchsia' | 'sky'
 }) {
+  const tintClass = {
+    indigo: 'bg-indigo-500/10 text-indigo-600 ring-indigo-500/20 dark:text-indigo-300',
+    fuchsia: 'bg-fuchsia-500/10 text-fuchsia-600 ring-fuchsia-500/20 dark:text-fuchsia-300',
+    sky: 'bg-sky-500/10 text-sky-600 ring-sky-500/20 dark:text-sky-300',
+  }[tint]
   return (
-    <div className="flex items-center gap-2 px-4 py-3">
-      <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+    <div className="group flex items-center gap-3 px-5 py-4 transition-colors hover:bg-background/60">
+      <span
+        className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset shadow-sm transition-transform duration-300 group-hover:scale-110',
+          tintClass,
+        )}
+      >
+        <Icon className="h-4 w-4" strokeWidth={1.9} />
+      </span>
       <div className="min-w-0">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </p>
-        <p className="truncate text-sm font-bold tabular-nums text-foreground">
+        <p className="truncate font-mono text-lg font-semibold tabular-nums text-foreground">
           {value}
         </p>
       </div>
@@ -517,8 +635,10 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
         : '[&>div]:!bg-destructive'
 
   return (
-    <div className="space-y-3">
-      <p className="text-[13px] leading-relaxed text-foreground/85">
+    <div className="space-y-4">
+      {/* Narrative — sits on a slightly elevated card so it reads as the
+          hero of the section, not just a paragraph. */}
+      <p className="text-[14px] leading-relaxed text-foreground/90">
         {summary.summary}
       </p>
 
@@ -527,28 +647,33 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
           {summary.keyActivities.map((a, i) => (
             <span
               key={i}
-              className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+              className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
             >
+              <span className="h-1 w-1 rounded-full bg-primary" />
               {a}
             </span>
           ))}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex min-w-[180px] items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/40 pt-3">
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
             Productivity
           </span>
           <Progress
             value={pct}
-            className={cn('h-1.5 w-24 overflow-hidden rounded-full', prodColor)}
+            className={cn('h-2 w-32 overflow-hidden rounded-full', prodColor)}
           />
-          <span className="text-[11px] font-bold tabular-nums text-foreground">
-            {summary.productivityScore}/10
+          <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+            {summary.productivityScore}
+            <span className="text-xs font-semibold text-muted-foreground">
+              {' '}/10
+            </span>
           </span>
         </div>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <Sparkles className="h-2.5 w-2.5" />
           Generated{' '}
           {new Date(summary.generatedAt).toLocaleTimeString('en-US', {
             hour: '2-digit',

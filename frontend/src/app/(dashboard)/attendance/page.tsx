@@ -5,7 +5,7 @@ import {
   Search,
   X,
   Clock,
-  Download,
+  FileDown,
   User,
   Users,
   ArrowDownUp,
@@ -577,7 +577,7 @@ function TeamAttendanceView() {
                   disabled={!scopedRecords.length}
                   className="h-9 gap-1.5"
                 >
-                  <Download className="h-3.5 w-3.5" />
+                  <FileDown className="h-3.5 w-3.5" />
                   Export CSV
                 </Button>
               </div>

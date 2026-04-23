@@ -54,8 +54,23 @@ def generate_work_summary(activity_data: dict, task_context: str = "") -> dict:
     active_min = activity_data.get("total_active_minutes", 0)
     idle_min = activity_data.get("total_idle_minutes", 0)
     app_usage = activity_data.get("app_usage", {})
-    keyboard = sum(b.get("keyboard_count", 0) for b in activity_data.get("buckets", []))
-    mouse = sum(b.get("mouse_count", 0) for b in activity_data.get("buckets", []))
+    # to_dict() now exposes these directly — fall back to per-bucket
+    # summation only if an older payload shape is passed in.
+    keyboard = activity_data.get(
+        "total_keystrokes",
+        sum(b.get("keyboard_count", 0) for b in activity_data.get("buckets", [])),
+    )
+    mouse = activity_data.get(
+        "total_mouse_events",
+        sum(b.get("mouse_count", 0) for b in activity_data.get("buckets", [])),
+    )
+    # Objective sub-scores from the new composite formula
+    # (PRESENCE_WEIGHT × presence + INTENSITY_WEIGHT × intensity).
+    # Passed in so the AI's narrative aligns with the math instead of
+    # contradicting it.
+    presence = activity_data.get("presence", 0.0)
+    intensity = activity_data.get("intensity", 0.0)
+    activity_score = activity_data.get("activity_score", 0.0)
 
     app_lines = []
     for app, seconds in sorted(app_usage.items(), key=lambda x: -x[1]):
@@ -67,40 +82,155 @@ def generate_work_summary(activity_data: dict, task_context: str = "") -> dict:
             app_lines.append(f"  - {app}: {mins}m")
     app_text = "\n".join(app_lines) if app_lines else "  No app usage data"
 
-    prompt = f"""You are analyzing a work session for an employee. Based on the activity data below, provide a work summary.
+    intervals = len(activity_data.get("buckets", []))
+    task_block = (
+        f"<task_context>\n{task_context.strip()}\n</task_context>"
+        if task_context
+        else ""
+    )
 
-## Activity Data
-- Total active time: {int(active_min)}m ({round(active_min / 60, 1)}h)
-- Total idle time: {int(idle_min)}m
-- Keyboard events: {keyboard:,}
-- Mouse events: {mouse:,}
-- Activity buckets recorded: {len(activity_data.get('buckets', []))}
+    prompt = f"""<role>
+You are TaskFlow's Daily Activity Analyst. You receive passive
+desktop-monitoring data — application usage, input throughput, and
+active/idle time — and produce a short, honest written summary of one
+team member's workday.
 
-## App Usage (time spent in each application)
+You are NOT the user. You are inferring what they likely did from
+indirect evidence. Hedge accordingly: "appears to", "likely spent",
+"consistent with". Never claim to know intent or feelings.
+</role>
+
+<audience>
+A team manager or workspace owner who has thirty seconds to read your
+output before moving to the next person. Make those seconds count.
+Specific is better than flattering. Honest is better than impressive.
+</audience>
+
+<inputs>
+<time>
+- Active time:        {int(active_min)} min  ({round(active_min / 60, 1)} h)
+- Idle time:          {int(idle_min)} min
+- Recorded intervals: {intervals}  (each = a 5-minute window)
+</time>
+
+<input_throughput>
+- Keystrokes:    {keyboard:,}
+- Mouse events:  {mouse:,}
+</input_throughput>
+
+<objective_scores>
+These three scores are deterministically computed BEFORE you see the
+data. You may explain or contextualise them, but you must NOT generate
+numbers that disagree with them.
+
+- Presence:        {round(presence * 100)}%   (active time / total tracked time)
+- Intensity:       {round(intensity * 100)}%   (weighted input rate vs 40 events/min target, capped at 100%)
+- Composite score: {round(activity_score * 100)}%   (0.7 × presence + 0.3 × intensity)
+</objective_scores>
+
+<app_usage>
 {app_text}
+</app_usage>
 
-{f"## Task Context" + chr(10) + task_context if task_context else ""}
+{task_block}
+</inputs>
 
-## Instructions
-Respond with ONLY valid JSON (no markdown, no code blocks):
+<output_schema>
+Respond with ONLY this JSON object. No markdown fences, no preamble,
+no trailing prose.
+
 {{
-  "summary": "2-3 sentence summary of what the user likely accomplished based on the apps used and activity levels",
-  "key_activities": ["activity 1", "activity 2", "activity 3"],
-  "productivity_score": 7,
+  "summary":            <string, 2-3 sentences>,
+  "key_activities":     <array of 3 to 5 short strings>,
+  "productivity_score": <integer 1-10, qualitative — see scale>,
+  "concerns":           <array of 0 to 3 short strings>
+}}
+</output_schema>
+
+<style_guide>
+Write like a senior analyst, not a coach. The reader is a busy
+manager, not the person being summarised.
+
+DO:
+- Name specific apps and time blocks ("4h 12m in VS Code").
+- Hedge inferences ("appears to", "likely", "consistent with").
+- Reconcile with the objective scores. If composite < 50%, do not
+  call the day "highly productive". If intensity < 30%, name the
+  low throughput as part of the picture.
+- Keep concerns short — under twelve words each, observation not
+  accusation.
+
+DO NOT:
+- Use generic praise ("great day", "amazing", "crushed it").
+- Pretend to know what the user "meant" to do or how they felt.
+- Pad with empty phrases ("a wide range of activities").
+- Invent numbers. The only numbers you may quote are those above.
+- Repeat the same point in summary AND concerns.
+</style_guide>
+
+<productivity_scale>
+This 1-10 score is your QUALITATIVE read on work quality given the
+app mix and rhythm. It is distinct from the composite score (which is
+pure math). It MAY diverge from the composite by 2-3 points if the
+apps justify it; larger divergence requires explicit justification in
+the summary.
+
+Calibration:
+- 10  Sustained deep work in a clearly productive tool, high intensity throughout.
+- 8-9 Strong day in productive tools (code, design, docs, terminals); reasonable focus.
+- 6-7 Mixed productive day, OR a meeting/comms-heavy day with legitimate output.
+- 4-5 Some productive signal, but most time in browsers/comms without clear purpose.
+- 2-3 Mostly idle, or apparent distraction (entertainment / news dominant).
+- 1   Almost no signal of work happening.
+</productivity_scale>
+
+<concerns_catalogue>
+Pick AT MOST three. Only include those that are genuinely supported by
+the data above. Phrase as observations, never accusations.
+
+Examples of well-formed concerns:
+- "Idle time exceeded 30% of tracked time"
+- "Input intensity well below the 40 events/min baseline"
+- "Most active time spent in browsers without clear research signal"
+- "Short tracked day — only NN minutes of activity recorded"
+- "Mouse-heavy with low keyboard activity — review/browsing pattern"
+- "Single-app dominance — over 80% of active time in one tool"
+
+Empty array `[]` if nothing worth flagging.
+</concerns_catalogue>
+
+<good_example>
+{{
+  "summary": "Likely spent the day on backend code in VS Code (4h 12m) with periodic Slack check-ins (38m). Input intensity remained strong, consistent with active implementation rather than review.",
+  "key_activities": ["Coding in VS Code", "Team coordination on Slack", "Brief documentation lookup in Chrome"],
+  "productivity_score": 8,
   "concerns": []
 }}
+</good_example>
 
-Rules:
-- productivity_score: 1-10 (10 = highly productive)
-- concerns: list any issues like excessive idle time (>30% of total), very low keyboard activity, etc. Empty list if no concerns.
-- key_activities: 3-5 inferred activities based on which apps were used
-- summary: be specific about what apps suggest (e.g., VS Code = coding, Chrome = research/testing, Slack = communication)
+<bad_example>
+{{
+  "summary": "Great day full of energy! The user accomplished many important tasks across various tools and showed amazing focus throughout.",
+  "key_activities": ["Working hard", "Being productive", "Multitasking"],
+  "productivity_score": 10,
+  "concerns": []
+}}
+</bad_example>
 """
 
     payload = json.dumps({
         "model": GROQ_MODEL,
         "messages": [
-            {"role": "system", "content": "You are a work activity analyzer. Always respond with valid JSON only."},
+            {
+                "role": "system",
+                "content": (
+                    "You are TaskFlow's Daily Activity Analyst. Output ONLY a "
+                    "single JSON object matching the schema in the user "
+                    "message — no markdown, no code fences, no commentary "
+                    "before or after. Be specific, hedge inferences, and "
+                    "never contradict the objective scores you are given."
+                ),
+            },
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.3,

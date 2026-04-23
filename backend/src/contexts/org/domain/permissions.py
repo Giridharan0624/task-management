@@ -32,6 +32,10 @@ PROJECT_MEMBERS_LIST = "project.members.list"
 PROJECT_MEMBERS_MANAGE = "project.members.manage"
 PROJECT_EDIT = "project.edit"
 PROJECT_DELETE = "project.delete"
+# Alias kept so the project-role catalogue (default_project_roles.py)
+# can refer to PROJECT_UPDATE without diverging from the existing wire
+# value. New code should prefer PROJECT_EDIT.
+PROJECT_UPDATE = PROJECT_EDIT
 
 # ---- Tasks ----
 TASK_CREATE = "task.create"
@@ -41,6 +45,12 @@ TASK_UPDATE_ANY = "task.update.any"
 TASK_UPDATE_OWN = "task.update.own"
 TASK_DELETE_ANY = "task.delete.any"
 TASK_MANAGE = "task.manage"
+# Alias for project-role compatibility — TASK_DELETE matches the
+# wire-equivalent TASK_DELETE_ANY (a single delete permission, no
+# scope split between own/any). TASK_ASSIGN is a new sibling of
+# TASK_MANAGE: re-assigning an existing task to another member.
+TASK_DELETE = TASK_DELETE_ANY
+TASK_ASSIGN = "task.assign"
 
 # ---- Comments ----
 COMMENT_CREATE = "comment.create"
@@ -70,7 +80,7 @@ ALL_PERMISSIONS: frozenset[str] = frozenset({
     PROJECT_CREATE, PROJECT_LIST_ALL, PROJECT_MEMBERS_LIST,
     PROJECT_MEMBERS_MANAGE, PROJECT_EDIT, PROJECT_DELETE,
     TASK_CREATE, TASK_LIST, TASK_VIEW_ALL, TASK_UPDATE_ANY,
-    TASK_UPDATE_OWN, TASK_DELETE_ANY, TASK_MANAGE,
+    TASK_UPDATE_OWN, TASK_DELETE_ANY, TASK_MANAGE, TASK_ASSIGN,
     COMMENT_CREATE, COMMENT_LIST,
     DAYOFF_REQUEST, DAYOFF_LIST_ALL, DAYOFF_APPROVE, DAYOFF_REJECT,
     ATTENDANCE_REPORT_VIEW,

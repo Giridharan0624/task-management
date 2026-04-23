@@ -113,7 +113,10 @@ export default function LandingPage() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex-1 focus-visible:outline-none"
+        // Compensates for the now-fixed LandingHeader:
+        //  - base (mobile/tablet): 64px top bar + ~40px mobile pill row ≈ 104px
+        //  - lg+: just the 64px bar (the pill row is lg:hidden)
+        className="flex-1 pt-[104px] focus-visible:outline-none lg:pt-16"
       >
         <Hero />
         <ProblemSection />

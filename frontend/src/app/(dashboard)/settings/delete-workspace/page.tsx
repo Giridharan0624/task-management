@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ArrowRight, Download, RotateCcw } from 'lucide-react'
+import { AlertTriangle, ArrowRight, FileDown, RotateCcw } from 'lucide-react'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
@@ -168,7 +168,7 @@ export default function DeleteWorkspacePage() {
           loading={exporting}
           className="w-full sm:w-auto"
         >
-          <Download className="h-3.5 w-3.5" />
+          <FileDown className="h-3.5 w-3.5" />
           Export as JSON
         </Button>
       </Card>

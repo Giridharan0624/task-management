@@ -20,7 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Download,
+  FileDown,
   Sparkles,
   User,
   Users,
@@ -1248,7 +1248,7 @@ function DetailedView({
           disabled={detailedRows.length === 0}
           className="gap-1.5"
         >
-          <Download className="h-3.5 w-3.5" />
+          <FileDown className="h-3.5 w-3.5" />
           Export CSV
         </Button>
       </div>

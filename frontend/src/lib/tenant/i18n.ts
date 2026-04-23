@@ -53,6 +53,7 @@ export const BASE_TERMINOLOGY: Record<string, string> = {
   'nav.dashboard': 'Dashboard',
   'nav.projects': 'Projects',
   'nav.my_tasks': 'My tasks',
+  'nav.all_tasks': 'All tasks',
   'nav.attendance': 'Attendance',
   'nav.my_attendance': 'My Attendance',
   'nav.day_offs': 'Day offs',

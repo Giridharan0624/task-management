@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Search, X, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X, FileDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -130,7 +130,7 @@ export function TaskUpdateToolbar({
           disabled={!canExport}
           className="gap-1.5"
         >
-          <Download className="h-3.5 w-3.5" />
+          <FileDown className="h-3.5 w-3.5" />
           Export
         </Button>
       </div>

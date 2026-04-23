@@ -79,7 +79,9 @@ function isFeatureEnabled(
 
 const adminNav: NavItem[] = [
   { nameKey: 'nav.dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { nameKey: 'nav.my_tasks', name: 'All Tasks', href: '/my-tasks', icon: CheckSquare },
+  // ADMIN defaults to their personal scope on /my-tasks (with a toggle
+  // to flip to team view). "My tasks" matches the default landing.
+  { nameKey: 'nav.my_tasks', name: 'My tasks', href: '/my-tasks', icon: CheckSquare },
   { nameKey: 'nav.task_updates', name: 'Daily Updates', href: '/task-updates', icon: FileText, feature: 'task_updates' },
   { nameKey: 'user.team', name: 'Users', href: '/admin/users', icon: Users },
   { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare },
@@ -88,8 +90,16 @@ const adminNav: NavItem[] = [
   { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
 ]
 
+// OWNER lands on /my-tasks with scope='team' (the page shows every
+// task in the org, not just the owner's). The label needs to match
+// that — "All tasks" instead of "My tasks". Same href, same handler;
+// only the sidebar copy changes.
 const ownerNav: NavItem[] = [
-  ...adminNav,
+  ...adminNav.map((item) =>
+    item.href === '/my-tasks'
+      ? { ...item, nameKey: 'nav.all_tasks', name: 'All tasks' }
+      : item,
+  ),
   { nameKey: 'nav.settings', name: 'Settings', href: '/settings/organization', icon: Settings },
 ]
 

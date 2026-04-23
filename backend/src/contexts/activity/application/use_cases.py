@@ -66,6 +66,18 @@ class RecordHeartbeatUseCase:
                 user_email=user.email if user else "",
             )
 
+        # Idempotency: dedupe on bucket timestamp. The desktop's
+        # offline queue replays heartbeats after a reconnect, and
+        # without this check a retry would double-count the keystrokes
+        # for that window. Client is required to keep the original
+        # timestamp stable across retries (queue stores it verbatim).
+        for existing in activity.buckets:
+            if existing.timestamp == bucket.timestamp:
+                return {
+                    "status": "duplicate",
+                    "bucket_count": len(activity.buckets),
+                }
+
         activity.add_bucket(bucket)
         self._activity_repo.save(activity)
 
