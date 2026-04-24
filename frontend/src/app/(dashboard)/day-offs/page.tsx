@@ -26,6 +26,7 @@ import {
   useCancelDayOff,
 } from '@/lib/hooks/useDayOffs'
 import { useUsers } from '@/lib/hooks/useUsers'
+import { useHasPermission } from '@/lib/hooks/usePermission'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -220,7 +221,33 @@ export default function DayOffsPage() {
   const role = (user?.systemRole ?? 'MEMBER') as Role
   const isOwner = role === 'OWNER'
   const isAdmin = role === 'ADMIN'
-  const isPrivileged = isOwner || isAdmin
+  // `isPrivileged` historically gated BOTH the view-all-requests tab
+  // and the approve/reject buttons from a single hardcoded system-role
+  // check. Now that tenants can edit role permissions live, these
+  // need to branch on the ACTUAL permission the action requires.
+  //
+  //   canApprove  → `dayoff.approve`
+  //   canReject   → `dayoff.reject`
+  //   canListAll  → `dayoff.request.list.all`
+  //
+  // `useHasPermission` returns null while the /orgs/current/roles
+  // fetch is in flight — we optimistically use the legacy role check
+  // in that window so the first paint matches the pre-Session-8
+  // behavior (no flashing disabled buttons for OWNER/ADMIN).
+  const canApprovePerm = useHasPermission('dayoff.approve')
+  const canRejectPerm = useHasPermission('dayoff.reject')
+  const canListAllPerm = useHasPermission('dayoff.request.list.all')
+  const canApprove =
+    canApprovePerm === null ? isOwner || isAdmin : canApprovePerm
+  const canReject =
+    canRejectPerm === null ? isOwner || isAdmin : canRejectPerm
+  const canListAll =
+    canListAllPerm === null ? isOwner || isAdmin : canListAllPerm
+  // `isPrivileged` retained as the "can I see any admin affordance"
+  // umbrella — approving + rejecting + listing-all are the three
+  // admin actions on this page, so the union covers every existing
+  // call site.
+  const isPrivileged = canApprove || canReject || canListAll
 
   const { data: myDayOffs, isLoading: myLoading } = useMyDayOffs()
   const { data: pendingDayOffs, isLoading: pendingLoading } =
@@ -620,8 +647,11 @@ export default function DayOffsPage() {
                     avatarUrl={
                       allUsers?.find((u) => u.userId === req.userId)?.avatarUrl
                     }
-                    onApprove={() => handleApprove(req)}
-                    onReject={() => handleReject(req)}
+                    // Pass the handler only when the caller has
+                    // the matching permission — PendingRequestCard
+                    // hides the button when the prop is undefined.
+                    onApprove={canApprove ? () => handleApprove(req) : undefined}
+                    onReject={canReject ? () => handleReject(req) : undefined}
                     isActing={
                       approveMutation.isPending || rejectMutation.isPending
                     }
@@ -1092,8 +1122,11 @@ function PendingRequestRow({
 }: {
   req: DayOffRequest
   avatarUrl?: string
-  onApprove: () => void
-  onReject: () => void
+  /** Undefined when the caller lacks `dayoff.approve` — the button
+   *  is hidden entirely rather than shown disabled. */
+  onApprove?: () => void
+  /** Undefined when the caller lacks `dayoff.reject`. */
+  onReject?: () => void
   isActing: boolean
   disableActions?: boolean
 }) {
@@ -1149,29 +1182,33 @@ function PendingRequestRow({
             )}
           </p>
         </div>
-        {!disableActions && (
+        {!disableActions && (onApprove || onReject) && (
           <div className="flex shrink-0 gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onApprove}
-              disabled={isActing || isExpired}
-              className="gap-1.5"
-              title={isExpired ? 'The date is already in the past' : undefined}
-            >
-              <Check className="h-3.5 w-3.5" />
-              Approve
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onReject}
-              disabled={isActing}
-              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              <XCircle className="h-3.5 w-3.5" />
-              Reject
-            </Button>
+            {onApprove && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onApprove}
+                disabled={isActing || isExpired}
+                className="gap-1.5"
+                title={isExpired ? 'The date is already in the past' : undefined}
+              >
+                <Check className="h-3.5 w-3.5" />
+                Approve
+              </Button>
+            )}
+            {onReject && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onReject}
+                disabled={isActing}
+                className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                Reject
+              </Button>
+            )}
           </div>
         )}
         {disableActions && (

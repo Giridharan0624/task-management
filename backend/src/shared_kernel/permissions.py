@@ -1,71 +1,120 @@
-"""Phase 4 — `require(ctx, permission)` shared helper.
+"""Phase 4 — permission enforcement helpers.
 
-Replaces ad-hoc `if auth.system_role not in PRIVILEGED_ROLES:` checks
-scattered across handlers/use cases. Resolves permissions from:
+Every sensitive handler/use case decides access through one of three
+public checks in this module. All three consult the **live per-tenant
+DynamoDB role record** (with a short-TTL in-memory cache), so a
+permission edit in `/settings/roles` takes effect across every Lambda
+container within `_CACHE_TTL_SECONDS` — no redeploy needed.
 
-1. The user's role record stored under `PK=ORG#{org}` `SK=ROLE#{role_id}`
-   (per-tenant custom roles, the Phase 4 model), then falling back to
-2. The legacy `SystemRole` enum value carried on `AuthContext.system_role`
-   mapped via `default_roles.permissions_for_role_id`.
+Public helpers:
 
-Lookups are cached for the duration of a Lambda invocation in a tiny
-in-memory dict so a handler making 5 `require()` calls only fetches the
-role record once.
+- `require(ctx, perm)`          raises `AuthorizationError` when missing
+- `has_permission(ctx, perm)`   bool, never raises (UI-mode checks)
+- `has_permission_for_role(role, perm)`
+                                bool, for call sites that only carry a
+                                role-string (uses the current-org
+                                ContextVar to scope the DDB lookup).
+- `role_has(role, perm)`        DEPRECATED alias for
+                                `has_permission_for_role`, kept so
+                                existing imports compile. New code
+                                should use the explicit name.
+
+Cache model: `_PERMISSION_CACHE` keyed by `(org_id, role_id)` stores
+a tuple `(perms, cached_at_epoch_seconds)`. Entries are considered
+fresh for `_CACHE_TTL_SECONDS`; after that, the next lookup re-reads
+DynamoDB. `invalidate_role_cache()` is still called by role-edit
+handlers to drop the current container's entries immediately, but
+the TTL is the real safety net — other warm containers (which the
+edit-handler's `invalidate_role_cache` call cannot reach) see the
+new permissions on their next lookup past the TTL.
+
+Fail-closed: unknown role_ids resolve to the empty permission set, so
+a misconfigured user is automatically read-only.
 """
 from __future__ import annotations
 
 import json
+import time
 from typing import Optional
 
 from shared_kernel.auth_context import AuthContext
 from shared_kernel.errors import AuthorizationError
-from shared_kernel.tenant_keys import org_pk, role_sk
+from shared_kernel.tenant_keys import get_current_org_id, org_pk, role_sk
 
 
-# Per-process cache: { (org_id, role_id) → frozenset[str] }.
-# Lambdas reuse warm processes for many invocations, so this avoids a
-# DynamoDB get per `require()` call. Keys are scoped to (org, role) so a
-# role rename in tenant A never resolves for tenant B.
-_PERMISSION_CACHE: dict[tuple[str, str], frozenset[str]] = {}
+# Short enough that permission edits feel responsive (worst-case
+# propagation delay across all warm containers is bounded by this).
+# Long enough that hot handlers (tasks list, for example) don't hit
+# DynamoDB on every invocation. 60s strikes the right balance — the
+# DDB read amortizes to ~1 per minute per (tenant × role × container).
+_CACHE_TTL_SECONDS = 60
+
+
+# Per-process cache: `{ (org_id, role_id) → (frozenset[str], cached_at) }`.
+# Keys are scoped to `(org, role)` so a role rename in tenant A never
+# resolves for tenant B. Value is a tuple so we can expire entries by
+# age without a parallel timestamp map.
+_PERMISSION_CACHE: dict[tuple[str, str], tuple[frozenset[str], float]] = {}
 
 
 def has_permission(ctx: AuthContext, permission: str) -> bool:
     """Pure check — returns True/False, never raises. Use for soft
     decisions like UI-mode rendering. For enforcement, use `require()`."""
-    return permission in _resolve_permissions(ctx)
+    return permission in _resolve_permissions_for_role(ctx.org_id, _role_id_for(ctx))
+
+
+def has_permission_for_role(role_id_or_system_role: str, permission: str) -> bool:
+    """Live-lookup variant for call sites that only have a role string
+    (legacy use-case signatures that receive `caller_system_role: str`).
+
+    Reads the current org_id from the tenant ContextVar — which
+    `extract_auth_context()` sets on every authenticated request — so
+    the DDB role record for THIS tenant is consulted, not a static map.
+    When called outside a request context (scheduled jobs, cold start
+    helpers), falls back to the default-role static map.
+    """
+    role_id = (role_id_or_system_role or "").strip()
+    if not role_id:
+        return False
+    org_id = get_current_org_id()
+    return permission in _resolve_permissions_for_role(org_id, role_id)
+
+
+def role_has(role_id_or_system_role: str, permission: str) -> bool:
+    """DEPRECATED alias for `has_permission_for_role`. Originally read
+    a hardcoded static map; now routes to the live DDB-backed helper so
+    existing `role_has(role, P.FOO)` call sites respect tenant edits
+    without needing to change their import.
+
+    Prefer `has_permission_for_role` in new code — the name makes the
+    live-lookup behavior obvious.
+    """
+    return has_permission_for_role(role_id_or_system_role, permission)
+
+
+def require(ctx: AuthContext, permission: str) -> None:
+    """Raise AuthorizationError if the caller lacks `permission`.
+
+    Failing closed — unknown roles get the empty permission set, so a
+    misconfigured user can never accidentally do anything privileged.
+    """
+    if not has_permission(ctx, permission):
+        raise AuthorizationError(
+            f"You don't have permission to '{permission}'."
+        )
 
 
 def require_email_verified(ctx: AuthContext) -> None:
-    """Block the action when the caller's email is not verified.
-
-    Signup creates users with `email_verified=false`; the /verify-email
-    frontend flow flips it to true via Cognito VerifyUserAttribute. A
-    legacy user (pre-verification rollout) has `email_verified=true`
-    already because the pool's backfill set it that way, so existing
-    tenants are unaffected.
-
-    Not applied globally — only called from handlers where a bot with a
-    real-looking but unverified email could cause outsized damage
-    (invite spam, role edits, billing). Other handlers leave the gate
-    to the frontend, which is good enough for UX-level enforcement.
-    """
+    """Block the action when the caller's email is not verified."""
     if not ctx.email_verified:
         from shared_kernel.errors import EmailNotVerifiedError
         raise EmailNotVerifiedError()
 
 
 def require_not_suspended(ctx: AuthContext) -> None:
-    """Block writes when the tenant is suspended.
-
-    Suspended orgs are read-only: logins still work, dashboards still
-    load, but every mutation-path handler calls this at the top and gets
-    a 403 that the frontend renders as an "account suspended" banner.
-
-    Reads the Org record once per invocation; the ContextVar-scoped
-    permission cache keeps cold starts cheap. A missing Org record
-    (unknown tenant, pre-migration user) is treated as NOT suspended —
-    fail-open for the primary action, fail-closed for the audit side.
-    """
+    """Block writes when the tenant is suspended or scheduled for
+    deletion. See the docstring on the typed error classes in
+    `shared_kernel.errors` for the frontend semantics of each code."""
     from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
     from shared_kernel.errors import OrgPendingDeletionError, OrgSuspendedError
 
@@ -82,49 +131,18 @@ def require_not_suspended(ctx: AuthContext) -> None:
             "This workspace is currently suspended. "
             "Contact the platform operator to resume activity.",
         )
-    # Soft-deleted tenants are also read-only. The owner-initiated
-    # delete path deliberately bypasses this check (handled in the
-    # handler itself) so the OWNER can still trigger undelete / export
-    # during the grace period.
     if status_value == "PENDING_DELETION":
         raise OrgPendingDeletionError()
 
 
-def role_has(role_id_or_system_role: str, permission: str) -> bool:
-    """Check whether a role string holds a permission, WITHOUT building a
-    full AuthContext. Resolves through `default_roles.permissions_for_role_id`
-    (the owner/admin/member map).
-
-    Use this in application/use_cases.py where functions only receive a
-    `caller_system_role: str` parameter (not a full AuthContext). Handler-
-    level checks should prefer `require(ctx, perm)` which also consults
-    per-tenant custom role records.
-
-    Custom-role caveat: this helper falls back to member-level permissions
-    for any role_id it doesn't recognize (fail-closed). Tenants who
-    define custom roles need to use the handler-layer `require()` path
-    or migrate the use-case signature to pass AuthContext through.
-    """
-    from contexts.org.domain.default_roles import permissions_for_role_id
-    return permission in permissions_for_role_id(role_id_or_system_role)
-
-
-def require(ctx: AuthContext, permission: str) -> None:
-    """Raise AuthorizationError if the caller lacks `permission`.
-
-    Failing closed — unknown roles get the empty permission set, so a
-    misconfigured user can never accidentally do anything privileged.
-    """
-    if permission not in _resolve_permissions(ctx):
-        raise AuthorizationError(
-            f"You don't have permission to '{permission}'."
-        )
-
-
 def invalidate_role_cache(org_id: Optional[str] = None) -> None:
-    """Clear the in-process permission cache. Call after editing a role
-    record so subsequent `require()` calls re-fetch fresh permissions.
-    Pass `org_id` to scope the eviction; pass nothing to clear all."""
+    """Drop cached entries so the NEXT lookup hits DynamoDB. Called by
+    role-edit handlers immediately after a write. Only reliably clears
+    the current container's entries — other warm containers rely on
+    the `_CACHE_TTL_SECONDS` TTL to pick up the change.
+
+    Pass `org_id` to scope the eviction; pass nothing to clear all.
+    """
     if org_id is None:
         _PERMISSION_CACHE.clear()
         return
@@ -132,32 +150,50 @@ def invalidate_role_cache(org_id: Optional[str] = None) -> None:
         _PERMISSION_CACHE.pop(key, None)
 
 
-def _resolve_permissions(ctx: AuthContext) -> frozenset[str]:
-    # Prefer the Phase-4 role_id when the pre-token trigger injected it;
-    # fall back to the legacy system_role string for tokens issued before
-    # the trigger update. Both forms resolve via the same lookup path.
-    role_id = (getattr(ctx, "role_id", "") or ctx.system_role or "").strip()
+# ----------------------------------------------------------------------
+# Internals
+# ----------------------------------------------------------------------
+
+
+def _role_id_for(ctx: AuthContext) -> str:
+    """Prefer the Phase-4 role_id claim when the pre-token trigger
+    injected it; fall back to the legacy system_role string for tokens
+    issued before the trigger update. Both forms resolve via the same
+    `_resolve_permissions_for_role` path."""
+    return (getattr(ctx, "role_id", "") or ctx.system_role or "").strip()
+
+
+def _resolve_permissions_for_role(org_id: str, role_id: str) -> frozenset[str]:
+    """Look up the permission set for `(org_id, role_id)`. Consults
+    the in-process cache first (subject to TTL); misses / expired
+    entries hit DynamoDB. An unknown role_id (neither in DDB nor in
+    the static default map) resolves to the empty set — fail-closed."""
     if not role_id:
         return frozenset()
 
-    cache_key = (ctx.org_id, role_id)
+    cache_key = (org_id, role_id)
     cached = _PERMISSION_CACHE.get(cache_key)
+    now = time.monotonic()
     if cached is not None:
-        return cached
+        perms, cached_at = cached
+        if now - cached_at < _CACHE_TTL_SECONDS:
+            return perms
 
-    perms = _load_role_permissions(ctx.org_id, role_id)
+    perms = _load_role_permissions(org_id, role_id)
     if perms is None:
-        # No custom role record — fall through to system-role defaults.
+        # No custom role record — fall through to the static default
+        # map so pre-signup / pre-migration users still resolve to
+        # the sensible baseline.
         from contexts.org.domain.default_roles import permissions_for_role_id
         perms = permissions_for_role_id(role_id)
 
-    _PERMISSION_CACHE[cache_key] = perms
+    _PERMISSION_CACHE[cache_key] = (perms, now)
     return perms
 
 
 def _load_role_permissions(org_id: str, role_id: str) -> Optional[frozenset[str]]:
-    """Fetch the role record from DynamoDB. Returns None on miss/error so
-    the caller can fall back to system-role defaults; never raises."""
+    """Fetch the role record from DynamoDB. Returns None on miss/error
+    so the caller can fall back to system-role defaults; never raises."""
     try:
         from shared_kernel.dynamo_client import get_table
         # Try lowercase first (canonical), then the raw id (handles legacy
