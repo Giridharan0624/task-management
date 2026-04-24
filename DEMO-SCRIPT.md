@@ -45,7 +45,7 @@
 
 **[SHOW]** Cut to the Windows system tray. Click the app icon to open the desktop companion. Pick an active task from the dropdown. Hit **Start**. The activity counter begins ticking. Minimize back to the tray.
 
-**[SAY]** "This is where real tracking happens — a small companion that lives in the system tray. When someone picks a task and hits start, the app captures input cadence, app focus, and periodic screenshots in five-minute windows, all in the background. This is what gives me visibility I've never had before — I'm not relying on people to log their own hours or write up what they did. The work itself produces the record. Token lives in the OS credential store, not on disk, and if the network drops, samples queue locally and sync when it's back."
+**[SAY]** "The desktop app. This is where real tracking happens — a small companion that lives in the system tray. When someone picks a task and hits start, the app captures input cadence, app focus, and periodic screenshots in five-minute windows, all in the background. This is what gives me visibility I've never had before — I'm not relying on people to log their own hours or write up what they did. The work itself produces the record. Token lives in the OS credential store, not on disk, and if the network drops, samples queue locally and sync when it's back."
 
 ---
 
@@ -53,7 +53,7 @@
 
 **[SHOW]** Back to the browser. Click **Attendance** → team grid. Then **Task Updates** → today's standup list.
 
-**[SAY]** "Back on the web, this is where the captured time lands. Attendance — per user, per day, broken into sessions: sign-in, sign-out, active task — rolled up into weekly and monthly reports. No manual timesheets, no 'did you punch in?' The system already knows. And task updates are the narrative layer on top: what each person worked on, where their time went. The management view I'd normally have to chase — sitting here, current."
+**[SAY]** "Attendance. This is where the captured time lands — per user, per day, broken into sessions: sign-in, sign-out, active task — rolled up into weekly and monthly reports. No manual timesheets, no 'did you punch in?' The system already knows. And task updates are the narrative layer on top: what each person worked on, where their time went. The management view I'd normally have to chase — sitting here, current."
 
 ---
 
@@ -61,7 +61,7 @@
 
 **[SHOW]** Click **Day-offs**. Open one pending request routed to you. Show approve/reject.
 
-**[SAY]** "Leave requests live in the same workspace. Someone submits a request, it routes to the team lead first, then to me. Every transition is logged — who approved, when, any note they left — so I have a full audit trail. Approvals reflect in the team's capacity view the moment I click. No separate HR tool, no email threads, no forgotten approvals."
+**[SAY]** "Day-offs. Leave requests live in the same workspace. Someone submits a request, it routes to the team lead first, then to me. Every transition is logged — who approved, when, any note they left — so I have a full audit trail. Approvals reflect in the team's capacity view the moment I click. No separate HR tool, no email threads, no forgotten approvals."
 
 ---
 
@@ -69,7 +69,7 @@
 
 **[SHOW]** Click the activity report page. Show a user's daily summary with the AI paragraph and productivity score.
 
-**[SAY]** "This is where tracking becomes management. For each person, each day, I see a full picture — input cadence, active versus idle time, the apps they focused on, screenshots captured through the day, and an AI-generated summary of what they actually did, with a productivity score and the themes of their day. I can spot a productive day at a glance, catch someone on the verge of burnout, find coaching moments I'd otherwise miss. Real-time insight into how every day actually went — without asking a single person."
+**[SAY]** "Activity insights. This is where tracking becomes management. For each person, each day, I see a full picture — input cadence, active versus idle time, the apps they focused on, screenshots captured through the day, and an AI-generated summary of what they actually did, with a productivity score and the themes of their day. I can spot a productive day at a glance, catch someone on the verge of burnout, find coaching moments I'd otherwise miss. Real-time insight into how every day actually went — without asking a single person."
 
 ---
 
@@ -77,7 +77,7 @@
 
 **[SHOW]** Click **Settings → Roles** → show the permission matrix. Then **Settings → Organization** → branding, terminology, leave types.
 
-**[SAY]** "Everything I've shown you is shaped from here, in one place. The roles matrix is that thirty-five-permission catalog — toggle actions on a role, or define entirely new roles. Branding: logo, colors, favicon — applied everywhere. Terminology is an override map — if we called them 'missions' instead of 'tasks', the whole product picks up the new label without a code change. Leave policies, working hours, timezone, feature flags — every knob that shapes how my workspace runs, on one screen. Management, streamlined."
+**[SAY]** "Settings. Everything I've shown you is shaped from here, in one place. The roles matrix is that thirty-five-permission catalog — toggle actions on a role, or define entirely new roles. Branding: logo, colors, favicon — applied everywhere. Terminology is an override map — if we called them 'missions' instead of 'tasks', the whole product picks up the new label without a code change. Leave policies, working hours, timezone, feature flags — every knob that shapes how my workspace runs, on one screen. Management, streamlined."
 
 ---
 
@@ -86,6 +86,42 @@
 **[SHOW]** Return to dashboard.
 
 **[SAY]** "Tasks, time, attention, approvals — captured automatically, surfaced where I need them. Running a company without the constant chasing. That's what this app gives me."
+
+---
+
+## Speaking track — read straight
+
+*For reading or teleprompting. Same lines as above, stripped of SHOW cues. Timestamps and page markers tell you where to be on screen as each line lands.*
+
+**0:00 · Login**
+"Running a company, I need real visibility — what's being built, who's building it, and how the work is actually moving. Not status updates people type out. Signals captured from the work itself. That's what this app gives me. Let me walk you through a day, as the founder of NEUROSTACK."
+
+**0:25 · Dashboard**
+"The dashboard isn't my to-do list — it's the company's pulse. Active projects, the team's hours this week, anything routed to me: a leave request, a flagged blocker. I don't have to ask anyone for an update — the signal is already here. And every view is scoped to my workspace — my data and another company's never mix, at any layer."
+
+**1:00 · Projects**
+"Projects. Everything shipping across the company. Each project binds to a pipeline — and pipelines are first-class entities, not hardcoded columns. A named set of statuses, with order, color, and a terminal flag. Four templates ship; admins define more. Tasks reference their pipeline, so renaming a stage propagates everywhere. Each task carries its own thread — multi-assignee, priority, deadline, attributed comments."
+
+**1:40 · Team**
+"The team. Fifty people, seven departments. Permissions aren't tied to three fixed roles — there's a catalog of thirty-five granular actions, and roles compose from that catalog. I can define a 'Lead Engineer' who approves leave but can't edit settings. Three system roles ship — Owner, Admin, Member — and any custom role I define is honored everywhere the permission is checked."
+
+**2:10 · Desktop app**
+"The desktop app. This is where real tracking happens — a small companion that lives in the system tray. When someone picks a task and hits start, the app captures input cadence, app focus, and periodic screenshots in five-minute windows, all in the background. This is what gives me visibility I've never had before — I'm not relying on people to log their own hours or write up what they did. The work itself produces the record. Token lives in the OS credential store, not on disk, and if the network drops, samples queue locally and sync when it's back."
+
+**2:45 · Attendance**
+"Attendance. This is where the captured time lands — per user, per day, broken into sessions: sign-in, sign-out, active task — rolled up into weekly and monthly reports. No manual timesheets, no 'did you punch in?' The system already knows. And task updates are the narrative layer on top: what each person worked on, where their time went. The management view I'd normally have to chase — sitting here, current."
+
+**3:15 · Day-offs**
+"Day-offs. Leave requests live in the same workspace. Someone submits a request, it routes to the team lead first, then to me. Every transition is logged — who approved, when, any note they left — so I have a full audit trail. Approvals reflect in the team's capacity view the moment I click. No separate HR tool, no email threads, no forgotten approvals."
+
+**3:45 · Activity insights**
+"Activity insights. This is where tracking becomes management. For each person, each day, I see a full picture — input cadence, active versus idle time, the apps they focused on, screenshots captured through the day, and an AI-generated summary of what they actually did, with a productivity score and the themes of their day. I can spot a productive day at a glance, catch someone on the verge of burnout, find coaching moments I'd otherwise miss. Real-time insight into how every day actually went — without asking a single person."
+
+**4:20 · Settings**
+"Settings. Everything I've shown you is shaped from here, in one place. The roles matrix is that thirty-five-permission catalog — toggle actions on a role, or define entirely new roles. Branding: logo, colors, favicon — applied everywhere. Terminology is an override map — if we called them 'missions' instead of 'tasks', the whole product picks up the new label without a code change. Leave policies, working hours, timezone, feature flags — every knob that shapes how my workspace runs, on one screen. Management, streamlined."
+
+**4:50 · Close**
+"Tasks, time, attention, approvals — captured automatically, surfaced where I need them. Running a company without the constant chasing. That's what this app gives me."
 
 ---
 

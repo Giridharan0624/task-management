@@ -18,18 +18,21 @@ import { Progress } from '@/components/ui/Progress'
 import { useUsers } from '@/lib/hooks/useUsers'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { useTenant } from '@/lib/tenant/TenantProvider'
+import { orgsApi } from '@/lib/api/orgsApi'
 import { cn } from '@/lib/utils'
 
-const DISMISS_KEY = 'tf:setup-checklist:dismissed'
-const DESKTOP_FLAG_KEY = 'tf:setup:desktop-installed'
-const BRANDING_FLAG_KEY = 'tf:setup:branding-done'
+// Server-persisted flag keys inside OrgSettings.features. The dashboard
+// previously stored these in localStorage, which made dismissals and
+// "marked done" ticks per-browser. They live on the org now so the OWNER
+// sees the same state across devices and after clearing site data.
+const FLAG_DISMISSED = 'onboarding_checklist_dismissed'
+const FLAG_DESKTOP = 'onboarding_desktop_installed'
+const FLAG_BRANDING = 'onboarding_branding_done'
+
 // Brand defaults we ship with — MUST match the backend OrgSettings seed
 // (`primary_color = "#4F46E5"`, `accent_color = "#10B981"` in
-// backend/src/contexts/org/domain/entities.py). When these values match
-// the tenant's settings, branding looks "untouched" via auto-detection.
-// Kept lowercase so comparisons are case-insensitive against whatever
-// the tenant may have re-saved. Used as a fallback signal — the
-// authoritative source is the localStorage flag set by the user.
+// backend/src/contexts/org/domain/entities.py). Used as a courtesy
+// auto-tick for owners who customised before the explicit flag existed.
 const DEFAULT_PRIMARY = '#4f46e5'
 const DEFAULT_ACCENT = '#10b981'
 
@@ -48,45 +51,55 @@ interface Step {
  * project, install the desktop companion, and customize branding.
  *
  * Hides itself when all four are done OR when the user dismisses it.
- * Completion is derived from live state (users, projects, tenant settings)
- * where possible, with localStorage fallback for client-only actions like
- * "I installed the desktop app".
+ * State is read from `current.settings.features` (server-persisted) so
+ * the UI stays consistent across browsers and devices.
  */
 export function SetupChecklist() {
   const { data: users } = useUsers()
   const { data: projects } = useProjects()
-  const { current } = useTenant()
+  const { current, refreshCurrent } = useTenant()
 
-  // Hydration-safe: don't compute dismissed/flag state until mounted so
-  // server and client render match.
+  const settings = current?.settings
+  const features = settings?.features ?? {}
+
+  const dismissed = features[FLAG_DISMISSED] === true
+  const desktopMarkedDone = features[FLAG_DESKTOP] === true
+  const brandingMarkedDone = features[FLAG_BRANDING] === true
+
+  // Pending state per-flag so a slow network doesn't lock the whole card.
+  const [pending, setPending] = useState<string | null>(null)
+
+  // Avoid hydration mismatch — `current` is hydrated client-side after
+  // login, so first server render has nothing to gate on.
   const [mounted, setMounted] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
-  const [desktopMarkedDone, setDesktopMarkedDone] = useState(false)
-  const [brandingMarkedDone, setBrandingMarkedDone] = useState(false)
-
   useEffect(() => {
     setMounted(true)
-    try {
-      setDismissed(localStorage.getItem(DISMISS_KEY) === '1')
-      setDesktopMarkedDone(localStorage.getItem(DESKTOP_FLAG_KEY) === '1')
-      setBrandingMarkedDone(localStorage.getItem(BRANDING_FLAG_KEY) === '1')
-    } catch {
-      // Storage disabled — treat as not-dismissed.
-    }
   }, [])
+
+  const setFlag = async (key: string, value: boolean) => {
+    if (!features) return
+    setPending(key)
+    try {
+      // Replace the whole features dict — the PUT handler swaps the
+      // field wholesale, so any partial payload would drop the other
+      // toggles (birthday_wishes, ai_summaries, ...).
+      await orgsApi.updateSettings({ features: { ...features, [key]: value } })
+      await refreshCurrent()
+    } catch {
+      // Swallow — the user can retry; we deliberately don't toast here
+      // because the checklist itself is non-critical UI.
+    } finally {
+      setPending(null)
+    }
+  }
 
   const nonOwnerUsers = (users ?? []).filter((u) => u.systemRole !== 'OWNER')
   const hasTeammates = nonOwnerUsers.length > 0
   const hasProject = (projects ?? []).length > 0
-  const settings = current?.settings
-  // Branding step is considered done when EITHER the user explicitly
-  // marked it (localStorage flag, set by the "Mark as done" button) OR
-  // the tenant has saved a colour that differs from the seeded defaults.
-  // The auto-detect alone was unreliable: clicking "Reset to defaults"
-  // or picking a colour that happened to equal the seed left this step
-  // permanently un-tickable. The explicit flag is now the primary source
-  // of truth; the colour heuristic stays as a courtesy auto-tick for
-  // users who customised before the flag existed.
+  // Branding step ticks when EITHER the owner explicitly marked it OR
+  // they have saved a colour that differs from the seeded defaults. The
+  // explicit flag is the primary source of truth; the colour heuristic
+  // covers tenants that customised before the flag existed.
   const colorsCustomised =
     !!settings &&
     (settings.primaryColor?.toLowerCase() !== DEFAULT_PRIMARY ||
@@ -135,14 +148,8 @@ export function SetupChecklist() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            try {
-              localStorage.setItem(DESKTOP_FLAG_KEY, '1')
-            } catch {
-              // Ignore.
-            }
-            setDesktopMarkedDone(true)
-          }}
+          loading={pending === FLAG_DESKTOP}
+          onClick={() => setFlag(FLAG_DESKTOP, true)}
         >
           I installed it
         </Button>
@@ -159,14 +166,8 @@ export function SetupChecklist() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              try {
-                localStorage.setItem(BRANDING_FLAG_KEY, '1')
-              } catch {
-                // Ignore.
-              }
-              setBrandingMarkedDone(true)
-            }}
+            loading={pending === FLAG_BRANDING}
+            onClick={() => setFlag(FLAG_BRANDING, true)}
           >
             Mark done
           </Button>
@@ -185,18 +186,10 @@ export function SetupChecklist() {
   const total = steps.length
   const percent = Math.round((completed / total) * 100)
 
-  const dismiss = () => {
-    try {
-      localStorage.setItem(DISMISS_KEY, '1')
-    } catch {
-      // Ignore.
-    }
-    setDismissed(true)
-  }
-
-  // Gate visibility — but don't early-return before the mount effect so hooks
-  // fire in the same order every render.
+  // Gate visibility — hooks must run in the same order every render, so
+  // these checks live below all the useState/useEffect calls.
   if (!mounted) return null
+  if (!settings) return null
   if (dismissed) return null
   if (completed === total) return null
 
@@ -216,9 +209,10 @@ export function SetupChecklist() {
         </div>
         <button
           type="button"
-          onClick={dismiss}
+          onClick={() => setFlag(FLAG_DISMISSED, true)}
+          disabled={pending === FLAG_DISMISSED}
           aria-label="Dismiss setup checklist"
-          className="-m-1 rounded-lg p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+          className="-m-1 rounded-lg p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
         >
           <X className="h-4 w-4" />
         </button>

@@ -13,8 +13,9 @@ import json
 import urllib.error
 import urllib.request
 from collections import defaultdict
-from dataclasses import dataclass
-from typing import Iterable
+from dataclasses import dataclass, field
+from datetime import date as date_cls, timedelta
+from typing import Any, Iterable
 
 from contexts.activity.infrastructure.groq_service import (
     GROQ_API_URL,
@@ -30,14 +31,22 @@ from contexts.taskupdate.domain.entities import TaskUpdate
 
 @dataclass
 class WeeklyFacts:
-    """Deterministic aggregations of the week's task updates.
+    """Deterministic aggregations of the week across every data source.
 
     Kept in a dataclass (not a raw dict) so the shape is self-documenting
     and the handler can return these metrics verbatim — owners get reliable
     numbers even if Groq is degraded or offline.
+
+    Rolls together five dimensions, each pulled from its own bounded
+    context's repository:
+      - Task updates (self-reported) — hours/tasks/contributors
+      - Attendance (timer sessions, objective) — hours, sessions, presence
+      - Activity (desktop-app signals) — active/idle minutes, scores, apps
+      - Day-offs — approved leaves covering any day in the window
     """
     start_date: str
     end_date: str
+    # ── Task-update slice (self-reported) ──────────────────────────────
     total_updates: int
     contributor_count: int
     total_hours: float
@@ -45,6 +54,25 @@ class WeeklyFacts:
     by_task: list[dict]          # [{ task_name, hours, contributors, updates }]
     by_day: list[dict]           # [{ date, updates, hours }]
     missing_days: list[str]      # days in window with zero updates
+
+    # ── Attendance slice (objective timer data) ────────────────────────
+    attendance_total_hours: float = 0.0
+    attendance_contributor_count: int = 0
+    attendance_sessions_count: int = 0
+    attendance_by_day: list[dict] = field(default_factory=list)
+    attendance_by_contributor: list[dict] = field(default_factory=list)
+
+    # ── Activity slice (desktop-app signals) ───────────────────────────
+    activity_avg_score: float = 0.0
+    activity_total_active_minutes: float = 0.0
+    activity_total_idle_minutes: float = 0.0
+    activity_top_apps: list[dict] = field(default_factory=list)
+    activity_contributor_count: int = 0
+
+    # ── Day-off slice (approved leaves overlapping the window) ─────────
+    dayoffs_approved_count: int = 0
+    dayoffs_days_lost: int = 0  # Sum of in-window days across approved leaves
+    dayoffs_requests: list[dict] = field(default_factory=list)
 
 
 def _parse_time_string(time_str: str) -> float:
@@ -80,14 +108,239 @@ def _parse_time_string(time_str: str) -> float:
     return hours
 
 
+def _session_hours(session: Any) -> float:
+    """Duck-typed session hours getter. Supports entity or dict shape."""
+    hrs = getattr(session, "hours", None)
+    if hrs is None and isinstance(session, dict):
+        hrs = session.get("hours")
+    if hrs is not None:
+        try:
+            return float(hrs)
+        except (TypeError, ValueError):
+            return 0.0
+    # Compute from sign-in/out if no cached hours (active sessions).
+    sign_in = getattr(session, "sign_in_at", None) or (session.get("signInAt") if isinstance(session, dict) else None)
+    sign_out = getattr(session, "sign_out_at", None) or (session.get("signOutAt") if isinstance(session, dict) else None)
+    if not sign_in or not sign_out:
+        return 0.0
+    try:
+        from datetime import datetime
+        start = datetime.fromisoformat(sign_in.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(sign_out.replace("Z", "+00:00"))
+        return max(0.0, (end - start).total_seconds() / 3600.0)
+    except (ValueError, AttributeError):
+        return 0.0
+
+
+def _aggregate_attendance(
+    records: Iterable[Any],
+    start_date: str,
+    end_date: str,
+) -> dict:
+    """Roll attendance records into per-day + per-user hour totals."""
+    records_list = list(records)
+
+    contributor_hours: dict[str, float] = defaultdict(float)
+    contributor_sessions: dict[str, int] = defaultdict(int)
+    day_hours: dict[str, float] = defaultdict(float)
+    day_sessions: dict[str, int] = defaultdict(int)
+    day_signed_in: dict[str, set[str]] = defaultdict(set)
+    total_sessions = 0
+
+    for r in records_list:
+        date = getattr(r, "date", None) or (r.get("date") if isinstance(r, dict) else None)
+        user_name = getattr(r, "user_name", None) or (r.get("userName") if isinstance(r, dict) else None) or "Unknown"
+        sessions = getattr(r, "sessions", None) or (r.get("sessions") if isinstance(r, dict) else []) or []
+        if not date:
+            continue
+        for s in sessions:
+            hrs = _session_hours(s)
+            contributor_hours[user_name] += hrs
+            contributor_sessions[user_name] += 1
+            day_hours[date] += hrs
+            day_sessions[date] += 1
+            day_signed_in[date].add(user_name)
+            total_sessions += 1
+
+    by_contributor = sorted(
+        [
+            {
+                "name": name,
+                "hours": round(contributor_hours[name], 2),
+                "sessions": contributor_sessions[name],
+            }
+            for name in contributor_hours
+        ],
+        key=lambda r: r["hours"],
+        reverse=True,
+    )
+
+    start = date_cls.fromisoformat(start_date)
+    end = date_cls.fromisoformat(end_date)
+    by_day: list[dict] = []
+    current = start
+    while current <= end:
+        iso = current.isoformat()
+        by_day.append(
+            {
+                "date": iso,
+                "hours": round(day_hours.get(iso, 0.0), 2),
+                "sessions": day_sessions.get(iso, 0),
+                "signed_in_count": len(day_signed_in.get(iso, set())),
+            }
+        )
+        current += timedelta(days=1)
+
+    total_hours = round(sum(contributor_hours.values()), 2)
+
+    return {
+        "total_hours": total_hours,
+        "contributor_count": len(contributor_hours),
+        "sessions_count": total_sessions,
+        "by_day": by_day,
+        "by_contributor": by_contributor,
+    }
+
+
+def _aggregate_activity(records: Iterable[Any]) -> dict:
+    """Roll activity records into active/idle totals + top apps + avg score."""
+    records_list = list(records)
+    if not records_list:
+        return {
+            "avg_score": 0.0,
+            "total_active_minutes": 0.0,
+            "total_idle_minutes": 0.0,
+            "top_apps": [],
+            "contributor_count": 0,
+        }
+
+    total_active = 0.0
+    total_idle = 0.0
+    scores: list[float] = []
+    users: set[str] = set()
+    app_seconds: dict[str, float] = defaultdict(float)
+
+    for r in records_list:
+        total_active += float(getattr(r, "total_active_minutes", None) or (r.get("totalActiveMinutes") if isinstance(r, dict) else 0) or 0)
+        total_idle += float(getattr(r, "total_idle_minutes", None) or (r.get("totalIdleMinutes") if isinstance(r, dict) else 0) or 0)
+        score = getattr(r, "activity_score", None)
+        if score is None and isinstance(r, dict):
+            score = r.get("activityScore")
+        if score is not None:
+            try:
+                scores.append(float(score))
+            except (TypeError, ValueError):
+                pass
+        user_id = getattr(r, "user_id", None) or (r.get("userId") if isinstance(r, dict) else None)
+        if user_id:
+            users.add(user_id)
+        app_usage = getattr(r, "app_usage", None)
+        if app_usage is None and isinstance(r, dict):
+            app_usage = r.get("appUsage")
+        if isinstance(app_usage, dict):
+            for app_name, seconds in app_usage.items():
+                try:
+                    app_seconds[app_name] += float(seconds)
+                except (TypeError, ValueError):
+                    pass
+
+    top_apps = sorted(
+        [{"app_name": name, "minutes": round(seconds / 60, 1)} for name, seconds in app_seconds.items()],
+        key=lambda r: r["minutes"],
+        reverse=True,
+    )[:5]
+
+    avg_score = round((sum(scores) / len(scores)) * 100) if scores else 0
+
+    return {
+        "avg_score": avg_score,
+        "total_active_minutes": round(total_active, 1),
+        "total_idle_minutes": round(total_idle, 1),
+        "top_apps": top_apps,
+        "contributor_count": len(users),
+    }
+
+
+def _aggregate_dayoffs(
+    requests: Iterable[Any],
+    start_date: str,
+    end_date: str,
+) -> dict:
+    """Keep only APPROVED requests that overlap the window, count days lost."""
+    start = date_cls.fromisoformat(start_date)
+    end = date_cls.fromisoformat(end_date)
+    requests_list = list(requests)
+
+    approved_in_window: list[dict] = []
+    total_days_lost = 0
+
+    for r in requests_list:
+        status = getattr(r, "status", None) or (r.get("status") if isinstance(r, dict) else None)
+        # Entity may expose status as an enum-with-value; coerce to string.
+        if hasattr(status, "value"):
+            status = status.value
+        if str(status) != "APPROVED":
+            continue
+
+        req_start_raw = getattr(r, "start_date", None) or (r.get("startDate") if isinstance(r, dict) else None)
+        req_end_raw = getattr(r, "end_date", None) or (r.get("endDate") if isinstance(r, dict) else None)
+        if not req_start_raw or not req_end_raw:
+            continue
+        try:
+            req_start = date_cls.fromisoformat(str(req_start_raw)[:10])
+            req_end = date_cls.fromisoformat(str(req_end_raw)[:10])
+        except ValueError:
+            continue
+
+        # Overlap window?
+        overlap_start = max(req_start, start)
+        overlap_end = min(req_end, end)
+        if overlap_start > overlap_end:
+            continue
+
+        days_in_window = (overlap_end - overlap_start).days + 1
+        total_days_lost += days_in_window
+
+        user_name = (
+            getattr(r, "user_name", None)
+            or (r.get("userName") if isinstance(r, dict) else None)
+            or "Unknown"
+        )
+        reason = getattr(r, "reason", None) or (r.get("reason") if isinstance(r, dict) else "") or ""
+        approved_in_window.append(
+            {
+                "name": user_name,
+                "start_date": req_start.isoformat(),
+                "end_date": req_end.isoformat(),
+                "days_in_window": days_in_window,
+                "reason": reason[:200],
+            }
+        )
+
+    approved_in_window.sort(key=lambda r: r["start_date"])
+
+    return {
+        "approved_count": len(approved_in_window),
+        "days_lost": total_days_lost,
+        "requests": approved_in_window,
+    }
+
+
 def aggregate(
     updates: Iterable[TaskUpdate],
     start_date: str,
     end_date: str,
+    attendance_records: Iterable[Any] | None = None,
+    activity_records: Iterable[Any] | None = None,
+    dayoff_requests: Iterable[Any] | None = None,
 ) -> WeeklyFacts:
-    """Compute the deterministic slice the AI will summarise."""
-    from datetime import date as date_cls, timedelta
+    """Compute the deterministic slice the AI will summarise.
 
+    The attendance / activity / dayoff parameters are optional so older
+    callers keep working — when omitted, the corresponding sections on
+    the returned `WeeklyFacts` stay at their dataclass defaults.
+    """
+    # `date_cls`/`timedelta` are imported at module-level now.
     updates_list = list(updates)
 
     contributor_hours: dict[str, float] = defaultdict(float)
@@ -168,6 +421,16 @@ def aggregate(
 
     total_hours = round(sum(contributor_hours.values()), 2)
 
+    # Roll up the other dimensions, defaulting to empty slices when the
+    # caller passes None (keeps older unit-test call sites working).
+    attendance_slice = (
+        _aggregate_attendance(attendance_records or [], start_date, end_date)
+    )
+    activity_slice = _aggregate_activity(activity_records or [])
+    dayoff_slice = _aggregate_dayoffs(
+        dayoff_requests or [], start_date, end_date
+    )
+
     return WeeklyFacts(
         start_date=start_date,
         end_date=end_date,
@@ -178,6 +441,19 @@ def aggregate(
         by_task=by_task,
         by_day=by_day,
         missing_days=missing_days,
+        attendance_total_hours=attendance_slice["total_hours"],
+        attendance_contributor_count=attendance_slice["contributor_count"],
+        attendance_sessions_count=attendance_slice["sessions_count"],
+        attendance_by_day=attendance_slice["by_day"],
+        attendance_by_contributor=attendance_slice["by_contributor"],
+        activity_avg_score=activity_slice["avg_score"],
+        activity_total_active_minutes=activity_slice["total_active_minutes"],
+        activity_total_idle_minutes=activity_slice["total_idle_minutes"],
+        activity_top_apps=activity_slice["top_apps"],
+        activity_contributor_count=activity_slice["contributor_count"],
+        dayoffs_approved_count=dayoff_slice["approved_count"],
+        dayoffs_days_lost=dayoff_slice["days_lost"],
+        dayoffs_requests=dayoff_slice["requests"],
     )
 
 
@@ -201,19 +477,31 @@ def generate_weekly_narrative(facts: WeeklyFacts, team_size: int) -> dict:
     those are computed in `aggregate()` and passed in as gospel. The model's
     only job is language: headline, 2–3 sentence recap, highlights, patterns,
     concerns. This keeps hallucinations scoped to prose, not figures.
+
+    The prompt now covers all five dimensions (updates, attendance, activity,
+    day-offs) so the narrative is a full weekly digest rather than an
+    updates-only recap.
     """
-    # When the workspace has nothing to summarise, don't spend a token.
-    if facts.total_updates == 0:
+    # Skip the API call only when every dimension is empty — otherwise we
+    # still have a story to tell (e.g. "logged 42h but submitted no updates").
+    no_data = (
+        facts.total_updates == 0
+        and facts.attendance_total_hours == 0
+        and facts.activity_total_active_minutes == 0
+        and facts.dayoffs_approved_count == 0
+    )
+    if no_data:
         return {
-            "headline": "No updates submitted this week.",
+            "headline": "No activity recorded this week.",
             "summary": (
-                f"{team_size} members in the workspace, but no task updates "
-                f"were submitted between {facts.start_date} and {facts.end_date}."
+                f"{team_size} members in the workspace, but no task updates, "
+                f"attendance sessions, activity, or approved day-offs were "
+                f"recorded between {facts.start_date} and {facts.end_date}."
             ),
             "highlights": [],
             "notable_patterns": [],
             "concerns": [
-                "Zero updates submitted. Check whether the desktop app is deployed and members are running the timer.",
+                "Zero activity across every data source. Check whether the desktop app is deployed and members are running the timer.",
             ],
         }
 
@@ -224,16 +512,34 @@ def generate_weekly_narrative(facts: WeeklyFacts, team_size: int) -> dict:
 
     top_contributors = facts.by_contributor[:5]
     top_tasks = facts.by_task[:8]
+    top_attendance = facts.attendance_by_contributor[:5]
+    top_apps = facts.activity_top_apps[:5]
+    top_dayoffs = facts.dayoffs_requests[:6]
 
     contributor_lines = "\n".join(
         f"  - {c['name']}: {c['hours']}h across {c['updates']} update(s), {c['tasks']} distinct task(s)"
         for c in top_contributors
-    ) or "  - (no contributors)"
+    ) or "  - (none)"
 
     task_lines = "\n".join(
         f"  - {t['task_name']}: {t['hours']}h ({t['contributors']} contributor(s))"
         for t in top_tasks
-    ) or "  - (no tasks)"
+    ) or "  - (none)"
+
+    attendance_lines = "\n".join(
+        f"  - {c['name']}: {c['hours']}h over {c['sessions']} session(s)"
+        for c in top_attendance
+    ) or "  - (no timer sessions)"
+
+    app_lines = "\n".join(
+        f"  - {a['app_name']}: {a['minutes']}m"
+        for a in top_apps
+    ) or "  - (no desktop activity)"
+
+    dayoff_lines = "\n".join(
+        f"  - {d['name']}: {d['start_date']} → {d['end_date']} ({d['days_in_window']} day(s) in this week) — {d['reason'] or 'no reason given'}"
+        for d in top_dayoffs
+    ) or "  - (none approved for this week)"
 
     missing_line = (
         f"Days with zero updates: {', '.join(facts.missing_days)}"
@@ -241,28 +547,60 @@ def generate_weekly_narrative(facts: WeeklyFacts, team_size: int) -> dict:
         else "Updates submitted every day of the window."
     )
 
+    # Update-vs-attendance gap is the single most interesting derived
+    # signal for a manager — surface it in the prompt so the model can
+    # mention it if worth calling out.
+    hour_gap = round(facts.attendance_total_hours - facts.total_hours, 1)
+    gap_line = (
+        f"Self-reported hours vs timer hours gap: {hour_gap}h "
+        f"({'updates under-report' if hour_gap > 0 else 'updates over-report' if hour_gap < 0 else 'aligned'})"
+    )
+
     prompt = f"""You are summarising one week of team activity for a workspace owner.
 
 ## Window
 {facts.start_date} to {facts.end_date}
 
-## Headline metrics
+## Task updates (self-reported)
 - Total updates submitted: {facts.total_updates}
 - Contributors: {facts.contributor_count} of {team_size} members
-- Total tracked time: {facts.total_hours}h
+- Self-reported hours: {facts.total_hours}h
 - {missing_line}
 
-## Top contributors (by hours)
+### Top contributors (by self-reported hours)
 {contributor_lines}
 
-## Top tasks / themes (by hours)
+### Top tasks / themes (by hours)
 {task_lines}
+
+## Attendance (objective timer sessions)
+- Objective hours logged: {facts.attendance_total_hours}h across {facts.attendance_sessions_count} session(s)
+- Members who clocked in: {facts.attendance_contributor_count} of {team_size}
+- {gap_line}
+
+### Top members by timer hours
+{attendance_lines}
+
+## Focus signals (desktop activity)
+- Avg activity score across users: {facts.activity_avg_score}%
+- Total active minutes: {facts.activity_total_active_minutes}m
+- Total idle minutes: {facts.activity_total_idle_minutes}m
+- Members tracked: {facts.activity_contributor_count}
+
+### Top apps this week
+{app_lines}
+
+## Approved day-offs overlapping this week
+- Approved requests: {facts.dayoffs_approved_count}
+- Person-days of leave consumed: {facts.dayoffs_days_lost}
+
+{dayoff_lines}
 
 ## Instructions
 Respond with ONLY valid JSON (no markdown, no code blocks) in this exact shape:
 {{
   "headline": "one crisp sentence summarising the week, no more than 100 characters",
-  "summary": "2-3 sentence editorial recap written for a busy owner",
+  "summary": "3-4 sentence editorial recap covering task updates, tracked time, focus, and leave — written for a busy owner",
   "highlights": ["short bullet 1", "short bullet 2", "short bullet 3"],
   "notable_patterns": ["observation about the week's shape"],
   "concerns": ["any risks or gaps worth flagging"]
@@ -270,9 +608,10 @@ Respond with ONLY valid JSON (no markdown, no code blocks) in this exact shape:
 
 Rules:
 - Do NOT invent numbers. Only refer to figures present above.
-- highlights: 2–5 items, each grouped around a project / task theme or a specific outcome.
-- notable_patterns: 0–3 items. Examples: "most work concentrated on Monday and Tuesday", "three contributors drove 80% of hours".
-- concerns: 0–3 items. Examples: "two members submitted no updates this week", "task X spans four contributors with no clear owner".
+- The summary MUST touch on more than one dimension (for example: updates + tracked time, or attendance + day-offs). Don't write an updates-only recap.
+- highlights: 3–6 items. Mix across dimensions — a top task, a top contributor by timer hours, a notable focus score, a big-impact leave.
+- notable_patterns: 0–3 items. Examples: "most work concentrated on Monday and Tuesday", "3-hour gap between self-reported and objective hours", "two members drove 70% of tracked time".
+- concerns: 0–3 items. Examples: "two members submitted no updates despite 12h logged", "large leave window coincided with missing updates on the same days", "task X spans four contributors with no clear owner".
 - Keep language professional. No slang, no emoji."""
 
     payload = json.dumps(

@@ -280,6 +280,17 @@ function ProblemSection() {
       ring: 'ring-slate-500/20',
       bg: 'bg-slate-500/10',
     },
+    {
+      // Fourth pain — matches the "four disconnected systems" headline
+      // and the "inbox for leave requests" tool named in card #1.
+      icon: Calendar,
+      title: 'Leave tracking lives in email.',
+      blurb:
+        'Approvals, balances, and return dates scatter across inboxes and HR spreadsheets. When a manager needs to know who is out this week, they end up asking Slack instead of a system of record.',
+      tone: 'text-sky-600 dark:text-sky-300',
+      ring: 'ring-sky-500/20',
+      bg: 'bg-sky-500/10',
+    },
   ]
 
   return (
@@ -317,7 +328,7 @@ function ProblemSection() {
           </Reveal>
         </div>
 
-        <ul className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <ul className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {pains.map((p, i) => (
             <Reveal key={p.title} direction="up" delay={i * 80}>
               <li className="group relative h-full overflow-hidden rounded-3xl border border-white/50 bg-white/40 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_14px_40px_-20px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all hover:-translate-y-1 hover:border-white/70 hover:bg-white/55 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_20px_50px_-20px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
@@ -611,7 +622,12 @@ function DemoRow({
   return (
     <div
       className={cn(
-        'grid grid-cols-1 items-center gap-8 lg:grid-cols-[1fr_1fr] lg:gap-12',
+        // `minmax(0, 1fr)` overrides the default grid-cell min-width of
+        // `auto`, which was letting the right column's visual (6 wide
+        // tiles) push past its share and squeeze the text column down
+        // to ~25% width. This forces a true 50/50 split regardless of
+        // the visual's intrinsic width.
+        'grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12',
         reverse && 'lg:grid-flow-dense'
       )}
     >
@@ -860,7 +876,9 @@ function ScreenshotTile({
     <div className="flex flex-col items-center gap-1.5">
       <div
         className={cn(
-          'relative h-24 w-32 flex-shrink-0 overflow-hidden rounded-lg border border-border/80 bg-white shadow-md dark:bg-[var(--color-surface)]',
+          // Responsive size so the full row of six tiles fits inside a
+          // half-column on `lg` without forcing the grid to expand.
+          'relative h-16 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border/80 bg-white shadow-md sm:h-20 sm:w-24 xl:h-24 xl:w-32 dark:bg-[var(--color-surface)]',
           tile.live && 'ring-2 ring-primary/50',
         )}
         style={{
@@ -940,7 +958,11 @@ function ScreenshotDemo() {
           </span>
         </div>
 
-        <div className="flex items-end justify-center gap-2 py-3">
+        {/* `overflow-x-auto` is a belt-and-suspenders fallback in case the
+            parent container gets narrower than the six-tile row can handle
+            at its smallest size (e.g. very small mobile widths); scrollbar
+            is visually hidden on desktop because the row already fits. */}
+        <div className="-mx-2 flex items-end justify-start gap-2 overflow-x-auto px-2 py-3 sm:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {SCREENSHOT_TILES.map((tile, i) => (
             <ScreenshotTile key={i} tile={tile} index={i} />
           ))}
@@ -1445,37 +1467,114 @@ function HowItWorks() {
 }
 
 /* ────────────────────────────────────────────────────────────────────
- * Pricing — Free forever
+ * Pricing — Free / Pro / Enterprise
  * ──────────────────────────────────────────────────────────────────── */
 
+interface PricingFeature {
+  label: string
+  /** Set true for items that are on the roadmap but not yet shipping.
+   *  Renders a muted "soon" pill so we never over-promise. */
+  soon?: boolean
+}
+
+interface PricingTier {
+  name: string
+  badge: string
+  badgeTone: 'emerald' | 'primary' | 'fuchsia'
+  price: string
+  priceUnit: string | null
+  /** Small line beneath the price, e.g. "billed annually" */
+  priceFootnote: string | null
+  description: string
+  cta: { label: string; href: string; variant: 'primary' | 'ghost' }
+  features: PricingFeature[]
+  /** Adds a "carries everything from {name}" line above the feature list */
+  inheritsFrom: string | null
+  highlighted: boolean
+}
+
 function Pricing() {
-  // Features grouped into three categories so the long list reads as
-  // structured value rather than a wall of bullets. Each group gets a
-  // small heading + 3-4 short items.
-  const featureGroups: { title: string; items: string[] }[] = [
+  // Tier capacity and feature claims are sourced from
+  // backend/src/contexts/org/domain/plans.py — keep them in sync. If a
+  // capability is gated behind a feature flag that has no handler yet
+  // (e.g. SSO, SCIM), mark it `soon: true` rather than dropping it.
+  const tiers: PricingTier[] = [
     {
-      title: 'Core',
-      items: [
-        'Unlimited workspaces, members, projects, and tasks',
-        'Cross-project reporting with CSV export',
-        'Desktop apps for Windows, macOS, and Linux',
+      name: 'Free',
+      badge: 'Available now',
+      badgeTone: 'emerald',
+      price: '$0',
+      priceUnit: '/ workspace',
+      priceFootnote: 'No card required',
+      description:
+        'Everything a small team needs to plan work, track time, and ship.',
+      cta: { label: 'Start free', href: '/signup', variant: 'primary' },
+      features: [
+        { label: 'Up to 10 members and 3 projects' },
+        { label: 'Unlimited tasks, comments, and reporting' },
+        { label: 'AI daily summaries and weekly rollups' },
+        { label: 'Desktop apps for Windows, macOS, and Linux' },
+        { label: 'Activity tracking for accurate time capture' },
+        { label: '30-day audit-log retention' },
+        { label: 'Community support' },
       ],
+      inheritsFrom: null,
+      highlighted: false,
     },
     {
-      title: 'Intelligence',
-      items: [
-        'AI-generated daily summaries and weekly rollups',
-        'Activity tracking and periodic screenshot capture',
-        'Custom pipelines with per-project stages',
+      name: 'Pro',
+      badge: 'Most popular',
+      badgeTone: 'primary',
+      price: '$8',
+      priceUnit: '/ member / month',
+      priceFootnote: 'Annual billing — coming soon',
+      description:
+        'Built for growing teams that need more headroom and finer-grained controls.',
+      cta: {
+        label: 'Notify me at launch',
+        href: 'mailto:support@neurostack.in?subject=TaskFlow%20Pro%20launch%20notification',
+        variant: 'primary',
+      },
+      features: [
+        { label: 'Up to 50 members and 50 projects' },
+        { label: 'Periodic screenshot capture for time accuracy' },
+        { label: 'Custom roles with per-permission editing' },
+        { label: 'Custom workflow pipelines for your team' },
+        { label: 'Project webhooks with HMAC-signed delivery' },
+        { label: '365-day audit-log retention' },
+        { label: 'Priority email support' },
+        { label: 'Public REST API with personal access tokens', soon: true },
       ],
+      inheritsFrom: 'Free',
+      highlighted: true,
     },
     {
-      title: 'Security & ownership',
-      items: [
-        'Two-factor authentication for every member',
-        'Per-tenant audit log with retention policy',
-        'Custom roles, SRP authentication, JSON export',
+      name: 'Enterprise',
+      badge: 'Custom',
+      badgeTone: 'fuchsia',
+      price: 'Let’s talk',
+      priceUnit: null,
+      priceFootnote: 'Tailored to your scale and compliance needs',
+      description:
+        'For large organisations with security, residency, or scale requirements.',
+      cta: {
+        label: 'Contact sales',
+        href: 'mailto:support@neurostack.in?subject=TaskFlow%20Enterprise%20enquiry',
+        variant: 'ghost',
+      },
+      features: [
+        { label: 'Unlimited members and projects' },
+        { label: 'White-label branding (logo, colours, terminology)' },
+        { label: 'Unlimited audit-log retention' },
+        { label: 'Dedicated infrastructure on request' },
+        { label: 'Named CSM and contractual SLA' },
+        { label: 'Procurement, DPA, and security review support' },
+        { label: 'Custom domain on your workspace', soon: true },
+        { label: 'Single sign-on (SAML, OIDC)', soon: true },
+        { label: 'SCIM provisioning and directory sync', soon: true },
       ],
+      inheritsFrom: 'Pro',
+      highlighted: false,
     },
   ]
 
@@ -1484,23 +1583,23 @@ function Pricing() {
       id="pricing"
       className="relative overflow-hidden border-b border-border/60 bg-muted/20 py-14 sm:py-20"
     >
-      {/* Layered background halo — the glass card below refracts this
-          colour gradient, which is what makes the frosted surface read
-          as genuinely glass instead of a grey card with a blur filter. */}
+      {/* Layered background halo — the glass cards below refract this
+          colour gradient, which is what makes the frosted surfaces read
+          as genuinely glass instead of grey cards with a blur filter. */}
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[120px]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute left-[20%] top-[20%] -z-10 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl"
+        className="pointer-events-none absolute left-[10%] top-[20%] -z-10 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute right-[10%] bottom-[10%] -z-10 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl"
+        className="pointer-events-none absolute right-[8%] bottom-[10%] -z-10 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl"
       />
 
-      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-xl dark:text-emerald-300">
@@ -1510,120 +1609,205 @@ function Pricing() {
           </Reveal>
           <Reveal direction="up" delay={80}>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              Free for every team.{' '}
+              Plans that{' '}
               <span className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent">
-                Permanently.
+                scale with you
               </span>
+              .
             </h2>
           </Reveal>
           <Reveal direction="up" delay={160}>
             <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
-              No seat limits and no feature gating. The desktop application,
-              AI summaries, and reporting are fully included. Paid tiers are
-              planned for enterprise-scale deployments and compliance add-ons;
-              workspaces provisioned today remain on the Free plan indefinitely.
+              Start free with the full product. Upgrade to Pro when your team
+              outgrows the seat cap, or move to Enterprise for SSO, custom
+              retention, and dedicated infrastructure.
             </p>
           </Reveal>
         </div>
 
-        <Reveal direction="up" delay={240}>
-          <TiltCard maxTilt={3}>
-            <div className="relative mt-10 overflow-hidden rounded-3xl border border-white/60 bg-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_30px_90px_-30px_rgba(99,102,241,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_30px_90px_-30px_rgba(0,0,0,0.6)]">
-              {/* Outer glow ring — makes the glass card feel levitated
-                  above the halo behind it */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-white/70 via-transparent to-white/30 opacity-70 dark:from-white/15 dark:via-transparent dark:to-white/5"
-                style={{
-                  WebkitMask:
-                    'linear-gradient(#000, #000) content-box, linear-gradient(#000, #000)',
-                  WebkitMaskComposite: 'xor',
-                  maskComposite: 'exclude',
-                  padding: '1px',
-                }}
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-fuchsia-500"
-              />
-              {/* Left column — price hero + CTA. Right column — features
-                  grouped into three readable categories. The vertical
-                  divider on lg+ ties the two halves together visually. */}
-              <div className="grid grid-cols-1 gap-8 p-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-12 lg:p-12">
-                {/* ─── LEFT: price + CTA ─── */}
-                <div className="flex flex-col">
-                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur dark:text-emerald-300">
-                    <Sparkles className="h-3 w-3" />
-                    Free forever
-                  </span>
+        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch md:gap-5 lg:gap-6">
+          {tiers.map((tier, i) => (
+            <Reveal key={tier.name} direction="up" delay={240 + i * 80}>
+              <PricingCard tier={tier} />
+            </Reveal>
+          ))}
+        </div>
 
-                  <div className="mt-6 flex items-baseline gap-3">
-                    <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/60 bg-clip-text text-7xl font-black leading-none tracking-tighter text-transparent sm:text-8xl">
-                      $0
-                    </span>
-                    <span className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      / workspace
-                    </span>
-                  </div>
-
-                  <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-                    Every TaskFlow capability is included. No credit card at
-                    signup, no feature paywalls inside the product, no
-                    countdown-to-trial-end emails.
-                  </p>
-
-                  <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center lg:mt-auto lg:flex-col lg:items-stretch lg:gap-4">
-                    <Link
-                      href="/signup"
-                      className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary to-primary/85 px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-[0_1px_0_0_rgba(255,255,255,0.18)_inset,0_14px_28px_-10px_rgba(99,102,241,0.7)] transition-all hover:-translate-y-0.5 hover:shadow-[0_1px_0_0_rgba(255,255,255,0.22)_inset,0_18px_36px_-12px_rgba(99,102,241,0.85)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full"
-                      />
-                      <span className="relative">Start free</span>
-                      <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground sm:flex-1 lg:flex-none">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                      Sub-minute provisioning, no card required
-                    </p>
-                  </div>
-                </div>
-
-                {/* ─── RIGHT: grouped features ─── */}
-                <div className="relative lg:border-l lg:border-border/60 lg:pl-12">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-                    What's included
-                  </p>
-                  <div className="mt-5 flex flex-col gap-6">
-                    {featureGroups.map((group) => (
-                      <div key={group.title}>
-                        <p className="mb-2.5 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground">
-                          <span className="h-2.5 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
-                          {group.title}
-                        </p>
-                        <ul className="space-y-2">
-                          {group.items.map((item) => (
-                            <li
-                              key={item}
-                              className="flex items-start gap-2.5 text-[13px] leading-snug text-foreground/85"
-                            >
-                              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TiltCard>
+        <Reveal direction="up" delay={520}>
+          <p className="mt-8 text-center text-[12px] text-muted-foreground">
+            All tiers include AES-256 encryption at rest, TLS 1.2+ in
+            transit, and full workspace export at any time.
+          </p>
         </Reveal>
       </div>
     </section>
+  )
+}
+
+function PricingCard({ tier }: { tier: PricingTier }) {
+  // Tone palette per tier — keeps each card visually distinct without
+  // breaking the shared glass aesthetic. Pro uses the brand primary so
+  // it reads as the recommended path even before scanning the badge.
+  const toneClasses = {
+    emerald: {
+      badge:
+        'border-emerald-400/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+      bar: 'from-emerald-400 via-emerald-500 to-teal-500',
+      accent: 'text-emerald-500',
+    },
+    primary: {
+      badge:
+        'border-primary/40 bg-primary/15 text-primary',
+      bar: 'from-primary via-accent to-fuchsia-500',
+      accent: 'text-primary',
+    },
+    fuchsia: {
+      badge:
+        'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300',
+      bar: 'from-fuchsia-500 via-purple-500 to-indigo-500',
+      accent: 'text-fuchsia-500',
+    },
+  } as const
+
+  const tone = toneClasses[tier.badgeTone]
+  const isPrimaryCta = tier.cta.variant === 'primary'
+  const isExternal = tier.cta.href.startsWith('mailto:') || tier.cta.href.startsWith('http')
+
+  return (
+    <div
+      className={cn(
+        'group relative flex h-full flex-col overflow-hidden rounded-3xl border backdrop-blur-2xl transition-all',
+        tier.highlighted
+          ? 'border-primary/40 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_30px_90px_-30px_rgba(99,102,241,0.6)] dark:border-primary/30 dark:bg-white/[0.05] md:-translate-y-2 md:scale-[1.02]'
+          : 'border-white/60 bg-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_20px_60px_-30px_rgba(0,0,0,0.25)] dark:border-white/10 dark:bg-white/[0.03] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_60px_-30px_rgba(0,0,0,0.6)]'
+      )}
+    >
+      {/* Top accent bar — gradient differs per tier so the three cards
+          read as related but distinct. Highlighted tier gets the full
+          brand gradient; the others get tone-matched bars. */}
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-x-0 top-0 h-1 bg-gradient-to-r',
+          tone.bar
+        )}
+      />
+      {tier.highlighted && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-primary/20 via-transparent to-fuchsia-400/20 opacity-60"
+          style={{
+            WebkitMask:
+              'linear-gradient(#000, #000) content-box, linear-gradient(#000, #000)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude',
+            padding: '1px',
+          }}
+        />
+      )}
+
+      <div className="flex flex-1 flex-col p-7 lg:p-8">
+        {/* ─── Header ─── */}
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-lg font-bold tracking-tight text-foreground">
+            {tier.name}
+          </h3>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur',
+              tone.badge
+            )}
+          >
+            {tier.highlighted && <Sparkles className="h-2.5 w-2.5" />}
+            {tier.badge}
+          </span>
+        </div>
+
+        {/* ─── Price ─── */}
+        <div className="mt-5 flex items-baseline gap-2">
+          <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/60 bg-clip-text text-5xl font-black leading-none tracking-tighter text-transparent sm:text-6xl">
+            {tier.price}
+          </span>
+          {tier.priceUnit && (
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {tier.priceUnit}
+            </span>
+          )}
+        </div>
+        {tier.priceFootnote && (
+          <p className="mt-2 text-[11px] text-muted-foreground/80">
+            {tier.priceFootnote}
+          </p>
+        )}
+
+        <p className="mt-4 text-[13px] leading-relaxed text-muted-foreground">
+          {tier.description}
+        </p>
+
+        {/* ─── CTA ─── */}
+        <div className="mt-6">
+          {isPrimaryCta ? (
+            <Link
+              href={tier.cta.href}
+              {...(isExternal ? { rel: 'noreferrer noopener' } : {})}
+              className="group/cta relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary to-primary/85 px-5 py-3 text-sm font-bold text-primary-foreground shadow-[0_1px_0_0_rgba(255,255,255,0.18)_inset,0_14px_28px_-10px_rgba(99,102,241,0.6)] transition-all hover:-translate-y-0.5 hover:shadow-[0_1px_0_0_rgba(255,255,255,0.22)_inset,0_18px_36px_-12px_rgba(99,102,241,0.8)]"
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover/cta:translate-x-full"
+              />
+              <span className="relative">{tier.cta.label}</span>
+              <ArrowRight className="relative h-4 w-4 transition-transform group-hover/cta:translate-x-1" />
+            </Link>
+          ) : (
+            <Link
+              href={tier.cta.href}
+              {...(isExternal ? { rel: 'noreferrer noopener' } : {})}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-white/60 px-5 py-3 text-sm font-bold text-foreground backdrop-blur transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-white/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.12]"
+            >
+              <span>{tier.cta.label}</span>
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
+
+        {/* ─── Features ─── */}
+        <div className="mt-7 border-t border-border/40 pt-5">
+          {tier.inheritsFrom && (
+            <p className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground/75">
+              <Sparkles className={cn('h-3 w-3', tone.accent)} />
+              Everything in {tier.inheritsFrom}, plus:
+            </p>
+          )}
+          <ul className="space-y-2.5">
+            {tier.features.map((item) => (
+              <li
+                key={item.label}
+                className={cn(
+                  'flex items-start gap-2.5 text-[13px] leading-snug',
+                  item.soon ? 'text-foreground/55' : 'text-foreground/85'
+                )}
+              >
+                <CheckCircle2
+                  className={cn(
+                    'mt-0.5 h-4 w-4 shrink-0',
+                    item.soon ? 'text-muted-foreground/50' : tone.accent
+                  )}
+                />
+                <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <span>{item.label}</span>
+                  {item.soon && (
+                    <span className="rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                      Soon
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
   )
 }
 

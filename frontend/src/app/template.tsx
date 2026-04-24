@@ -6,14 +6,18 @@ import { PageTransition } from '@/components/ui/PageTransition'
  * route change — public pages and authenticated pages alike — replays
  * the selected CSS page-enter animation. Respects prefers-reduced-motion.
  *
- * To try a different transition feel, swap PAGE_TRANSITION below:
- *   - 'rise'   fade + gentle upward translate (default; deliberate)
- *   - 'fade'   pure opacity — cleanest, least movement
- *   - 'slide'  horizontal sweep from the right (Linear-esque)
- *   - 'scale'  blooms from 96% → 100% (panel-materialising)
- *   - 'blur'   blur ramp + fade (premium / cinematic)
+ * Variant must be `fade` (opacity only). Any variant that animates
+ * `transform`, `filter`, or `perspective` (rise/slide/scale/blur)
+ * creates a containing block on this wrapper — which makes the
+ * landing page's `position: fixed` LandingHeader anchor to the
+ * wrapper instead of the viewport, so the header scrolls with the
+ * page. The spec says `transform: none` end-state should release the
+ * containing block, but Chrome/WebKit keep the element on its own
+ * compositor layer after the animation, so the breakage persists.
+ * If you want movement back, render it inside individual sections via
+ * the <Reveal> primitive instead of the page-level wrapper.
  */
-const PAGE_TRANSITION = 'rise' as const
+const PAGE_TRANSITION = 'fade' as const
 
 export default function Template({ children }: { children: React.ReactNode }) {
   return <PageTransition variant={PAGE_TRANSITION}>{children}</PageTransition>

@@ -14,6 +14,12 @@ export function getMyTaskUpdate(): Promise<TaskUpdate | PendingTaskUpdate | null
   return apiClient.get<TaskUpdate | PendingTaskUpdate | null>('/task-updates/me')
 }
 
+// NOTE — the shared `apiClient` runs snake_case → camelCase on every
+// response body, so every field in these types MUST be camelCase. The
+// backend emits snake_case on the wire and the transform handles the
+// rename. Writing snake_case here (as this file used to) produced
+// `undefined` at every call site.
+
 export interface WeeklyRollupContributor {
   name: string
   updates: number
@@ -22,7 +28,7 @@ export interface WeeklyRollupContributor {
 }
 
 export interface WeeklyRollupTask {
-  task_name: string
+  taskName: string
   hours: number
   contributors: number
   updates: number
@@ -34,29 +40,71 @@ export interface WeeklyRollupDay {
   hours: number
 }
 
+export interface WeeklyRollupAttendanceDay {
+  date: string
+  hours: number
+  sessions: number
+  signedInCount: number
+}
+
+export interface WeeklyRollupAttendanceContributor {
+  name: string
+  hours: number
+  sessions: number
+}
+
+export interface WeeklyRollupApp {
+  appName: string
+  minutes: number
+}
+
+export interface WeeklyRollupDayOff {
+  name: string
+  startDate: string
+  endDate: string
+  daysInWindow: number
+  reason: string
+}
+
 export interface WeeklyRollupNarrative {
   headline: string
   summary: string
   highlights: string[]
-  notable_patterns: string[]
+  notablePatterns: string[]
   concerns: string[]
 }
 
 export interface WeeklyRollup {
-  week_start: string
-  week_end: string
-  team_size: number
+  weekStart: string
+  weekEnd: string
+  teamSize: number
   metrics: {
-    total_updates: number
-    contributor_count: number
-    total_hours: number
-    missing_days: string[]
+    totalUpdates: number
+    contributorCount: number
+    totalHours: number
+    missingDays: string[]
+    // Attendance slice (objective timer)
+    attendanceTotalHours: number
+    attendanceContributorCount: number
+    attendanceSessionsCount: number
+    // Activity slice (desktop signals)
+    activityAvgScore: number
+    activityTotalActiveMinutes: number
+    activityTotalIdleMinutes: number
+    activityContributorCount: number
+    // Day-off slice
+    dayoffsApprovedCount: number
+    dayoffsDaysLost: number
   }
-  by_contributor: WeeklyRollupContributor[]
-  by_task: WeeklyRollupTask[]
-  by_day: WeeklyRollupDay[]
+  byContributor: WeeklyRollupContributor[]
+  byTask: WeeklyRollupTask[]
+  byDay: WeeklyRollupDay[]
+  attendanceByDay: WeeklyRollupAttendanceDay[]
+  attendanceByContributor: WeeklyRollupAttendanceContributor[]
+  activityTopApps: WeeklyRollupApp[]
+  dayoffsRequests: WeeklyRollupDayOff[]
   narrative: WeeklyRollupNarrative
-  generated_at: string
+  generatedAt: string
 }
 
 /** Fetches the owner/admin weekly rollup. `weekStart` is an optional

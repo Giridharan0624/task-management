@@ -106,6 +106,12 @@ class OrgSettings(BaseModel):
         "day_offs": True,
         "comments": True,
         "task_updates": True,
+        # First-run setup checklist state (OWNER-only UI on the
+        # dashboard). Server-persisted so dismissal/marks survive across
+        # browsers and devices. False = not yet acknowledged.
+        "onboarding_checklist_dismissed": False,
+        "onboarding_desktop_installed": False,
+        "onboarding_branding_done": False,
     }
     leave_types: list[dict] = [
         {"id": "casual", "name": "Casual", "annual_quota": 12},

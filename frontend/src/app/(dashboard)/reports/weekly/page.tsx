@@ -4,15 +4,20 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
+  AppWindow,
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Gauge,
   ListTodo,
+  Palmtree,
+  PauseCircle,
   RefreshCw,
   Sparkles,
+  Timer,
   Users,
 } from 'lucide-react'
 
@@ -123,7 +128,7 @@ export default function WeeklyRollupPage() {
           </Button>
           <div className="flex min-w-[220px] items-center justify-center gap-2 px-3 text-sm font-semibold text-foreground">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            {data ? formatRange(data.week_start, data.week_end) : formatRange(
+            {data ? formatRange(data.weekStart, data.weekEnd) : formatRange(
               weekStartIso,
               iso(new Date(weekStart.getTime() + 6 * 86400000)),
             )}
@@ -218,44 +223,125 @@ function LoadingState() {
 }
 
 interface RollupData {
-  week_start: string
-  week_end: string
-  team_size: number
-  metrics: {
-    total_updates: number
-    contributor_count: number
-    total_hours: number
-    missing_days: string[]
+  weekStart: string
+  weekEnd: string
+  teamSize: number
+  // The rollup endpoint can omit any of these sections — or individual
+  // leaves inside them — when the week is sparse. Mark optional all the
+  // way down so TS flags unsafe access; `RollupContent` deep-defaults
+  // every leaf below.
+  metrics?: {
+    // Task-update slice
+    totalUpdates?: number
+    contributorCount?: number
+    totalHours?: number
+    missingDays?: string[]
+    // Attendance slice (objective timer)
+    attendanceTotalHours?: number
+    attendanceContributorCount?: number
+    attendanceSessionsCount?: number
+    // Activity slice (desktop signals)
+    activityAvgScore?: number
+    activityTotalActiveMinutes?: number
+    activityTotalIdleMinutes?: number
+    activityContributorCount?: number
+    // Day-off slice
+    dayoffsApprovedCount?: number
+    dayoffsDaysLost?: number
   }
-  by_contributor: {
+  byContributor?: {
     name: string
     updates: number
     hours: number
     tasks: number
   }[]
-  by_task: {
-    task_name: string
+  byTask?: {
+    taskName: string
     hours: number
     contributors: number
     updates: number
   }[]
-  by_day: { date: string; updates: number; hours: number }[]
-  narrative: {
-    headline: string
-    summary: string
-    highlights: string[]
-    notable_patterns: string[]
-    concerns: string[]
+  byDay?: { date: string; updates: number; hours: number }[]
+  // New per-dimension breakdowns
+  attendanceByDay?: {
+    date: string
+    hours: number
+    sessions: number
+    signedInCount: number
+  }[]
+  attendanceByContributor?: {
+    name: string
+    hours: number
+    sessions: number
+  }[]
+  activityTopApps?: { appName: string; minutes: number }[]
+  dayoffsRequests?: {
+    name: string
+    startDate: string
+    endDate: string
+    daysInWindow: number
+    reason: string
+  }[]
+  narrative?: {
+    headline?: string
+    summary?: string
+    highlights?: string[]
+    notablePatterns?: string[]
+    concerns?: string[]
   }
-  generated_at: string
+  generatedAt?: string
 }
 
 function RollupContent({ data }: { data: RollupData }) {
+  // Deep-default every leaf of the potentially-missing sections so the
+  // render tree below can reference non-null values without `?? 0` /
+  // `?? []` noise at every site. The rollup endpoint omits not just
+  // whole sections but sometimes individual fields on sparse weeks.
+  const byDay = data.byDay ?? []
+  const byContributor = data.byContributor ?? []
+  const byTask = data.byTask ?? []
+  const attendanceByDay = data.attendanceByDay ?? []
+  const attendanceByContributor = data.attendanceByContributor ?? []
+  const activityTopApps = data.activityTopApps ?? []
+  const dayoffRequests = data.dayoffsRequests ?? []
+  const metrics = {
+    totalUpdates: data.metrics?.totalUpdates ?? 0,
+    contributorCount: data.metrics?.contributorCount ?? 0,
+    totalHours: data.metrics?.totalHours ?? 0,
+    missingDays: data.metrics?.missingDays ?? [],
+    attendanceTotalHours: data.metrics?.attendanceTotalHours ?? 0,
+    attendanceContributorCount:
+      data.metrics?.attendanceContributorCount ?? 0,
+    attendanceSessionsCount: data.metrics?.attendanceSessionsCount ?? 0,
+    activityAvgScore: data.metrics?.activityAvgScore ?? 0,
+    activityTotalActiveMinutes:
+      data.metrics?.activityTotalActiveMinutes ?? 0,
+    activityTotalIdleMinutes:
+      data.metrics?.activityTotalIdleMinutes ?? 0,
+    activityContributorCount: data.metrics?.activityContributorCount ?? 0,
+    dayoffsApprovedCount: data.metrics?.dayoffsApprovedCount ?? 0,
+    dayoffsDaysLost: data.metrics?.dayoffsDaysLost ?? 0,
+  }
+  const narrative = {
+    headline: data.narrative?.headline ?? '',
+    summary: data.narrative?.summary ?? '',
+    highlights: data.narrative?.highlights ?? [],
+    notablePatterns: data.narrative?.notablePatterns ?? [],
+    concerns: data.narrative?.concerns ?? [],
+  }
+
   const maxDayHours = useMemo(
-    () => Math.max(1, ...data.by_day.map((d) => d.hours)),
-    [data.by_day],
+    () => Math.max(1, ...byDay.map((d) => d.hours)),
+    [byDay],
   )
-  const hasData = data.metrics.total_updates > 0
+  // `hasData` is true if ANY dimension has something to show — previously
+  // the page collapsed to the empty-state whenever task updates were
+  // missing, even if the team logged plenty of timer hours.
+  const hasData =
+    metrics.totalUpdates > 0 ||
+    metrics.attendanceTotalHours > 0 ||
+    metrics.activityTotalActiveMinutes > 0 ||
+    metrics.dayoffsApprovedCount > 0
 
   return (
     <div className="flex flex-col gap-6">
@@ -275,47 +361,110 @@ function RollupContent({ data }: { data: RollupData }) {
             AI summary
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            {data.narrative.headline || 'Weekly digest'}
+            {narrative.headline || 'Weekly digest'}
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            {data.narrative.summary}
+            {narrative.summary}
           </p>
 
-          <p className="mt-5 text-[11px] text-muted-foreground">
-            Generated {new Date(data.generated_at).toLocaleString()}
-          </p>
+          {data.generatedAt && (
+            <p className="mt-5 text-[11px] text-muted-foreground">
+              Generated {new Date(data.generatedAt).toLocaleString()}
+            </p>
+          )}
         </div>
       </Card>
 
-      {/* Metric strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricTile
-          Icon={ListTodo}
-          label="Updates"
-          value={data.metrics.total_updates}
-          tint="from-indigo-500/15 text-indigo-600 dark:text-indigo-300"
-        />
-        <MetricTile
-          Icon={Users}
-          label="Contributors"
-          value={`${data.metrics.contributor_count}${
-            data.team_size > 0 ? ` / ${data.team_size}` : ''
-          }`}
-          tint="from-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-        />
-        <MetricTile
-          Icon={Clock}
-          label="Hours tracked"
-          value={`${Math.round(data.metrics.total_hours * 10) / 10}h`}
-          tint="from-amber-500/15 text-amber-600 dark:text-amber-300"
-        />
-        <MetricTile
-          Icon={CalendarDays}
-          label="Missing days"
-          value={data.metrics.missing_days.length}
-          tint="from-rose-500/15 text-rose-600 dark:text-rose-300"
-        />
+      {/* Metric strip — row 1: self-reported (task updates) */}
+      <div>
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Task updates · self-reported
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <MetricTile
+            Icon={ListTodo}
+            label="Updates"
+            value={metrics.totalUpdates}
+            tint="from-indigo-500/15 text-indigo-600 dark:text-indigo-300"
+          />
+          <MetricTile
+            Icon={Users}
+            label="Contributors"
+            value={`${metrics.contributorCount}${
+              data.teamSize > 0 ? ` / ${data.teamSize}` : ''
+            }`}
+            tint="from-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+          />
+          <MetricTile
+            Icon={Clock}
+            label="Hours reported"
+            value={`${Math.round(metrics.totalHours * 10) / 10}h`}
+            tint="from-amber-500/15 text-amber-600 dark:text-amber-300"
+          />
+          <MetricTile
+            Icon={CalendarDays}
+            label="Missing days"
+            value={metrics.missingDays.length}
+            tint="from-rose-500/15 text-rose-600 dark:text-rose-300"
+          />
+        </div>
       </div>
+
+      {/* Metric strip — row 2: objective signals (attendance + activity) */}
+      <div>
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Objective signals · timer &amp; desktop activity
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <MetricTile
+            Icon={Timer}
+            label="Timer hours"
+            value={`${Math.round(metrics.attendanceTotalHours * 10) / 10}h`}
+            tint="from-blue-500/15 text-blue-600 dark:text-blue-300"
+          />
+          <MetricTile
+            Icon={Clock}
+            label="Sessions"
+            value={metrics.attendanceSessionsCount}
+            tint="from-cyan-500/15 text-cyan-600 dark:text-cyan-300"
+          />
+          <MetricTile
+            Icon={Gauge}
+            label="Avg focus"
+            value={`${metrics.activityAvgScore}%`}
+            tint="from-violet-500/15 text-violet-600 dark:text-violet-300"
+          />
+          <MetricTile
+            Icon={PauseCircle}
+            label="Idle"
+            value={`${Math.round(metrics.activityTotalIdleMinutes)}m`}
+            tint="from-slate-500/15 text-slate-600 dark:text-slate-300"
+          />
+        </div>
+      </div>
+
+      {/* Metric strip — row 3: leave */}
+      {metrics.dayoffsApprovedCount > 0 && (
+        <div>
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Leave this week
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <MetricTile
+              Icon={Palmtree}
+              label="Approved leaves"
+              value={metrics.dayoffsApprovedCount}
+              tint="from-orange-500/15 text-orange-600 dark:text-orange-300"
+            />
+            <MetricTile
+              Icon={CalendarDays}
+              label="Person-days lost"
+              value={metrics.dayoffsDaysLost}
+              tint="from-pink-500/15 text-pink-600 dark:text-pink-300"
+            />
+          </div>
+        </div>
+      )}
 
       {hasData && (
         <>
@@ -335,7 +484,7 @@ function RollupContent({ data }: { data: RollupData }) {
               </span>
             </div>
             <div className="flex items-end gap-2 sm:gap-3">
-              {data.by_day.map((d) => {
+              {byDay.map((d) => {
                 const heightPct = (d.hours / maxDayHours) * 100
                 const date = new Date(d.date + 'T00:00:00')
                 const label = date
@@ -380,19 +529,19 @@ function RollupContent({ data }: { data: RollupData }) {
             <ListCard
               title="Highlights"
               badge="AI"
-              items={data.narrative.highlights}
+              items={narrative.highlights}
               emptyHint="No standout highlights for this window."
               tone="primary"
             />
             <ListCard
               title="Notable patterns"
-              items={data.narrative.notable_patterns}
+              items={narrative.notablePatterns}
               emptyHint="Nothing unusual about the week's shape."
               tone="muted"
             />
           </div>
 
-          {data.narrative.concerns.length > 0 && (
+          {narrative.concerns.length > 0 && (
             <Card className="border-amber-400/40 bg-amber-500/[0.04] p-5 sm:p-6">
               <div className="mb-3 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -401,7 +550,7 @@ function RollupContent({ data }: { data: RollupData }) {
                 </h3>
               </div>
               <ul className="space-y-2">
-                {data.narrative.concerns.map((c, i) => (
+                {narrative.concerns.map((c, i) => (
                   <li
                     key={i}
                     className="flex items-start gap-2 text-sm text-foreground/90"
@@ -425,7 +574,7 @@ function RollupContent({ data }: { data: RollupData }) {
                 </span>
               </div>
               <ul className="divide-y divide-border">
-                {data.by_contributor.slice(0, 8).map((c) => (
+                {byContributor.slice(0, 8).map((c) => (
                   <li
                     key={c.name}
                     className="flex items-center justify-between gap-3 py-2.5"
@@ -457,14 +606,14 @@ function RollupContent({ data }: { data: RollupData }) {
                 </span>
               </div>
               <ul className="divide-y divide-border">
-                {data.by_task.slice(0, 8).map((t) => (
+                {byTask.slice(0, 8).map((t) => (
                   <li
-                    key={t.task_name}
+                    key={t.taskName}
                     className="flex items-center justify-between gap-3 py-2.5"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">
-                        {t.task_name}
+                        {t.taskName}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
                         {t.contributors} contributor
@@ -479,6 +628,113 @@ function RollupContent({ data }: { data: RollupData }) {
               </ul>
             </Card>
           </div>
+
+          {/* Attendance + Activity + Leave — only render the grid rows that
+              actually have content so a team with no timer use doesn't get
+              a wall of empty cards. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {attendanceByContributor.length > 0 && (
+              <Card className="p-5 sm:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-foreground">
+                    Timer hours by member
+                  </h3>
+                  <span className="text-[11px] text-muted-foreground">
+                    objective
+                  </span>
+                </div>
+                <ul className="divide-y divide-border">
+                  {attendanceByContributor.slice(0, 8).map((c) => (
+                    <li
+                      key={c.name}
+                      className="flex items-center justify-between gap-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {c.name}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {c.sessions} session
+                          {c.sessions === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-foreground">
+                        {c.hours.toFixed(1)}h
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
+            {activityTopApps.length > 0 && (
+              <Card className="p-5 sm:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AppWindow className="h-3.5 w-3.5 text-muted-foreground" />
+                    <h3 className="text-sm font-bold text-foreground">
+                      Top apps
+                    </h3>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    by minutes
+                  </span>
+                </div>
+                <ul className="divide-y divide-border">
+                  {activityTopApps.map((a) => (
+                    <li
+                      key={a.appName}
+                      className="flex items-center justify-between gap-3 py-2.5"
+                    >
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {a.appName}
+                      </p>
+                      <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-foreground">
+                        {a.minutes}m
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+          </div>
+
+          {dayoffRequests.length > 0 && (
+            <Card className="p-5 sm:p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Palmtree className="h-3.5 w-3.5 text-orange-500" />
+                <h3 className="text-sm font-bold text-foreground">
+                  Approved leave overlapping this week
+                </h3>
+                <span className="ml-auto text-[11px] text-muted-foreground">
+                  {metrics.dayoffsDaysLost} person-day
+                  {metrics.dayoffsDaysLost === 1 ? '' : 's'} in window
+                </span>
+              </div>
+              <ul className="divide-y divide-border">
+                {dayoffRequests.map((r) => (
+                  <li
+                    key={`${r.name}-${r.startDate}`}
+                    className="flex items-center justify-between gap-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {r.name}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {formatRange(r.startDate, r.endDate)}
+                        {r.reason ? ` · ${r.reason}` : ''}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-300">
+                      {r.daysInWindow} day
+                      {r.daysInWindow === 1 ? '' : 's'} in window
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
         </>
       )}
 
