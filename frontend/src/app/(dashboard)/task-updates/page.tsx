@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { FileText } from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useHasPermission } from '@/lib/hooks/usePermission'
 import { useTaskUpdates } from '@/lib/hooks/useTaskUpdates'
 import { useUsers } from '@/lib/hooks/useUsers'
 import {
@@ -72,8 +73,12 @@ export default function TaskUpdatesPage() {
     ? (todayAttendance ?? [])
     : (reportAttendance ?? [])
 
-  const canView =
+  // Gate the team-wide submissions view on the live permission.
+  // Falls back to the role check during the roles-fetch window.
+  const canViewPerm = useHasPermission('taskupdate.list.all')
+  const legacyCanView =
     user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const canView = canViewPerm === null ? legacyCanView : canViewPerm
 
   // Lookups
   const userByIdRaw = useMemo(() => {

@@ -26,6 +26,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useHasPermission } from '@/lib/hooks/usePermission'
 import { useAttendanceReport } from '@/lib/hooks/useAttendance'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
@@ -238,8 +239,13 @@ export default function ReportsPage() {
 
   const [memberFilter, setMemberFilter] = useState<string>('ALL')
 
-  const isPrivileged =
+  // Reports show team-wide data when the caller has progress-view.
+  // Falls back to the legacy role check during the roles-fetch window.
+  const canViewTeamProgress = useHasPermission('user.progress.view')
+  const legacyPrivileged =
     user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const isPrivileged =
+    canViewTeamProgress === null ? legacyPrivileged : canViewTeamProgress
 
   // Summary view data
   const summaryRange = useMemo(

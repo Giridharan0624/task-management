@@ -11,6 +11,7 @@ import {
   ArrowDownUp,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useHasPermission } from '@/lib/hooks/usePermission'
 import {
   useAttendanceReport,
   useMyAttendance,
@@ -164,8 +165,15 @@ function TeamAttendanceView() {
     return () => clearInterval(i)
   }, [hasActiveSession, rawRecords])
 
-  const isPrivileged =
+  // Team attendance view is gated on the live user.progress.view
+  // permission (same as reports — if you can see report data, you
+  // can see the roster's hours). Falls back to the legacy role check
+  // while roles are still loading.
+  const canViewTeamProgress = useHasPermission('user.progress.view')
+  const legacyPrivileged =
     user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const isPrivileged =
+    canViewTeamProgress === null ? legacyPrivileged : canViewTeamProgress
   const monthLabel = new Date(selectedYear, selectedMonth - 1).toLocaleString(
     'en-US',
     { month: 'long', year: 'numeric' }

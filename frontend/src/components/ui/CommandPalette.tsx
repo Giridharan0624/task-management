@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useHasPermission } from '@/lib/hooks/usePermission'
 
 interface CommandItem {
   id: string
@@ -57,7 +58,14 @@ export function CommandPalette() {
     if (open) setTimeout(() => inputRef.current?.focus(), 50)
   }, [open])
 
-  const isPrivileged = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  // Live-permission check — `nav-users` only shows when the caller
+  // actually has user.list. Falls back to the role check while the
+  // /orgs/current/roles fetch is in flight.
+  const canListUsersPerm = useHasPermission('user.list')
+  const legacyPrivileged =
+    user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const isPrivileged =
+    canListUsersPerm === null ? legacyPrivileged : canListUsersPerm
 
   const items = useMemo<CommandItem[]>(() => {
     const nav: CommandItem[] = [

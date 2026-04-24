@@ -3,6 +3,7 @@
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
 import { useT } from '@/lib/tenant/useT'
+import { useEffectivePermissions } from '@/lib/hooks/usePermission'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -64,6 +65,14 @@ interface NavItem {
   /** Optional feature flag from OrgSettings.features. When set, the
    * nav item is hidden if the tenant has the feature disabled. */
   feature?: string
+  /** Optional backend permission string. When set, the nav item is
+   * hidden unless the caller's live role permissions include it
+   * (live-read via useEffectivePermissions from the roles API). This
+   * makes the sidebar respect OWNER-level permission edits without
+   * any redeploy — the Admin's "Users" link disappears within one
+   * React Query staleTime after OWNER removes `user.list` from the
+   * Admin role. */
+  requiredPermission?: string
 }
 
 /** Returns true if the nav item should be visible. Missing feature key
@@ -82,10 +91,14 @@ const adminNav: NavItem[] = [
   // ADMIN defaults to their personal scope on /my-tasks (with a toggle
   // to flip to team view). "My tasks" matches the default landing.
   { nameKey: 'nav.my_tasks', name: 'My tasks', href: '/my-tasks', icon: CheckSquare },
-  { nameKey: 'nav.task_updates', name: 'Daily Updates', href: '/task-updates', icon: FileText, feature: 'task_updates' },
-  { nameKey: 'user.team', name: 'Users', href: '/admin/users', icon: Users },
-  { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare },
-  { nameKey: 'nav.reports', name: 'Reports', href: '/reports', icon: BarChart3 },
+  // Every admin-scope nav item is permission-gated. Role edits hide
+  // the nav item live (no reload needed). Personal-scope routes
+  // (/dashboard, /my-tasks, /attendance, /day-offs) carry no
+  // requiredPermission so they always show.
+  { nameKey: 'nav.task_updates', name: 'Daily Updates', href: '/task-updates', icon: FileText, feature: 'task_updates', requiredPermission: 'taskupdate.list.all' },
+  { nameKey: 'user.team', name: 'Users', href: '/admin/users', icon: Users, requiredPermission: 'user.list' },
+  { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare, requiredPermission: 'project.list' },
+  { nameKey: 'nav.reports', name: 'Reports', href: '/reports', icon: BarChart3, requiredPermission: 'user.progress.view' },
   { nameKey: 'nav.attendance', name: 'Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
   { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
 ]
@@ -100,7 +113,7 @@ const ownerNav: NavItem[] = [
       ? { ...item, nameKey: 'nav.all_tasks', name: 'All tasks' }
       : item,
   ),
-  { nameKey: 'nav.settings', name: 'Settings', href: '/settings/organization', icon: Settings },
+  { nameKey: 'nav.settings', name: 'Settings', href: '/settings/organization', icon: Settings, requiredPermission: 'settings.view' },
 ]
 
 const memberNav: NavItem[] = [
@@ -299,6 +312,12 @@ interface SidebarContentProps {
   onNavClick?: () => void
   getBadgeCount: (href: string) => number
   features: Record<string, boolean> | null | undefined
+  /** Caller's live permission set (from /orgs/current/roles), or
+   *  null while loading. Nav items declaring `requiredPermission`
+   *  are filtered against this. Null disables the filter — the role-
+   *  based `getNavItems` output is shown optimistically so the first
+   *  paint isn't degraded. */
+  effectivePermissions: Set<string> | null
 }
 
 function SidebarContent({
@@ -311,6 +330,7 @@ function SidebarContent({
   onNavClick,
   getBadgeCount,
   features,
+  effectivePermissions,
 }: SidebarContentProps) {
   const t = useT()
   return (
@@ -346,6 +366,16 @@ function SidebarContent({
       >
         {navItems
           .filter((item) => isFeatureEnabled(item.feature, features))
+          // Permission gate: if effectivePermissions is null (still
+          // loading), show everything the role-based getNavItems
+          // returned so the sidebar doesn't flash empty. Once
+          // permissions arrive, drop items whose requiredPermission
+          // isn't granted by the tenant's current role record.
+          .filter((item) => {
+            if (!item.requiredPermission) return true
+            if (effectivePermissions === null) return true
+            return effectivePermissions.has(item.requiredPermission)
+          })
           .map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + '/')
@@ -439,6 +469,12 @@ export default function DashboardLayout({
   const [profileName, setProfileName] = useState<string | undefined>()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
+  // Live permission set — called at the top of the component (before
+  // any early returns) to satisfy React's hook-call ordering rule.
+  // Nav items with `requiredPermission` filter against this inside
+  // <SidebarContent>. Null while loading, which makes the filter a
+  // no-op so the first paint shows the role-based default.
+  const effectivePermissions = useEffectivePermissions()
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -544,6 +580,7 @@ export default function DashboardLayout({
             signOut={signOut}
             getBadgeCount={getBadgeCount}
             features={features}
+            effectivePermissions={effectivePermissions}
           />
         </aside>
 
@@ -563,6 +600,7 @@ export default function DashboardLayout({
               onNavClick={closeSidebar}
               getBadgeCount={getBadgeCount}
               features={features}
+              effectivePermissions={effectivePermissions}
             />
           </SheetContent>
         </Sheet>
