@@ -1,6 +1,7 @@
 # TaskFlow — Technical Design Document
 
 **Scope:** how the multi-tenant SaaS is built. Complements [PRD.md](PRD.md) (product surface) and [SAAS-STATUS.md](SAAS-STATUS.md) (shipped vs. not).
+**Version:** 2.2 (post-Session 7)
 **Last updated:** 2026-04-22
 
 ---
@@ -56,10 +57,11 @@ Three deployable units in one monorepo:
 All tenant-scoped items prefix `ORG#{org_id}#` in their PK. Key construction is **centralized** in [backend/src/shared_kernel/tenant_keys.py](backend/src/shared_kernel/tenant_keys.py) — repositories never string-format PKs inline.
 
 ```
-PK=ORG#{org}#USER#{userId}        SK=PROFILE
+PK=ORG#{org}#USER#{userId}        SK=PROFILE | NOTIF#{ts}#{id}
 PK=ORG#{org}#PROJECT#{pid}        SK=METADATA | MEMBER#{uid} | TASK#{tid}
 PK=ORG#{org}                      SK=ORG | SETTINGS | PLAN
 PK=ORG#{org}                      SK=ROLE#{id} | PIPELINE#{id} | INVITE#{token}
+PK=ORG#{org}                      SK=WEBHOOK#{id}
 PK=ORG#{org}#AUDIT                SK=EVENT#{ts}#{eventId}
 PK=ORG#{org}#ACTIVITY             SK=...
 PK=SLUG#{slug}                    SK=ORG              # global resolver
@@ -67,6 +69,9 @@ PK=INVITE_TOKEN#{token}           SK=LOOKUP           # global, O(1) accept
 GSI1PK=USER_EMAIL#{email}                             # email uniqueness
 GSI2PK=ORG#{org}#EMPLOYEE#{eid}                       # per-tenant employee IDs
 ```
+
+### Role scope (Session 4)
+`ROLE#{id}` records carry a `scope` attribute: `"system"` (OWNER / ADMIN / MEMBER and custom system roles) or `"project"` (project_admin / project_manager / team_lead / project_member and custom project roles). `ProjectMember.project_role_id` references the latter — the legacy `project_role` enum is translated on read via `normalize_project_role_id()` and emitted alongside the new field on write for backward compat.
 
 `DEFAULT_ORG_ID = "neurostack"` is the legacy fallback when a token lacks `custom:orgId`. New code emits v2 keys only.
 
@@ -104,6 +109,20 @@ auth = extract_auth_context(event)   # shared_kernel/auth_context.py
 
 ### Email verification
 Signup creates the Cognito user with `email_verified=false`. Invite acceptance ships `email_verified=true` (link receipt proves ownership). The `/verify-email` page calls Cognito SDK `getAttributeVerificationCode` / `verifyAttribute`; post-verify `refreshSession()` pulls a fresh token. Dashboard layout + login page both gate on `emailVerified === false` and redirect.
+
+### TOTP 2FA (Session 3)
+Pool `MfaConfiguration=OPTIONAL` with `otp=True, sms=False`. SMS is deliberately off — SIM-swap attacks make it weak for admin accounts. TOTP-only is the baseline.
+
+Enrollment flow:
+1. `associateSoftwareToken` — returns a secret seed; frontend renders a QR code (`otpauth://totp/{issuer}:{email}?secret=…`) + a manual-entry field
+2. User scans into Google Authenticator / Authy / 1Password / Microsoft Authenticator
+3. User enters the first generated code → `verifySoftwareToken` + `setUserMfaPreference({ PreferredMfa: true })`
+4. Future sign-ins return a `SOFTWARE_TOKEN_MFA` challenge; `cognitoClient.signIn` surfaces it as a `SoftwareTokenMfaRequired` result member, `AuthProvider.completeMfaChallenge(code)` finishes the flow
+
+OWNER reset: `POST /users/{userId}/reset-mfa` calls `AdminSetUserMFAPreference` to disable all factors on the target user, audited as `user.mfa_reset`. Escape hatch for lost authenticators; no recovery codes in v1.
+
+### Change-email (Session 2)
+Cognito owns the verification ceremony. Frontend calls `updateAttributes([{Name:'email', Value: new}])` — Cognito stages the new address, sets `email_verified=false`, mails a 6-digit code to the NEW address. User enters the code → `verifyAttribute` commits the swap. Backend `PUT /users/me/email` then syncs the DDB User record from the refreshed JWT's `email` claim. Collision check (global email uniqueness) re-verified backend-side.
 
 ---
 
@@ -291,6 +310,91 @@ Scaffolded but dormant. Activates when `SENTRY_DSN` env var is set + `sentry-sdk
 
 ---
 
+## 10a. Notifications (Session 5)
+
+Per-user partition on the existing USER tree so a single query can bulk-fetch:
+
+```
+PK = ORG#{org_id}#USER#{user_id}
+SK = NOTIF#{iso_timestamp}#{notif_id}
+```
+
+Writer: `shared_kernel.notifications.create(org, user, type, title, message, link, metadata)` — fire-and-forget, never raises. Emitters call it from handlers after successful actions (e.g. `assign_task.py` after the use case succeeds).
+
+Reader: `list_for_user(org, user, limit, unread_only)` via `ScanIndexForward=False` → newest first; unread filter is client-side because volumes are small.
+
+Mark-read: stamps `read_at` via UpdateItem (single-item) or a bounded scan + batch update (mark-all-read, capped at 200 items per call).
+
+API surface is a single router Lambda — `GET` lists, `POST` with action body (`{action: "mark_read", notif_id}` or `{action: "mark_all_read"}`) dispatches. Chose shallow routing over separate `/read` + `/read-all` subpaths to conserve CFN method count.
+
+Frontend merges server-side notifications with the existing client-derived ones (overdue tasks, timer-too-long) in `NotificationCenter.tsx`. Polls every 30s + on panel open.
+
+## 10b. Outbound webhooks (Session 5)
+
+Per-org subscriptions on the org partition:
+
+```
+PK = ORG#{org_id}
+SK = WEBHOOK#{webhook_id}
+```
+
+Attributes: `url`, `secret` (stored plaintext — needed to re-sign on every delivery), `events[]`, `enabled`, `description`, timestamps.
+
+### Signature
+```
+X-TaskFlow-Signature: t={unix_seconds},v1={hmac_hex}
+hmac_hex = HMAC_SHA256(secret, "{t}.{body_bytes}")
+```
+
+Same shape as Stripe's webhook signing, so subscribers' Stripe-webhook libraries port with minimal tweaks.
+
+### Delivery
+Synchronous from the emitter (`webhooks.deliver(org, event, payload)`) with a 5-second per-URL timeout. 2xx = success; any other response or network failure is logged and dropped. First wiring: `task.assigned` (from `assign_task.py`). Future emitters will call `deliver()` the same way.
+
+No retry queue in v1 — subscribers must tolerate missed deliveries and reconcile via API. Adding SQS + retry with exponential backoff is straightforward when a real tenant needs stronger guarantees.
+
+### CRUD router
+Single Lambda at `/orgs/current/webhooks{,/{webhookId}}` with ANY verb dispatch (same pattern as roles_router / pipelines_router). Secret is returned in full only on the create response; subsequent reads mask it (`abc…xyz` preview).
+
+## 10c. Platform operator console (Sessions 1, 5, 7)
+
+Operator-only endpoints scoped under `/platform`:
+
+| Route | Method | Purpose |
+|---|---|---|
+| `/platform/orgs/{orgId}/status` | POST | Suspend / resume tenant |
+| `/platform/orgs/{orgId}/features` | PATCH | Shallow-merge `OrgSettings.features` |
+
+Both gated by env-allowlist `PLATFORM_ADMIN_USER_IDS` (comma-separated Cognito subs). Fail-closed when unset.
+
+Frontend console at `/platform` uses `NEXT_PUBLIC_PLATFORM_ADMIN_USER_IDS` (must mirror backend env) for UX-level gating. Non-admins get redirected to `/dashboard`; backend is the real authority.
+
+Tenant lookup: the operator types a workspace slug; frontend hits the public `GET /orgs/by-slug/{slug}` endpoint to resolve + display the orgId. No global "list all tenants" endpoint exists — deliberately, to keep the footprint small.
+
+## 10d. Deletion lifecycle (Session 2)
+
+Three-state status on `Organization`: `ACTIVE | SUSPENDED | PENDING_DELETION`. Plus a nullable `deleted_at` timestamp. The `require_not_suspended()` helper now treats both `SUSPENDED` and `PENDING_DELETION` as read-only, with typed error codes `ORG_SUSPENDED` and `ORG_PENDING_DELETION` so the frontend can render different UIs.
+
+### Lifecycle endpoints (OWNER + email-verified)
+| Route | Method | Effect |
+|---|---|---|
+| `/orgs/current/delete` | POST | Typed-slug confirm; marks `PENDING_DELETION`, stamps `deleted_at` |
+| `/orgs/current/undelete` | POST | Clears `deleted_at`, back to `ACTIVE` (grace window only) |
+| `/orgs/current/export` | POST | Dumps all tenant-scoped DDB items to `orgs/{orgId}/exports/{ts}.json` on S3, returns 24h presigned GET URL |
+
+### Hard-delete sweeper
+Scheduled Lambda at 04:00 UTC (after retention sweeper + seat reconciliation). Scans `list_all_orgs()`, filters to `PENDING_DELETION AND deleted_at < now-30d`, then for each match:
+1. Collect Cognito user emails from the DDB USER records (needed before we delete them)
+2. Batch-delete every item with PK `ORG#{org_id}#*` (USER/PROJECT/etc. composite partitions)
+3. Batch-delete the ORG partition (ORG, SETTINGS, PLAN, ROLE#*, PIPELINE#*, INVITE#*, WEBHOOK#*)
+4. Batch-delete the AUDIT partition
+5. Delete the SLUG resolver (makes the slug available for reclaim)
+6. `admin_delete_user` every Cognito user email
+
+`HARD_DELETE_GRACE_DAYS` env lets staging rehearse with a compressed timeline.
+
+Frontend `/settings/delete-workspace` wires all three surfaces: export (always available), delete (typed-slug confirm, hidden once pending), recover (only visible during grace). Dashboard layout grows a `PendingDeletionBanner` showing days-remaining to every org user.
+
 ## 11. Scheduled jobs
 
 | Job | Schedule (UTC) | Purpose |
@@ -298,6 +402,7 @@ Scaffolded but dormant. Activates when `SENTRY_DSN` env var is set + `sentry-sdk
 | Daily AI summary generation | 18:00 | Groq-generated per-user productivity summary for previous day |
 | Retention sweeper | 03:00 | Delete ACTIVITY rows older than `plan.retention_days` per-org |
 | Seat reconciliation | 03:30 | Detect seat overflow post-race; audit via "system:reconciliation" actor |
+| Hard-delete sweeper | 04:00 | Purge tenants past 30-day `deleted_at` grace (see §10d) |
 | Stale session sweeper | every 5 min | Close abandoned desktop attendance sessions |
 
 ---
@@ -354,15 +459,15 @@ See [SAAS-STATUS.md](SAAS-STATUS.md) for the full living status. Highlights:
 
 | Category | Gap | Why deferred |
 |---|---|---|
-| Lifecycle | Org deletion w/ 30-day soft-delete | Design pass needed; low urgency at 1-3 tenants |
 | Platform | API custom domain (`api.taskflow.neurostack.in`) | Purely cosmetic under Option B; revisit for 3rd-party API consumers |
 | Migration | Prod backfill rehearsal | Awaiting your go-ahead |
-| Auth | 2FA via Cognito TOTP | Needs careful MFA-challenge handling in signIn |
-| Auth | Change-email flow | Low value; can be operator-assisted |
-| Email | SES migration from Gmail SMTP | Gmail works at current scale |
-| Roles | `ProjectRole` → per-org records | 4+ hour refactor; deserves own session |
-| Desktop | macOS build + code-signing | Needs Mac host + CA certs |
+| Email | SES migration from Gmail SMTP | Gmail works at current scale (~500/day cap) |
+| Webhooks | Retry queue + dead-letter | Synchronous best-effort is enough for current tenant count; add SQS when a tenant needs guarantees |
+| Notifications | Additional emitters (dayoff, invite, mention) | First emitter (task.assigned) is the proof-point; add more as use cases surface |
+| i18n | Full call-site migration | Foundation + 2 migrations shipped; ~35 sites still use `toLocaleDateString('en-US')`. Incremental. |
+| Desktop | macOS build + code-signing + first-run UI | Separate repo; needs Mac host + CA certs + focused session |
 | Billing | Stripe integration | Plan tier set manually today |
+| SSO | SAML / OIDC federation | Waiting on enterprise prospect |
 
 ---
 

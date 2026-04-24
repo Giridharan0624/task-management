@@ -1,6 +1,8 @@
 # SaaS Migration — Full Progress
 
-Branch `saas-migration` vs `main`: **231 files · +29,382 / −6,714 lines** across 17 commits.
+Current branch: `Develop`. Fast-forwarded 7+ sessions past `main`.
+
+> **Up-to-date checklist:** see [SAAS-STATUS.md](SAAS-STATUS.md) — this file is a narrative history of the migration; SAAS-STATUS tracks what's done vs. pending at any given point.
 
 ## Status at a glance
 
@@ -9,15 +11,16 @@ Branch `saas-migration` vs `main`: **231 files · +29,382 / −6,714 lines** acr
 | 1 | Multi-tenant foundation (org, keys, signup) | ✅ Shipped |
 | 2 | Invites + tenant user management | ✅ Shipped |
 | 3 | Tenant configuration (branding / settings) | ✅ Shipped |
-| 4 | Custom roles + permission matrix | 🟨 Core shipped; ~10 use-case sites + Project roles pending |
-| 5 | Custom task pipelines | 🟨 Foundation shipped; CRUD UI + frontend migration pending |
-| 6 | Desktop + WAF rate limiting | 🟨 Screenshot gate + WAF shipped; first-run UI + signing pending |
-| Prod rollout | Wildcard cert, Route53, stack splitting | ⏳ Not started |
+| 4 | Custom roles + permission matrix | ✅ Shipped (system + project scope, per-org) |
+| 5 | Custom task pipelines | ✅ Shipped (CRUD + frontend) |
+| 6 | Desktop + WAF rate limiting | 🟨 WAF + screenshot gate shipped; first-run UI + code-signing pending (separate repo) |
+| Session 1–7 | Admin surfaces · lifecycle · 2FA · roles refactor · notifications · webhooks · platform console · i18n foundation | ✅ Shipped |
+| Prod rollout | Backfill + CDK cutover | ⏳ Not started |
 | Billing | Stripe + plan enforcement | ⏳ Not started |
 
-**Staging**: deployed and verified — stack `task-management-staging` split into parent (458/500) + `OrgNestedStack` (47) + `WorkflowNestedStack` (37). NEUROSTACK backfilled (role matrix + pipelines + `features.screenshots: true`). 42 resources of headroom on parent.
+**Staging**: deployed + verified. Stack `task-management-staging` at parent (~497/500) + `OrgNestedStack` (holds most new feature Lambdas) + `WorkflowNestedStack`. NEUROSTACK backfilled.
 
-**Prod**: untouched, live users, stays on current version until staging gate passes.
+**Prod**: untouched. Live users. Stays on main-branch code until staging gate passes + cutover window.
 
 ---
 
@@ -551,6 +554,89 @@ Beyond the P0 Phase 6 items above:
 - [x] `SAAS-MIGRATION.md` — full phased plan
 - [x] `SAAS-CHANGES.md` — running log
 - [x] `SAAS-PROGRESS.md` — this file
+- [x] `SAAS-STATUS.md` — living P0/P1/P2 checklist (primary reference)
+- [x] `PRD.md`, `TDD.md` — product + technical design (multi-tenant)
+- [x] `README.md` rewritten for multi-tenant reality
 - [x] `docs/PHASE-1-STAGING-DEPLOY.md` — deploy runbook
 - [x] `Bug-Report-Go.md`, `Bug-Report-Go-v2.md` — desktop audit notes
 - [x] `CLAUDE.md` updated with multi-tenant architecture
+
+---
+
+# Post-phase-6 session log
+
+After the core 6-phase migration, work continued in themed sessions. Each is summarized below with what shipped + the key commit.
+
+## Session 1 — Admin surfaces + infra polish (`8be6dab`, `2a59614`, `80c546d`)
+- **Org suspension**: `POST /platform/orgs/{orgId}/status` env-allowlist gated, typed `ORG_SUSPENDED` code, `SuspendedScreen` full-page block, mid-session 403 event bus
+- **Ownership transfer UI** at `/settings/transfer-ownership` (target picker, typed-email guard, post-transfer token refresh)
+- **Health check** at `GET /health` (DDB reachability probe)
+- **CAPTCHA** on signup via hCaptcha widget + backend verifier (dormant until keys set)
+- **Sentry scaffold** backend + frontend (dormant until DSN + package)
+- **GitHub Actions CI** — backend pytest + frontend lint/build, path-filtered
+- **Email verification** audit: signup now sets `email_verified=false`, `/verify-email` page wires Cognito SDK code challenge
+- **Bulk CSV user import** — `POST /users/bulk` + frontend modal (preview → submit → row-level success/fail)
+- **Command palette** extended with people search (OWNER/ADMIN see user list)
+
+## Session 2 — Lifecycle (`c0d0ccf`)
+- `OrgStatus.PENDING_DELETION` + nullable `deleted_at` on the `Organization` entity
+- Three new handlers: `delete_org` (OWNER + typed-slug confirm + email-verified), `undelete_org`, `export_org` (JSON dump to S3, 24h presigned URL)
+- **Hard-delete sweeper** scheduled Lambda at 04:00 UTC — past 30-day grace → wipes every tenant-scoped row + Cognito users + slug resolver
+- `/settings/delete-workspace` UI combining all three flows; dashboard-wide PendingDeletionBanner
+- **`require_email_verified`** applied to 7 sensitive handlers (invite send, role CRUD, settings update, transfer ownership, delete workspace)
+- **Change-email** self-service at `/profile/change-email` — Cognito `updateAttributes` code challenge + backend DB sync
+- CDK parent stack stayed under cap by relocating `bulk_create_users`, `sync_email`, `health_check`, `set_org_status`, task-update handlers, `presign` into `OrgNestedStack`
+
+## Session 3 — Auth hardening, TOTP 2FA (`41c1bc4`)
+- `MfaConfiguration=OPTIONAL` on the pool + `MfaSecondFactor(otp=True, sms=False)` — TOTP-only, SMS deliberately off for SIM-swap resistance
+- `cognitoClient` wrappers: `associateTotp`, `verifyTotpEnrollment`, `disableTotp`, `isTotpEnabled`, `completeMfaChallenge`
+- `signIn` grew `totpRequired` callback → returns `SoftwareTokenMfaRequired` union member
+- `AuthProvider` tracks `pendingMfaChallenge`, exposes `completeMfaChallenge(code)`
+- `LoginForm` swaps to a 6-digit input when `needsMfaChallenge` is true
+- `/profile/mfa` — 3-state UI (loading / enabled / disabled) with QR + manual-secret entry + verify input
+- **OWNER-side MFA reset** via `POST /users/{userId}/reset-mfa` — escape hatch for lost authenticators; row menu action on Users page
+- Relocated 4 handlers to nested stack (GetBirthdays, ListAdmins, UpdateUserDepartment, AdminResetMfa) to absorb cap pressure
+
+## Session 4 — ProjectRole refactor (in `a569b70`)
+- `ProjectRole` enum (ADMIN/PROJECT_MANAGER/TEAM_LEAD/MEMBER) replaced with per-org role records at `scope="project"`
+- 4 defaults seeded at signup: `project_admin`, `project_manager`, `team_lead`, `project_member`
+- `ProjectMember.project_role_id: str` replaces the enum field; mapper translates legacy `project_role` attribute on read
+- Handlers accept either field name (`normalize_project_role_id` bridges the two)
+- Permission checks + single-Team-Lead guard now match on `PROJECT_MANAGE_ROLE_IDS` set
+- API responses emit both `project_role_id` + legacy `project_role` so frontend keeps working without immediate migration
+
+## Session 5 — Tenant communication (in `a569b70`)
+- **In-app notifications**: `shared_kernel/notifications.py` with per-user partition (`PK=ORG#{org}#USER#{uid}`, `SK=NOTIF#{ts}#{id}`), fire-and-forget writes, `create/list/mark_read/mark_all_read` helpers
+- Single router Lambda at `GET+POST /users/me/notifications` — POST carries an action verb to conserve CFN budget
+- NotificationCenter merges server results with existing derived notifications (overdue, timer), polls every 30s
+- Emitted on `task.assigned`; additional emitters (dayoff, invites) deferred to future sessions
+- **Outbound webhooks** (`shared_kernel/webhooks.py`): per-org subscriptions (`PK=ORG#{org}`, `SK=WEBHOOK#{id}`), HMAC-SHA256 signed `X-TaskFlow-Signature: t={ts},v1={hmac}` header (Stripe-compatible shape), sync delivery on `task.assigned`
+- `webhooks_router` Lambda handles CRUD under `/orgs/current/webhooks{,/{webhookId}}` via ANY verb
+- Secret returned in full only on create response; subsequent reads mask it
+- **Platform feature-flag toggle**: `PATCH /platform/orgs/{orgId}/features` — operator flips `OrgSettings.features` per-tenant without a code deploy; env-allowlist gated
+
+## Session 6 — i18n foundation (in `a569b70`)
+- `lib/utils/format.ts` — pure Intl-based helpers (`formatDate`, `formatTime`, `formatNumber`, `formatCurrency`, `formatRelative`)
+- `lib/tenant/useLocale.ts` + `useFormat.ts` — hooks binding the helpers to tenant `settings.locale / timezone / currency`
+- Call-site migration is incremental; pattern established but only a handful of sites migrated (rest in Session 7)
+
+## Session 7 — Frontend closure (`ab97646`)
+- **MemberList** dropdowns fetch from `/orgs/current/roles` scoped to `scope: 'project'` — custom tenant project roles now selectable
+- `useRoles({ scope })` hook added; `updateMemberRole` API client routes canonical role IDs to `projectRoleId`, legacy enum values to `projectRole`
+- **Audit log UI** grew friendly action labels for every known action (webhooks, platform, MFA reset, etc.); added "Webhooks" + "Platform" action filters
+- **i18n first migrations** — MemberList.joinedAt and TaskCard.deadline switched to `useFormat()`
+- **Webhooks admin page** at `/settings/webhooks` — list / create / edit / delete / enable-toggle; event picker with `*` wildcard + per-event checkboxes; secret revealed ONCE on create with copy-to-clipboard
+- **Platform operator console** at `/platform` — slug lookup, suspend/unsuspend, per-tenant feature-flag toggles. Access-gated by `NEXT_PUBLIC_PLATFORM_ADMIN_USER_IDS` (must mirror backend env)
+- `apiClient.patch()` method added for the PATCH /features endpoint
+
+---
+
+# What's next (post-Session 7)
+
+Pure-product work from the P1/P2 backlog is incremental. The real launch gates are **operational**:
+
+1. **Prod backfill rehearsal** — run `backfill_neurostack.py` against a company-account snapshot.
+2. **Cutover window** — CDK deploy to company account, Vercel env swap, Cognito pool identity flip.
+3. **Customer onboarding** — first external tenant signs up; feedback drives the next session's priority (SSO, Stripe, desktop signing, etc.).
+
+Everything else — full i18n sweep, SES migration, desktop code-signing, SSO/SAML, Stripe billing — waits on real tenant demand.

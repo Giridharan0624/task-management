@@ -53,18 +53,22 @@ See [TDD.md](TDD.md) for the full system design.
 | Area | What ships |
 |---|---|
 | **Tenant signup** | Slug claim, two-phase Cognito + DynamoDB create with rollback, hCaptcha (optional), email-verification gate |
-| **Auth** | Cognito SRP, email+password, 8+ char password policy, SDK-based email-verification challenge |
-| **Invites** | Single-use 7-day tokens, email via Gmail SMTP, accept flow sets own password |
-| **Roles & permissions** | 35-permission catalog, per-org role records, matrix editor UI, cache invalidation on edit |
+| **Auth** | Cognito SRP, email+password, 8+ char password policy, SDK email-verification challenge, **TOTP 2FA** (enroll/verify/disable + OWNER reset path), **self-service email change** |
+| **Invites** | Single-use 7-day tokens, email via Gmail SMTP, accept flow sets own password, **bulk CSV import** |
+| **Roles & permissions** | 35-permission catalog, per-org role records (both `scope="system"` and `scope="project"`), matrix editor UI, cache invalidation on edit |
 | **Projects & tasks** | Per-org pipelines (named, ordered, colored statuses), kanban + list views, comments, attachments |
 | **Attendance & timer** | Live timer (web + desktop), task switching, meeting mode, mandatory descriptions |
 | **Activity monitoring** | Desktop keyboard/mouse counts + screenshots (opt-in per tenant via feature flag) |
 | **Day-offs** | Request/approve/reject, per-org leave types, self-approval blocked |
-| **Reports** | Summary/detailed/weekly/activity, Recharts + CSV export, AI summaries via Groq |
-| **Branding** | Per-org colors (CSS vars), logo + favicon, terminology overrides (`useT()` hook) |
+| **Reports** | Summary/detailed/weekly/activity, Recharts + CSV export, AI summaries via Groq, **weekly AI-rollup digest** |
+| **Branding & i18n** | Per-org colors (CSS vars), logo + favicon, terminology overrides (`useT()` hook), **locale-bound date/number/currency formatters** (`useFormat()` hook) |
 | **Ownership** | OWNER-only transfer with typed-email confirmation + forced token refresh |
 | **Suspension** | Platform-operator env-allowlist endpoint + fullscreen SuspendedScreen |
-| **Audit log** | Every sensitive mutation written to `PK=ORG#{org}#AUDIT` |
+| **Deletion** | OWNER-initiated soft-delete (30-day grace) + JSON export to S3 + nightly hard-delete sweeper |
+| **Audit log** | Every sensitive mutation written to `PK=ORG#{org}#AUDIT`; viewer UI with friendly action labels + filters + pagination |
+| **Notifications** | Per-user in-app partition; NotificationCenter bell polls every 30s; emitted on task assignment |
+| **Webhooks** | Per-org subscriptions; HMAC-SHA256 Stripe-shape signing; `/settings/webhooks` CRUD UI |
+| **Platform console** | `/platform` (env-gated) — slug lookup, suspend/unsuspend, per-tenant feature-flag toggles |
 
 ### Platform
 | Area | What ships |
@@ -162,11 +166,13 @@ NEXT_PUBLIC_SENTRY_DSN=
 
 | Flag | Where | Effect |
 |---|---|---|
-| `platform_admin_user_ids` | CDK stage config | Comma-separated Cognito subs allowed to call `POST /platform/orgs/{orgId}/status` (suspension). Empty = nobody (fail-closed). |
+| `platform_admin_user_ids` | CDK stage config | Comma-separated Cognito subs allowed to hit `/platform/orgs/{orgId}/status` (suspension) and `/platform/orgs/{orgId}/features` (feature-flag toggle). Empty = nobody (fail-closed). |
+| `NEXT_PUBLIC_PLATFORM_ADMIN_USER_IDS` | Vercel | Must mirror the backend allowlist. Controls who sees the `/platform` frontend console. |
 | `hcaptcha_secret` | CDK stage config | Enables server-side hCaptcha verify on signup |
 | `NEXT_PUBLIC_HCAPTCHA_SITE_KEY` | Vercel | Renders the hCaptcha widget on the signup form |
 | `SENTRY_DSN` | Lambda env | Activates backend Sentry (requires `sentry-sdk[aws_lambda]` in deps layer) |
 | `NEXT_PUBLIC_SENTRY_DSN` | Vercel | Activates frontend Sentry (requires `npm install @sentry/browser`) |
+| `HARD_DELETE_GRACE_DAYS` | Lambda env (staging only) | Compresses the 30-day deletion grace period for rehearsal runs |
 
 ---
 
@@ -177,10 +183,12 @@ NEXT_PUBLIC_SENTRY_DSN=
 | Organization | `ORG#{org}` | `ORG` |
 | Org settings | `ORG#{org}` | `SETTINGS` |
 | Org plan | `ORG#{org}` | `PLAN` |
-| Role | `ORG#{org}` | `ROLE#{role_id}` |
+| Role (system or project) | `ORG#{org}` | `ROLE#{role_id}` |
 | Pipeline | `ORG#{org}` | `PIPELINE#{pipeline_id}` |
 | Invite | `ORG#{org}` | `INVITE#{token}` |
+| Webhook | `ORG#{org}` | `WEBHOOK#{webhook_id}` |
 | User | `ORG#{org}#USER#{userId}` | `PROFILE` |
+| Notification | `ORG#{org}#USER#{userId}` | `NOTIF#{ts}#{id}` |
 | Project | `ORG#{org}#PROJECT#{pid}` | `METADATA` |
 | Project member | `ORG#{org}#PROJECT#{pid}` | `MEMBER#{userId}` |
 | Task | `ORG#{org}#PROJECT#{pid}` | `TASK#{taskId}` |
@@ -208,13 +216,15 @@ Deployment rule (from `CLAUDE.md`): **no prod deploy until the full change is ve
 
 ## Status
 
-P0 SaaS substrate is **functionally complete on staging**. See [SAAS-STATUS.md](SAAS-STATUS.md) for the live checklist.
+P0 + most of P1 is **functionally complete on staging** after 7 post-phase sessions. See [SAAS-STATUS.md](SAAS-STATUS.md) for the live checklist.
 
-The only remaining P0-adjacent gates before prod cutover are:
-1. Prod backfill rehearsal
-2. Org-deletion design pass
+Shipped across Sessions 1–7: 2FA TOTP, 30-day deletion lifecycle with export + sweeper, change-email, bulk CSV import, `ProjectRole` → per-org roles refactor, in-app notifications, outbound webhooks, platform operator console, audit log viewer UI, i18n foundation, CI/CD, Sentry scaffold, CAPTCHA on signup, health check, ownership transfer UI, suspension.
 
-P1 backlog (desktop code-signing, macOS build, 2FA, SES, bulk CSV import, `ProjectRole` refactor) is deliberately not being worked until tenant feedback forces priority.
+The only remaining gates before prod cutover are operational:
+1. **Prod backfill rehearsal** — dry-run `backfill_neurostack.py` against a company-account snapshot
+2. **Cutover window** — CDK deploy to company account + Vercel env swap
+
+P1/P2 backlog (desktop code-signing, macOS build, SES, SSO/SAML, Stripe billing, full i18n sweep) is deliberately waiting on tenant-driven priority.
 
 ---
 

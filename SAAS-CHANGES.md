@@ -261,3 +261,33 @@ To keep scope sane, these stay the same:
 - NEUROSTACK's existing task `domain` strings (`DEVELOPMENT`, etc.) become pipeline IDs of the same name — no task row migration needed
 - Users continue accessing the app at `taskflow.neurostack.in` and enter workspace code `neurostack` on the login form — zero login disruption beyond the new field (pre-filled once they've logged in the first time)
 - Branding (logo, colors, name) seeded from current hardcoded values so the UI looks identical post-migration
+
+---
+
+## 11. Post-phase-6 sessions (April 2026)
+
+Seven themed sessions after the core 6-phase migration. Each shipped as a commit on `Develop`; all deployed to staging. See [SAAS-PROGRESS.md § Post-phase-6 session log](SAAS-PROGRESS.md) for full narratives.
+
+### Session 1 — Admin surfaces + infra polish
+Org suspension (platform-admin endpoint + SuspendedScreen), ownership transfer UI, `GET /health`, hCaptcha on signup, Sentry scaffold (backend + frontend), GitHub Actions CI, email-verification flow on signup, bulk CSV user import, command-palette people search.
+
+### Session 2 — Lifecycle
+`OrgStatus.PENDING_DELETION` + `deleted_at`; three lifecycle endpoints (`delete / undelete / export`); nightly hard-delete sweeper at 04:00 UTC; `require_email_verified` gate applied to 7 sensitive handlers; self-service change-email at `/profile/change-email`.
+
+### Session 3 — Auth hardening
+Cognito pool flipped to `Mfa.OPTIONAL` with TOTP-only. `/profile/mfa` enroll/disable page; `LoginForm` MFA challenge swap; OWNER-side MFA reset at `POST /users/{userId}/reset-mfa`.
+
+### Session 4 — ProjectRole refactor
+Enum (ADMIN/PROJECT_MANAGER/TEAM_LEAD/MEMBER) replaced with per-org Role records at `scope="project"`. Four defaults seeded at signup. `ProjectMember.project_role_id` replaces the enum field; mapper translates legacy attribute on read; handlers accept both field names; dropdowns populate from the API.
+
+### Session 5 — Tenant communication
+In-app notifications (per-user partition + polling NotificationCenter + mark-read + emitted on `task.assigned`). Outbound webhooks (per-org subscriptions + HMAC-SHA256 Stripe-shape signing + sync delivery + `/settings/webhooks` CRUD UI). Platform operator feature-flag toggle (`PATCH /platform/orgs/{orgId}/features`).
+
+### Session 6 — i18n foundation
+`lib/utils/format.ts` pure Intl helpers; `useLocale` + `useFormat` hooks binding them to tenant `settings.locale / timezone / currency`. Pattern in place; call-site migration is incremental.
+
+### Session 7 — Frontend closure
+MemberList dropdowns read from `/orgs/current/roles` — custom project roles selectable. `/settings/webhooks` admin UI with secret-reveal-once. `/platform` operator console with slug lookup + suspend/unsuspend + feature toggles. Audit log UI grew friendly action labels. First two i18n call-site migrations (MemberList, TaskCard).
+
+### CDK topology management
+Every new surface was engineered against the CFN 500-resource parent-stack cap. The established pattern — parent declares the Resource node; nested stack attaches the Method + Lambda + IAM — was used for webhooks, notifications, platform features, health check, TOTP reset, bulk create, change-email sync, task-update handlers, upload presign, and 7+ relocated list endpoints. Parent finished at ~497/500 after Session 7.

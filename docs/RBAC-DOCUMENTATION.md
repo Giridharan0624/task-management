@@ -1,11 +1,21 @@
 # TaskFlow — Role-Based Access Control (RBAC) Documentation
 
-> Complete reference for all permission rules enforced by the system.
-> Last updated: 2026-04-02
+> **⚠️ This document predates the SaaS migration (Sessions 1–7, April 2026).**
+> Some of what's described below is legacy — specifically the CEO/MD system roles (retired; system roles are now OWNER / ADMIN / MEMBER only) and the hardcoded `ProjectRole` enum (replaced by per-org role records at `scope="project"`). For current behavior, see:
+>
+> - **`backend/src/contexts/org/domain/permissions.py`** — the authoritative 35-permission catalog
+> - **`backend/src/contexts/org/domain/default_roles.py`** — seeded system-role permission maps
+> - **`backend/src/contexts/org/domain/default_project_roles.py`** — seeded project-role permission maps (Session 4)
+> - **`shared_kernel/permissions.py`** — `require(ctx, perm)`, `has_permission(ctx, perm)`, `require_not_suspended`, `require_email_verified`, `role_has(role_str, perm)`
+> - **[TDD.md § 5 Authorization](../TDD.md)** — architecture-level explanation
+>
+> The legacy narrative below is kept for historical context and may still be useful for understanding design intent in parts of the codebase that haven't been migrated yet.
+>
+> Last substantive update: 2026-04-02. Annotations above added 2026-04-22.
 
 ---
 
-## 1. Role Hierarchy
+## 1. Role Hierarchy (LEGACY)
 
 ```
 OWNER  >  CEO  >  MD  >  ADMIN  >  MEMBER
@@ -19,24 +29,30 @@ OWNER  >  CEO  >  MD  >  ADMIN  >  MEMBER
 | **PRIVILEGED** | OWNER, CEO, MD, ADMIN | Can manage users, projects, and tasks. |
 | **MEMBER** | MEMBER | Basic access. Can only work on assigned tasks. |
 
+**Current state:** CEO and MD were removed during the SaaS migration. `SystemRole` is now `OWNER | ADMIN | MEMBER`, and tenants can define custom system- and project-scope roles via `/settings/roles` with a 35-permission matrix editor.
+
 ### System Role Constraints
 
-- Only **1 OWNER** exists (created at system setup).
-- Only **1 CEO** and **1 MD** allowed system-wide.
-- OWNER cannot be created, deleted, or demoted.
+- Only **1 OWNER** exists per tenant (created at signup).
+- CEO / MD no longer exist as first-class roles — tenants that need executive roles define custom ones via the Roles UI.
+- OWNER cannot be deleted. Ownership is transferred via `/settings/transfer-ownership`.
 
 ---
 
-## 2. Project Roles
+## 2. Project Roles (post-Session 4 refactor)
 
-Each user can have a **project-level role** independent of their system role.
+Project-scope roles are now per-tenant Role records with `scope="project"` stored at `PK=ORG#{org}` / `SK=ROLE#{role_id}`. Four defaults are seeded at signup:
 
-| Project Role | Can Manage Tasks | Can Manage Members |
-|-------------|-----------------|-------------------|
-| ADMIN | Yes | Yes |
-| PROJECT_MANAGER | Yes | Yes |
-| TEAM_LEAD | Yes | Yes |
-| MEMBER | No (status only) | No |
+| role_id | Display name | Can manage members | Can assign tasks | Can view all project tasks |
+|---|---|---|---|---|
+| `project_admin` | Project Admin | Yes | Yes | Yes |
+| `project_manager` | Project Manager | Yes | Yes | Yes |
+| `team_lead` | Team Lead | No | Yes | Yes |
+| `project_member` | Member | No | No | Assigned only |
+
+Tenants can clone or edit these defaults, and create entirely custom project roles. `ProjectMember.project_role_id: str` replaces the pre-refactor `ProjectRole` enum field. Handlers accept either `projectRoleId` (canonical) or legacy `projectRole` enum strings for backward compat.
+
+Legacy enum values (ADMIN / PROJECT_MANAGER / TEAM_LEAD / MEMBER) are translated to the new IDs via `normalize_project_role_id()` in `default_project_roles.py`. Old DDB records keep working on read.
 
 **Constraint**: Only 1 TEAM_LEAD per project.
 
