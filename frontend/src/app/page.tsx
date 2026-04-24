@@ -36,6 +36,7 @@ import { MaybeRedirectIfAuthed } from '@/components/landing/MaybeRedirectIfAuthe
 import { Reveal } from '@/components/landing/Reveal'
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter'
 import { HeroTaskMockup } from '@/components/landing/HeroTaskMockup'
+import { Faq } from '@/components/landing/Faq'
 import {
   ActivityWaveform,
   MouseSpotlight,
@@ -976,12 +977,23 @@ function ScreenshotDemo() {
  * Feature grid — everything else, uniform compact cards
  * ──────────────────────────────────────────────────────────────────── */
 
+// `tier` mirrors backend/src/contexts/org/domain/plans.py — features
+// without a tier field are available on every plan (Free included).
+// "Pro" gates `screenshots`, `custom_roles`, `custom_pipelines`,
+// `api_access`. "Enterprise" gates `sso`, `audit_logs`, `white_label`,
+// `custom_domain`. Audit log itself is Free-included (capped at 30d
+// retention); the Enterprise unlock is "audit_logs" custom retention.
+type FeatureTier = 'Pro' | 'Enterprise'
+
 interface FeatureCardData {
   icon: typeof KanbanSquare
   title: string
   blurb: string
   tint: string
   iconClass: string
+  /** When set, the card shows a small tier badge — signals this
+   *  capability requires the named plan or higher. */
+  tier?: FeatureTier
 }
 
 const FEATURES: FeatureCardData[] = [
@@ -1011,9 +1023,9 @@ const FEATURES: FeatureCardData[] = [
   },
   {
     icon: Brain,
-    title: 'AI weekly rollups',
+    title: 'AI daily summaries & weekly rollups',
     blurb:
-      'Editorial digest of every task update from the last seven days — top contributors, themes, and concerns. Consistent with the math, never invents numbers.',
+      'Daily per-member productivity summaries plus a weekly editorial digest covering task updates, attendance, and activity. Consistent with the math, never invents numbers.',
     tint: 'from-purple-500/15',
     iconClass: 'bg-purple-500/15 text-purple-600 dark:text-purple-300',
   },
@@ -1026,12 +1038,22 @@ const FEATURES: FeatureCardData[] = [
     iconClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-300',
   },
   {
+    icon: Camera,
+    title: 'Activity tracking & screenshots',
+    blurb:
+      'Aggregate keyboard / mouse counts (no keystroke content) plus periodic screenshot capture from the desktop companion. Composite presence-and-intensity score per member, per day.',
+    tint: 'from-amber-500/15',
+    iconClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+    tier: 'Pro',
+  },
+  {
     icon: Layers,
     title: 'Custom pipelines',
     blurb:
       'Design task workflows specific to each project domain. Configure stages and assign colors to reflect real status.',
     tint: 'from-teal-500/15',
     iconClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-300',
+    tier: 'Pro',
   },
   {
     icon: Shield,
@@ -1040,6 +1062,16 @@ const FEATURES: FeatureCardData[] = [
       'Define your own roles beyond owner / admin / member with fine-grained per-feature permissions. Per-tenant, scoped to your workspace.',
     tint: 'from-cyan-500/15',
     iconClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
+    tier: 'Pro',
+  },
+  {
+    icon: Shuffle,
+    title: 'HMAC-signed webhooks',
+    blurb:
+      'Subscribe external systems to project events. Stripe-compatible HMAC-SHA256 signing so existing webhook libraries work with minimal tweaks.',
+    tint: 'from-orange-500/15',
+    iconClass: 'bg-orange-500/15 text-orange-600 dark:text-orange-300',
+    tier: 'Pro',
   },
   {
     icon: KeyRound,
@@ -1053,7 +1085,7 @@ const FEATURES: FeatureCardData[] = [
     icon: ClipboardList,
     title: 'Per-tenant audit log',
     blurb:
-      'Every privileged action recorded with actor, target, and rule identifier. Filterable, exportable, retention-policied.',
+      'Every privileged action recorded with actor, target, and rule identifier. Filterable timeline; 30-day retention on Free, 365-day on Pro, unlimited on Enterprise.',
     tint: 'from-slate-500/15',
     iconClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-300',
   },
@@ -1064,14 +1096,6 @@ const FEATURES: FeatureCardData[] = [
       'Workspace-level isolation with configurable terminology, feature toggles, branding, and locale. No cross-tenant data exposure.',
     tint: 'from-violet-500/15',
     iconClass: 'bg-violet-500/15 text-violet-600 dark:text-violet-300',
-  },
-  {
-    icon: BarChart3,
-    title: 'Cross-project reporting',
-    blurb:
-      'Hours by project, by member, and by week. Deep-linkable filters and saved views persist across reloads and shared links.',
-    tint: 'from-orange-500/15',
-    iconClass: 'bg-orange-500/15 text-orange-600 dark:text-orange-300',
   },
   {
     icon: Download,
@@ -1119,7 +1143,13 @@ function FeatureGrid() {
           <Reveal direction="up" delay={80}>
             <p className="mt-3 text-base text-muted-foreground">
               The capabilities typically distributed across four separate
-              subscriptions, delivered in a single integrated platform.
+              subscriptions, delivered in a single integrated platform.{' '}
+              <a
+                href="#pricing"
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                See what's on each plan ↓
+              </a>
             </p>
           </Reveal>
         </div>
@@ -1146,6 +1176,23 @@ function FeatureGrid() {
                 />
 
                 <div className="relative flex h-full flex-col">
+                  {/* Plan-tier badge — surfaces only for capabilities
+                      gated behind Pro or Enterprise so the card doubles
+                      as an upgrade signal. Free-included items render
+                      without a badge to keep them visually unmarked. */}
+                  {f.tier && (
+                    <span
+                      className={cn(
+                        'absolute right-0 top-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur',
+                        f.tier === 'Pro'
+                          ? 'border-primary/40 bg-primary/15 text-primary'
+                          : 'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300'
+                      )}
+                    >
+                      <Sparkles className="h-2.5 w-2.5" />
+                      {f.tier}
+                    </span>
+                  )}
                   <div
                     className={cn(
                       'mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-inset ring-white/20 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6',
@@ -1815,142 +1862,10 @@ function PricingCard({ tier }: { tier: PricingTier }) {
  * FAQ
  * ──────────────────────────────────────────────────────────────────── */
 
-const FAQS: { q: string; a: string }[] = [
-  {
-    q: 'Is TaskFlow genuinely free?',
-    a: 'Yes. Workspaces, invitations, projects, tasks, reporting, AI summaries, and the desktop application are all included at no cost. Paid tiers are planned for larger organizations and compliance add-ons; workspaces provisioned today remain on the Free plan.',
-  },
-  {
-    q: 'How does the AI weekly rollup work?',
-    a: 'Owners and admins can open the weekly digest from the Reports tab. The system aggregates every task update from the last seven days into deterministic metrics (hours, contributors, missing days), then asks an LLM to write a short editorial recap around those numbers. The AI is explicitly forbidden from inventing figures — it only writes prose around what the math has already produced.',
-  },
-  {
-    q: 'Is two-factor authentication supported?',
-    a: 'Yes. Members can enrol a TOTP authenticator (Google Authenticator, 1Password, Authy, etc.) from their profile. Owners can enforce 2FA workspace-wide. Recovery codes are generated at enrolment so a lost authenticator does not lock anyone out.',
-  },
-  {
-    q: 'Is there an audit log?',
-    a: 'Yes. Every privileged action — role changes, member removals, ownership transfers, settings edits — is recorded in a per-tenant audit log with the actor, target, and rule identifier. Filterable by user, action, and date range; exportable to CSV. Retention is policied by your plan.',
-  },
-  {
-    q: 'Can I define custom roles beyond owner / admin / member?',
-    a: 'Yes. The three-tier default is the starting point. Owners can clone any default role and edit its permission set field-by-field, or build a new role from scratch. Custom roles are scoped to your workspace and never affect other tenants.',
-  },
-  {
-    q: 'Do we own our data, and can we export it?',
-    a: 'Yes. Every list view supports CSV export. A full-workspace export covering users, projects, tasks, attendance, time-off records, and audit log is available as a single JSON archive from the workspace settings page.',
-  },
-  {
-    q: 'How is our data isolated from other tenants?',
-    a: 'Every database record is prefixed with your organization identifier. Each authenticated request re-reads the requesting user’s role from DynamoDB rather than trusting the JWT claim alone. Uploads reside under your organization’s S3 prefix, and the presigned-URL handler rejects any key outside that scope.',
-  },
-  {
-    q: 'Can TaskFlow be hosted on our own infrastructure?',
-    a: 'Self-hosting is not formally supported at this time. The backend runs on Python Lambda, DynamoDB, and AWS CDK, so a technical team can adapt the infrastructure to run in its own AWS account. A packaged self-hosting option is on our roadmap.',
-  },
-  {
-    q: 'Does TaskFlow support multiple teams within a single workspace?',
-    a: 'One workspace corresponds to one team. Within a workspace you can create any number of projects, each with its own membership and roles. Organizations operating multiple business units should provision a separate workspace per unit to maintain full data isolation.',
-  },
-  {
-    q: 'What happens when a user signs out of the desktop application?',
-    a: 'Active sessions are finalized at sign-out, and recorded hours are attributed to the day of clock-in. If the application is force-closed, a nightly process closes any orphaned sessions so timesheets remain accurate.',
-  },
-]
-
-function Faq() {
-  return (
-    <section
-      id="faq"
-      className="relative overflow-hidden border-b border-border/60 py-14 sm:py-20"
-    >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        {/* Two-column split so the heading + support CTA stick to the left
-            while the scrollable list of Q&As fills the right. Stacks on
-            mobile so the Q&As never disappear under the sticky column. */}
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <Reveal direction="up">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
-                <Sparkles className="h-3 w-3" />
-                FAQ
-              </div>
-            </Reveal>
-            <Reveal direction="up" delay={80}>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-                Questions,{' '}
-                <span
-                  className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
-                  style={{ backgroundSize: '200% 200%' }}
-                >
-                  answered.
-                </span>
-              </h2>
-            </Reveal>
-            <Reveal direction="up" delay={160}>
-              <p className="mt-3 text-sm text-muted-foreground">
-                The questions we are asked most often. If you cannot find what
-                you are looking for, our team responds within one business day.
-              </p>
-            </Reveal>
-            <Reveal direction="up" delay={240}>
-              <a
-                href="mailto:support@neurostack.in"
-                className="mt-6 flex items-start gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <MessageSquare className="h-5 w-5" strokeWidth={1.8} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    Need further assistance?
-                  </p>
-                  <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-                    support@neurostack.in
-                  </p>
-                </div>
-                <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-              </a>
-            </Reveal>
-          </aside>
-
-          <div className="space-y-2.5">
-            {FAQS.map((item, i) => (
-              <Reveal key={item.q} direction="up" delay={i * 40}>
-                <details className="group rounded-2xl border border-white/50 bg-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-xl transition-all hover:border-primary/40 hover:bg-white/50 open:border-primary/50 open:bg-gradient-to-br open:from-primary/[0.06] open:to-accent/[0.06] open:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_20px_50px_-20px_rgba(99,102,241,0.3)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
-                  <summary className="flex cursor-pointer list-none items-start gap-4 px-5 py-4 text-left">
-                    <span
-                      className={cn(
-                        'shrink-0 font-mono text-[11px] font-bold tabular-nums text-muted-foreground/70 transition-colors group-open:text-primary'
-                      )}
-                    >
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <span className="flex-1 font-semibold text-foreground">
-                      {item.q}
-                    </span>
-                    <span
-                      aria-hidden
-                      className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-all group-open:bg-primary group-open:text-primary-foreground"
-                    >
-                      <span className="absolute h-2.5 w-[1.5px] bg-current transition-transform duration-300 group-open:rotate-90" />
-                      <span className="absolute h-[1.5px] w-2.5 bg-current" />
-                    </span>
-                  </summary>
-                  <div className="overflow-hidden">
-                    <p className="px-5 pb-5 pl-[54px] text-sm leading-relaxed text-muted-foreground">
-                      {item.a}
-                    </p>
-                  </div>
-                </details>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
+/* The Faq component lives in components/landing/Faq.tsx — interactive
+ * (search + category filtering + smooth animated expand) so it needs
+ * 'use client'. Kept out of this server-rendered file so the rest of
+ * the landing page bundle stays lean. */
 
 /* ────────────────────────────────────────────────────────────────────
  * Final CTA — big close-the-deal banner

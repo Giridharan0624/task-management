@@ -9,6 +9,7 @@ import { useTenant } from '@/lib/tenant/TenantProvider'
 import { getUsers } from '@/lib/api/userApi'
 import { orgsApi } from '@/lib/api/orgsApi'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { BackToSettings } from '@/components/settings/BackToSettings'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -110,13 +111,10 @@ export default function TransferOwnershipPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 pb-24 animate-fade-in">
+      <BackToSettings />
       <PageHeader
         title="Transfer ownership"
         description={`Move ownership of ${orgName} to another member.`}
-        breadcrumbs={[
-          { label: 'Settings', href: '/settings/organization' },
-          { label: 'Transfer ownership' },
-        ]}
       />
 
       <Alert variant="destructive">

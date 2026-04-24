@@ -1,8 +1,8 @@
 # TaskFlow — Product Requirements Document
 
-**Version:** 2.2 (post-Session 7)
+**Version:** 2.3 (post-Session 8)
 **Status:** Staging verified, prod cutover pending
-**Last updated:** 2026-04-22
+**Last updated:** 2026-04-24
 
 ---
 
@@ -81,6 +81,7 @@ System roles are seeded at signup (`owner`, `admin`, `member`) but are backed by
 - Desktop app captures keyboard + mouse counts (event counts only — no keystrokes) and periodic screenshots (with 5-second warning + skip on locked screens)
 - Per-tenant feature flags: `activity_monitoring`, `screenshots`, `ai_summaries` can each be disabled
 - Activity retention enforced nightly (Lambda deletes rows past `plan.retention_days`)
+- **Composite activity score** (Session 8): `score = 0.7 × presence + 0.3 × intensity` where presence is the active/total-minutes ratio and intensity normalises keyboard+mouse against a target throughput. Punishes wiggle-farming, caps power-typists at 1.0, and is unit-tested ([backend/tests/test_domain_activity.py](backend/tests/test_domain_activity.py)). The AI summary prompt receives the objective score directly and is forbidden from inventing numbers.
 
 ### 4.5 Day-offs
 - Request → approve/reject workflow
@@ -90,6 +91,8 @@ System roles are seeded at signup (`owner`, `admin`, `member`) but are backed by
 ### 4.6 Reports & AI summaries
 - Summary / detailed / weekly / activity views with Recharts
 - Groq LLaMA 3.3 generates daily productivity summaries (feature-flagged per tenant)
+- **Weekly AI rollup** (Session 8): aggregates a full week's task updates **plus attendance, activity, and day-off** records into a single editorial recap; each data source is wrapped so a single repo failure can't torpedo the rollup
+- **Project Reports tab** restructured (Session 8) into inner tabs (Overview / Workload / Sessions) with a consolidated period+navigator+export toolbar, pixel-grid metric strip, and donut without tooltip-collision
 - CSV export for attendance
 
 ### 4.7 Branding & terminology
@@ -99,11 +102,13 @@ System roles are seeded at signup (`owner`, `admin`, `member`) but are backed by
 - Locale: timezone, currency, week-start day, working hours
 
 ### 4.8 Plans & quotas
-- **FREE**: 10 users, 3 projects, 30-day retention
-- **PRO**: 50 users, 50 projects, 365-day retention
-- **ENTERPRISE**: unlimited
-- Quotas enforced in code at every create site + nightly seat reconciliation
-- Stripe integration not yet implemented; plan tier is set manually on the Org record
+- **FREE**: 10 users, 3 projects, 30-day retention. Includes activity tracking, AI daily summaries + weekly rollups, desktop apps.
+- **PRO**: 50 users, 50 projects, 365-day retention. Adds screenshots, custom roles, custom pipelines, HMAC webhooks, public REST API (planned), priority email support.
+- **ENTERPRISE**: unlimited members/projects, unlimited retention, white-label branding, dedicated infra on request, named CSM + SLA. SAML/OIDC SSO, SCIM provisioning, and custom domain are on the roadmap (visible on the pricing page with a "Soon" tag, not yet shipping).
+- **Capacity caps** (`max_users`, `max_projects`) enforced **at write-time** in `CreateUserUseCase`, `SendInviteUseCase`, and `CreateProjectUseCase` — the user gets an actionable error before the row is created. Belt-and-braces: a nightly seat-reconciliation Lambda audits any race-induced overflow.
+- **Feature flags** (`screenshots`, `custom_roles`, `custom_pipelines`, `audit_logs`, `sso`, `white_label`, `custom_domain`, `api_access`) live on `Plan.features_allowed` and are checked at handler entry. `screenshots` is the only flag actively gated today; the rest are declared and waiting for the shared `plan_limits` helper to land.
+- **Retention** enforced by a nightly sweeper (`activity/handlers/retention_sweeper.py`) that deletes rows past `plan.retention_days`. Currently sweeps `ACTIVITY#` items only — extending to `EVENT#` audit rows is a known gap.
+- Stripe integration not yet implemented; plan tier is set manually on the Org record. Full design and rollout plan in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md).
 
 ### 4.9 Audit log
 - Every sensitive action (role edit, ownership transfer, suspension, plan change, webhook CRUD, platform flag toggle) writes to `PK=ORG#{org}#AUDIT`
@@ -136,18 +141,30 @@ System roles are seeded at signup (`owner`, `admin`, `member`) but are backed by
 - Terminology overrides (per-org word swaps like "task" → "ticket") layer separately via `useT()` — shipped in Phase 3
 - Migration of existing `toLocaleDateString('en-US', ...)` call sites to `fmt.date()` is incremental (~35 remaining)
 
-### 4.10 Desktop companion
+### 4.14 Desktop companion
 - Same timer + activity features as web
 - DPAPI-encrypted token storage on Windows
 - Auto-update via GitHub releases (signed, planned — code-signing not yet purchased)
 - macOS build + DMG (planned — needs a Mac build host)
+
+### 4.15 First-run onboarding checklist (Session 8)
+- A four-step "Finish setting up your workspace" card on the OWNER's dashboard: invite teammates, create a project, install the desktop app, customise branding
+- Steps tick off automatically when their backing condition is met (real users / projects / colour customisation), or manually via "I installed it" / "Mark done" buttons for steps the server can't directly observe
+- **State persists in `OrgSettings.features`** under `onboarding_checklist_dismissed`, `onboarding_desktop_installed`, `onboarding_branding_done` — same dismiss state on every browser/device, no per-device localStorage drift
+- Card hides itself when all four steps are done OR the OWNER clicks the dismiss ✕
+
+### 4.16 Marketing surface (Session 8)
+- Landing page at `/` rebuilt with the Lexend display face and **glassmorphism** treatments across Hero, Problem, Features, How-it-works, FAQ, and Final-CTA sections
+- Pricing card replaced with a three-tier glass grid (Free / Pro / Enterprise); aspirational items (SSO, SCIM, custom domain, public REST API) carry a muted **"Soon"** pill so claims stay honest
+- Page transitions use a pure-opacity `fade` variant — the previous `rise` variant created a CSS containing block on the wrapper that defeated `position: fixed` for the landing header, so the bar would scroll with the page
+- Public legal/security/status pages: `/privacy`, `/terms`, `/security`, `/status`, `/download`
 
 ---
 
 ## 5. What ships today vs. what's planned
 
 ### Production-ready (verified on staging)
-Multi-tenancy, signup, invites, system + project-scope RBAC (per-org), custom pipelines, audit viewer with friendly labels, suspension endpoint + UI, ownership transfer, health check, hCaptcha, Sentry scaffold, CI/CD, WAFv2 rate limiting, DynamoDB PITR, CloudWatch alarms, seat reconciliation, activity retention sweeper, email verification, **TOTP 2FA, 30-day soft-delete + JSON export + hard-delete sweeper, change-email self-service, bulk CSV user import, in-app notifications, outbound webhooks with HMAC signing, platform operator console, i18n foundation.**
+Multi-tenancy, signup, invites, system + project-scope RBAC (per-org), custom pipelines, audit viewer with friendly labels, suspension endpoint + UI, ownership transfer, health check, hCaptcha, Sentry scaffold, CI/CD, WAFv2 rate limiting, DynamoDB PITR, CloudWatch alarms, seat reconciliation, activity retention sweeper, email verification, TOTP 2FA, 30-day soft-delete + JSON export + hard-delete sweeper, change-email self-service, bulk CSV user import, in-app notifications, outbound webhooks with HMAC signing, platform operator console, i18n foundation, **composite activity score formula, weekly AI rollup with multi-source enrichment, server-persisted onboarding checklist, glass landing + 3-tier pricing surface, restructured Project Reports with inner tabs.**
 
 ### Before prod cutover
 - Run backfill script against the company AWS account
@@ -159,8 +176,15 @@ Multi-tenancy, signup, invites, system + project-scope RBAC (per-org), custom pi
 - Desktop first-run UI (Preact login, separate repo)
 - Desktop macOS build + `.dmg` (needs Mac CI)
 - Code-signing: Windows Authenticode, macOS notarization, Linux repo key
-- SSO / SAML federation
-- Stripe billing integration
+- SSO / SAML / OIDC federation (Enterprise)
+- SCIM provisioning + directory sync (Enterprise)
+- Custom domain per tenant (Enterprise — needs ACM + per-tenant CloudFront alias automation)
+- Stripe billing integration + plan-upgrade audit events
+- `shared_kernel/plan_limits.py` helper to dedupe the four existing enforcement sites and unblock gating for `custom_roles`, `custom_pipelines`, `audit_logs`, `white_label`, `api_access`, `sso` — design in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md)
+- Frontend `<FeatureGate>` + `<UpgradePrompt>` components for soft-gating UI
+- Public REST API + personal access tokens (Pro tier)
+- Extend `retention_sweeper` to also delete `EVENT#` audit-log rows past `plan.retention_days` (currently sweeps `ACTIVITY#` only)
+- Extract audit-log standalone CSV export from `/settings/audit` (today the log is only downloadable as part of the full workspace JSON export)
 - Full i18n sweep (~35 call sites) migrating from `toLocaleDateString('en-US', ...)` to `useFormat()`
 - Webhook retry queue + dead-letter (sync-only in v1)
 - Additional notification emitters (day-off outcomes, invite acceptance, @mentions)

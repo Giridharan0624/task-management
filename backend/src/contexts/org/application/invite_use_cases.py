@@ -40,10 +40,11 @@ from shared_kernel.errors import (
 
 INVITE_EXPIRY_DAYS = 7
 
-# Phase 2: only admin and member can be assigned via invite. OWNER role
-# is reserved for signup (first user of a new org) and explicit
-# ownership-transfer flows (Phase 4+).
-VALID_INVITE_ROLES = {ADMIN_ROLE_ID, MEMBER_ROLE_ID}
+# Roles that cannot be assigned via invite. OWNER is reserved for signup
+# (first user of a new org) and the explicit ownership-transfer flow.
+# Every other scope="system" role in the tenant's role records is fair
+# game — enforced dynamically in SendInviteUseCase.execute().
+INVITE_ROLE_BLOCKLIST = {OWNER_ROLE_ID}
 
 
 class SendInviteRequest(BaseModel):
@@ -82,9 +83,24 @@ class SendInviteUseCase:
         role_id = req.role_id.strip().lower()
         if "@" not in email or len(email) > 254:
             raise ValidationError("Invalid email address.")
-        if role_id not in VALID_INVITE_ROLES:
+        if role_id in INVITE_ROLE_BLOCKLIST:
             raise ValidationError(
-                f"Role must be one of: {sorted(VALID_INVITE_ROLES)}"
+                "The owner role cannot be assigned via invite. "
+                "Use the ownership-transfer flow instead.",
+            )
+        # Validate against the tenant's live role records so custom
+        # system-scope roles defined in /settings/roles can be invited
+        # directly. Fail-closed: unknown role_ids reject.
+        known_roles = self._org_repo.list_roles(caller_org_id)
+        match = next(
+            (r for r in known_roles if (r.get("role_id") or "").lower() == role_id),
+            None,
+        )
+        if match is None:
+            raise ValidationError(f"Unknown role: {role_id}")
+        if match.get("scope", "system") != "system":
+            raise ValidationError(
+                f"Role '{role_id}' is not a system-scope role and cannot be assigned to a user."
             )
 
         # Plan-limit check: current active users + pending unaccepted invites
@@ -191,15 +207,18 @@ class AcceptInviteUseCase:
         if not org:
             raise NotFoundError("Invited organization no longer exists.")
 
-        # Map invite role_id to the existing SystemRole enum value for
-        # the custom:systemRole Cognito attribute. Phase 4 replaces the
-        # enum with a full permission matrix.
-        role_to_system_role = {
+        # Map invite role_id to the stored form of `custom:systemRole`.
+        # Built-in tiers use the legacy uppercase enum value for
+        # backward compat; custom role_ids keep their canonical
+        # lowercase form. The pre-token trigger mirrors whatever's stored
+        # here into `custom:roleId` (always lowercased) for the
+        # permission engine to resolve.
+        builtin_map = {
             OWNER_ROLE_ID: SystemRole.OWNER.value,
             ADMIN_ROLE_ID: SystemRole.ADMIN.value,
             MEMBER_ROLE_ID: SystemRole.MEMBER.value,
         }
-        system_role = role_to_system_role.get(invite.role_id, SystemRole.MEMBER.value)
+        system_role = builtin_map.get(invite.role_id, invite.role_id)
 
         # Create the Cognito user. If this is None (unit tests) fabricate a sub.
         import uuid
@@ -230,7 +249,9 @@ class AcceptInviteUseCase:
             user_id=user_id,
             email=invite.email,
             name=name,
-            system_role=SystemRole(system_role),
+            # Plain string — User.system_role is no longer enum-typed
+            # (Session 8 relaxed it so custom role_ids can be assigned).
+            system_role=system_role,
         )
         try:
             user_repo = UserDynamoRepository(org_id=invite.org_id)

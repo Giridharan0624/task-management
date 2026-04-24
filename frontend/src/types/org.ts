@@ -89,7 +89,11 @@ export interface SignupResponse {
 
 export interface SendInviteRequest {
   email: string
-  roleId?: 'admin' | 'member'
+  /** Canonical lowercase role_id. Built-in tiers are `admin` and
+   *  `member`; tenants with custom scope="system" roles can also pass
+   *  those role_ids directly (validated server-side against the tenant's
+   *  role records). `owner` is rejected — use transfer-ownership. */
+  roleId?: string
 }
 
 export interface SendInviteResponse {

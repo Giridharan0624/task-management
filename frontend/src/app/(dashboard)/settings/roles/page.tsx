@@ -17,6 +17,8 @@ import {
   X,
 } from 'lucide-react'
 
+import { BackToSettings } from '@/components/settings/BackToSettings'
+
 import { domainLabel, metaFor } from '@/lib/permissions/catalog'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
@@ -148,6 +150,8 @@ export default function RolesSettingsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-24 animate-fade-in">
+      <BackToSettings />
+
       <PageHeader
         title="Roles & permissions"
         description={

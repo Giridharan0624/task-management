@@ -11,14 +11,15 @@ def handler(event, context):
         user_repo = UserDynamoRepository()
         user = user_repo.find_by_id(auth.user_id)
         if not user:
-            # Auto-create profile from JWT claims
+            # Auto-create profile from JWT claims. `auth.system_role` is
+            # the role_id from Cognito — could be OWNER/ADMIN/MEMBER or a
+            # custom role_id. We trust the JWT claim (it's set by the
+            # pre-token trigger from the authoritative attribute); the
+            # User entity validator normalizes empty/None to MEMBER.
             claims = (
                 event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
             )
-            try:
-                system_role = SystemRole(auth.system_role)
-            except ValueError:
-                system_role = SystemRole.MEMBER
+            system_role = auth.system_role or SystemRole.MEMBER.value
 
             user = User.create(
                 user_id=auth.user_id,

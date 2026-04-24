@@ -86,55 +86,49 @@ function isFeatureEnabled(
   return features[feature] !== false
 }
 
-const adminNav: NavItem[] = [
+// Single master nav list — every item either has no gate (always
+// visible to authenticated users in this org) or declares a
+// `requiredPermission` that the SidebarContent filter checks against
+// the caller's live permission set. This is what makes custom roles
+// "just work": a tenant-defined role called `tester` with
+// `project.list` + `task.list` will see Projects but not Users, with
+// no hardcoded role → menu mapping anywhere in the tree.
+//
+// Historical note: this replaces a three-way switch (adminNav /
+// ownerNav / memberNav / default → memberNav) where any role string
+// that wasn't literally OWNER or ADMIN fell through to the member
+// menu. That meant a custom role with admin-tier permissions would
+// still see only the member menu — the permission check on the
+// individual /admin/users link was moot because the link was never
+// added to the nav list in the first place.
+const navBase: NavItem[] = [
+  // Personal-scope items — every authenticated user sees these.
   { nameKey: 'nav.dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  // ADMIN defaults to their personal scope on /my-tasks (with a toggle
-  // to flip to team view). "My tasks" matches the default landing.
   { nameKey: 'nav.my_tasks', name: 'My tasks', href: '/my-tasks', icon: CheckSquare },
-  // Every admin-scope nav item is permission-gated. Role edits hide
-  // the nav item live (no reload needed). Personal-scope routes
-  // (/dashboard, /my-tasks, /attendance, /day-offs) carry no
-  // requiredPermission so they always show.
+  // Role-gated items — filtered out unless the caller's permissions
+  // include the declared key. `feature` is an independent org-level
+  // toggle (an OWNER can disable Daily Updates for the whole tenant).
   { nameKey: 'nav.task_updates', name: 'Daily Updates', href: '/task-updates', icon: FileText, feature: 'task_updates', requiredPermission: 'taskupdate.list.all' },
   { nameKey: 'user.team', name: 'Users', href: '/admin/users', icon: Users, requiredPermission: 'user.list' },
   { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare, requiredPermission: 'project.list' },
   { nameKey: 'nav.reports', name: 'Reports', href: '/reports', icon: BarChart3, requiredPermission: 'user.progress.view' },
   { nameKey: 'nav.attendance', name: 'Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
   { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
-]
-
-// OWNER lands on /my-tasks with scope='team' (the page shows every
-// task in the org, not just the owner's). The label needs to match
-// that — "All tasks" instead of "My tasks". Same href, same handler;
-// only the sidebar copy changes.
-const ownerNav: NavItem[] = [
-  ...adminNav.map((item) =>
-    item.href === '/my-tasks'
-      ? { ...item, nameKey: 'nav.all_tasks', name: 'All tasks' }
-      : item,
-  ),
   { nameKey: 'nav.settings', name: 'Settings', href: '/settings/organization', icon: Settings, requiredPermission: 'settings.view' },
 ]
 
-const memberNav: NavItem[] = [
-  { nameKey: 'nav.dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { nameKey: 'nav.my_tasks', name: 'My Tasks', href: '/my-tasks', icon: CheckSquare },
-  { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare },
-  // Members land on MyAttendanceView — label mirrors that scoping so
-  // they don't expect a team roster behind this link.
-  { nameKey: 'nav.my_attendance', name: 'My Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
-  { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
-]
-
-function getNavItems(role?: string) {
-  switch (role) {
-    case 'OWNER':
-      return ownerNav
-    case 'ADMIN':
-      return adminNav
-    default:
-      return memberNav
-  }
+/** Returns the master nav list with the `/my-tasks` label swapped to
+ *  "All tasks" for callers whose permissions include `task.view.all`
+ *  (reflecting the fact that /my-tasks auto-flips to team scope for
+ *  those users). Everything else is handled by the permission filter
+ *  in SidebarContent — this function doesn't switch on role strings. */
+function buildNavItems(effectivePermissions: Set<string> | null): NavItem[] {
+  const canSeeAllTasks = effectivePermissions?.has('task.view.all') ?? false
+  return navBase.map((item) =>
+    item.href === '/my-tasks' && canSeeAllTasks
+      ? { ...item, nameKey: 'nav.all_tasks', name: 'All tasks' }
+      : item,
+  )
 }
 
 function getOS(): 'windows' | 'linux' | 'macos' {
@@ -366,14 +360,25 @@ function SidebarContent({
       >
         {navItems
           .filter((item) => isFeatureEnabled(item.feature, features))
-          // Permission gate: if effectivePermissions is null (still
-          // loading), show everything the role-based getNavItems
-          // returned so the sidebar doesn't flash empty. Once
-          // permissions arrive, drop items whose requiredPermission
-          // isn't granted by the tenant's current role record.
+          // Permission gate. Session 8 dropped the three per-role nav
+          // lists in favor of one master list filtered purely by
+          // permission, so this filter is the ONLY thing preventing
+          // members from seeing admin routes — treat changes here with
+          // care.
+          //
+          // Loading fallback: when effectivePermissions is null the
+          // /orgs/current/roles fetch is in flight. To avoid flashing
+          // admin items to a member, fall back to the legacy
+          // privileged-tier check (OWNER/ADMIN see gated items; custom
+          // roles and MEMBER don't). Once permissions arrive, the exact
+          // check takes over and the sidebar reconciles.
           .filter((item) => {
             if (!item.requiredPermission) return true
-            if (effectivePermissions === null) return true
+            if (effectivePermissions === null) {
+              return (
+                user.systemRole === 'OWNER' || user.systemRole === 'ADMIN'
+              )
+            }
             return effectivePermissions.has(item.requiredPermission)
           })
           .map((item) => {
@@ -544,7 +549,7 @@ export default function DashboardLayout({
     return <SuspendedScreen orgName={currentTenant.org.name} />
   }
 
-  const navItems = getNavItems(user.systemRole)
+  const navItems = buildNavItems(effectivePermissions)
   const features = tenantFeatures
   const closeSidebar = () => setSidebarOpen(false)
 

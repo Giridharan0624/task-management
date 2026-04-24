@@ -97,7 +97,7 @@ def handler(event, context):
             )
         except Exception as e:
             try:
-                cognito.update_user_role(new_owner.email, new_owner.system_role.value)
+                cognito.update_user_role(new_owner.email, new_owner.system_role)
             except Exception:
                 pass  # best-effort rollback
             raise ValidationError(f"Failed to demote current owner in Cognito: {e}")

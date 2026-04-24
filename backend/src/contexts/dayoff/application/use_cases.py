@@ -69,7 +69,7 @@ class CreateDayOffRequestUseCase:
             if u.user_id == caller_user_id:
                 continue
             # Anyone who can approve a day-off is a valid auto-approver.
-            if role_has(u.system_role.value, P.DAYOFF_APPROVE):
+            if role_has(u.system_role, P.DAYOFF_APPROVE):
                 approver = u
                 break
 

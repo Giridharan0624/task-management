@@ -13,6 +13,7 @@ import {
 import { useTodayAttendance } from '@/lib/hooks/useAttendance'
 import { useAllDayOffs } from '@/lib/hooks/useDayOffs'
 import { useSystemPermission } from '@/lib/hooks/usePermission'
+import { useRoles } from '@/lib/hooks/useRoles'
 import { useUrlParam } from '@/lib/hooks/useUrlState'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -51,6 +52,11 @@ export default function UsersPage() {
   const { data: users, isLoading, error: usersError } = useUsers()
   const { data: todayAttendance } = useTodayAttendance()
   const { data: allDayOffs } = useAllDayOffs()
+  // System-scope roles defined on the tenant (OWNER/ADMIN/MEMBER plus
+  // any custom roles the tenant created in /settings/roles). Powers
+  // the role dropdowns, the invite role picker, and the management-tier
+  // classifier below.
+  const { roles: systemRoles } = useRoles({ scope: 'system' })
   const createUserMutation = useCreateUser()
   const deleteUserMutation = useDeleteUser()
   const updateRole = useUpdateUserRole()
@@ -62,7 +68,7 @@ export default function UsersPage() {
   const [showInvite, setShowInvite] = useState(false)
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member')
+  const [inviteRole, setInviteRole] = useState<string>('member')
   const [inviteSending, setInviteSending] = useState(false)
   const [inviteError, setInviteError] = useState('')
   const [progressUser, setProgressUser] = useState<string | null>(null)
@@ -96,24 +102,48 @@ export default function UsersPage() {
     return { onlineUserIds: online, attendanceByUserId: byId }
   }, [todayAttendance])
 
-  // Scope-filtered users (admin ↔ member toggle).
-  // Management covers OWNER + ADMIN — the owner IS management and should
-  // appear under this tab, otherwise a fresh workspace reads as empty.
+  // "Management" = roles that can administer users / roles. Session 8
+  // replaces the hardcoded OWNER/ADMIN check with a permission-derived
+  // set: any tenant-defined system role whose permissions include
+  // `user.role.manage` or `role.manage` counts as management. Owner +
+  // Admin are kept as a baseline so the tab works even when the caller
+  // can't see other roles' permissions (ADMIN viewing this page gets
+  // redacted perms for non-own roles — see list_roles handler).
+  const privilegedRoleIds = useMemo(() => {
+    const ids = new Set<string>(['owner', 'admin'])
+    for (const r of systemRoles) {
+      if (
+        r.permissions.includes('user.role.manage') ||
+        r.permissions.includes('role.manage')
+      ) {
+        ids.add(r.roleId.toLowerCase())
+      }
+    }
+    return ids
+  }, [systemRoles])
+
+  const isPrivilegedUser = useMemo(() => {
+    return (u: User) => privilegedRoleIds.has((u.systemRole || '').toLowerCase())
+  }, [privilegedRoleIds])
+
+  // Scope-filtered users (management ↔ members toggle). Non-OWNER
+  // callers only see regular (non-management) users because they can't
+  // edit admins anyway.
   const allVisibleUsers = useMemo(() => {
     const list = users ?? []
-    if (!isOwner) return list.filter((u) => u.systemRole === 'MEMBER')
+    if (!isOwner) return list.filter((u) => !isPrivilegedUser(u))
     return scope === 'management'
-      ? list.filter(
-          (u) => u.systemRole === 'ADMIN' || u.systemRole === 'OWNER',
-        )
-      : list.filter((u) => u.systemRole === 'MEMBER')
-  }, [users, isOwner, scope])
+      ? list.filter((u) => isPrivilegedUser(u))
+      : list.filter((u) => !isPrivilegedUser(u))
+  }, [users, isOwner, scope, isPrivilegedUser])
 
   // Department list is derived from ALL non-OWNER users so switching scope
   // never makes departments disappear. Counts reflect the current scope —
   // if a department has zero users in the current view it's hidden as noise.
   const departments = useMemo(() => {
-    const allRelevant = (users ?? []).filter((u) => u.systemRole !== 'OWNER')
+    const allRelevant = (users ?? []).filter(
+      (u) => (u.systemRole || '').toUpperCase() !== 'OWNER',
+    )
     const allDepts = new Set<string>()
     for (const u of allRelevant) {
       allDepts.add(u.department || 'Unassigned')
@@ -129,13 +159,10 @@ export default function UsersPage() {
       .filter((d) => d.count > 0 || d.value === deptFilter)
   }, [users, allVisibleUsers, deptFilter])
 
-  // Management count includes the OWNER so the Management pill matches
-  // the scope filter above (OWNER + ADMIN). Total reflects the whole
-  // workspace — never zero while the owner is logged in.
-  const adminCount = (users ?? []).filter(
-    (u) => u.systemRole === 'ADMIN' || u.systemRole === 'OWNER',
-  ).length
-  const memberCount = (users ?? []).filter((u) => u.systemRole === 'MEMBER').length
+  // Counts for the scope pills. Management uses the privileged set so
+  // custom admin-tier roles get counted correctly.
+  const adminCount = (users ?? []).filter((u) => isPrivilegedUser(u)).length
+  const memberCount = (users ?? []).filter((u) => !isPrivilegedUser(u)).length
   const onlineCount = (users ?? []).filter((u) =>
     onlineUserIds.has(u.userId)
   ).length
@@ -210,7 +237,42 @@ export default function UsersPage() {
     a.click()
   }
 
-  const creatableRoles = isOwner ? ['ADMIN', 'MEMBER'] : ['MEMBER']
+  // Assignable system roles — OWNER is excluded (transfer-ownership is
+  // a separate flow). When the roles fetch hasn't arrived yet, fall back
+  // to the two built-in tiers so the Add User modal is never blank on
+  // first paint. Admins can only create non-privileged roles; owners
+  // can assign any assignable role including custom admin-tier ones.
+  const assignableRoles = useMemo(() => {
+    if (systemRoles.length === 0) {
+      return [
+        { roleId: 'ADMIN', name: 'Admin' },
+        { roleId: 'MEMBER', name: 'Member' },
+      ]
+    }
+    return systemRoles
+      .filter((r) => r.roleId.toLowerCase() !== 'owner')
+      .map((r) => {
+        // Built-in tiers keep their uppercase stored form so the
+        // request body matches what the backend expects (ADMIN/MEMBER);
+        // custom roles send their canonical lowercase role_id.
+        const id = ['admin', 'member'].includes(r.roleId.toLowerCase())
+          ? r.roleId.toUpperCase()
+          : r.roleId
+        return { roleId: id, name: r.name || r.roleId }
+      })
+  }, [systemRoles])
+
+  const creatableRoles = useMemo(() => {
+    // Admins can create Members and other non-privileged custom roles,
+    // but never anything in the privileged (admin-tier) set — that's
+    // reserved for the OWNER. This preserves the pre-Session-8 rule
+    // ("admins can create admins or members") at the owner level while
+    // preventing an admin from elevating via a custom role sidestep.
+    if (isOwner) return assignableRoles
+    return assignableRoles.filter(
+      (r) => !privilegedRoleIds.has(r.roleId.toLowerCase()),
+    )
+  }, [assignableRoles, isOwner, privilegedRoleIds])
 
   const handleCreateUser = async () => {
     setError('')
@@ -274,7 +336,7 @@ export default function UsersPage() {
       toast.error("You can't delete your own account.")
       return
     }
-    if (u.systemRole === 'OWNER') {
+    if ((u.systemRole || '').toUpperCase() === 'OWNER') {
       toast.error("The Owner account can't be deleted from this screen.")
       return
     }
@@ -327,7 +389,19 @@ export default function UsersPage() {
     }
   }
 
-  if (!systemPerms.canManageUsers) {
+  // Gate strategy. Defer the "no permission" screen ONLY when the
+  // caller has a custom role AND the roles fetch is in flight —
+  // without roles loaded we can't tell whether the custom role grants
+  // `user.create`/`user.invite`/`user.delete`, so flashing "access
+  // denied" would be wrong. Built-in tiers (OWNER/ADMIN/MEMBER)
+  // resolve correctly from the legacy fallback, so they don't need
+  // to wait for roles — keeping first-paint snappy for 99% of users.
+  const callerRole = (currentUser?.systemRole || '').toUpperCase()
+  const isBuiltinTier =
+    callerRole === 'OWNER' || callerRole === 'ADMIN' || callerRole === 'MEMBER'
+  const deferringPermissionDecision =
+    !isBuiltinTier && systemPerms.isLoading && !systemPerms.canManageUsers
+  if (!deferringPermissionDecision && !systemPerms.canManageUsers) {
     return (
       <div className="flex h-64 items-center justify-center">
         <p className="text-muted-foreground">
@@ -337,7 +411,7 @@ export default function UsersPage() {
     )
   }
 
-  if (isLoading) {
+  if (isLoading || deferringPermissionDecision) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Spinner />
@@ -473,12 +547,21 @@ export default function UsersPage() {
                 {displayedUsers.map((u) => {
                   const att = attendanceByUserId.get(u.userId)
                   const isOnline = onlineUserIds.has(u.userId)
+                  const targetIsOwner = (u.systemRole || '').toUpperCase() === 'OWNER'
+                  const targetIsPrivileged = isPrivilegedUser(u)
+                  // Any admin-tier caller (built-in ADMIN or a custom
+                  // privileged role) can delete non-privileged users;
+                  // OWNER can delete anyone except themselves.
+                  const callerIsPrivileged = currentUser
+                    ? privilegedRoleIds.has(
+                        (currentUser.systemRole || '').toLowerCase(),
+                      )
+                    : false
                   const canDelete =
-                    u.systemRole !== 'OWNER' &&
+                    !targetIsOwner &&
                     u.userId !== currentUser?.userId &&
                     (isOwner ||
-                      (currentUser?.systemRole === 'ADMIN' &&
-                        u.systemRole === 'MEMBER'))
+                      (callerIsPrivileged && !targetIsPrivileged))
 
                   return (
                     <tr
@@ -543,7 +626,11 @@ export default function UsersPage() {
                         <RoleDropdown
                           role={u.systemRole}
                           onChange={(r) => handleRoleChange(u.userId, r)}
-                          disabled={!isOwner || u.systemRole === 'OWNER'}
+                          disabled={
+                            !isOwner ||
+                            (u.systemRole || '').toUpperCase() === 'OWNER'
+                          }
+                          roles={assignableRoles}
                         />
                       </td>
                       <td className="whitespace-nowrap px-5 py-3 text-xs">
@@ -615,7 +702,10 @@ export default function UsersPage() {
             <Select
               value={newRole}
               onChange={setNewRole}
-              options={creatableRoles.map((r) => ({ value: r, label: r }))}
+              options={creatableRoles.map((r) => ({
+                value: r.roleId,
+                label: r.name,
+              }))}
             />
           </div>
           <div>
@@ -702,11 +792,20 @@ export default function UsersPage() {
             </label>
             <Select
               value={inviteRole}
-              onChange={(v) => setInviteRole(v as 'admin' | 'member')}
-              options={[
-                { value: 'member', label: 'Member' },
-                { value: 'admin', label: 'Admin' },
-              ]}
+              onChange={setInviteRole}
+              // The invite API expects lowercase role_ids. Built-in
+              // ADMIN/MEMBER always appear; any custom scope="system"
+              // role defined in /settings/roles shows up too. Non-owners
+              // can't invite anyone into a privileged role.
+              options={(isOwner
+                ? assignableRoles
+                : assignableRoles.filter(
+                    (r) => !privilegedRoleIds.has(r.roleId.toLowerCase()),
+                  )
+              ).map((r) => ({
+                value: r.roleId.toLowerCase(),
+                label: r.name,
+              }))}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -834,6 +933,19 @@ function LastSeenCell({
   return <span className="text-muted-foreground">—</span>
 }
 
+/**
+ * Resolve a user's role_id to the human-readable label defined in the
+ * tenant's role record. Falls back to the role_id itself when the
+ * record is missing (e.g. the role was renamed or deleted while the
+ * user was still assigned) so the badge never renders blank.
+ */
+function roleLabel(roleId: string, systemRoles: { roleId: string; name: string }[]): string {
+  const match = systemRoles.find(
+    (r) => r.roleId.toLowerCase() === (roleId || '').toLowerCase(),
+  )
+  return (match?.name || roleId || '').trim()
+}
+
 function UserBioContent({
   viewUser,
   allDayOffs,
@@ -843,6 +955,9 @@ function UserBioContent({
   allDayOffs: { userId: string; status: string; startDate: string; endDate: string }[]
   userMap: Map<string, string>
 }) {
+  // Pull roles inline — useQuery dedupes, so this hits the same cached
+  // response the parent page loaded instead of a new request.
+  const { roles: systemRoles } = useRoles({ scope: 'system' })
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -861,7 +976,7 @@ function UserBioContent({
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <Badge className={ROLE_STYLES[viewUser.systemRole]}>
-              {viewUser.systemRole}
+              {roleLabel(viewUser.systemRole, systemRoles)}
             </Badge>
             {viewUser.employeeId && (
               <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 font-mono text-xs font-medium text-foreground/85">
@@ -889,7 +1004,7 @@ function UserBioContent({
       )}
 
       {/* Day-Off score */}
-      {viewUser.systemRole !== 'OWNER' &&
+      {(viewUser.systemRole || '').toUpperCase() !== 'OWNER' &&
         (() => {
           const now = new Date()
           const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`

@@ -73,7 +73,7 @@ Backend: [backend/src/contexts/task/handlers/](../backend/src/contexts/task/hand
 - **Live timer** with task/project selection, one-click "Meeting" mode, mandatory "What are you working on?" description, real-time `HH:MM:SS` ticker.
 - **Tab title** updates live via a Web Worker; **favicon** shows a red recording dot when active.
 - **Task switching** auto-stops and starts timers; quick-restart for last task; optimistic start.
-- **Timestamp-based calculation** — no background process, resilient to refresh and browser close (see [docs/TIMER-ARCHITECTURE.md](TIMER-ARCHITECTURE.md)).
+- **Timestamp-based calculation** — no background process, resilient to refresh and browser close (see [../architecture/TIMER-ARCHITECTURE.md](../architecture/TIMER-ARCHITECTURE.md)).
 - **Sign-in / sign-out** endpoints record task and project; multiple sessions per day with cumulative hours.
 - **Team attendance table** — live timers for active users, online count badge.
 - **Monthly reports** with CSV export, per-member and per-task breakdowns, expandable daily records.

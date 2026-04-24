@@ -12,27 +12,43 @@ import { Spinner } from '@/components/ui/Spinner'
  * Non-admins (and admins who had this permission revoked by the
  * OWNER in /settings/roles) get redirected to /dashboard.
  *
- * `useHasPermission` returns null while `/orgs/current/roles` is in
- * flight. During that window we fall back to the legacy system-role
- * check so the first paint isn't degraded.
+ * Loading strategy:
+ *   - If the user's `systemRole` is one of the three built-in tiers
+ *     (OWNER/ADMIN/MEMBER), we can decide immediately from the
+ *     hardcoded privileged check — no need to wait for roles.
+ *   - If it's a custom role, we defer the redirect decision until
+ *     the roles fetch resolves. Without this, a user whose custom
+ *     role grants `user.list` gets bounced to /dashboard before the
+ *     permission check has a chance to confirm their access.
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
   const canListUsers = useHasPermission('user.list')
 
-  const legacyIsAdmin =
-    user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
-  const allowed =
-    canListUsers === null ? legacyIsAdmin : canListUsers
+  const systemRole = user?.systemRole || ''
+  const isBuiltinTier =
+    systemRole === 'OWNER' || systemRole === 'ADMIN' || systemRole === 'MEMBER'
+  const legacyIsAdmin = systemRole === 'OWNER' || systemRole === 'ADMIN'
+
+  // Permission state: true / false / 'pending'. We only treat it as
+  // 'pending' for custom role_ids — built-in tiers resolve correctly
+  // from the fallback so there's no reason to delay their render.
+  const permissionState: true | false | 'pending' =
+    canListUsers !== null
+      ? canListUsers
+      : isBuiltinTier
+        ? legacyIsAdmin
+        : 'pending'
 
   useEffect(() => {
     if (isLoading) return
     if (!user) return // AuthProvider will redirect
-    if (!allowed) router.replace('/dashboard')
-  }, [isLoading, user, allowed, router])
+    if (permissionState === 'pending') return // wait for roles to load
+    if (!permissionState) router.replace('/dashboard')
+  }, [isLoading, user, permissionState, router])
 
-  if (isLoading) {
+  if (isLoading || permissionState === 'pending') {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner size="lg" />
@@ -40,7 +56,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     )
   }
 
-  if (!allowed) return null
+  if (!permissionState) return null
 
   return <>{children}</>
 }

@@ -31,44 +31,101 @@ class ListUsersUseCase:
 
 
 class UpdateUserRoleUseCase:
-    """Only OWNER can promote/demote users between ADMIN and MEMBER."""
-    def __init__(self, user_repo: IUserRepository, identity_service: IIdentityService):
+    """Assign a user to any system-scope role defined by the tenant.
+
+    Historically this use case only permitted ADMIN and MEMBER — the
+    hardcoded `SystemRole` enum was the only acceptable target. Session 8
+    relaxed that: the target role_id is validated against the tenant's
+    DDB role records (`list_roles(org_id)` filtered by `scope="system"`)
+    so custom roles created in /settings/roles can actually be assigned.
+
+    Rules:
+      - Only the OWNER can change user roles.
+      - The OWNER role is immutable — cannot be granted or revoked
+        through this path (use /orgs/current/transfer-ownership).
+      - The target role_id must exist in the tenant's role records with
+        `scope="system"`. Unknown role_ids are rejected.
+      - Mixed-case input is accepted. Built-in tiers stay uppercase
+        (OWNER/ADMIN/MEMBER) for backward compatibility with existing
+        Cognito `custom:systemRole` values and DDB rows; custom roles
+        are stored in their canonical lowercase form.
+    """
+    def __init__(
+        self,
+        user_repo: IUserRepository,
+        identity_service: IIdentityService,
+        org_repo=None,
+        org_id: str = "",
+    ):
         self._user_repo = user_repo
         self._cognito = identity_service
+        self._org_repo = org_repo
+        self._org_id = org_id
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
-        if caller_system_role != SystemRole.OWNER.value:
+        if (caller_system_role or "").upper() != SystemRole.OWNER.value:
             raise AuthorizationError("Only the Owner can change user roles.")
 
         target_user_id = dto["user_id"]
-        new_role_value = dto["system_role"]
+        new_role_raw = (dto.get("system_role") or "").strip()
+        if not new_role_raw:
+            raise ValidationError("system_role is required")
 
         target_user = self._user_repo.find_by_id(target_user_id)
         if not target_user:
             raise NotFoundError(f"User {target_user_id} not found")
 
-        if target_user.system_role == SystemRole.OWNER:
+        if (target_user.system_role or "").upper() == SystemRole.OWNER.value:
             raise AuthorizationError("The Owner role cannot be changed.")
 
-        try:
-            new_role = SystemRole(new_role_value)
-        except ValueError:
-            raise ValidationError(f"Invalid system role: {new_role_value}")
-
-        if new_role == SystemRole.OWNER:
+        # Reject any attempt to promote to OWNER here. Ownership transfer
+        # is a separate endpoint with its own invariants (demote current
+        # owner to ADMIN, update org.owner_id, etc.).
+        if new_role_raw.lower() == "owner":
             raise AuthorizationError("Users cannot be promoted to the Owner role.")
 
-        if new_role not in (SystemRole.ADMIN, SystemRole.MEMBER):
-            raise ValidationError(f"Invalid target role: {new_role_value}")
+        # Resolve the canonical stored form. Built-in tiers stay upper-
+        # case for compatibility; custom roles use the lowercase role_id
+        # exactly as stored in DDB role records.
+        canonical_role = self._resolve_canonical_role(new_role_raw)
 
         updated_user = target_user.model_copy(update={
-            "system_role": new_role,
+            "system_role": canonical_role,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
         self._user_repo.update(updated_user)
-        self._cognito.update_user_role(target_user.email, new_role.value)
+        # Cognito `custom:systemRole` mirrors the stored value; the
+        # pre-token trigger lowercases it into `custom:roleId` for the
+        # permission engine to consume.
+        self._cognito.update_user_role(target_user.email, canonical_role)
 
         return updated_user.to_dict()
+
+    def _resolve_canonical_role(self, raw: str) -> str:
+        """Look up `raw` in the org's role records; return the canonical
+        stored form. Raises ValidationError for unknown or wrong-scope
+        role_ids. The three built-in tiers resolve to uppercase
+        OWNER/ADMIN/MEMBER (matching legacy storage) even if `raw` came
+        in lowercased."""
+        if raw.upper() in (SystemRole.ADMIN.value, SystemRole.MEMBER.value):
+            return raw.upper()
+
+        if not self._org_repo or not self._org_id:
+            # No role-repo access — preserve the pre-custom-role behavior
+            # so unit tests that don't wire the org repo still work.
+            raise ValidationError(f"Invalid target role: {raw}")
+
+        roles = self._org_repo.list_roles(self._org_id)
+        needle = raw.lower()
+        for r in roles:
+            if (r.get("role_id") or "").lower() != needle:
+                continue
+            if r.get("scope", "system") != "system":
+                raise ValidationError(
+                    f"Role '{raw}' is not a system-scope role and cannot be assigned to a user."
+                )
+            return r.get("role_id") or needle
+        raise ValidationError(f"Invalid target role: {raw}")
 
 
 class GetUserProgressUseCase:
@@ -123,10 +180,14 @@ class GetUserProgressUseCase:
 
 class CreateUserUseCase:
     """
-    Owner creates Admins or Members.
-    Admins create Admins or Members.
+    Owner and Admins can create users.
     Members cannot create anyone.
-    Nobody can create OWNER.
+    Nobody can create OWNER (use /orgs/current/transfer-ownership).
+
+    Target role: the three built-in tiers (ADMIN/MEMBER) have always
+    worked; Session 8 extended this to any scope="system" role defined
+    in the tenant's /settings/roles so custom roles can be assigned at
+    creation time, not just promoted to afterwards.
 
     Multi-tenant: every created user is scoped to the caller's org_id.
     The Cognito user gets `custom:orgId` set so they land in the right
@@ -136,7 +197,9 @@ class CreateUserUseCase:
     def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService, org_repo=None):
         self._user_repo = user_repo
         self._cognito = cognito_service
-        self._org_repo = org_repo  # optional — used to read OrgSettings for branding
+        # Optional — used to read OrgSettings for branding AND to validate
+        # custom role_ids against the tenant's role records.
+        self._org_repo = org_repo
 
     @staticmethod
     def _generate_otp(length: int = 12) -> str:
@@ -156,29 +219,37 @@ class CreateUserUseCase:
         caller_system_role: str,
         caller_org_id: str,
     ) -> dict:
-        target_role = dto.get("system_role", "MEMBER")
+        target_role_raw = (dto.get("system_role") or "MEMBER").strip()
         email = dto["email"]
         name = dto["name"]
 
         if not caller_org_id:
             raise ValidationError("Org context is missing.")
 
-        # Validate the target role
-        try:
-            role_enum = SystemRole(target_role)
-        except ValueError:
-            raise ValidationError(f"Invalid role: {target_role}")
-
-        # Cannot create an owner
-        if role_enum == SystemRole.OWNER:
+        # Reject any attempt to create an Owner here. The OWNER role is
+        # only granted through org signup and the ownership-transfer flow.
+        if target_role_raw.lower() == "owner":
             raise AuthorizationError("An Owner account cannot be created.")
 
-        # Authorization: who can create whom
-        if caller_system_role in (SystemRole.OWNER.value, SystemRole.ADMIN.value):
-            if role_enum not in (SystemRole.ADMIN, SystemRole.MEMBER):
-                raise AuthorizationError("You can only create Admin or Member accounts.")
-        else:
+        # Caller authorization. Only OWNER and ADMIN can create users —
+        # custom roles whose permissions include user.create would bypass
+        # this check via the handler-level `require(ctx, USER_CREATE)` gate
+        # that already runs on the public entry point. Here we guard
+        # against the legacy enum-only path where caller_system_role was
+        # compared literally to the built-in tiers.
+        caller_is_privileged = (
+            caller_system_role in (SystemRole.OWNER.value, SystemRole.ADMIN.value)
+            or role_has(caller_system_role, P.USER_CREATE)
+        )
+        if not caller_is_privileged:
             raise AuthorizationError("You don't have permission to create user accounts.")
+
+        # Target role resolution. Uppercase ADMIN/MEMBER keep their legacy
+        # stored form so existing DDB rows stay consistent; custom roles
+        # use their canonical lowercase role_id. Any role not matching
+        # one of the three built-in tiers is validated against the org's
+        # live role records — same pattern as UpdateUserRoleUseCase.
+        target_role = self._resolve_target_role(target_role_raw, caller_org_id)
 
         # Plan limit: refuse if existing user count + pending invites would exceed max_users
         if self._org_repo is not None:
@@ -252,12 +323,13 @@ class CreateUserUseCase:
         except Exception as e:
             raise ValidationError(str(e))
 
-        # Create in DynamoDB
+        # Create in DynamoDB. Plain string here — User.system_role is
+        # no longer enum-typed, so custom role_ids pass through.
         user = User.create(
             user_id=user_id,
             email=email,
             name=name,
-            system_role=role_enum,
+            system_role=target_role,
             created_by=caller_user_id,
             employee_id=employee_id,
         )
@@ -305,6 +377,27 @@ class CreateUserUseCase:
         result = user.to_dict()
         result["otp"] = otp  # Return OTP in response so admin can share if email fails
         return result
+
+    def _resolve_target_role(self, raw: str, org_id: str) -> str:
+        """Mirror of UpdateUserRoleUseCase._resolve_canonical_role — kept
+        duplicated rather than extracted because the two live in
+        different domain areas and their error messages differ. Built-in
+        tiers resolve to uppercase ADMIN/MEMBER for legacy compatibility;
+        custom roles to their stored (lowercase) role_id."""
+        if raw.upper() in (SystemRole.ADMIN.value, SystemRole.MEMBER.value):
+            return raw.upper()
+        if not self._org_repo:
+            # No org repo wired — only built-in tiers can be validated.
+            raise ValidationError(f"Invalid role: {raw}")
+        for r in self._org_repo.list_roles(org_id):
+            if (r.get("role_id") or "").lower() != raw.lower():
+                continue
+            if r.get("scope", "system") != "system":
+                raise ValidationError(
+                    f"Role '{raw}' is not a system-scope role and cannot be assigned to a user."
+                )
+            return r.get("role_id") or raw.lower()
+        raise ValidationError(f"Invalid role: {raw}")
 
 
 class DeleteUserUseCase:

@@ -301,6 +301,6 @@ Everything else should be demand-driven or bundled with a related feature.
 ## How to pick up an item
 
 1. Read the acceptance criteria — they're the definition of done.
-2. Check the existing primitives listed in [TEAMMATE-ONBOARDING.md](TEAMMATE-ONBOARDING.md) before building new ones.
+2. Check the existing primitives listed in [../guides/TEAMMATE-ONBOARDING.md](../guides/TEAMMATE-ONBOARDING.md) before building new ones.
 3. Run `npx tsc --noEmit` before committing. The frontend does not currently use ESLint (Next 16 removed `next lint`).
 4. Keep scope tight — ship the acceptance criteria, not an ambient refactor.

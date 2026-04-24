@@ -311,13 +311,13 @@ Two role layers:
 - **System roles** (workspace-wide): `OWNER`, `ADMIN`, `MEMBER`. Stored on the user record, mirrored to `custom:systemRole` JWT claim but always re-validated from DynamoDB in `extract_auth_context`.
 - **Project roles** (per-project membership): `OWNER`, `MANAGER`, `MEMBER`, `VIEWER`. Stored on `PROJECT#{pid}#MEMBER#{uid}` items.
 
-Authorization checks live in the `application/` layer of each context, never in handlers. See **[docs/RBAC-DOCUMENTATION.md](docs/RBAC-DOCUMENTATION.md)** for the full permission matrix.
+Authorization checks live in the `application/` layer of each context, never in handlers. See **[../architecture/RBAC-DOCUMENTATION.md](../architecture/RBAC-DOCUMENTATION.md)** for the full permission matrix.
 
 ---
 
 ## 8. Timer architecture
 
-The timer is **migrating from web to desktop-only.** Both surfaces run today, but the plan is to remove the web timer once desktop reaches full feature parity. **Do not add web-only timer features without flagging this.** Full state machine in **[docs/TIMER-ARCHITECTURE.md](docs/TIMER-ARCHITECTURE.md)**.
+The timer is **migrating from web to desktop-only.** Both surfaces run today, but the plan is to remove the web timer once desktop reaches full feature parity. **Do not add web-only timer features without flagging this.** Full state machine in **[../architecture/TIMER-ARCHITECTURE.md](../architecture/TIMER-ARCHITECTURE.md)**.
 
 ---
 
@@ -348,16 +348,16 @@ The whole frontend got rebuilt on shadcn/ui. Every page was restructured. Highli
   - Department filter was scope-filtered → now derived from all non-OWNER users.
   - "2 members" dashboard bug: OWNER was counted → filtered out.
 
-Full trail of what shipped per phase is in **[SAAS-CHANGES.md](SAAS-CHANGES.md)**.
+Full trail of what shipped per phase is in **[../saas/SAAS-CHANGES.md](../saas/SAAS-CHANGES.md)**.
 
 ---
 
 ## 10. What's still to do
 
-### SaaS migration (tracked in [SAAS-MIGRATION.md](SAAS-MIGRATION.md) + [SAAS-PROGRESS.md](SAAS-PROGRESS.md))
+### SaaS migration (tracked in [../saas/SAAS-MIGRATION.md](../saas/SAAS-MIGRATION.md) + [../saas/SAAS-PROGRESS.md](../saas/SAAS-PROGRESS.md))
 
 - **Phase 3 remaining**: locale tab + leave-types tab on Settings (deferred).
-- Phase 4+ scope — see SAAS-MIGRATION.md.
+- Phase 4+ scope — see ../saas/SAAS-MIGRATION.md.
 
 ### Color scheme change (interrupted mid-task)
 
@@ -365,7 +365,7 @@ User picked "Deep navy + slate" but pivoted to animations. Resuming means flippi
 
 ### Desktop app P0 security issues
 
-**[Bug-Report-Go.md](Bug-Report-Go.md) lists 10 critical vulnerabilities** — blockers before wider rollout:
+**[../bug-reports/Bug-Report-Go.md](../bug-reports/Bug-Report-Go.md) lists 10 critical vulnerabilities** — blockers before wider rollout:
 - Unsigned updater binary
 - DPAPI fallback to plaintext credential storage
 - Path traversal in update unpack
@@ -377,10 +377,10 @@ Only ~2 test files in `backend/tests/` today. **No integration tests, no tenant-
 
 ### Other known work
 
-- Chat feature (planned — see `docs/CHAT-FEATURE-PLAN.md`)
-- CI pipeline (planned — see `docs/CI-PIPELINE-PLAN.md`)
-- Cross-platform desktop builds (planned — see `docs/CROSS-PLATFORM-PLAN.md`)
-- Welcome email OTP flow (planned — see `docs/WELCOME-EMAIL-OTP-PLAN.md`)
+- Chat feature (planned — see `../planning/CHAT-FEATURE-PLAN.md`)
+- CI pipeline (planned — see `../planning/CI-PIPELINE-PLAN.md`)
+- Cross-platform desktop builds (planned — see `../desktop/CROSS-PLATFORM-PLAN.md`)
+- Welcome email OTP flow (planned — see `../planning/WELCOME-EMAIL-OTP-PLAN.md`)
 
 ---
 
@@ -406,29 +406,30 @@ Only ~2 test files in `backend/tests/` today. **No integration tests, no tenant-
 
 | File | Why |
 |---|---|
-| [CLAUDE.md](CLAUDE.md) | Project conventions, commands, deploy rules |
-| [SAAS-MIGRATION.md](SAAS-MIGRATION.md) | Full multi-tenant conversion plan |
-| [SAAS-CHANGES.md](SAAS-CHANGES.md) | What each phase actually shipped |
-| [SAAS-PROGRESS.md](SAAS-PROGRESS.md) | Current state snapshot |
-| [backend/API.md](backend/API.md) | Endpoint reference |
-| [backend/src/shared_kernel/tenant_keys.py](backend/src/shared_kernel/tenant_keys.py) | All DynamoDB key construction |
-| [backend/src/shared_kernel/auth_context.py](backend/src/shared_kernel/auth_context.py) | Every authed request starts here |
-| [backend/cdk/stack.py](backend/cdk/stack.py) | Routes + Lambdas wiring |
-| [frontend/src/app/globals.css](frontend/src/app/globals.css) | Theme tokens + animations |
-| [frontend/tailwind.config.ts](frontend/tailwind.config.ts) | Semantic tokens + tenant RGB |
-| [frontend/src/components/ui/StatCardsGrid.tsx](frontend/src/components/ui/StatCardsGrid.tsx) | Pattern for animated stat cards used everywhere |
-| [frontend/src/lib/tenant/](frontend/src/lib/tenant/) | Workspace resolver + branding |
-| [docs/RBAC-DOCUMENTATION.md](docs/RBAC-DOCUMENTATION.md) | Permission matrix |
-| [docs/TIMER-ARCHITECTURE.md](docs/TIMER-ARCHITECTURE.md) | Timer state machine across web + desktop |
-| [docs/FEATURE-DEVELOPMENT-GUIDE.md](docs/FEATURE-DEVELOPMENT-GUIDE.md) | How to add a feature end-to-end |
-| [Bug-Report-Go.md](Bug-Report-Go.md) | Desktop P0 security issues |
+| [../../CLAUDE.md](../../CLAUDE.md) | Project conventions, commands, deploy rules |
+| [../saas/SAAS-MIGRATION.md](../saas/SAAS-MIGRATION.md) | Full multi-tenant conversion plan |
+| [../saas/SAAS-CHANGES.md](../saas/SAAS-CHANGES.md) | What each phase actually shipped |
+| [../saas/SAAS-PROGRESS.md](../saas/SAAS-PROGRESS.md) | Current state snapshot |
+| [../api/API.md](../api/API.md) | Endpoint reference |
+| [../../backend/src/shared_kernel/tenant_keys.py](../../backend/src/shared_kernel/tenant_keys.py) | All DynamoDB key construction |
+| [../../backend/src/shared_kernel/auth_context.py](../../backend/src/shared_kernel/auth_context.py) | Every authed request starts here |
+| [../../backend/cdk/stack.py](../../backend/cdk/stack.py) | Routes + Lambdas wiring |
+| [../../frontend/src/app/globals.css](../../frontend/src/app/globals.css) | Theme tokens + animations |
+| [../../frontend/tailwind.config.ts](../../frontend/tailwind.config.ts) | Semantic tokens + tenant RGB |
+| [../../frontend/src/components/ui/StatCardsGrid.tsx](../../frontend/src/components/ui/StatCardsGrid.tsx) | Pattern for animated stat cards used everywhere |
+| [../../frontend/src/lib/tenant/](../../frontend/src/lib/tenant/) | Workspace resolver + branding |
+| [../architecture/RBAC-DOCUMENTATION.md](../architecture/RBAC-DOCUMENTATION.md) | Permission matrix |
+| [../architecture/TIMER-ARCHITECTURE.md](../architecture/TIMER-ARCHITECTURE.md) | Timer state machine across web + desktop |
+| [../architecture/PLAN-LIMITS.md](../architecture/PLAN-LIMITS.md) | Plan tiers, capacity caps, feature gating |
+| [FEATURE-DEVELOPMENT-GUIDE.md](FEATURE-DEVELOPMENT-GUIDE.md) | How to add a feature end-to-end |
+| [../bug-reports/Bug-Report-Go.md](../bug-reports/Bug-Report-Go.md) | Desktop P0 security issues |
 
 ---
 
 ## 13. Your first week checklist
 
 - [ ] Read this file end-to-end.
-- [ ] Read [CLAUDE.md](CLAUDE.md) and [SAAS-MIGRATION.md](SAAS-MIGRATION.md).
+- [ ] Read [../../CLAUDE.md](../../CLAUDE.md) and [../saas/SAAS-MIGRATION.md](../saas/SAAS-MIGRATION.md).
 - [ ] Get AWS staging access (personal-account default profile).
 - [ ] Run `cdk deploy --app "python app_staging.py"` against staging and verify `backend/output.json` fills in.
 - [ ] Point your `frontend/.env.local` at staging and `npm run dev`.
@@ -436,6 +437,6 @@ Only ~2 test files in `backend/tests/` today. **No integration tests, no tenant-
 - [ ] Pick one endpoint in `backend/src/contexts/` and trace it top-to-bottom: route in `stack.py` → handler → use case → repository → DynamoDB.
 - [ ] Pick one page in `frontend/src/app/(dashboard)/` and trace it: page → widget components → React Query hook → API wrapper → endpoint.
 - [ ] Open the desktop app in `wails dev`, sign in, run the timer, confirm the daily update syncs.
-- [ ] Skim [Bug-Report-Go.md](Bug-Report-Go.md) and [Bug-Report-Go-v2.md](Bug-Report-Go-v2.md) — know what's unfixed on desktop.
+- [ ] Skim [../bug-reports/Bug-Report-Go.md](../bug-reports/Bug-Report-Go.md) and [../bug-reports/Bug-Report-Go-v2.md](../bug-reports/Bug-Report-Go-v2.md) — know what's unfixed on desktop.
 
 Ask questions early. Welcome aboard.

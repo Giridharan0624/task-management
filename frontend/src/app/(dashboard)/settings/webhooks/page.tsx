@@ -24,6 +24,7 @@ import {
 } from '@/lib/api/webhooksApi'
 import { useFormat } from '@/lib/tenant/useFormat'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { BackToSettings } from '@/components/settings/BackToSettings'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -125,13 +126,10 @@ export default function WebhooksPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 pb-24 animate-fade-in">
+      <BackToSettings />
       <PageHeader
         title="Webhooks"
         description="Register HTTPS endpoints that receive signed events when something happens in this workspace."
-        breadcrumbs={[
-          { label: 'Settings', href: '/settings/organization' },
-          { label: 'Webhooks' },
-        ]}
         actions={
           <Button
             onClick={() => {

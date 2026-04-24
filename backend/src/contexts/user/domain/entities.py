@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from contexts.user.domain.value_objects import SystemRole
 
@@ -13,7 +13,19 @@ class User(BaseModel):
     employee_id: Optional[str] = None
     email: str
     name: str
-    system_role: SystemRole
+    # system_role is the user's assigned role_id. Historically this was
+    # constrained to the SystemRole enum (OWNER/ADMIN/MEMBER); Session 8
+    # relaxed it to accept any role_id that exists as a scope="system"
+    # record in the org's role table, so tenants can assign users to
+    # custom roles they've defined in /settings/roles.
+    #
+    # Stored canonical form: uppercase for the three built-in tiers
+    # (OWNER, ADMIN, MEMBER) for backward compatibility with existing
+    # DDB items and Cognito `custom:systemRole`; lowercase for custom
+    # role_ids (matching the role_id convention in default_roles.py).
+    # Permission resolution uses a case-insensitive match against DDB
+    # role records, so both forms work.
+    system_role: str
     created_by: Optional[str] = None
     phone: Optional[str] = None
     designation: Optional[str] = None
@@ -30,13 +42,26 @@ class User(BaseModel):
     created_at: str
     updated_at: str
 
+    @field_validator("system_role", mode="before")
+    @classmethod
+    def _coerce_system_role(cls, v):
+        # Accept SystemRole enum members, raw strings from DDB/Cognito,
+        # or anything the old Pydantic-enum field accepted. Empty/None
+        # collapses to MEMBER so a corrupt DDB item doesn't blow up the
+        # mapper on load.
+        if v is None or v == "":
+            return SystemRole.MEMBER.value
+        if isinstance(v, SystemRole):
+            return v.value
+        return str(v)
+
     @classmethod
     def create(
         cls,
         user_id: str,
         email: str,
         name: str,
-        system_role: SystemRole = SystemRole.MEMBER,
+        system_role: Union[SystemRole, str] = SystemRole.MEMBER,
         created_by: Optional[str] = None,
         employee_id: Optional[str] = None,
     ) -> "User":
@@ -46,7 +71,7 @@ class User(BaseModel):
             employee_id=employee_id,
             email=email,
             name=name,
-            system_role=system_role,
+            system_role=system_role.value if isinstance(system_role, SystemRole) else system_role,
             created_by=created_by,
             created_at=now,
             updated_at=now,
@@ -58,7 +83,7 @@ class User(BaseModel):
             "employee_id": self.employee_id,
             "email": self.email,
             "name": self.name,
-            "system_role": self.system_role.value,
+            "system_role": self.system_role,
             "created_by": self.created_by,
             "phone": self.phone,
             "designation": self.designation,

@@ -1,8 +1,8 @@
 # TaskFlow — Technical Design Document
 
-**Scope:** how the multi-tenant SaaS is built. Complements [PRD.md](PRD.md) (product surface) and [SAAS-STATUS.md](SAAS-STATUS.md) (shipped vs. not).
-**Version:** 2.2 (post-Session 7)
-**Last updated:** 2026-04-22
+**Scope:** how the multi-tenant SaaS is built. Complements [PRD.md](PRD.md) (product surface) and [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) (shipped vs. not).
+**Version:** 2.3 (post-Session 8)
+**Last updated:** 2026-04-24
 
 ---
 
@@ -78,6 +78,17 @@ GSI2PK=ORG#{org}#EMPLOYEE#{eid}                       # per-tenant employee IDs
 ### Aggregate keys are forbidden
 No `ORG#{id}#USER#LIST` or similar — they concentrate writes on one partition. Always query scoped PKs.
 
+### `OrgSettings.features` evolution (Session 8)
+The `features` dict on `OrgSettings` is the per-tenant feature-toggle map. Originally seven booleans (`birthday_wishes`, `activity_monitoring`, `screenshots`, `ai_summaries`, `day_offs`, `comments`, `task_updates`). Session 8 added three onboarding-state booleans:
+
+```python
+"onboarding_checklist_dismissed": False,
+"onboarding_desktop_installed": False,
+"onboarding_branding_done": False,
+```
+
+These back the dashboard's [SetupChecklist](frontend/src/components/dashboard/SetupChecklist.tsx) so dismissal and per-step ticks survive across browsers/devices. Reusing `features` (rather than adding a new `OrgSettings.onboarding` field) keeps the surface flat — the existing `PUT /orgs/current/settings` handler accepts the field unchanged. Caveat: the partial-update merge in `model_copy(update=...)` REPLACES the whole `features` dict, so writers MUST send `{...current.settings.features, [key]: value}` rather than just the changed pair.
+
 ### PITR
 Enabled on both stages. Staging: 7-day retention. Prod: 35-day. Uses `PointInTimeRecoverySpecification` (not the deprecated `point_in_time_recovery=True`).
 
@@ -149,6 +160,31 @@ Lookups are cached per Lambda invocation in `_PERMISSION_CACHE: dict[(org_id, ro
 
 ### Email-verification gate (defense-in-depth)
 `require_email_verified(ctx)` raises `EmailNotVerifiedError(code="EMAIL_NOT_VERIFIED")`. Helper is defined but not applied anywhere yet — frontend gate is the primary enforcement.
+
+---
+
+## 5b. Plan limits & feature gating
+
+A second axis of authorisation, orthogonal to the permission system in §5. Permissions answer "is this user allowed to perform this action?"; plan limits answer "does this tenant's plan permit this action at all?"
+
+### Two kinds of restriction
+| Kind | Examples | How enforced |
+|---|---|---|
+| **Capacity caps** | seats (10/50/∞), projects (3/50/∞), retention (30/365/∞ days) | Counter compared against `plan.max_*` at write-time, OR sweeper deletes expired rows |
+| **Feature flags** | screenshots, custom_roles, sso, white_label | Handler checks `feature in plan.features_allowed` before executing |
+
+### Currently enforced
+- `max_users` — `user/application/use_cases.py:CreateUserUseCase` and `org/application/invite_use_cases.py:SendInviteUseCase` (counts pending invites too, so a tenant can't blow past the cap by issuing 1000 invites)
+- `max_projects` — `project/application/use_cases.py:CreateProjectUseCase`
+- `screenshots` feature — `upload/handlers/presign.py` (rejects upload if absent; fail-open on DDB errors)
+- `retention_days` — `activity/handlers/retention_sweeper.py` (nightly EventBridge → Lambda)
+- Belt-and-braces: nightly `seat_reconciliation.py` audits any race-induced overflow as `plan.seats_overflow`
+
+### Declared but not yet enforced
+`custom_roles`, `custom_pipelines`, `api_access` (PRO+); `audit_logs`, `sso`, `white_label`, `custom_domain` (ENTERPRISE). The shared helper that closes these gaps in one place is the proposed `shared_kernel/plan_limits.py` module — see [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) for the design, the helper API, the per-feature gating map, and the rollout order.
+
+### Why fail-open
+Plan lookup failures are TaskFlow problems, not customer problems. Falling open means a transient DDB error doesn't manifest as "I can't invite users." The audit log + nightly reconciler catch anything that slips through.
 
 ---
 
@@ -413,8 +449,9 @@ Frontend `/settings/delete-workspace` wires all three surfaces: export (always a
 - **pytest** (`backend/pytest.ini`, testpaths=tests, pythonpath=src)
 - Domain unit tests (User, Task, Pipeline entities)
 - Attendance sweep use-case tests with fake repos
+- **Composite activity score tests** ([backend/tests/test_domain_activity.py](backend/tests/test_domain_activity.py)) — 11 tests pinning formula behaviour: empty day, full-presence, wiggle-farmer punishment, power-typist cap, keyboard-vs-mouse weighting, breakdown serialization
 - **Multitenancy contract tests** ([backend/tests/test_multitenancy.py](backend/tests/test_multitenancy.py)) — moto-backed DynamoDB, two orgs in one table, assert cross-tenant reads return None/empty
-- Current count: 33 tests, passing
+- Current count: 44 tests across 5 test files, passing
 
 ### Frontend
 - No test harness yet. Backlog — add Vitest / React Testing Library when a feature regression forces it.
@@ -455,7 +492,7 @@ cd backend/cdk && cdk deploy --app "python app.py" --profile company
 
 ## 14. Known gaps & deferred work
 
-See [SAAS-STATUS.md](SAAS-STATUS.md) for the full living status. Highlights:
+See [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) for the full living status. Highlights:
 
 | Category | Gap | Why deferred |
 |---|---|---|
@@ -468,15 +505,18 @@ See [SAAS-STATUS.md](SAAS-STATUS.md) for the full living status. Highlights:
 | Desktop | macOS build + code-signing + first-run UI | Separate repo; needs Mac host + CA certs + focused session |
 | Billing | Stripe integration | Plan tier set manually today |
 | SSO | SAML / OIDC federation | Waiting on enterprise prospect |
+| Plan gating | Shared `shared_kernel/plan_limits.py` helper | Four enforcement sites duplicate boilerplate today; consolidating unblocks gating for `custom_roles`, `custom_pipelines`, `audit_logs`, `white_label`, `api_access`, `sso`. Design in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) |
+| Audit retention | Sweeper extends to `EVENT#` rows | Today only `ACTIVITY#` rows are pruned; audit events accumulate forever, making the per-tier retention claim partially aspirational |
 
 ---
 
 ## 15. Further reading
 
-- [SAAS-MIGRATION.md](SAAS-MIGRATION.md) — original phased plan for multi-tenant conversion
-- [SAAS-PROGRESS.md](SAAS-PROGRESS.md) — running log of what each phase shipped
-- [SAAS-STATUS.md](SAAS-STATUS.md) — current state against the P0/P1/P2 roadmap
-- [docs/RBAC-DOCUMENTATION.md](docs/RBAC-DOCUMENTATION.md) — system roles vs. project roles, permission matrix
-- [docs/TIMER-ARCHITECTURE.md](docs/TIMER-ARCHITECTURE.md) — timer state machine across web + desktop
-- [backend/API.md](backend/API.md) — endpoint reference
+- [docs/saas/SAAS-MIGRATION.md](docs/saas/SAAS-MIGRATION.md) — original phased plan for multi-tenant conversion
+- [docs/saas/SAAS-PROGRESS.md](docs/saas/SAAS-PROGRESS.md) — running log of what each phase shipped
+- [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) — current state against the P0/P1/P2 roadmap
+- [docs/architecture/RBAC-DOCUMENTATION.md](docs/architecture/RBAC-DOCUMENTATION.md) — system roles vs. project roles, permission matrix
+- [docs/architecture/TIMER-ARCHITECTURE.md](docs/architecture/TIMER-ARCHITECTURE.md) — timer state machine across web + desktop
+- [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) — plan tiers, capacity caps, feature gating
+- [docs/api/API.md](docs/api/API.md) — endpoint reference
 - [CLAUDE.md](CLAUDE.md) — the authoritative codebase conventions file

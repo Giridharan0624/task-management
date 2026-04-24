@@ -4,7 +4,7 @@
 
 Any organization signs up at `taskflow.neurostack.in/signup`, picks a workspace code, and gets an isolated tenant with configurable branding, roles, pipelines, terminology, and feature toggles. Full web dashboard plus a Windows/Linux/macOS desktop companion for timer + activity capture.
 
-📄 [PRD](PRD.md) · [TDD](TDD.md) · [Shipped vs. not](SAAS-STATUS.md) · [Conventions](CLAUDE.md)
+📄 [PRD](PRD.md) · [TDD](TDD.md) · [Shipped vs. not](docs/saas/SAAS-STATUS.md) · [Conventions](CLAUDE.md) · [Docs index](docs/README.md)
 
 ---
 
@@ -60,8 +60,12 @@ See [TDD.md](TDD.md) for the full system design.
 | **Attendance & timer** | Live timer (web + desktop), task switching, meeting mode, mandatory descriptions |
 | **Activity monitoring** | Desktop keyboard/mouse counts + screenshots (opt-in per tenant via feature flag) |
 | **Day-offs** | Request/approve/reject, per-org leave types, self-approval blocked |
-| **Reports** | Summary/detailed/weekly/activity, Recharts + CSV export, AI summaries via Groq, **weekly AI-rollup digest** |
+| **Reports** | Summary/detailed/weekly/activity, Recharts + CSV export, AI summaries via Groq, **weekly AI-rollup digest** that pulls task updates + attendance + activity + day-offs into one editorial recap |
+| **Project Reports tab** | Inner tabs (Overview / Workload / Sessions), consolidated period+navigator+export toolbar, pixel-grid metric strip, donut without tooltip-collision |
+| **Activity score** | Composite `0.7 × presence + 0.3 × intensity` formula — punishes wiggle-farming, caps power-typists at 1.0, fed directly into the AI summary prompt |
 | **Branding & i18n** | Per-org colors (CSS vars), logo + favicon, terminology overrides (`useT()` hook), **locale-bound date/number/currency formatters** (`useFormat()` hook) |
+| **Onboarding** | Server-persisted first-run checklist on the OWNER dashboard; dismissal + per-step ticks live in `OrgSettings.features` so they survive across browsers |
+| **Marketing** | Glass-morphism landing with Lexend display face; 3-tier pricing card (Free/Pro/Enterprise) with honest "Soon" tags on aspirational items; legal/security/status/download pages |
 | **Ownership** | OWNER-only transfer with typed-email confirmation + forced token refresh |
 | **Suspension** | Platform-operator env-allowlist endpoint + fullscreen SuspendedScreen |
 | **Deletion** | OWNER-initiated soft-delete (30-day grace) + JSON export to S3 + nightly hard-delete sweeper |
@@ -78,7 +82,7 @@ See [TDD.md](TDD.md) for the full system design.
 | **Data protection** | DynamoDB PITR (7d staging / 35d prod), S3 encryption, presigned uploads scoped to `orgs/{orgId}/` |
 | **CI** | GitHub Actions: backend pytest + frontend lint/build, path-filtered |
 | **Scheduled jobs** | Nightly retention sweeper, seat reconciliation, daily AI summaries, 5-min stale session sweeper |
-| **Plans** | FREE (10u/3p/30d), PRO (50u/50p/365d), ENTERPRISE (unlimited). Enforced at create sites. |
+| **Plans** | FREE (10u/3p/30d), PRO (50u/50p/365d), ENTERPRISE (unlimited). Capacity enforced at create sites + nightly seat reconciliation. Feature gating design in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md). |
 
 ---
 
@@ -108,11 +112,16 @@ task-management/
 ├── .github/workflows/   Backend + frontend CI
 ├── PRD.md               Product requirements (user-facing)
 ├── TDD.md               Technical design (engineer-facing)
-├── SAAS-STATUS.md       Current state vs. P0/P1/P2 roadmap
-├── SAAS-MIGRATION.md    Original phased migration plan
-├── SAAS-PROGRESS.md     Running log of shipped changes
 ├── CLAUDE.md            Authoritative codebase conventions
-└── docs/                Per-feature docs (RBAC, timer, API, migrations)
+└── docs/
+    ├── architecture/    Plan limits, RBAC, timer architecture
+    ├── saas/            Multi-tenant migration plan, status, progress
+    ├── guides/          Onboarding, demo script, deployment runbooks
+    ├── desktop/         CI/CD, release-signing, cross-platform plan
+    ├── planning/        UX backlog, feature proposals
+    ├── api/             REST endpoint reference
+    ├── reference/       Feature catalog, legacy PRD
+    └── bug-reports/     Historical bug investigations
 ```
 
 ---
@@ -130,7 +139,7 @@ task-management/
 ```bash
 cd backend
 pip install -r requirements.txt -r requirements-dev.txt
-pytest                                    # 33 tests
+pytest                                    # 44 tests across 5 files
 
 cd cdk
 cdk deploy --app "python app_staging.py"  # staging (personal profile)
@@ -216,15 +225,17 @@ Deployment rule (from `CLAUDE.md`): **no prod deploy until the full change is ve
 
 ## Status
 
-P0 + most of P1 is **functionally complete on staging** after 7 post-phase sessions. See [SAAS-STATUS.md](SAAS-STATUS.md) for the live checklist.
+P0 + most of P1 is **functionally complete on staging** after 8 post-phase sessions. See [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) for the live checklist.
 
 Shipped across Sessions 1–7: 2FA TOTP, 30-day deletion lifecycle with export + sweeper, change-email, bulk CSV import, `ProjectRole` → per-org roles refactor, in-app notifications, outbound webhooks, platform operator console, audit log viewer UI, i18n foundation, CI/CD, Sentry scaffold, CAPTCHA on signup, health check, ownership transfer UI, suspension.
+
+Shipped in Session 8 (2026-04-23/24): composite activity score formula + 11 unit tests, AI prompt restructured for the new score, weekly rollup enriched with attendance/activity/day-off context, glass landing redesign with Lexend display face, 3-tier pricing card with honest "Soon" tags, server-persisted onboarding checklist, page-transition fix so the landing header stays viewport-fixed, Project Reports tab restructured into Overview/Workload/Sessions, audit log viewer (writes were already shipping; reader now wired in CDK), [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) design, docs reorganised into 8 categorised subfolders.
 
 The only remaining gates before prod cutover are operational:
 1. **Prod backfill rehearsal** — dry-run `backfill_neurostack.py` against a company-account snapshot
 2. **Cutover window** — CDK deploy to company account + Vercel env swap
 
-P1/P2 backlog (desktop code-signing, macOS build, SES, SSO/SAML, Stripe billing, full i18n sweep) is deliberately waiting on tenant-driven priority.
+P1/P2 backlog (desktop code-signing, macOS build, SES, SSO/SAML, SCIM, custom-domain-per-tenant, Stripe billing, `shared_kernel/plan_limits.py` helper, audit-log retention sweep, full i18n sweep) is deliberately waiting on tenant-driven priority.
 
 ---
 

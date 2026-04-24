@@ -56,16 +56,30 @@ class TestUserEntity:
         assert d["skills"] == []
         assert d["avatar_url"] is None
 
-    def test_invalid_role_rejected(self):
-        # Pydantic raises ValidationError (subclass of ValueError) for
-        # unknown enum values — either matches the pytest.raises target.
-        with pytest.raises(ValueError):
-            User.create(
-                user_id="u-004",
-                email="dave@example.com",
-                name="Dave",
-                system_role="SUPERUSER",
-            )
+    def test_custom_role_string_accepted(self):
+        # Session 8: User.system_role was relaxed from a strict SystemRole
+        # enum to a plain string so tenant-defined custom roles can be
+        # assigned to users. The domain entity no longer enforces the
+        # closed set — that moved to UpdateUserRoleUseCase which validates
+        # the incoming role_id against the org's /settings/roles records.
+        user = User.create(
+            user_id="u-004",
+            email="dave@example.com",
+            name="Dave",
+            system_role="tester",
+        )
+        assert user.system_role == "tester"
+
+    def test_empty_role_falls_back_to_member(self):
+        # The field validator collapses empty/None to MEMBER so a
+        # corrupt DDB item doesn't blow up the mapper on load.
+        user = User.create(
+            user_id="u-005",
+            email="eve@example.com",
+            name="Eve",
+            system_role="",
+        )
+        assert user.system_role == SystemRole.MEMBER.value
 
 
 class TestSystemRoleEnum:

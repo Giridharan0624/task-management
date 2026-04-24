@@ -10,7 +10,7 @@ Three deployable units in one monorepo:
 - `frontend/` — Next.js 16 (App Router) web app deployed to Vercel. Uses `amazon-cognito-identity-js` (SRP) for auth and React Query for state.
 - `desktop/` — Go 1.22 + Wails v2 + Preact companion app (Windows/Linux/macOS) for timer, activity counters, and screenshots. Talks to the same API with a Cognito token.
 
-Top-level `SAAS-MIGRATION.md` and `SAAS-CHANGES.md` describe the multi-tenant conversion currently on the `saas-migration` branch; read them before touching anything under `contexts/org/` or `shared_kernel/tenant_keys.py`.
+[docs/saas/SAAS-MIGRATION.md](docs/saas/SAAS-MIGRATION.md) and [docs/saas/SAAS-CHANGES.md](docs/saas/SAAS-CHANGES.md) describe the multi-tenant conversion currently on the `saas-migration` branch; read them before touching anything under `contexts/org/` or `shared_kernel/tenant_keys.py`.
 
 ## Common commands
 
@@ -130,8 +130,9 @@ The timer is migrating from web to desktop-only — both surfaces run today, but
 
 ## Documentation worth reading before larger changes
 
-- [SAAS-MIGRATION.md](SAAS-MIGRATION.md) — full phased plan for the multi-tenant conversion
-- [SAAS-CHANGES.md](SAAS-CHANGES.md) — running log of what each phase actually shipped
-- [docs/RBAC-DOCUMENTATION.md](docs/RBAC-DOCUMENTATION.md) — system roles vs. project roles, permission matrix
-- [docs/TIMER-ARCHITECTURE.md](docs/TIMER-ARCHITECTURE.md) — timer state machine across web + desktop
-- [backend/API.md](backend/API.md) — endpoint reference
+- [docs/saas/SAAS-MIGRATION.md](docs/saas/SAAS-MIGRATION.md) — full phased plan for the multi-tenant conversion
+- [docs/saas/SAAS-CHANGES.md](docs/saas/SAAS-CHANGES.md) — running log of what each phase actually shipped
+- [docs/architecture/RBAC-DOCUMENTATION.md](docs/architecture/RBAC-DOCUMENTATION.md) — system roles vs. project roles, permission matrix
+- [docs/architecture/TIMER-ARCHITECTURE.md](docs/architecture/TIMER-ARCHITECTURE.md) — timer state machine across web + desktop
+- [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) — plan tiers, capacity caps, feature gating
+- [docs/api/API.md](docs/api/API.md) — endpoint reference

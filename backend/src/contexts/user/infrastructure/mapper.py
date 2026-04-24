@@ -1,7 +1,6 @@
 import json
 
 from contexts.user.domain.entities import User
-from contexts.user.domain.value_objects import SystemRole
 from shared_kernel import tenant_keys
 
 
@@ -19,7 +18,7 @@ class UserMapper:
             employee_id=item.get("employee_id"),
             email=item.get("email", ""),
             name=item.get("name", ""),
-            system_role=SystemRole(item.get("system_role") or item.get("systemRole", "MEMBER")),
+            system_role=item.get("system_role") or item.get("systemRole", "MEMBER"),
             created_by=item.get("created_by"),
             phone=item.get("phone"),
             designation=item.get("designation"),
@@ -48,7 +47,7 @@ class UserMapper:
             "user_id": user.user_id,
             "email": user.email,
             "name": user.name,
-            "system_role": user.system_role.value,
+            "system_role": user.system_role,
             "created_at": user.created_at,
             "updated_at": user.updated_at,
         }

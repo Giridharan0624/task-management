@@ -52,7 +52,7 @@ def extract_auth_context(event: dict) -> AuthContext:
         user_repo = UserDynamoRepository()
         user = user_repo.find_by_id(user_id)
         if user:
-            db_role = user.system_role.value
+            db_role = user.system_role
     except Exception:
         pass  # Fall back to JWT role on any DB error
 

@@ -21,6 +21,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { BackToSettings } from '@/components/settings/BackToSettings'
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { cn } from '@/lib/utils'
 
@@ -100,6 +101,7 @@ export default function PlanSettingsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 pb-24 animate-fade-in">
+      <BackToSettings />
       <PageHeader
         title="Plan & usage"
         description="Your current plan, limits, and how much of each you're using."

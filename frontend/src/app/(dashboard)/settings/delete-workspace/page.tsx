@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
 import { orgsApi } from '@/lib/api/orgsApi'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { BackToSettings } from '@/components/settings/BackToSettings'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -119,13 +120,10 @@ export default function DeleteWorkspacePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 pb-24 animate-fade-in">
+      <BackToSettings />
       <PageHeader
         title="Delete workspace"
         description="Permanently remove this workspace and all its data."
-        breadcrumbs={[
-          { label: 'Settings', href: '/settings/organization' },
-          { label: 'Delete workspace' },
-        ]}
       />
 
       {pendingDeletion && (
