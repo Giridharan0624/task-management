@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Palmtree } from 'lucide-react'
+import { CalendarOff, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { useAllDayOffs } from '@/lib/hooks/useDayOffs'
@@ -96,7 +96,7 @@ export function OnLeaveToday() {
         </div>
         <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-            <Palmtree className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+            <CalendarOff className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
           </div>
           <p className="text-sm font-semibold text-foreground">Everyone&apos;s in today</p>
           <p className="max-w-xs text-xs text-muted-foreground">

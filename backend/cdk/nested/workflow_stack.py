@@ -83,6 +83,10 @@ class WorkflowNestedStack(NestedStack):
 
         # ── Day-offs ──────────────────────────────────────────────────
         dayoffs = api.root.add_resource("day-offs")
+        # `MyDayOffs` doubles as the balance endpoint via `?view=balance` to
+        # avoid burning another API Gateway resource/method/permission triplet
+        # against the parent stack's 500-resource CFN cap. See
+        # contexts/dayoff/handlers/my_requests.py for the dispatch logic.
         dayoffs_my = dayoffs.add_resource("my")
         dayoffs_pending = dayoffs.add_resource("pending")
         dayoffs_all = dayoffs.add_resource("all")

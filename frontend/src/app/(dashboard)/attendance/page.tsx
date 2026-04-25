@@ -42,6 +42,8 @@ import {
   type MemberAttendanceSummary,
 } from '@/components/attendance/MemberAttendanceCard'
 import { MemberAttendanceDrawer } from '@/components/attendance/MemberAttendanceDrawer'
+import { MonthAttendanceCalendar } from '@/components/attendance/MonthAttendanceCalendar'
+import { useAllDayOffs } from '@/lib/hooks/useDayOffs'
 import {
   WeeklyLeaderboard,
   type WeekLeaderboard,
@@ -152,6 +154,10 @@ function TeamAttendanceView() {
   const { data: rawRecords, isLoading } = useAttendanceReport(start, end)
   const { data: allUsers } = useUsers()
   const { data: myAttendance } = useMyAttendance()
+  // Fed into the calendar's day-detail modal so each day can split
+  // "absent" (no record at all) from "on approved leave". Only fetched
+  // for privileged viewers — members get the my-only attendance view.
+  const { data: allDayOffs } = useAllDayOffs()
   const hasActiveSession = myAttendance?.status === 'SIGNED_IN'
 
   // Live tick when any session in scope is open
@@ -442,6 +448,16 @@ function TeamAttendanceView() {
       value: formatDuration(avgPerDay),
       accent: 'text-emerald-700',
     },
+    {
+      // "Active days" complements the Hours/Members/Sessions trio with
+      // the temporal axis — how MANY distinct days the team showed up
+      // on inside the selected month. Click a day on the calendar
+      // below to drill into who was present / absent.
+      key: 'days',
+      label: 'Active days',
+      value: `${uniqueDays} / ${daysInMonth}`,
+      accent: 'text-amber-700',
+    },
   ]
 
   const memberFilterLabel =
@@ -472,7 +488,7 @@ function TeamAttendanceView() {
         </div>
       ) : (
         <>
-          <StatCardsGrid items={statItems} columns={4} />
+          <StatCardsGrid items={statItems} columns={5} />
 
           {isPrivileged && (
             <div className="flex flex-wrap items-center gap-2">
@@ -516,22 +532,31 @@ function TeamAttendanceView() {
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel>Filter by member</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuRadioGroup
-                    value={memberFilter}
-                    onValueChange={setMemberFilter}
-                  >
-                    <DropdownMenuRadioItem value="ALL">
-                      All members
-                    </DropdownMenuRadioItem>
-                    {memberOptions.map((m) => (
-                      <DropdownMenuRadioItem key={m.id} value={m.id}>
-                        {m.name}
+                <DropdownMenuContent
+                  align="end"
+                  className="flex w-52 max-h-[60vh] flex-col overflow-hidden p-0"
+                >
+                  {/* Pinned header — stays put while the member list
+                      scrolls beneath it. The wrapper keeps the rounded
+                      corners clean while the inner div handles scroll. */}
+                  <div className="border-b border-border p-1">
+                    <DropdownMenuLabel>Filter by member</DropdownMenuLabel>
+                  </div>
+                  <div className="overflow-y-auto p-1">
+                    <DropdownMenuRadioGroup
+                      value={memberFilter}
+                      onValueChange={setMemberFilter}
+                    >
+                      <DropdownMenuRadioItem value="ALL">
+                        All members
                       </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
+                      {memberOptions.map((m) => (
+                        <DropdownMenuRadioItem key={m.id} value={m.id}>
+                          {m.name}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -590,6 +615,35 @@ function TeamAttendanceView() {
                 </Button>
               </div>
             </div>
+          )}
+
+          {isPrivileged && (
+            <MonthAttendanceCalendar
+              year={selectedYear}
+              month={selectedMonth}
+              members={memberSummaries.map((m) => ({
+                userId: m.userId,
+                name: m.name,
+                email: m.email,
+                avatarUrl: m.avatarUrl,
+                dailyHours: m.dailyHours,
+              }))}
+              roster={(allUsers ?? []).map((u) => ({
+                userId: u.userId,
+                name: u.name || u.email,
+                email: u.email,
+                avatarUrl: u.avatarUrl,
+              }))}
+              dayOffs={(allDayOffs ?? [])
+                .filter((d) => d.status === 'APPROVED')
+                .map((d) => ({
+                  userId: d.userId,
+                  userName: d.userName,
+                  startDate: d.startDate,
+                  endDate: d.endDate,
+                  reason: d.reason,
+                }))}
+            />
           )}
 
           <WeeklyLeaderboard

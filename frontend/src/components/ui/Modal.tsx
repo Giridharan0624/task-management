@@ -37,15 +37,24 @@ export function Modal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          'max-h-[90vh] overflow-y-auto p-0 gap-0',
+          // `flex flex-col` overrides the base `grid`. `h-fit` forces
+          // the modal to be exactly its content height (instead of
+          // letting Radix's animations / transforms inflate it), with
+          // `max-h-[90vh]` capping it on tall forms. Inner scroll is
+          // handled by the body wrapper below, NOT the outer
+          // container — so there can never be scrollable empty space
+          // below the form's last element.
+          'flex flex-col h-fit max-h-[90vh] p-0 gap-0',
           sizeClasses[size],
           className
         )}
       >
-        <DialogHeader className="px-6 py-4 border-b border-border">
+        <DialogHeader className="shrink-0 px-6 py-4 border-b border-border">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="px-6 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   )

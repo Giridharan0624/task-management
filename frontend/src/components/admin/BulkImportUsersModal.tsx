@@ -25,6 +25,7 @@ import {
   type BulkCreateResult,
   type BulkUserRow,
 } from '@/lib/api/userApi'
+import { useRoles } from '@/lib/hooks/useRoles'
 import { cn } from '@/lib/utils'
 
 /**
@@ -47,10 +48,13 @@ import { cn } from '@/lib/utils'
  */
 
 const MAX_ROWS = 200
-const VALID_ROLES: ReadonlyArray<BulkUserRow['systemRole']> = [
-  'ADMIN',
-  'MEMBER',
-]
+
+// Roles always rejected from bulk import. OWNER is reserved for the
+// signup + transfer-ownership flows; the catalog of EVERYTHING ELSE
+// (built-in admin/member plus any tenant-defined custom system roles)
+// is loaded at runtime from `/orgs/current/roles` so a tenant can
+// bulk-import users into their own custom roles like `tester`.
+const BULK_ROLE_BLOCKLIST = new Set(['owner'])
 
 interface ParsedRow extends BulkUserRow {
   /** 1-indexed for user-facing display. */
@@ -75,6 +79,34 @@ export function BulkImportUsersModal({
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<BulkCreateResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Pull the tenant's system roles so the CSV validator accepts custom
+  // role_ids (e.g. `tester`) in addition to the built-in ADMIN/MEMBER.
+  // OWNER is filtered out since it can't be assigned through this path.
+  const { roles: systemRoles } = useRoles({ scope: 'system' })
+  const assignableRoles = useMemo(() => {
+    const list = systemRoles
+      .filter((r) => !BULK_ROLE_BLOCKLIST.has(r.roleId.toLowerCase()))
+      .map((r) => ({
+        id: ['admin', 'member'].includes(r.roleId.toLowerCase())
+          ? r.roleId.toUpperCase()
+          : r.roleId,
+        label: r.name || r.roleId,
+      }))
+    // Pre-load fallback for the case where /orgs/current/roles hasn't
+    // resolved yet — keeps the modal usable on first open.
+    if (list.length === 0) {
+      return [
+        { id: 'ADMIN', label: 'Admin' },
+        { id: 'MEMBER', label: 'Member' },
+      ]
+    }
+    return list
+  }, [systemRoles])
+  const assignableRoleIds = useMemo(
+    () => new Set(assignableRoles.map((r) => r.id.toLowerCase())),
+    [assignableRoles],
+  )
 
   const invalidCount = useMemo(
     () => rows.filter((r) => r.error).length,
@@ -102,7 +134,7 @@ export function BulkImportUsersModal({
     setResult(null)
     try {
       const text = await f.text()
-      const parsed = parseCsv(text)
+      const parsed = parseCsv(text, assignableRoleIds)
       if (parsed.length === 0) {
         setParseError('No data rows found in the CSV.')
         setRows([])
@@ -122,7 +154,7 @@ export function BulkImportUsersModal({
       )
       setRows([])
     }
-  }, [])
+  }, [assignableRoleIds])
 
   const handleSubmit = useCallback(async () => {
     setSubmitting(true)
@@ -180,6 +212,7 @@ export function BulkImportUsersModal({
             file={file}
             parseError={parseError}
             onFileChosen={handleParse}
+            assignableRoles={assignableRoles}
           />
         )}
       </DialogContent>
@@ -194,13 +227,16 @@ function UploadPhase({
   file,
   parseError,
   onFileChosen,
+  assignableRoles,
 }: {
   fileInputRef: React.MutableRefObject<HTMLInputElement | null>
   file: File | null
   parseError: string | null
   onFileChosen: (f: File) => void
+  assignableRoles: { id: string; label: string }[]
 }) {
   const [dragOver, setDragOver] = useState(false)
+  const roleHint = assignableRoles.map((r) => r.id).join(', ') || 'ADMIN, MEMBER'
 
   return (
     <div className="flex flex-col gap-4">
@@ -210,8 +246,8 @@ function UploadPhase({
           email, name, role, department, date_of_joining
         </code>
         <p className="mt-2">
-          <strong className="text-foreground">role</strong> accepts{' '}
-          <code>ADMIN</code> or <code>MEMBER</code> (defaults to MEMBER).{' '}
+          <strong className="text-foreground">role</strong> accepts any of:{' '}
+          <code>{roleHint}</code> (defaults to MEMBER, case-insensitive).{' '}
           <strong className="text-foreground">date_of_joining</strong> is
           optional (ISO date like <code>2026-01-15</code>). Max{' '}
           {MAX_ROWS} rows per import.
@@ -526,7 +562,7 @@ function ResultSection({
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function parseCsv(text: string): ParsedRow[] {
+function parseCsv(text: string, assignableRoleIds: Set<string>): ParsedRow[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim())
   if (lines.length === 0) return []
   const header = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase())
@@ -554,18 +590,25 @@ function parseCsv(text: string): ParsedRow[] {
     )
   }
 
+  // Canonical stored form for built-in tiers stays uppercase
+  // (ADMIN/MEMBER); custom roles are stored as their lowercase id.
+  // This mirrors what UpdateUserRoleUseCase / CreateUserUseCase emit.
+  const canonicalize = (raw: string): string => {
+    const lower = raw.toLowerCase()
+    if (lower === 'admin') return 'ADMIN'
+    if (lower === 'member') return 'MEMBER'
+    return lower
+  }
+
   const out: ParsedRow[] = []
   for (let i = 1; i < lines.length; i++) {
     const cells = parseCsvLine(lines[i])
     const email = (cells[iEmail] ?? '').trim().toLowerCase()
     const name = (cells[iName] ?? '').trim()
     const rawRole =
-      iRole >= 0
-        ? (cells[iRole] ?? '').trim().toUpperCase() || 'MEMBER'
-        : 'MEMBER'
-    const systemRole = VALID_ROLES.includes(rawRole as BulkUserRow['systemRole'])
-      ? (rawRole as BulkUserRow['systemRole'])
-      : 'MEMBER'
+      iRole >= 0 ? (cells[iRole] ?? '').trim() || 'MEMBER' : 'MEMBER'
+    const roleIsKnown = assignableRoleIds.has(rawRole.toLowerCase())
+    const systemRole: string = roleIsKnown ? canonicalize(rawRole) : 'MEMBER'
     const department = iDept >= 0 ? (cells[iDept] ?? '').trim() : ''
     const dateOfJoining = iJoined >= 0 ? (cells[iJoined] ?? '').trim() : ''
 
@@ -573,8 +616,8 @@ function parseCsv(text: string): ParsedRow[] {
     if (!email) error = 'Email is required'
     else if (!EMAIL_RE.test(email)) error = 'Invalid email format'
     else if (!name) error = 'Name is required'
-    else if (iRole >= 0 && !VALID_ROLES.includes(rawRole as BulkUserRow['systemRole'])) {
-      error = `Role "${rawRole}" not valid (use ADMIN or MEMBER)`
+    else if (iRole >= 0 && !roleIsKnown) {
+      error = `Role "${rawRole}" is not defined for this workspace`
     }
 
     out.push({
@@ -621,6 +664,9 @@ function parseCsvLine(line: string): string[] {
 }
 
 function downloadTemplate() {
+  // Template uses the two built-in roles for clarity. Tenants with
+  // custom system roles can substitute their own role_id in the role
+  // column — the upload-phase hint surfaces the full assignable list.
   const csv =
     'email,name,role,department,date_of_joining\n' +
     'alice@example.com,Alice Smith,MEMBER,Engineering,2026-01-15\n' +

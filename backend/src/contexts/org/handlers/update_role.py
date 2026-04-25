@@ -17,7 +17,6 @@ from shared_kernel.errors import NotFoundError, ValidationError
 from shared_kernel.permissions import (
     invalidate_role_cache,
     require,
-    require_email_verified,
     require_not_suspended,
 )
 from shared_kernel.response import build_error, build_success
@@ -33,7 +32,7 @@ def handler(event, context):
     try:
         auth = extract_auth_context(event)
         require_not_suspended(auth)
-        require_email_verified(auth)
+        # Email-verified gate intentionally omitted — see create_role.py.
         require(auth, P.ROLE_MANAGE)
 
         path = event.get("pathParameters") or {}

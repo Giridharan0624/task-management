@@ -106,16 +106,16 @@ export function ProjectsToolbar({
         />
       </div>
 
-      {/* Domain */}
+      {/* Workflow filter — backend identifier is still `domain` */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="sm" className="h-9 gap-1.5 text-xs">
-            <span className="text-muted-foreground">Domain:</span>
+            <span className="text-muted-foreground">Workflow:</span>
             <span className="font-semibold">{DOMAIN_LABELS[domain]}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
-          <DropdownMenuLabel>Filter by domain</DropdownMenuLabel>
+          <DropdownMenuLabel>Filter by workflow</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuRadioGroup
             value={domain}

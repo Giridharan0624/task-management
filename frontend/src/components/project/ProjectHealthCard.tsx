@@ -118,29 +118,16 @@ export function ProjectHealthCard({ status }: ProjectHealthCardProps) {
               : 'bg-primary'
           }
         />
-        {status.totalEstimatedHours > 0 && (
-          <Metric
-            label="Time budget"
-            value={`${status.timeBudgetPercent}%`}
-            progress={Math.min(status.timeBudgetPercent, 100)}
-            tone={
-              status.timeBudgetPercent > 100
-                ? 'bg-destructive'
-                : 'bg-amber-400'
-            }
-          />
-        )}
+        {/* "Time budget" + "/ {estimate}" suffix removed: tasks do not
+            collect an estimated-hours value through the UI today, so
+            the percentage compared against an unset budget is
+            meaningless. If estimates are added back to the create/
+            edit task form, restore both the Metric and the suffix. */}
         {status.totalTrackedHours > 0 && (
           <div className="flex items-center justify-between pt-1 text-[11px]">
             <span className="text-muted-foreground">Time tracked</span>
             <span className="font-semibold tabular-nums text-foreground">
               {formatDuration(status.totalTrackedHours)}
-              {status.totalEstimatedHours > 0 && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  / {formatDuration(status.totalEstimatedHours)}
-                </span>
-              )}
             </span>
           </div>
         )}

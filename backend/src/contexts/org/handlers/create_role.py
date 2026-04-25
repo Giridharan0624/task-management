@@ -19,7 +19,6 @@ from shared_kernel.errors import ValidationError
 from shared_kernel.permissions import (
     invalidate_role_cache,
     require,
-    require_email_verified,
     require_not_suspended,
 )
 from shared_kernel.response import build_error, build_success
@@ -48,7 +47,12 @@ def handler(event, context):
     try:
         auth = extract_auth_context(event)
         require_not_suspended(auth)
-        require_email_verified(auth)
+        # NOTE: email-verified gate intentionally omitted here. Role
+        # mutations are an internal admin workflow and the action is
+        # already gated on ROLE_MANAGE; requiring email verification
+        # in addition was blocking OWNERs whose verification claim
+        # hadn't propagated. Sensitive cross-account actions (invite,
+        # transfer-ownership, delete-org, settings) keep the gate.
         require(auth, P.ROLE_MANAGE)
 
         req = validate_body(CreateRoleRequest, event.get("body"))

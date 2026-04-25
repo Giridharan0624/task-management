@@ -53,6 +53,7 @@ export const PERMISSION_META: Record<string, PermissionMeta> = {
   'task.update.own': { label: 'Edit own tasks' },
   'task.delete.any': { label: 'Delete any task', destructive: true },
   'task.manage': { label: 'Full task management' },
+  'task.assign': { label: 'Assign tasks', description: 'Re-assign existing tasks to other members.' },
 
   // Comments
   'comment.create': { label: 'Add comments' },

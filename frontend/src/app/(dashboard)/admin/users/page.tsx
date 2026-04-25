@@ -12,7 +12,7 @@ import {
 } from '@/lib/hooks/useUsers'
 import { useTodayAttendance } from '@/lib/hooks/useAttendance'
 import { useAllDayOffs } from '@/lib/hooks/useDayOffs'
-import { useSystemPermission } from '@/lib/hooks/usePermission'
+import { useSystemPermission, useHasPermission } from '@/lib/hooks/usePermission'
 import { useRoles } from '@/lib/hooks/useRoles'
 import { useUrlParam } from '@/lib/hooks/useUrlState'
 import { Button } from '@/components/ui/Button'
@@ -40,7 +40,6 @@ import { UserStatStrip } from '@/components/admin/UserStatStrip'
 import { RoleDropdown, ROLE_STYLES } from '@/components/admin/RoleDropdown'
 import { UserActionsMenu } from '@/components/admin/UserActionsMenu'
 import { BulkImportUsersModal } from '@/components/admin/BulkImportUsersModal'
-import { orgsApi } from '@/lib/api/orgsApi'
 import { buildCsvName } from '@/lib/utils/csvFilename'
 import { getLocalToday } from '@/lib/utils/date'
 import type { User } from '@/types/user'
@@ -57,6 +56,14 @@ export default function UsersPage() {
   // the role dropdowns, the invite role picker, and the management-tier
   // classifier below.
   const { roles: systemRoles } = useRoles({ scope: 'system' })
+  // Per-affordance permission gates. Live, with the hardcoded fallback
+  // during the initial /orgs/current/roles fetch (returns null while
+  // loading; we coerce to the legacy isPrivileged behavior).
+  const legacyIsPrivileged =
+    currentUser?.systemRole === 'OWNER' || currentUser?.systemRole === 'ADMIN'
+  const canCreateUserPerm = useHasPermission('user.create')
+  const canCreateUser =
+    canCreateUserPerm === null ? legacyIsPrivileged : canCreateUserPerm
   const createUserMutation = useCreateUser()
   const deleteUserMutation = useDeleteUser()
   const updateRole = useUpdateUserRole()
@@ -65,12 +72,7 @@ export default function UsersPage() {
   const queryClient = useQueryClient()
 
   const [showAddUser, setShowAddUser] = useState(false)
-  const [showInvite, setShowInvite] = useState(false)
   const [showBulkImport, setShowBulkImport] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<string>('member')
-  const [inviteSending, setInviteSending] = useState(false)
-  const [inviteError, setInviteError] = useState('')
   const [progressUser, setProgressUser] = useState<string | null>(null)
   const [viewUser, setViewUser] = useState<User | null>(null)
   const [searchQuery, setSearchQuery] = useUrlParam<string>('q', '')
@@ -281,8 +283,7 @@ export default function UsersPage() {
       return
     }
     // Normalize the email so "John@Example.com" and "john@example.com"
-    // never produce two separate user records. Keeps behavior consistent
-    // with handleSendInvite below, which already lowercases.
+    // never produce two separate user records.
     const normalizedEmail = newEmail.trim().toLowerCase()
     if (!/.+@.+\..+/.test(normalizedEmail)) {
       setError('Enter a valid email address')
@@ -305,27 +306,6 @@ export default function UsersPage() {
       toast.success('User created')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create user')
-    }
-  }
-
-  const handleSendInvite = async () => {
-    setInviteError('')
-    const email = inviteEmail.trim().toLowerCase()
-    if (!email || !/.+@.+\..+/.test(email)) {
-      setInviteError('Enter a valid email address')
-      return
-    }
-    setInviteSending(true)
-    try {
-      await orgsApi.sendInvite({ email, roleId: inviteRole })
-      toast.success(`Invitation sent to ${email}`)
-      setShowInvite(false)
-      setInviteEmail('')
-      setInviteRole('member')
-    } catch (err: unknown) {
-      setInviteError(err instanceof Error ? err.message : 'Failed to send invite')
-    } finally {
-      setInviteSending(false)
     }
   }
 
@@ -389,29 +369,15 @@ export default function UsersPage() {
     }
   }
 
-  // Gate strategy. Defer the "no permission" screen ONLY when the
-  // caller has a custom role AND the roles fetch is in flight —
-  // without roles loaded we can't tell whether the custom role grants
-  // `user.create`/`user.invite`/`user.delete`, so flashing "access
-  // denied" would be wrong. Built-in tiers (OWNER/ADMIN/MEMBER)
-  // resolve correctly from the legacy fallback, so they don't need
-  // to wait for roles — keeping first-paint snappy for 99% of users.
-  const callerRole = (currentUser?.systemRole || '').toUpperCase()
-  const isBuiltinTier =
-    callerRole === 'OWNER' || callerRole === 'ADMIN' || callerRole === 'MEMBER'
-  const deferringPermissionDecision =
-    !isBuiltinTier && systemPerms.isLoading && !systemPerms.canManageUsers
-  if (!deferringPermissionDecision && !systemPerms.canManageUsers) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">
-          You don&apos;t have permission to view this page.
-        </p>
-      </div>
-    )
-  }
+  // Page entry is gated by the parent AdminLayout, which checks
+  // `user.list`. We don't add a second `canManageUsers` gate here —
+  // doing so would deny entry to read-only roles like a custom
+  // `tester` whose permissions include user.list but not create or
+  // delete. Mutation affordances inside the page (Add User, Role
+  // dropdown, delete) are individually permission-gated below, so a
+  // list-only caller sees the table without the action buttons.
 
-  if (isLoading || deferringPermissionDecision) {
+  if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Spinner />
@@ -481,8 +447,7 @@ export default function UsersPage() {
           setDeptFilter('ALL')
         }}
         onExportCSV={exportUsersCSV}
-        onAddUser={() => setShowAddUser(true)}
-        onInvite={isOwner ? () => setShowInvite(true) : undefined}
+        onAddUser={canCreateUser ? () => setShowAddUser(true) : undefined}
         onBulkImport={isOwner ? () => setShowBulkImport(true) : undefined}
         addLabel={isOwner ? 'Add user' : 'Add member'}
       />
@@ -499,24 +464,14 @@ export default function UsersPage() {
           description={
             canClear
               ? 'Try clearing filters or switching scope.'
-              : `Invite teammates by email, or create them directly from here.`
+              : 'Add teammates so they can sign in and start working.'
           }
           action={
             !canClear ? (
-              <div className="flex gap-2">
-                <Button onClick={() => setShowAddUser(true)}>
-                  <UserPlus className="h-3.5 w-3.5" />
-                  {isOwner ? 'Add user' : 'Add member'}
-                </Button>
-                {isOwner && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowInvite(true)}
-                  >
-                    Send invite
-                  </Button>
-                )}
-              </div>
+              <Button onClick={() => setShowAddUser(true)}>
+                <UserPlus className="h-3.5 w-3.5" />
+                {isOwner ? 'Add user' : 'Add member'}
+              </Button>
             ) : (
               <Button
                 variant="secondary"
@@ -627,7 +582,10 @@ export default function UsersPage() {
                           role={u.systemRole}
                           onChange={(r) => handleRoleChange(u.userId, r)}
                           disabled={
-                            !isOwner ||
+                            // canManageAdmins is permission-driven (`user.role.manage`).
+                            // Backend agrees — UpdateUserRoleUseCase gates on the same
+                            // permission. The OWNER role itself stays immutable.
+                            !systemPerms.canManageAdmins ||
                             (u.systemRole || '').toUpperCase() === 'OWNER'
                           }
                           roles={assignableRoles}
@@ -752,78 +710,6 @@ export default function UsersPage() {
               loading={createUserMutation.isPending}
             >
               {createUserMutation.isPending ? 'Creating...' : 'Create user'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Invite by email Modal */}
-      <Modal
-        isOpen={showInvite}
-        onClose={() => {
-          setShowInvite(false)
-          setInviteError('')
-        }}
-        title="Invite teammate by email"
-      >
-        <div className="space-y-4">
-          {inviteError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{inviteError}</AlertDescription>
-            </Alert>
-          )}
-          <p className="text-sm text-muted-foreground">
-            They&apos;ll get an email link to choose their own password. They
-            fill in their own department and other profile details after
-            joining.
-          </p>
-          <Input
-            label="Email"
-            type="email"
-            placeholder="user@example.com"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            autoComplete="off"
-          />
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-foreground">
-              Role
-            </label>
-            <Select
-              value={inviteRole}
-              onChange={setInviteRole}
-              // The invite API expects lowercase role_ids. Built-in
-              // ADMIN/MEMBER always appear; any custom scope="system"
-              // role defined in /settings/roles shows up too. Non-owners
-              // can't invite anyone into a privileged role.
-              options={(isOwner
-                ? assignableRoles
-                : assignableRoles.filter(
-                    (r) => !privilegedRoleIds.has(r.roleId.toLowerCase()),
-                  )
-              ).map((r) => ({
-                value: r.roleId.toLowerCase(),
-                label: r.name,
-              }))}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowInvite(false)
-                setInviteError('')
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSendInvite}
-              loading={inviteSending}
-            >
-              {inviteSending ? 'Sending...' : 'Send invite'}
             </Button>
           </div>
         </div>

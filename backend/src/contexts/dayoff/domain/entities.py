@@ -14,6 +14,10 @@ class DayOffRequest(BaseModel):
     start_date: str
     end_date: str
     reason: str
+    # Leave-type id from OrgSettings.leave_types. Optional only because
+    # records created before quota tracking shipped have no value here;
+    # new requests always set it (validated server-side).
+    leave_type_id: Optional[str] = None
     status: str = "PENDING"
     team_lead_id: Optional[str] = None
     team_lead_name: Optional[str] = None
@@ -39,6 +43,7 @@ class DayOffRequest(BaseModel):
         reason: str,
         admin_id: str,
         admin_name: Optional[str],
+        leave_type_id: Optional[str] = None,
         team_lead_id: Optional[str] = None,
         team_lead_name: Optional[str] = None,
     ) -> DayOffRequest:
@@ -52,6 +57,7 @@ class DayOffRequest(BaseModel):
             start_date=start_date,
             end_date=end_date,
             reason=reason,
+            leave_type_id=leave_type_id,
             admin_id=admin_id,
             admin_name=admin_name,
             team_lead_id=team_lead_id,
@@ -79,6 +85,7 @@ class DayOffRequest(BaseModel):
             "start_date": self.start_date,
             "end_date": self.end_date,
             "reason": self.reason,
+            "leave_type_id": self.leave_type_id,
             "status": self.status,
             "team_lead_id": self.team_lead_id,
             "team_lead_name": self.team_lead_name,

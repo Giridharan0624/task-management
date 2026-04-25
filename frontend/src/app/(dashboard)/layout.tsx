@@ -110,7 +110,12 @@ const navBase: NavItem[] = [
   // toggle (an OWNER can disable Daily Updates for the whole tenant).
   { nameKey: 'nav.task_updates', name: 'Daily Updates', href: '/task-updates', icon: FileText, feature: 'task_updates', requiredPermission: 'taskupdate.list.all' },
   { nameKey: 'user.team', name: 'Users', href: '/admin/users', icon: Users, requiredPermission: 'user.list' },
-  { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare, requiredPermission: 'project.list' },
+  // Projects has no permission gate — every authenticated user has a
+  // /projects page (regular MEMBERs see only the projects they're a
+  // member of; OWNER/ADMIN see all). The backend `project.list.all`
+  // permission only governs whether the listing is org-wide or scoped
+  // to the caller's memberships, not whether the page is accessible.
+  { nameKey: 'nav.projects', name: 'Projects', href: '/projects', icon: KanbanSquare },
   { nameKey: 'nav.reports', name: 'Reports', href: '/reports', icon: BarChart3, requiredPermission: 'user.progress.view' },
   { nameKey: 'nav.attendance', name: 'Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
   { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },

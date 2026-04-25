@@ -74,6 +74,25 @@ export interface WeeklyRollupNarrative {
   concerns: string[]
 }
 
+/** A deterministically-detected anomaly from the week. Computed by the
+ *  backend (not the AI), so the figures and triggers are reliable. The
+ *  AI is allowed — and encouraged — to paraphrase these in concerns. */
+export interface WeeklyRollupAnomaly {
+  kind:
+    | 'zero_activity'
+    | 'solo_load'
+    | 'overtime_day'
+    | 'low_focus'
+    | 'mass_missing_day'
+    | 'task_mono_focus'
+    | string
+  severity: 'info' | 'warn' | 'alert'
+  title: string
+  detail: string
+  /** Optional — present when the anomaly targets one specific member. */
+  subject?: string
+}
+
 export interface WeeklyRollup {
   weekStart: string
   weekEnd: string
@@ -103,14 +122,27 @@ export interface WeeklyRollup {
   attendanceByContributor: WeeklyRollupAttendanceContributor[]
   activityTopApps: WeeklyRollupApp[]
   dayoffsRequests: WeeklyRollupDayOff[]
+  /** Deterministic anomalies detected for this week. Empty when clean. */
+  anomalies: WeeklyRollupAnomaly[]
   narrative: WeeklyRollupNarrative
   generatedAt: string
 }
 
 /** Fetches the owner/admin weekly rollup. `weekStart` is an optional
  *  YYYY-MM-DD — any date inside the target week works; the backend
- *  snaps it to the Monday of that week before aggregating. */
-export function getWeeklyRollup(weekStart?: string): Promise<WeeklyRollup> {
-  const query = weekStart ? `?week_start=${encodeURIComponent(weekStart)}` : ''
+ *  snaps it to the Monday of that week before aggregating.
+ *
+ *  `regenerate=true` bypasses the server-side cache and forces a fresh
+ *  Groq generation, then overwrites the cached row. Only the explicit
+ *  "Regenerate" button passes this flag — every other access reads the
+ *  cached payload to keep AI token costs predictable. */
+export function getWeeklyRollup(
+  weekStart?: string,
+  regenerate = false,
+): Promise<WeeklyRollup> {
+  const params = new URLSearchParams()
+  if (weekStart) params.set('week_start', weekStart)
+  if (regenerate) params.set('regenerate', 'true')
+  const query = params.toString() ? `?${params.toString()}` : ''
   return apiClient.get<WeeklyRollup>(`/task-updates/weekly-rollup${query}`)
 }

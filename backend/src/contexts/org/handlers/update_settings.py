@@ -12,6 +12,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from contexts.dayoff.infrastructure.dynamo_repository import DayOffDynamoRepository
 from contexts.org.domain import permissions as P
 from contexts.org.domain.entities import OrgSettings
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
@@ -65,6 +66,14 @@ def handler(event, context):
         updates = req.model_dump(exclude_unset=True)
         _validate_updates(updates)
 
+        # Block destructive leave_types edits — if any leave_type id present in
+        # historical day-offs is being removed, refuse so we don't orphan
+        # records and break the balance widget. This is a conservative check;
+        # the owner can still rename a *label* (the `name` field) freely as
+        # long as the `id` stays the same.
+        if "leave_types" in updates:
+            _guard_leave_type_removal(current.leave_types or [], updates["leave_types"] or [])
+
         merged = current.model_copy(update=updates)
         merged.updated_at = datetime.now(timezone.utc).isoformat()
 
@@ -117,6 +126,36 @@ def _validate_hex_color(value: str, field: str) -> None:
         int(value[1:], 16)
     except ValueError:
         raise ValidationError(f"{field} must be a hex color like #4F46E5.")
+
+
+def _guard_leave_type_removal(before: list[dict], after: list[dict]) -> None:
+    """Block edits that drop a leave_type id with live day-off records.
+
+    Renaming the `name` of a type is fine; renaming/deleting the `id` is
+    what breaks historical references. We scan *all* (not just APPROVED)
+    day-offs because PENDING records also point to the id.
+    """
+    before_ids = {(lt or {}).get("id") for lt in before if (lt or {}).get("id")}
+    after_ids = {(lt or {}).get("id") for lt in after if (lt or {}).get("id")}
+    removed = before_ids - after_ids
+    if not removed:
+        return
+
+    # Only run the (potentially expensive) scan when something was removed.
+    repo = DayOffDynamoRepository()
+    in_use = set()
+    for r in repo.find_all():
+        if r.leave_type_id in removed:
+            in_use.add(r.leave_type_id)
+            if in_use == removed:
+                break
+
+    if in_use:
+        raise ValidationError(
+            "Cannot remove leave types that have existing day-off requests: "
+            + ", ".join(sorted(in_use))
+            + ". Rename the label instead, or wait until those requests roll off."
+        )
 
 
 def _validate_time_str(value: str, field: str) -> None:

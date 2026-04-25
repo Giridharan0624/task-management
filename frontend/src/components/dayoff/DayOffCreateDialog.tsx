@@ -13,15 +13,23 @@ import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { TimePicker } from '@/components/ui/TimePicker'
+import { Select } from '@/components/ui/Select'
+import { DEFAULT_LEAVE_TYPES } from '@/components/settings/LeaveTypesPanel'
 import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
 import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
 import { useTenant } from '@/lib/tenant/TenantProvider'
+import { useDayOffBalance } from '@/lib/hooks/useDayOffs'
 import { cn } from '@/lib/utils'
 
 interface DayOffCreateDialogProps {
   open: boolean
   onClose: () => void
-  onCreate: (data: { startDate: string; endDate: string; reason: string }) => void
+  onCreate: (data: {
+    startDate: string
+    endDate: string
+    reason: string
+    leaveTypeId: string
+  }) => void
   isPending: boolean
 }
 
@@ -79,6 +87,7 @@ export function DayOffCreateDialog({
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
+  const [leaveTypeId, setLeaveTypeId] = useState('')
 
   // Day-off policy follows the tenant's working timezone, not the user's
   // browser. Prevents an ADMIN in New York silently bypassing an IST-based
@@ -86,6 +95,31 @@ export function DayOffCreateDialog({
   const { current } = useTenant()
   const tenantTimezone = current?.settings?.timezone
   const minDate = earliestAllowedDate(tenantTimezone)
+
+  // Leave types come from org settings; balance from the new endpoint.
+  // Both are needed so the dialog can show "remaining: X / Y" beside the
+  // selected type and pre-empt over-quota submissions.
+  // Fallback: if the workspace has no leave types saved (e.g. an early
+  // org created before defaults existed, or one that wiped them), use
+  // the same defaults the settings panel offers via "Restore defaults".
+  // Members can still file requests; the OWNER can replace them later.
+  const configuredLeaveTypes = current?.settings?.leaveTypes ?? []
+  const leaveTypes =
+    configuredLeaveTypes.length > 0
+      ? configuredLeaveTypes
+      : DEFAULT_LEAVE_TYPES
+  const usingDefaults = configuredLeaveTypes.length === 0
+  const { data: balance } = useDayOffBalance()
+  useEffect(() => {
+    // Default-select the first leave type once they load (or when the
+    // dialog re-opens fresh). Avoid stomping on a manual selection.
+    if (open && !leaveTypeId && leaveTypes.length > 0) {
+      setLeaveTypeId(leaveTypes[0].id)
+    }
+  }, [open, leaveTypes, leaveTypeId])
+  const selectedBalance = balance?.balances.find(
+    (b) => b.leaveTypeId === leaveTypeId
+  )
 
   // Preserve the reason across accidental dialog closes / navigations.
   const reasonDraft = useAutosaveDraft('dayoff:reason', reason, {
@@ -99,6 +133,7 @@ export function DayOffCreateDialog({
 
   const canSubmit =
     reason.trim().length > 0 &&
+    !!leaveTypeId &&
     ((mode === 'single' && !!singleDate) ||
       (mode === 'multiple' && !!startDate && !!endDate))
 
@@ -109,9 +144,14 @@ export function DayOffCreateDialog({
     if (mode === 'single') {
       const start = startTime ? `${singleDate}T${startTime}` : singleDate
       const end = endTime ? `${singleDate}T${endTime}` : singleDate
-      onCreate({ startDate: start, endDate: end, reason: reason.trim() })
+      onCreate({
+        startDate: start,
+        endDate: end,
+        reason: reason.trim(),
+        leaveTypeId,
+      })
     } else {
-      onCreate({ startDate, endDate, reason: reason.trim() })
+      onCreate({ startDate, endDate, reason: reason.trim(), leaveTypeId })
     }
     reasonDraft.clear()
   }
@@ -124,6 +164,7 @@ export function DayOffCreateDialog({
     setStartDate('')
     setEndDate('')
     setReason('')
+    setLeaveTypeId('')
   }
 
   const handleClose = () => {
@@ -153,6 +194,36 @@ export function DayOffCreateDialog({
               entityLabel="day-off reason"
             />
           )}
+
+          {/* Leave type */}
+          <div>
+            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Leave type
+            </label>
+            <Select
+              value={leaveTypeId}
+              onChange={setLeaveTypeId}
+              options={leaveTypes.map((lt) => ({
+                value: lt.id,
+                label: lt.name || lt.id,
+              }))}
+              placeholder="Pick a leave type"
+            />
+            {selectedBalance && selectedBalance.quota > 0 && (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                {selectedBalance.remaining} of {selectedBalance.quota} day
+                {selectedBalance.quota !== 1 ? 's' : ''} remaining this year
+                {selectedBalance.pending > 0 &&
+                  ` (${selectedBalance.pending} pending)`}
+              </p>
+            )}
+            {usingDefaults && (
+              <p className="mt-1.5 text-[11px] text-muted-foreground/80">
+                Using standard leave types — your workspace owner can
+                customise these under Settings → Organization → Leave types.
+              </p>
+            )}
+          </div>
 
           {/* Duration type */}
           <div>

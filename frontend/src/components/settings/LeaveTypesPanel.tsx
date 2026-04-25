@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -11,6 +11,17 @@ export interface LeaveType {
   name: string
   annualQuota: number
 }
+
+/** Mirrors the seeded defaults on the backend's `OrgSettings` entity
+ *  (backend/src/contexts/org/domain/entities.py). Kept here so the
+ *  empty-state "Restore defaults" button can re-seed without an API
+ *  round-trip, and so DayOffCreateDialog can fall back to them when
+ *  the org's saved list is empty. */
+export const DEFAULT_LEAVE_TYPES: LeaveType[] = [
+  { id: 'casual', name: 'Casual', annualQuota: 12 },
+  { id: 'sick', name: 'Sick', annualQuota: 10 },
+  { id: 'earned', name: 'Earned', annualQuota: 15 },
+]
 
 interface LeaveTypesPanelProps {
   value: LeaveType[]
@@ -59,7 +70,19 @@ export function LeaveTypesPanel({ value, onChange }: LeaveTypesPanelProps) {
       {value.length === 0 ? (
         <EmptyState
           title="No leave types"
-          description="Add at least one leave type so members can submit day-off requests."
+          description="Add at least one leave type so members can submit day-off requests. You can restore the standard set with one click."
+          action={
+            <div className="flex items-center justify-center gap-2">
+              <Button onClick={() => onChange(DEFAULT_LEAVE_TYPES)}>
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                Restore defaults
+              </Button>
+              <Button variant="secondary" onClick={addRow}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Add custom
+              </Button>
+            </div>
+          }
         />
       ) : (
         <Card className="overflow-hidden p-0">

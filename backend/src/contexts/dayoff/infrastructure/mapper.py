@@ -27,6 +27,8 @@ class DayOffMapper:
 
         if request.employee_id:
             item["employee_id"] = request.employee_id
+        if request.leave_type_id:
+            item["leave_type_id"] = request.leave_type_id
         if request.team_lead_id:
             item["team_lead_id"] = request.team_lead_id
             item["GSI2PK"] = tenant_keys.dayoff_lead_gsi2pk(org_id, request.team_lead_id)
@@ -54,6 +56,7 @@ class DayOffMapper:
             start_date=item["start_date"],
             end_date=item["end_date"],
             reason=item["reason"],
+            leave_type_id=item.get("leave_type_id"),
             status=item.get("status", "PENDING"),
             team_lead_id=item.get("team_lead_id"),
             team_lead_name=item.get("team_lead_name"),

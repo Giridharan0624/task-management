@@ -1,7 +1,12 @@
 import { apiClient } from './client'
-import type { DayOffRequest } from '@/types/dayoff'
+import type { DayOffBalance, DayOffRequest } from '@/types/dayoff'
 
-export function createDayOff(data: { startDate: string; endDate: string; reason: string }): Promise<DayOffRequest> {
+export function createDayOff(data: {
+  startDate: string
+  endDate: string
+  reason: string
+  leaveTypeId: string
+}): Promise<DayOffRequest> {
   return apiClient.post<DayOffRequest>('/day-offs', data)
 }
 
@@ -15,6 +20,14 @@ export function getPendingDayOffs(): Promise<DayOffRequest[]> {
 
 export function getAllDayOffs(): Promise<DayOffRequest[]> {
   return apiClient.get<DayOffRequest[]>('/day-offs/all')
+}
+
+export function getDayOffBalance(year?: number): Promise<DayOffBalance> {
+  // Collapsed onto /day-offs/my via ?view=balance to stay under the
+  // backend stack's CFN resource cap. The Lambda dispatches on the
+  // query param.
+  const yearQs = year ? `&year=${year}` : ''
+  return apiClient.get<DayOffBalance>(`/day-offs/my?view=balance${yearQs}`)
 }
 
 export function approveDayOff(requestId: string): Promise<DayOffRequest> {

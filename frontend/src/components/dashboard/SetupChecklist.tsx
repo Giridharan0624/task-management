@@ -7,7 +7,6 @@ import {
   Circle,
   UserPlus,
   FolderPlus,
-  Download,
   Palette,
   X,
   ArrowRight,
@@ -26,7 +25,6 @@ import { cn } from '@/lib/utils'
 // "marked done" ticks per-browser. They live on the org now so the OWNER
 // sees the same state across devices and after clearing site data.
 const FLAG_DISMISSED = 'onboarding_checklist_dismissed'
-const FLAG_DESKTOP = 'onboarding_desktop_installed'
 const FLAG_BRANDING = 'onboarding_branding_done'
 
 // Brand defaults we ship with — MUST match the backend OrgSettings seed
@@ -46,11 +44,11 @@ interface Step {
 }
 
 /**
- * First-run onboarding for a new workspace. Four concrete steps an OWNER
- * should do before the app feels "set up": invite teammates, create a
- * project, install the desktop companion, and customize branding.
+ * First-run onboarding for a new workspace. Three concrete steps an
+ * OWNER should do before the app feels "set up": invite teammates,
+ * create a project, and customize branding.
  *
- * Hides itself when all four are done OR when the user dismisses it.
+ * Hides itself when all steps are done OR when the user dismisses it.
  * State is read from `current.settings.features` (server-persisted) so
  * the UI stays consistent across browsers and devices.
  */
@@ -63,7 +61,6 @@ export function SetupChecklist() {
   const features = settings?.features ?? {}
 
   const dismissed = features[FLAG_DISMISSED] === true
-  const desktopMarkedDone = features[FLAG_DESKTOP] === true
   const brandingMarkedDone = features[FLAG_BRANDING] === true
 
   // Pending state per-flag so a slow network doesn't lock the whole card.
@@ -134,24 +131,6 @@ export function SetupChecklist() {
             Create project
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
-        </Button>
-      ),
-    },
-    {
-      key: 'desktop',
-      title: 'Install the desktop app',
-      description:
-        'Runs your timer, tracks activity, and captures daily summaries.',
-      done: desktopMarkedDone,
-      icon: Download,
-      action: (
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={pending === FLAG_DESKTOP}
-          onClick={() => setFlag(FLAG_DESKTOP, true)}
-        >
-          I installed it
         </Button>
       ),
     },

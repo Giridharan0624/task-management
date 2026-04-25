@@ -252,6 +252,17 @@ def audit_pk(org_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Weekly rollup cache (one row per org per week)
+# ---------------------------------------------------------------------------
+
+def weekly_rollup_sk(week_start: str) -> str:
+    """SK for a cached weekly rollup. Lives on `org_pk(org_id)` so
+    one Query lists every cached week for a tenant. `week_start` is
+    the ISO Monday date (YYYY-MM-DD)."""
+    return f"WEEKLY_ROLLUP#{week_start}"
+
+
+# ---------------------------------------------------------------------------
 # Webhook registrations (per-org, session 5)
 # ---------------------------------------------------------------------------
 

@@ -63,8 +63,14 @@ class UpdateUserRoleUseCase:
         self._org_id = org_id
 
     def execute(self, dto: dict, caller_user_id: str, caller_system_role: str) -> dict:
-        if (caller_system_role or "").upper() != SystemRole.OWNER.value:
-            raise AuthorizationError("Only the Owner can change user roles.")
+        # Caller must hold `user.role.manage`. By default this resolves
+        # to OWNER only (matching the pre-Session-8 behavior), but a
+        # tenant-defined custom role that grants USER_ROLE_MANAGE can
+        # change roles too — that's the whole point of the live
+        # permission model. The OWNER role itself remains immutable
+        # via the explicit reject below.
+        if not role_has(caller_system_role, P.USER_ROLE_MANAGE):
+            raise AuthorizationError("You don't have permission to change user roles.")
 
         target_user_id = dto["user_id"]
         new_role_raw = (dto.get("system_role") or "").strip()
@@ -402,9 +408,17 @@ class CreateUserUseCase:
 
 class DeleteUserUseCase:
     """
-    OWNER can delete anyone except self.
-    ADMIN can delete MEMBER only.
-    Cannot delete Owner.
+    Caller authorization is permission-driven (`user.delete`):
+      - OWNER (or any role granting `user.role.manage`) can delete
+        anyone except OWNER and self.
+      - Other privileged callers can only delete non-privileged users
+        — prevents lateral deletion of fellow admins or custom
+        admin-tier roles via this use case.
+      - Members and unprivileged custom roles get rejected.
+
+    Session 8 replaced the literal SystemRole enum check with a
+    permission-driven gate so tenant-defined roles that grant
+    `user.delete` actually work end-to-end.
     """
     def __init__(self, user_repo: IUserRepository, cognito_service: IIdentityService, project_repo: IProjectRepository):
         self._user_repo = user_repo
@@ -421,16 +435,26 @@ class DeleteUserUseCase:
         if not target_user:
             raise NotFoundError(f"User {target_user_id} not found")
 
-        if target_user.system_role == SystemRole.OWNER:
+        if (target_user.system_role or "").upper() == SystemRole.OWNER.value:
             raise AuthorizationError("The Owner account cannot be deleted.")
 
-        if caller_system_role == SystemRole.OWNER.value:
-            pass  # OWNER can delete anyone
-        elif caller_system_role == SystemRole.ADMIN.value:
-            if target_user.system_role != SystemRole.MEMBER:
-                raise AuthorizationError("You can only delete Member accounts.")
-        else:
+        if not role_has(caller_system_role, P.USER_DELETE):
             raise AuthorizationError("You don't have permission to delete user accounts.")
+
+        # OWNER (and any role with USER_ROLE_MANAGE — i.e. role-admins)
+        # can delete anyone. Other privileged callers (built-in ADMIN
+        # or custom roles granting USER_DELETE but NOT USER_ROLE_MANAGE)
+        # can only delete non-privileged users — prevents an ADMIN from
+        # quietly removing another ADMIN.
+        caller_is_role_admin = role_has(caller_system_role, P.USER_ROLE_MANAGE)
+        if not caller_is_role_admin:
+            target_is_privileged = role_has(target_user.system_role, P.USER_DELETE) or role_has(
+                target_user.system_role, P.USER_ROLE_MANAGE
+            )
+            if target_is_privileged:
+                raise AuthorizationError(
+                    "You can only delete users with non-privileged roles."
+                )
 
         # Delete from Cognito
         self._cognito.delete_user(target_user.email)

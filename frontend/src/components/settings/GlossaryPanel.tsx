@@ -15,6 +15,36 @@ interface GlossaryPanelProps {
   onChange: (next: Record<string, string>) => void
 }
 
+/**
+ * English-pluralisation heuristic. Handles the three regular patterns
+ * that cover almost every workspace noun ("Task" → "Tasks", "Box" →
+ * "Boxes", "City" → "Cities"). Preserves the casing of the trailing
+ * letter so "TASK" pluralises to "TASKS" and "task" to "tasks".
+ *
+ * Skipped on purpose: irregular English plurals (mouse / mice, person
+ * / people) — the user always retains the option to override the
+ * generated plural by hand.
+ */
+function pluralize(input: string): string {
+  const stem = input.trim()
+  if (!stem) return ''
+
+  const lastChar = stem.slice(-1)
+  const upper =
+    lastChar === lastChar.toUpperCase() && lastChar !== lastChar.toLowerCase()
+  const lower = stem.toLowerCase()
+
+  // Sibilant endings get "es": bus, box, buzz, church, dish.
+  if (/(s|x|z|ch|sh)$/.test(lower)) {
+    return stem + (upper ? 'ES' : 'es')
+  }
+  // Consonant + y → "ies": city → cities. (Vowel + y stays "ys": key → keys.)
+  if (/[^aeiou]y$/.test(lower)) {
+    return stem.slice(0, -1) + (upper ? 'IES' : 'ies')
+  }
+  return stem + (upper ? 'S' : 's')
+}
+
 /** A glossary noun is the user-facing concept ("Tasks", "Projects").
  *  Editing the singular/plural propagates to every derived UI string —
  *  saves admins from hand-editing 6 separate keys to rename one noun. */
@@ -188,8 +218,28 @@ function NounCard({
   const effSingular = singular.trim() || baseSingular
   const effPlural = plural.trim() || basePlural
 
-  const update = (nextSingular: string, nextPlural: string) => {
+  const update = (
+    nextSingular: string,
+    nextPlural: string,
+    /** Which input the user actually edited. When `singular`, we may
+     *  auto-pluralise the plural field below. When `plural`, the user
+     *  is overriding the generated value — never overwrite it. */
+    source: 'singular' | 'plural' = 'plural',
+  ) => {
     const next = { ...value }
+
+    // Auto-pluralise: if the user is typing in the singular field AND
+    // the plural is either empty or still equal to what we'd derive
+    // from the previous singular, derive a fresh plural. Never touch
+    // a hand-typed plural.
+    if (source === 'singular') {
+      const previousAuto = pluralize(singular || baseSingular)
+      const pluralIsAuto =
+        !plural.trim() || plural === previousAuto || plural === basePlural
+      if (pluralIsAuto) {
+        nextPlural = nextSingular.trim() ? pluralize(nextSingular) : ''
+      }
+    }
 
     // Source keys
     if (nextSingular.trim()) next[noun.singularKey] = nextSingular
@@ -265,7 +315,7 @@ function NounCard({
           <Input
             type="text"
             value={singular}
-            onChange={(e) => update(e.target.value, plural)}
+            onChange={(e) => update(e.target.value, plural, 'singular')}
             placeholder={baseSingular}
             className="h-9"
           />
@@ -277,7 +327,7 @@ function NounCard({
           <Input
             type="text"
             value={plural}
-            onChange={(e) => update(singular, e.target.value)}
+            onChange={(e) => update(singular, e.target.value, 'plural')}
             placeholder={basePlural}
             className="h-9"
           />

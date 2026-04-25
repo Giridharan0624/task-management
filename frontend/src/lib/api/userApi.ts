@@ -59,7 +59,11 @@ export function createUser(data: { email: string; name: string; systemRole: stri
 export interface BulkUserRow {
   email: string
   name: string
-  systemRole: 'ADMIN' | 'MEMBER'
+  /** Stored canonical form: uppercase ADMIN/MEMBER for the built-in
+   *  tiers; lowercase role_id for any tenant-defined custom system
+   *  role. The backend validates the value against the org's role
+   *  records — same path as CreateUserUseCase._resolve_target_role. */
+  systemRole: string
   department?: string
   dateOfJoining?: string
 }

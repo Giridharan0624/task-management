@@ -151,6 +151,13 @@ export function useSystemPermission(
   // in-flight state so page gates can defer — otherwise a user whose
   // custom role grants `user.list` would flash "no permission" before
   // the roles fetch resolves (the fallback only knows OWNER/ADMIN).
+  //
+  // canManageAdmins falls through to OWNER-only here because no other
+  // built-in tier grants `user.role.manage`. Custom roles that grant
+  // it pick up access once the roles fetch resolves — the relevant
+  // affordances (role dropdown in /admin/users) handle the brief
+  // "loading" window via their own `isLoading` checks rather than
+  // by being optimistically true here.
   if (!sysPerms) {
     const priv = isPrivilegedFallback(systemRole)
     return {

@@ -6,14 +6,15 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
-  CheckCircle2,
+  GripVertical,
   KanbanSquare,
   Plus,
   Save,
+  Settings2,
   Star,
   Trash2,
-  X,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/Switch'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
@@ -279,10 +280,46 @@ function PipelineEditorModal({
   )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // The technical ID column is hidden by default — most users care
+  // about the label (what shows on the kanban) and the colour. The ID
+  // is auto-derived from the label as the user types (slug → uppercase
+  // with underscores). Power users can flip "Show technical IDs" to
+  // edit them directly when integrating with external systems.
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const update = (i: number, patch: Partial<StatusDraft>) => {
     setStatuses((list) =>
       list.map((s, idx) => (idx === i ? { ...s, ...patch } : s)),
+    )
+  }
+
+  /** Slugify a label into a status ID. "Code Review" → "CODE_REVIEW".
+   *  Strips non-alphanumeric runs into single underscores; trims
+   *  leading/trailing underscores; uppercases. */
+  const labelToId = (label: string): string => {
+    return label
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+  }
+
+  /** Auto-derive the ID from the label, but only when the row's
+   *  current ID looks like one we generated previously (matches the
+   *  slug of the previous label, or matches our auto-prefix). Leaves
+   *  hand-typed IDs alone. */
+  const updateLabel = (i: number, nextLabel: string) => {
+    setStatuses((list) =>
+      list.map((s, idx) => {
+        if (idx !== i) return s
+        const previousAutoId = labelToId(s.label) || s.id
+        const isAutoId =
+          !s.id ||
+          s.id === previousAutoId ||
+          /^STATUS_\d+$/.test(s.id)
+        const nextId = isAutoId ? labelToId(nextLabel) || s.id : s.id
+        return { ...s, label: nextLabel, id: nextId }
+      }),
     )
   }
 
@@ -397,101 +434,161 @@ function PipelineEditorModal({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-foreground/85">
-              Statuses ({statuses.length})
-            </p>
-            <Button variant="secondary" size="sm" onClick={add}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Add status
-            </Button>
+            <div>
+              <p className="text-sm font-semibold text-foreground/85">
+                Columns ({statuses.length})
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                These appear left-to-right on the kanban. The first column
+                is where new tasks land; mark the last as &ldquo;Done&rdquo;.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors',
+                  showAdvanced
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+                title="Show technical IDs used by integrations"
+              >
+                <Settings2 className="h-3 w-3" />
+                {showAdvanced ? 'Hide IDs' : 'Show IDs'}
+              </button>
+              <Button variant="secondary" size="sm" onClick={add}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Add column
+              </Button>
+            </div>
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Order here is the order columns appear in the kanban. First status
-            is the landing column; last is typically the &ldquo;done&rdquo; column.
-          </p>
 
-          <ul className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+          <ul className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto pr-1">
             {statuses.map((s, i) => (
               <li
                 key={i}
-                className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2"
+                className={cn(
+                  'group flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5 transition-colors',
+                  s.isTerminal
+                    ? 'border-emerald-300/60 bg-emerald-500/[0.03]'
+                    : 'border-border hover:border-foreground/20',
+                )}
               >
-                <div className="flex flex-col gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => move(i, -1)}
-                    disabled={i === 0}
-                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                    aria-label="Move up"
-                  >
-                    <ArrowUp className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => move(i, 1)}
-                    disabled={i === statuses.length - 1}
-                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                    aria-label="Move down"
-                  >
-                    <ArrowDown className="h-3 w-3" />
-                  </button>
+                {/* Drag-handle look + functional up/down chevrons. We
+                    don't have a real DnD lib wired here, so the grip
+                    icon is a visual cue for the chevron pair. */}
+                <div className="flex items-center text-muted-foreground/50">
+                  <GripVertical className="h-3.5 w-3.5" />
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => move(i, -1)}
+                      disabled={i === 0}
+                      className="rounded p-0.5 hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+                      aria-label="Move up"
+                    >
+                      <ArrowUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(i, 1)}
+                      disabled={i === statuses.length - 1}
+                      className="rounded p-0.5 hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+                      aria-label="Move down"
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
 
-                <input
-                  type="color"
-                  value={s.color}
-                  onChange={(e) => update(i, { color: e.target.value })}
-                  className="h-8 w-8 shrink-0 cursor-pointer rounded border border-border bg-transparent"
-                  aria-label="Status color"
-                />
+                {/* Color swatch — native color picker behind a styled
+                    swatch. Click anywhere on the coloured square to pick. */}
+                <label
+                  className="relative h-8 w-8 shrink-0 cursor-pointer rounded-md ring-1 ring-inset ring-border/60 transition-shadow hover:ring-foreground/30"
+                  style={{ background: s.color }}
+                  title="Click to change colour"
+                >
+                  <input
+                    type="color"
+                    value={s.color}
+                    onChange={(e) => update(i, { color: e.target.value })}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-label="Column colour"
+                  />
+                </label>
 
-                <div className="min-w-0 flex-1 grid grid-cols-2 gap-2">
+                {/* Label is the dominant input. ID input only renders
+                    when "Show IDs" is on; otherwise the ID is auto-
+                    derived from the label as the user types. */}
+                <div className="min-w-0 flex-1">
                   <Input
                     type="text"
                     value={s.label}
-                    onChange={(e) => update(i, { label: e.target.value })}
-                    placeholder="Label"
+                    onChange={(e) => updateLabel(i, e.target.value)}
+                    placeholder="Column name (e.g. To do)"
                     className={cn(
-                      'h-8',
+                      'h-9',
                       s.isTerminal && 'font-semibold',
                     )}
                   />
-                  <Input
-                    type="text"
-                    value={s.id}
-                    onChange={(e) =>
-                      update(i, {
-                        id: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'),
-                      })
-                    }
-                    placeholder="ID"
-                    className="h-8 font-mono text-xs"
-                  />
+                  {showAdvanced && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                        ID
+                      </span>
+                      <Input
+                        type="text"
+                        value={s.id}
+                        onChange={(e) =>
+                          update(i, {
+                            id: e.target.value
+                              .toUpperCase()
+                              .replace(/[^A-Z0-9_]/g, '_'),
+                          })
+                        }
+                        placeholder="AUTO_FROM_NAME"
+                        className="h-7 flex-1 font-mono text-[11px]"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => update(i, { isTerminal: !s.isTerminal })}
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold transition-colors',
-                    s.isTerminal
-                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/70',
-                  )}
-                  title="Mark as terminal (done-equivalent)"
+                {/* Done-state toggle — explicit Switch + label leaves
+                    no doubt what it does. Hover help still mentions
+                    the technical term "terminal". */}
+                <label
+                  className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground"
+                  title="When ON, tasks in this column are considered complete (terminal status)"
                 >
-                  <CheckCircle2 className="h-3 w-3" />
-                  Terminal
-                </button>
+                  <Switch
+                    checked={s.isTerminal}
+                    onCheckedChange={(v: boolean) =>
+                      update(i, { isTerminal: v })
+                    }
+                    aria-label="Mark as Done state"
+                  />
+                  <span
+                    className={cn(
+                      'transition-colors',
+                      s.isTerminal &&
+                        'font-semibold text-emerald-700 dark:text-emerald-400',
+                    )}
+                  >
+                    Done
+                  </span>
+                </label>
 
                 <button
                   type="button"
                   onClick={() => remove(i)}
                   disabled={statuses.length <= 1}
-                  className="text-muted-foreground hover:text-destructive disabled:opacity-30"
-                  aria-label="Remove status"
+                  className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                  aria-label="Remove column"
+                  title="Remove column"
                 >
-                  <X className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </li>
             ))}

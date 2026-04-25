@@ -9,6 +9,9 @@ export interface DayOffRequest {
   startDate: string
   endDate: string
   reason: string
+  /** Org-configured leave-type id (e.g. "casual", "sick"). Optional only
+   *  for legacy records created before quota tracking shipped. */
+  leaveTypeId?: string
   status: DayOffStatus
   teamLeadId?: string
   teamLeadName?: string
@@ -21,4 +24,18 @@ export interface DayOffRequest {
   forwardedBy?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface DayOffBalanceEntry {
+  leaveTypeId: string
+  name: string
+  quota: number
+  used: number
+  pending: number
+  remaining: number
+}
+
+export interface DayOffBalance {
+  year: number
+  balances: DayOffBalanceEntry[]
 }

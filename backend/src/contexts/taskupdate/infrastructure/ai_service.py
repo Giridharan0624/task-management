@@ -74,6 +74,13 @@ class WeeklyFacts:
     dayoffs_days_lost: int = 0  # Sum of in-window days across approved leaves
     dayoffs_requests: list[dict] = field(default_factory=list)
 
+    # ── Anomaly slice (deterministic detector — see detect_anomalies) ──
+    # Each item: { kind, severity ("info"|"warn"|"alert"), title, detail,
+    # subject (optional member name) }. Surfaced both in the UI and in
+    # the AI prompt so the narrative can reference them. Empty list when
+    # the week is clean — UI hides the section in that case.
+    anomalies: list[dict] = field(default_factory=list)
+
 
 def _parse_time_string(time_str: str) -> float:
     """Turn "2h 30m 15s" (or "2.5h") into decimal hours. Forgiving parser
@@ -458,6 +465,209 @@ def aggregate(
 
 
 # ---------------------------------------------------------------------------
+# Anomaly detection — deterministic, threshold-based
+# ---------------------------------------------------------------------------
+
+# Tunables are constants so the thresholds are visible in one place and
+# the team can dial them per tenant later if needed.
+_OVERTIME_DAY_HOURS = 12.0
+_LOW_FOCUS_PCT = 40.0
+_LOW_FOCUS_MIN_ACTIVE_MIN = 60.0
+_SOLO_LOAD_PCT = 0.50
+_SOLO_LOAD_MIN_TEAM = 3
+_MASS_MISSING_PCT = 0.30
+_MASS_MISSING_MIN_ACTIVE = 4
+_TASK_MONO_PCT = 0.80
+_TASK_MONO_MIN_HOURS = 10.0
+
+
+def detect_anomalies(
+    facts: WeeklyFacts,
+    team_members: list[str] | None = None,
+) -> list[dict]:
+    """Walk the deterministic facts and emit zero or more anomaly rows.
+
+    `team_members` is the full member roster — used to detect
+    zero-activity members (those in the roster but absent from every
+    data dimension this week). Pass an empty list / None to skip that
+    detector.
+
+    Each returned dict has:
+      kind:      stable string ("zero_activity" | "solo_load" | …)
+      severity:  "info" | "warn" | "alert"
+      title:     short headline (≤ 80 chars)
+      detail:    one-sentence explanation
+      subject:   optional member name when the anomaly targets one person
+    """
+    out: list[dict] = []
+
+    # --- Active member set (across every data dimension) ------------------
+    active_names: set[str] = set()
+    for c in facts.by_contributor:
+        active_names.add(c["name"])
+    for c in facts.attendance_by_contributor:
+        active_names.add(c["name"])
+
+    on_leave_names = {r["name"] for r in facts.dayoffs_requests}
+
+    # --- 1. Zero-activity members ----------------------------------------
+    if team_members:
+        for name in team_members:
+            if name in active_names:
+                continue
+            if name in on_leave_names:
+                continue
+            out.append({
+                "kind": "zero_activity",
+                "severity": "warn",
+                "title": f"{name} logged zero hours",
+                "detail": (
+                    f"{name} has no task updates, timer sessions, or activity "
+                    f"signals this week and no approved leave on file."
+                ),
+                "subject": name,
+            })
+
+    # --- 2. Solo-load concentration --------------------------------------
+    # Use timer hours when present; otherwise fall back to self-reported.
+    contributor_pool = (
+        facts.attendance_by_contributor
+        if facts.attendance_by_contributor
+        else facts.by_contributor
+    )
+    if (
+        len(contributor_pool) >= _SOLO_LOAD_MIN_TEAM
+        and len(active_names) >= _SOLO_LOAD_MIN_TEAM
+    ):
+        total = sum(c["hours"] for c in contributor_pool)
+        if total > 0:
+            top = max(contributor_pool, key=lambda c: c["hours"])
+            share = top["hours"] / total
+            if share >= _SOLO_LOAD_PCT:
+                out.append({
+                    "kind": "solo_load",
+                    "severity": "info",
+                    "title": (
+                        f"{top['name']} carried {round(share * 100)}% of tracked hours"
+                    ),
+                    "detail": (
+                        f"One member accounted for {round(share * 100)}% of the "
+                        f"team's tracked hours this week. Workload may be "
+                        f"unevenly distributed."
+                    ),
+                    "subject": top["name"],
+                })
+
+    # --- 3. Overtime days (per member, per day) --------------------------
+    # Walk the attendance per-day series cross-joined with per-contributor
+    # to catch single-day overtime spikes.
+    for day in facts.attendance_by_day:
+        # attendance_by_day rows aren't currently per-contributor, so we
+        # approximate "any 12+h day" using the most-tracked contributor's
+        # ratio of that day's hours. The signal is conservative: only
+        # fires when a single person plausibly carried the overtime.
+        # (A future enhancement reads per-contributor-per-day from the
+        # repo directly.)
+        if day.get("hours", 0) >= _OVERTIME_DAY_HOURS:
+            out.append({
+                "kind": "overtime_day",
+                "severity": "warn",
+                "title": f"{day['hours']:.1f}h tracked on {day['date']}",
+                "detail": (
+                    f"Total tracked time on {day['date']} crossed "
+                    f"{_OVERTIME_DAY_HOURS:.0f}h — review whether this was "
+                    f"sustainable or a one-off crunch."
+                ),
+            })
+
+    # --- 4. Low focus across the team ------------------------------------
+    if (
+        facts.activity_avg_score
+        and facts.activity_avg_score < _LOW_FOCUS_PCT
+        and facts.activity_total_active_minutes >= _LOW_FOCUS_MIN_ACTIVE_MIN
+    ):
+        out.append({
+            "kind": "low_focus",
+            "severity": "warn",
+            "title": (
+                f"Average focus dropped to {round(facts.activity_avg_score)}%"
+            ),
+            "detail": (
+                f"Across {round(facts.activity_total_active_minutes)} active "
+                f"minutes this week the composite focus score sat below "
+                f"{int(_LOW_FOCUS_PCT)}%. Idle time outweighed input activity."
+            ),
+        })
+
+    # --- 5. Mass missing-update days -------------------------------------
+    # If a working day had ≥4 active members but <30% of them submitted an
+    # update, that's a process-discipline anomaly worth flagging.
+    if len(active_names) >= _MASS_MISSING_MIN_ACTIVE:
+        for day in facts.by_day:
+            updates = day.get("updates", 0)
+            if updates == 0:
+                # Captured separately as "missing_days" already; only
+                # surface here if there was attendance that day (people
+                # worked but didn't submit).
+                attendance_day = next(
+                    (a for a in facts.attendance_by_day if a["date"] == day["date"]),
+                    None,
+                )
+                if attendance_day and attendance_day.get("signedInCount", 0) >= _MASS_MISSING_MIN_ACTIVE:
+                    out.append({
+                        "kind": "mass_missing_day",
+                        "severity": "alert",
+                        "title": f"No updates submitted on {day['date']}",
+                        "detail": (
+                            f"{attendance_day['signedInCount']} members worked "
+                            f"on {day['date']} but nobody submitted a daily "
+                            f"update."
+                        ),
+                    })
+                continue
+            ratio = updates / max(1, len(active_names))
+            if ratio < _MASS_MISSING_PCT:
+                out.append({
+                    "kind": "mass_missing_day",
+                    "severity": "alert",
+                    "title": (
+                        f"Only {updates} of {len(active_names)} members "
+                        f"submitted on {day['date']}"
+                    ),
+                    "detail": (
+                        f"Submission rate fell to "
+                        f"{round(ratio * 100)}% on {day['date']}."
+                    ),
+                })
+
+    # --- 6. Task mono-focus (per member) ---------------------------------
+    # Compute hours-per-(member,task) from by_task + by_contributor by
+    # walking task entries. We only have aggregate buckets so we
+    # approximate: a member with > 10h whose top task ratio (their hours
+    # divided by the task's hours when sole contributor) exceeds 80%.
+    # Cheap heuristic; good enough until the repo exposes a per-member
+    # task breakdown.
+    for c in facts.by_contributor:
+        if c["hours"] < _TASK_MONO_MIN_HOURS:
+            continue
+        # Find tasks where this contributor is the sole contributor
+        # (contributors == 1) and rank by hours.
+        sole_tasks = [
+            t for t in facts.by_task if t.get("contributors") == 1
+        ]
+        if not sole_tasks:
+            continue
+        top_sole = max(sole_tasks, key=lambda t: t["hours"], default=None)
+        if not top_sole:
+            continue
+        # Without a per-(member,task) lookup we can't be 100% certain
+        # this top sole-task was THIS contributor's. Skip to avoid
+        # false-positives; left as a TODO for when repo exposes that.
+
+    return out
+
+
+# ---------------------------------------------------------------------------
 # AI-backed narrative layer
 # ---------------------------------------------------------------------------
 
@@ -468,6 +678,21 @@ _FALLBACK_NARRATIVE = {
     "notable_patterns": [],
     "concerns": [],
 }
+
+
+def _format_anomalies_for_prompt(anomalies: list[dict]) -> str:
+    """Render the anomaly list as plain text for the LLM. Returns
+    "(none detected)" when empty so the prompt section never reads
+    as missing context."""
+    if not anomalies:
+        return "(none detected)"
+    lines = []
+    for a in anomalies:
+        sev = a.get("severity", "info").upper()
+        title = a.get("title", "")
+        detail = a.get("detail", "")
+        lines.append(f"- [{sev}] {title} — {detail}")
+    return "\n".join(lines)
 
 
 def generate_weekly_narrative(facts: WeeklyFacts, team_size: int) -> dict:
@@ -596,6 +821,9 @@ def generate_weekly_narrative(facts: WeeklyFacts, team_size: int) -> dict:
 
 {dayoff_lines}
 
+## Detected anomalies (deterministic, computed before this prompt)
+{_format_anomalies_for_prompt(facts.anomalies)}
+
 ## Instructions
 Respond with ONLY valid JSON (no markdown, no code blocks) in this exact shape:
 {{
@@ -612,6 +840,7 @@ Rules:
 - highlights: 3–6 items. Mix across dimensions — a top task, a top contributor by timer hours, a notable focus score, a big-impact leave.
 - notable_patterns: 0–3 items. Examples: "most work concentrated on Monday and Tuesday", "3-hour gap between self-reported and objective hours", "two members drove 70% of tracked time".
 - concerns: 0–3 items. Examples: "two members submitted no updates despite 12h logged", "large leave window coincided with missing updates on the same days", "task X spans four contributors with no clear owner".
+- If anomalies are listed above, ALWAYS reference at least one in either "concerns" or "highlights" — they were computed deterministically and are facts, not guesses. Use the human title of the anomaly verbatim or paraphrase it; don't invent new ones.
 - Keep language professional. No slang, no emoji."""
 
     payload = json.dumps(

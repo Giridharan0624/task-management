@@ -6,6 +6,7 @@ import {
   getMyDayOffs,
   getPendingDayOffs,
   getAllDayOffs,
+  getDayOffBalance,
   approveDayOff,
   rejectDayOff,
   cancelDayOff,
@@ -16,6 +17,7 @@ const dayOffKeys = {
   my: ['dayoffs', 'my'] as const,
   pending: ['dayoffs', 'pending'] as const,
   all: ['dayoffs', 'all'] as const,
+  balance: (year?: number) => ['dayoffs', 'balance', year ?? 'current'] as const,
 }
 
 function useInvalidateAll() {
@@ -24,6 +26,8 @@ function useInvalidateAll() {
     queryClient.invalidateQueries({ queryKey: dayOffKeys.my })
     queryClient.invalidateQueries({ queryKey: dayOffKeys.pending })
     queryClient.invalidateQueries({ queryKey: dayOffKeys.all })
+    // Balance is keyed by year — invalidate the family.
+    queryClient.invalidateQueries({ queryKey: ['dayoffs', 'balance'] })
   }
 }
 
@@ -90,12 +94,25 @@ export function useAllDayOffs() {
   })
 }
 
+export function useDayOffBalance(year?: number) {
+  return useQuery({
+    queryKey: dayOffKeys.balance(year),
+    queryFn: () => getDayOffBalance(year),
+    staleTime: 30000,
+    refetchInterval: 60000,
+  })
+}
+
 export function useCreateDayOff() {
   const queryClient = useQueryClient()
   const invalidateAll = useInvalidateAll()
   return useMutation({
-    mutationFn: (data: { startDate: string; endDate: string; reason: string }) =>
-      createDayOff(data),
+    mutationFn: (data: {
+      startDate: string
+      endDate: string
+      reason: string
+      leaveTypeId: string
+    }) => createDayOff(data),
     onSuccess: (newRequest) => {
       if (newRequest) {
         queryClient.setQueryData<DayOffRequest[]>(dayOffKeys.my, (old) =>

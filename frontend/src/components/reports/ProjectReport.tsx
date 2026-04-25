@@ -14,13 +14,14 @@ import {
   Tooltip,
 } from 'recharts'
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   FileDown,
   ListChecks,
   PieChart as PieIcon,
-  Target,
   Users,
 } from 'lucide-react'
 
@@ -110,6 +111,42 @@ function formatDateShort(d: string) {
   })
 }
 
+/* ───────────────────────────── sessions types ───────────────────────── */
+
+interface SessionRow {
+  date: string
+  member: string
+  task: string
+  signIn: string
+  signOut: string | null
+  hours: number | null
+}
+
+type SortKey = 'date' | 'member' | 'task' | 'signIn' | 'signOut' | 'hours'
+type SortDir = 'asc' | 'desc'
+type GroupKey = 'none' | 'member' | 'task' | 'date'
+
+/** Project a row to a comparable scalar for the requested sort column.
+ *  Times are compared as epoch ms; everything else as native string/number.
+ *  Active sessions (no signOut) sort to the END in desc / start in asc —
+ *  Infinity / -Infinity does that without special-casing. */
+function sortValue(r: SessionRow, key: SortKey): number | string {
+  switch (key) {
+    case 'date':
+      return r.date
+    case 'member':
+      return r.member.toLowerCase()
+    case 'task':
+      return r.task.toLowerCase()
+    case 'signIn':
+      return new Date(r.signIn).getTime()
+    case 'signOut':
+      return r.signOut ? new Date(r.signOut).getTime() : Infinity
+    case 'hours':
+      return r.hours ?? -1
+  }
+}
+
 /* ───────────────────────────── component ────────────────────────────── */
 
 interface ProjectReportProps {
@@ -166,10 +203,6 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
     () => records.reduce((s, r) => s + r.sessions.length, 0),
     [records],
   )
-  const totalEstimated = projectStatus?.totalEstimatedHours ?? 0
-  const budgetPct =
-    totalEstimated > 0 ? Math.round((totalHours / totalEstimated) * 100) : 0
-
   // ─── Hours by task ───
   const taskHours = useMemo(() => {
     const map = new Map<string, number>()
@@ -230,30 +263,9 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
     }))
   }, [projectStatus, labelOf])
 
-  // ─── Estimated vs Actual ───
-  const estVsActual = useMemo(() => {
-    if (!projectStatus?.taskProgress) return []
-    return projectStatus.taskProgress
-      .map((t) => ({
-        name: t.title.length > 24 ? t.title.slice(0, 24) + '…' : t.title,
-        fullName: t.title,
-        estimated: t.estimatedHours ?? 0,
-        tracked: t.trackedHours ?? 0,
-        status: t.status,
-      }))
-      .filter((t) => t.estimated > 0 || t.tracked > 0)
-  }, [projectStatus])
-
   // ─── Session log ───
   const detailedRows = useMemo(() => {
-    const rows: {
-      date: string
-      member: string
-      task: string
-      signIn: string
-      signOut: string | null
-      hours: number | null
-    }[] = []
+    const rows: SessionRow[] = []
     for (const r of records)
       for (const s of r.sessions) {
         rows.push({
@@ -269,6 +281,62 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
       (a, b) => new Date(b.signIn).getTime() - new Date(a.signIn).getTime(),
     )
   }, [records])
+
+  // Sort state for the Sessions tab. Defaults match the natural reading
+  // order (newest sessions first). Clicking a header swaps the column;
+  // clicking the active header flips direction.
+  const [sortKey, setSortKey] = useState<SortKey>('signIn')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      // First click on a new column starts in the "more useful" direction:
+      // numeric/time columns go desc (highest first), text goes asc (A→Z).
+      setSortDir(
+        key === 'member' || key === 'task' || key === 'date' ? 'asc' : 'desc',
+      )
+    }
+  }
+  const sortedRows = useMemo(() => {
+    const out = [...detailedRows]
+    const factor = sortDir === 'asc' ? 1 : -1
+    out.sort((a, b) => {
+      const av = sortValue(a, sortKey)
+      const bv = sortValue(b, sortKey)
+      if (av < bv) return -1 * factor
+      if (av > bv) return 1 * factor
+      return 0
+    })
+    return out
+  }, [detailedRows, sortKey, sortDir])
+
+  // Grouping. None = flat list as before. Otherwise group by the chosen
+  // dimension and sort group keys in a sensible order: dates by recency,
+  // member/task names alphabetically.
+  const [groupBy, setGroupBy] = useState<GroupKey>('none')
+  const grouped = useMemo(() => {
+    if (groupBy === 'none') return null
+    const map = new Map<string, SessionRow[]>()
+    for (const r of sortedRows) {
+      const key =
+        groupBy === 'member' ? r.member : groupBy === 'task' ? r.task : r.date
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(r)
+    }
+    const groups = Array.from(map.entries()).map(([key, rows]) => ({
+      key,
+      rows,
+      totalHours: rows.reduce((s, r) => s + (r.hours ?? 0), 0),
+    }))
+    groups.sort((a, b) => {
+      if (groupBy === 'date')
+        return new Date(b.key).getTime() - new Date(a.key).getTime()
+      return a.key.localeCompare(b.key)
+    })
+    return groups
+  }, [sortedRows, groupBy])
 
   const exportCSV = () => {
     const header = ['Date', 'Member', 'Project', 'Task', 'Start', 'End', 'Duration']
@@ -374,26 +442,17 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
         </div>
       ) : (
         <>
-          {/* ───────── Metric strip — pixel-grid mosaic ───────── */}
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-4">
+          {/* ───────── Metric strip — pixel-grid mosaic ─────────
+              "Budget" tile removed — tasks do not capture estimated
+              hours through the UI today, so the percentage is
+              meaningless. Restore alongside Time budget on the
+              health card if estimates ever return to the task form. */}
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-3">
             <MetricTile
               Icon={Clock}
               label="Tracked"
               value={formatDuration(totalHours)}
               tint="indigo"
-            />
-            <MetricTile
-              Icon={Target}
-              label="Budget"
-              value={
-                totalEstimated > 0 ? `${budgetPct}%` : '—'
-              }
-              hint={
-                totalEstimated > 0
-                  ? `${formatDuration(totalHours)} of ${formatDuration(totalEstimated)}`
-                  : 'No estimates'
-              }
-              tint={budgetPct > 100 ? 'rose' : budgetPct > 80 ? 'amber' : 'emerald'}
             />
             <MetricTile
               Icon={Users}
@@ -476,10 +535,11 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
                         <YAxis
                           type="category"
                           dataKey="name"
-                          tick={{ fontSize: 11, fontWeight: 600 }}
-                          width={120}
+                          width={170}
                           axisLine={false}
                           tickLine={false}
+                          interval={0}
+                          tick={<TruncatedTick maxChars={22} />}
                         />
                         <Tooltip
                           cursor={{ fill: 'rgba(99,102,241,0.06)' }}
@@ -610,88 +670,6 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
                 </div>
               </div>
 
-              {/* Estimated vs Actual — only when we have estimate data */}
-              {estVsActual.length > 0 && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5">
-                  <ChartHeader Icon={Target} label="Estimated vs actual" />
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(200, Math.min(estVsActual.length, 10) * 40)}
-                  >
-                    <BarChart
-                      data={estVsActual.slice(0, 10)}
-                      layout="vertical"
-                      margin={{ left: 0, right: 16, top: 8, bottom: 4 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="rgba(0,0,0,0.05)"
-                        horizontal={false}
-                      />
-                      <XAxis
-                        type="number"
-                        tick={{ fontSize: 10 }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v: number) =>
-                          v > 0 ? formatDuration(v) : '0'
-                        }
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        tick={{ fontSize: 11, fontWeight: 600 }}
-                        width={130}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(99,102,241,0.06)' }}
-                        contentStyle={{
-                          fontSize: 11,
-                          borderRadius: 10,
-                          border: '1px solid rgba(0,0,0,0.08)',
-                        }}
-                        formatter={(v) => formatDuration(Number(v))}
-                      />
-                      <Bar
-                        dataKey="estimated"
-                        name="Estimated"
-                        fill="#c7d2fe"
-                        radius={[0, 4, 4, 0]}
-                        maxBarSize={18}
-                      />
-                      <Bar
-                        dataKey="tracked"
-                        name="Tracked"
-                        fill="#6366f1"
-                        radius={[0, 4, 4, 0]}
-                        maxBarSize={18}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="mt-3 flex items-center justify-center gap-5 border-t border-border/50 pt-3 text-[11px]">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-4 rounded-sm bg-[#c7d2fe]" />
-                      <span className="font-semibold text-foreground">
-                        Estimated
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-4 rounded-sm bg-[#6366f1]" />
-                      <span className="font-semibold text-foreground">
-                        Tracked
-                      </span>
-                    </span>
-                  </div>
-                  {estVsActual.length > 10 && (
-                    <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                      Showing 10 of {estVsActual.length} tasks — see Sessions
-                      tab for a complete log.
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -787,55 +765,15 @@ export function ProjectReport({ projectId, projectName }: ProjectReportProps) {
 
           {/* ───────── SESSIONS ───────── */}
           {tab === 'sessions' && (
-            <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
-              <div className="grid grid-cols-[90px_1.3fr_1.3fr_80px_80px_80px] gap-2 border-b border-border/60 bg-muted/40 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                <span>Date</span>
-                <span>Member</span>
-                <span>Task</span>
-                <span>Start</span>
-                <span>End</span>
-                <span className="text-right">Duration</span>
-              </div>
-              {detailedRows.length === 0 ? (
-                <div className="py-16 text-center text-[13px] text-muted-foreground">
-                  No sessions in this window.
-                </div>
-              ) : (
-                <div className="max-h-[560px] divide-y divide-border/60 overflow-y-auto">
-                  {detailedRows.map((r, i) => (
-                    <div
-                      key={i}
-                      className="grid grid-cols-[90px_1.3fr_1.3fr_80px_80px_80px] items-center gap-2 px-5 py-2.5 text-[12px] transition-colors hover:bg-muted/30"
-                    >
-                      <span className="text-muted-foreground">
-                        {formatDateShort(r.date)}
-                      </span>
-                      <span className="truncate font-semibold text-foreground">
-                        {r.member}
-                      </span>
-                      <span className="truncate text-muted-foreground">
-                        {r.task}
-                      </span>
-                      <span className="font-mono tabular-nums text-muted-foreground">
-                        {formatTime(r.signIn)}
-                      </span>
-                      <span className="font-mono tabular-nums text-muted-foreground">
-                        {r.signOut ? (
-                          formatTime(r.signOut)
-                        ) : (
-                          <span className="font-sans font-semibold text-emerald-600">
-                            Active
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-right font-mono font-semibold tabular-nums text-foreground">
-                        {r.hours != null ? formatDuration(r.hours) : '—'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SessionsTable
+              rows={sortedRows}
+              groups={grouped}
+              groupBy={groupBy}
+              setGroupBy={setGroupBy}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              toggleSort={toggleSort}
+            />
           )}
         </>
       )}
@@ -923,6 +861,312 @@ function EmptyPane({ height, text }: { height: number; text: string }) {
       style={{ height }}
     >
       {text}
+    </div>
+  )
+}
+
+interface TruncatedTickProps {
+  /** Recharts injects these — they're optional in the prop sense
+   *  because TS can't see Recharts' internal call site. */
+  x?: number
+  y?: number
+  payload?: { value?: string }
+  maxChars: number
+}
+
+/**
+ * Single-line, ellipsis-truncated label for `<YAxis type="category">`.
+ *
+ * The default Recharts category-tick can word-wrap onto multiple lines,
+ * which clips the LEADING characters when the rendered text is wider
+ * than the YAxis `width`. We render a single SVG `<text>` instead and
+ * truncate at the data layer with an ellipsis so labels are guaranteed
+ * to read left-aligned even when the title is long. The full title
+ * still appears in the chart Tooltip via the original `name` payload.
+ */
+function TruncatedTick({ x, y, payload, maxChars }: TruncatedTickProps) {
+  const raw = payload?.value ?? ''
+  const display =
+    raw.length > maxChars ? raw.slice(0, Math.max(1, maxChars - 1)) + '…' : raw
+  return (
+    <g transform={`translate(${x ?? 0},${y ?? 0})`}>
+      <title>{raw}</title>
+      <text
+        x={-8}
+        y={0}
+        dy={4}
+        textAnchor="end"
+        fontSize={11}
+        fontWeight={600}
+        fill="currentColor"
+      >
+        {display}
+      </text>
+    </g>
+  )
+}
+
+/* ─────────────────────────── Sessions table ────────────────────────── */
+
+interface SessionsTableProps {
+  rows: SessionRow[]
+  groups: { key: string; rows: SessionRow[]; totalHours: number }[] | null
+  groupBy: GroupKey
+  setGroupBy: (g: GroupKey) => void
+  sortKey: SortKey
+  sortDir: SortDir
+  toggleSort: (k: SortKey) => void
+}
+
+const GROUP_OPTIONS: { value: GroupKey; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'member', label: 'Member' },
+  { value: 'task', label: 'Task' },
+  { value: 'date', label: 'Date' },
+]
+
+const SESSION_GRID =
+  'grid grid-cols-[90px_1.3fr_1.3fr_80px_80px_80px] items-center gap-2'
+
+function SessionsTable({
+  rows,
+  groups,
+  groupBy,
+  setGroupBy,
+  sortKey,
+  sortDir,
+  toggleSort,
+}: SessionsTableProps) {
+  const totalHours = rows.reduce((s, r) => s + (r.hours ?? 0), 0)
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Toolbar — Group-by pills + summary */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
+          <span className="px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            Group by
+          </span>
+          {GROUP_OPTIONS.map((g) => (
+            <button
+              key={g.value}
+              type="button"
+              onClick={() => setGroupBy(g.value)}
+              className={cn(
+                'rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                groupBy === g.value
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          <span className="font-semibold text-foreground">{rows.length}</span>{' '}
+          session{rows.length === 1 ? '' : 's'} ·{' '}
+          <span className="font-semibold text-foreground">
+            {formatDuration(totalHours)}
+          </span>{' '}
+          tracked
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
+        {/* Sticky sortable header */}
+        <div
+          className={cn(
+            SESSION_GRID,
+            'sticky top-0 z-10 border-b border-border/60 bg-muted/40 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground',
+          )}
+        >
+          <SortHeader
+            label="Date"
+            keyName="date"
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onClick={toggleSort}
+          />
+          <SortHeader
+            label="Member"
+            keyName="member"
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onClick={toggleSort}
+          />
+          <SortHeader
+            label="Task"
+            keyName="task"
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onClick={toggleSort}
+          />
+          <SortHeader
+            label="Start"
+            keyName="signIn"
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onClick={toggleSort}
+          />
+          <SortHeader
+            label="End"
+            keyName="signOut"
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onClick={toggleSort}
+          />
+          <SortHeader
+            label="Duration"
+            keyName="hours"
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onClick={toggleSort}
+            align="right"
+          />
+        </div>
+
+        {rows.length === 0 ? (
+          <div className="py-16 text-center text-[13px] text-muted-foreground">
+            No sessions in this window.
+          </div>
+        ) : (
+          <div className="max-h-[560px] overflow-y-auto">
+            {groupBy === 'none' || !groups ? (
+              <div className="divide-y divide-border/60">
+                {rows.map((r, i) => (
+                  <SessionRowView key={i} row={r} />
+                ))}
+              </div>
+            ) : (
+              <div>
+                {groups.map((g) => (
+                  <SessionGroup
+                    key={g.key}
+                    label={
+                      groupBy === 'date' ? formatDateShort(g.key) : g.key
+                    }
+                    rows={g.rows}
+                    totalHours={g.totalHours}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface SortHeaderProps {
+  label: string
+  keyName: SortKey
+  sortKey: SortKey
+  sortDir: SortDir
+  onClick: (k: SortKey) => void
+  align?: 'left' | 'right'
+}
+
+function SortHeader({
+  label,
+  keyName,
+  sortKey,
+  sortDir,
+  onClick,
+  align = 'left',
+}: SortHeaderProps) {
+  const active = sortKey === keyName
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(keyName)}
+      className={cn(
+        'flex items-center gap-1 transition-colors hover:text-foreground',
+        align === 'right' && 'justify-end',
+        active && 'text-foreground',
+      )}
+    >
+      {label}
+      {active &&
+        (sortDir === 'asc' ? (
+          <ChevronUp className="h-3 w-3" />
+        ) : (
+          <ChevronDown className="h-3 w-3" />
+        ))}
+    </button>
+  )
+}
+
+function SessionRowView({ row: r }: { row: SessionRow }) {
+  return (
+    <div
+      className={cn(
+        SESSION_GRID,
+        'px-5 py-2.5 text-[12px] transition-colors hover:bg-muted/30',
+      )}
+    >
+      <span className="text-muted-foreground">{formatDateShort(r.date)}</span>
+      <span className="truncate font-semibold text-foreground">{r.member}</span>
+      <span className="truncate text-muted-foreground">{r.task}</span>
+      <span className="font-mono tabular-nums text-muted-foreground">
+        {formatTime(r.signIn)}
+      </span>
+      <span className="font-mono tabular-nums text-muted-foreground">
+        {r.signOut ? (
+          formatTime(r.signOut)
+        ) : (
+          <span className="font-sans font-semibold text-emerald-600">
+            Active
+          </span>
+        )}
+      </span>
+      <span className="text-right font-mono font-semibold tabular-nums text-foreground">
+        {r.hours != null ? formatDuration(r.hours) : '—'}
+      </span>
+    </div>
+  )
+}
+
+interface SessionGroupProps {
+  label: string
+  rows: SessionRow[]
+  totalHours: number
+}
+
+function SessionGroup({ label, rows, totalHours }: SessionGroupProps) {
+  const [open, setOpen] = useState(true)
+  return (
+    <div className="border-b border-border/60 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 bg-muted/20 px-5 py-2 text-left transition-colors hover:bg-muted/40"
+      >
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 text-muted-foreground transition-transform duration-200',
+            !open && '-rotate-90',
+          )}
+        />
+        <span className="truncate text-[12px] font-bold text-foreground">
+          {label}
+        </span>
+        <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+          {rows.length}
+        </span>
+        <span className="ml-auto font-mono text-[11px] font-semibold tabular-nums text-foreground">
+          {formatDuration(totalHours)}
+        </span>
+      </button>
+      {open && (
+        <div className="divide-y divide-border/60">
+          {rows.map((r, i) => (
+            <SessionRowView key={i} row={r} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

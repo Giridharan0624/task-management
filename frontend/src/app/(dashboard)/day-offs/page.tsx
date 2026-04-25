@@ -24,6 +24,7 @@ import {
   useApproveDayOff,
   useRejectDayOff,
   useCancelDayOff,
+  useDayOffBalance,
 } from '@/lib/hooks/useDayOffs'
 import { useUsers } from '@/lib/hooks/useUsers'
 import { useHasPermission } from '@/lib/hooks/usePermission'
@@ -59,7 +60,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { DayOffCreateDialog } from '@/components/dayoff/DayOffCreateDialog'
-import type { DayOffRequest, DayOffStatus } from '@/types/dayoff'
+import type {
+  DayOffBalance,
+  DayOffRequest,
+  DayOffStatus,
+} from '@/types/dayoff'
 import { cn } from '@/lib/utils'
 
 /* ═══ Helpers ═══ */
@@ -254,6 +259,10 @@ export default function DayOffsPage() {
     usePendingDayOffs()
   const { data: allDayOffs, isLoading: allLoading } = useAllDayOffs()
   const { data: allUsers } = useUsers()
+  // Owner has no own balance (they can't request day-offs); skip the
+  // round-trip in that case by passing the same hook unconditionally and
+  // letting the BalanceWidget render-gate on isOwner.
+  const { data: balance } = useDayOffBalance()
 
   const createMutation = useCreateDayOff()
   const approveMutation = useApproveDayOff()
@@ -598,6 +607,10 @@ export default function DayOffsPage() {
       />
 
       <StatCardsGrid items={stats} columns={4} />
+
+      {!isOwner && balance && balance.balances.length > 0 && (
+        <LeaveBalanceCard balance={balance} />
+      )}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
         <TabsList>
@@ -1107,6 +1120,76 @@ export default function DayOffsPage() {
         }}
       />
     </div>
+  )
+}
+
+/* ═══ Leave Balance Card ═══ */
+
+function LeaveBalanceCard({ balance }: { balance: DayOffBalance }) {
+  return (
+    <Card className="p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-foreground">
+          Leave balance · {balance.year}
+        </h3>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          Approved + pending counted
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {balance.balances.map((b) => {
+          const total = b.quota || 1
+          const usedPct = Math.min(100, Math.round((b.used / total) * 100))
+          const pendingPct = Math.min(
+            100 - usedPct,
+            Math.round((b.pending / total) * 100)
+          )
+          const overQuota = b.used + b.pending > b.quota
+          return (
+            <div
+              key={b.leaveTypeId}
+              className="rounded-xl border border-border bg-card p-3"
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {b.name}
+                </p>
+                <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  <span
+                    className={cn(
+                      'font-bold',
+                      overQuota ? 'text-red-700' : 'text-foreground'
+                    )}
+                  >
+                    {b.remaining}
+                  </span>{' '}
+                  / {b.quota} left
+                </p>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="flex h-full w-full">
+                  <div
+                    className={cn(
+                      'h-full',
+                      overQuota ? 'bg-red-500' : 'bg-indigo-500'
+                    )}
+                    style={{ width: `${usedPct}%` }}
+                  />
+                  <div
+                    className="h-full bg-amber-400"
+                    style={{ width: `${pendingPct}%` }}
+                  />
+                </div>
+              </div>
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                {b.used} used
+                {b.pending > 0 ? ` · ${b.pending} pending` : ''}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+    </Card>
   )
 }
 

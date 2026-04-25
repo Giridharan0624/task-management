@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, X, FileDown, Upload, UserPlus, Shield, Users, Mail } from 'lucide-react'
+import { Search, X, FileDown, Upload, UserPlus, Shield, Users } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import {
@@ -38,8 +38,9 @@ interface UsersToolbarProps {
   onClear: () => void
 
   onExportCSV: () => void
-  onAddUser: () => void
-  onInvite?: () => void
+  /** Hidden when undefined — list-only callers (e.g. a custom role
+   *  with `user.list` but not `user.create`) don't see Add User. */
+  onAddUser?: () => void
   /** OWNER-only bulk import from CSV. Optional — renders the button
    *  only when provided. */
   onBulkImport?: () => void
@@ -70,7 +71,6 @@ export function UsersToolbar({
   onClear,
   onExportCSV,
   onAddUser,
-  onInvite,
   onBulkImport,
   addLabel,
 }: UsersToolbarProps) {
@@ -243,26 +243,17 @@ export function UsersToolbar({
             Import CSV
           </Button>
         )}
-        {onInvite && (
+        {onAddUser && (
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
-            onClick={onInvite}
+            onClick={onAddUser}
             className="h-9 gap-1.5"
           >
-            <Mail className="h-3.5 w-3.5" />
-            Invite
+            <UserPlus className="h-3.5 w-3.5" />
+            {addLabel}
           </Button>
         )}
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={onAddUser}
-          className="h-9 gap-1.5"
-        >
-          <UserPlus className="h-3.5 w-3.5" />
-          {addLabel}
-        </Button>
       </div>
     </div>
   )

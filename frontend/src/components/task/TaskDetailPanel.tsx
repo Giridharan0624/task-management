@@ -416,7 +416,7 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Domain</label>
+                  <label className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5 block">Workflow</label>
                   <Select
                     value={watch('domain')}
                     onChange={(v) => {

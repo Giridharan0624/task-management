@@ -8,7 +8,7 @@ import { useProjects, projectKeys } from '@/lib/hooks/useProjects'
 import { deleteProject as deleteProjectApi } from '@/lib/api/projectApi'
 import { useUndoableDelete } from '@/lib/hooks/useUndoableDelete'
 import { useUsers } from '@/lib/hooks/useUsers'
-import { useSystemPermission } from '@/lib/hooks/usePermission'
+import { useSystemPermission, useHasPermission } from '@/lib/hooks/usePermission'
 import { useUrlParam } from '@/lib/hooks/useUrlState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SkeletonCard } from '@/components/ui/Skeleton'
@@ -49,6 +49,18 @@ function isCompleted(p: Project): boolean {
 export function ProjectList() {
   const { user } = useAuth()
   const systemPerms = useSystemPermission(user?.systemRole)
+  // Live `project.create` permission — `useSystemPermission`'s
+  // `canCreateProject` is keyed off the same backend permission, but
+  // its loading-time fallback only resolves true for OWNER/ADMIN.
+  // Pulling the live check here lets us also light up the Create
+  // button for custom roles that grant `project.create`. While the
+  // roles fetch is in flight we use the legacy isPrivileged check —
+  // matches the pre-Session-8 behavior for the 99% case.
+  const projectCreatePerm = useHasPermission('project.create')
+  const legacyIsPrivileged =
+    user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
+  const canCreateProject =
+    projectCreatePerm === null ? legacyIsPrivileged : projectCreatePerm
   const { data: projects, isLoading, error } = useProjects()
   const { data: allUsers } = useUsers()
   const confirm = useConfirm()
@@ -209,7 +221,7 @@ export function ProjectList() {
           setDomain('ALL')
           setStatus('ALL')
         }}
-        canCreate={systemPerms.canCreateProject}
+        canCreate={canCreateProject}
         onCreate={() => setShowCreateModal(true)}
       />
 
@@ -220,7 +232,7 @@ export function ProjectList() {
             title="No projects yet"
             description="Create a project to start organizing tasks, tracking time, and collaborating with your team."
             action={
-              systemPerms.canCreateProject ? (
+              canCreateProject ? (
                 <Button onClick={() => setShowCreateModal(true)}>
                   Create your first project
                 </Button>
@@ -239,7 +251,7 @@ export function ProjectList() {
             <ProjectCard
               key={project.projectId}
               project={project}
-              canDeleteProject={systemPerms.canCreateProject}
+              canDeleteProject={canCreateProject}
               onDelete={handleDelete}
               creatorName={nameMap.get(project.createdBy)}
             />
@@ -252,7 +264,7 @@ export function ProjectList() {
               <ProjectListRow
                 key={project.projectId}
                 project={project}
-                canDeleteProject={systemPerms.canCreateProject}
+                canDeleteProject={canCreateProject}
                 onDelete={handleDelete}
               />
             ))}

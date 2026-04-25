@@ -304,7 +304,7 @@ export default function ProjectDetailPage() {
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-foreground">
-              Domain
+              Workflow
             </label>
             <div className="grid grid-cols-2 gap-2">
               {DOMAIN_OPTIONS.map((opt) => (
@@ -324,7 +324,7 @@ export default function ProjectDetailPage() {
               ))}
             </div>
             <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Changing the domain updates the task pipeline stages for this
+              Changing the workflow updates the task pipeline stages for this
               project.
             </p>
           </div>

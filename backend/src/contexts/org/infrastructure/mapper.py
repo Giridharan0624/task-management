@@ -6,6 +6,38 @@ from contexts.org.domain.value_objects import OrgStatus, PlanTier
 from shared_kernel import tenant_keys
 
 
+# Mirror of OrgSettings.leave_types defaults — used by the mapper when a
+# stored settings record predates the leave_types field. Kept in sync by
+# convention; the entity is still the source of truth for new orgs.
+_DEFAULT_LEAVE_TYPES = [
+    {"id": "casual", "name": "Casual", "annual_quota": 12},
+    {"id": "sick", "name": "Sick", "annual_quota": 10},
+    {"id": "earned", "name": "Earned", "annual_quota": 15},
+]
+
+
+def _leave_types_or_default(raw) -> list[dict]:
+    """Parse stored leave_types and fall back to defaults on missing/empty.
+
+    Accepts the raw value as stored in DynamoDB — a JSON string, a list,
+    None, or empty string. Returns a non-empty list of dicts. Used by
+    settings_to_domain so the Request day-off dialog always has at least
+    the canonical Casual/Sick/Earned options to render.
+    """
+    if raw is None or raw == "":
+        return [dict(lt) for lt in _DEFAULT_LEAVE_TYPES]
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except (ValueError, TypeError):
+            return [dict(lt) for lt in _DEFAULT_LEAVE_TYPES]
+    else:
+        parsed = raw
+    if not isinstance(parsed, list) or not parsed:
+        return [dict(lt) for lt in _DEFAULT_LEAVE_TYPES]
+    return parsed
+
+
 class OrgMapper:
     # ------------------------------------------------------------------
     # Organization
@@ -113,7 +145,14 @@ class OrgMapper:
             working_hours_end=item.get("working_hours_end", "18:00"),
             employee_id_prefix=item.get("employee_id_prefix", "EMP-"),
             features=_json_or(item.get("features"), {}),
-            leave_types=_json_or(item.get("leave_types"), []),
+            # Tenants saved before leave_types shipped — and tenants saved
+            # with an explicit empty array — both fall back to the entity
+            # defaults. We treat "no leave types" as an invalid state rather
+            # than an owner-chosen one because the day-off create flow
+            # requires a leave_type_id; an empty list would silently brick
+            # the Request day-off dialog. Owners that genuinely want to
+            # disable day-offs should toggle the `day_offs` feature flag.
+            leave_types=_leave_types_or_default(item.get("leave_types")),
             created_at=item["created_at"],
             updated_at=item["updated_at"],
         )
