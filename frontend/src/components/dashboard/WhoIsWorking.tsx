@@ -1,13 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { Coffee, ChevronRight } from 'lucide-react'
+import { Coffee, ArrowUpRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/AvatarUpload'
 import { LiveDot } from '@/components/ui/LiveDot'
 import { useTodayAttendance } from '@/lib/hooks/useAttendance'
 import { useLiveTick } from '@/lib/hooks/useLiveTick'
-import { cn } from '@/lib/utils'
 
 export function WhoIsWorking() {
   const { data } = useTodayAttendance()
@@ -16,40 +15,46 @@ export function WhoIsWorking() {
   const working = (data ?? []).filter((a) => a.status === 'SIGNED_IN')
 
   return (
-    <Card className="flex flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+    <Card className="flex flex-col overflow-hidden p-0 shadow-none">
+      <div className="flex items-baseline justify-between border-b border-border/60 px-5 py-3">
         <div className="flex items-center gap-2">
           {working.length > 0 ? (
             <LiveDot size="sm" />
           ) : (
-            <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
           )}
-          <h3 className="text-sm font-bold text-foreground">Working now</h3>
-          <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+          <h3 className="text-sm font-medium text-foreground">Working now</h3>
+          <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
             {working.length}
           </span>
         </div>
         <Link
           href="/attendance"
-          className="flex items-center gap-0.5 text-xs font-semibold text-primary transition-colors hover:text-primary/80"
+          className="group inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
         >
           All attendance
-          <ChevronRight className="h-3 w-3" />
+          <ArrowUpRight
+            className="h-3 w-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+            strokeWidth={1.8}
+          />
         </Link>
       </div>
 
       {working.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-            <Coffee className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
-          </div>
-          <p className="text-sm font-semibold text-foreground">No one clocked in</p>
-          <p className="max-w-xs text-xs text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+          <Coffee
+            className="h-5 w-5 text-muted-foreground/70"
+            strokeWidth={1.4}
+          />
+          <p className="text-sm font-medium text-foreground">
+            No one clocked in
+          </p>
+          <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
             Team members appear here the moment they start a session.
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-border/60">
+        <ul className="divide-y divide-border/50">
           {working.slice(0, 8).map((a) => (
             <li
               key={a.userId}
@@ -57,7 +62,7 @@ export function WhoIsWorking() {
             >
               <Avatar name={a.userName || a.userEmail} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-sm font-medium text-foreground">
                   {a.userName || a.userEmail}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
@@ -70,16 +75,16 @@ export function WhoIsWorking() {
                   )}
                 </p>
               </div>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-emerald-600">
+              <span className="shrink-0 text-xs font-medium tabular-nums text-emerald-700">
                 {a.currentSignInAt && formatElapsed(a.currentSignInAt)}
               </span>
             </li>
           ))}
           {working.length > 8 && (
-            <li className="bg-muted/30 px-5 py-2 text-center">
+            <li className="bg-muted/20 px-5 py-2 text-center">
               <Link
                 href="/attendance"
-                className="text-xs font-semibold text-primary hover:underline"
+                className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground"
               >
                 +{working.length - 8} more working
               </Link>

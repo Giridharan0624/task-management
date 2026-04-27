@@ -10,10 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { Avatar } from '@/components/ui/AvatarUpload'
-import { Card } from '@/components/ui/Card'
 import { Progress } from '@/components/ui/Progress'
 import { RelativeTime } from '@/components/ui/RelativeTime'
-import { getProjectColor } from '@/lib/utils/projectColor'
 import { DOMAIN_LABELS, type TaskDomain } from '@/types/task'
 import type { Project } from '@/types/project'
 import type { ProjectStatus } from '@/lib/api/projectApi'
@@ -31,47 +29,38 @@ interface ProjectHeaderProps {
   totalTasks: number
 }
 
-const DOMAIN_PILL: Record<string, string> = {
-  DEVELOPMENT: 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200',
-  DESIGNING: 'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200',
-  MANAGEMENT: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-  RESEARCH: 'bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200',
-}
-
-/** Gradient used for the accent strip at the top of the header. */
-const DOMAIN_ACCENT: Record<string, string> = {
-  DEVELOPMENT: 'from-indigo-500 via-blue-500 to-purple-500',
-  DESIGNING: 'from-violet-500 via-fuchsia-500 to-pink-500',
-  MANAGEMENT: 'from-amber-500 via-orange-500 to-red-500',
-  RESEARCH: 'from-teal-500 via-cyan-500 to-sky-500',
+// Domain identity is carried by a vertical accent rule on the left of
+// the title block (Bloomberg ticker / Linear project-icon convention).
+// Same color is reused for the small dot beside the domain label below.
+const DOMAIN_RULE: Record<string, string> = {
+  DEVELOPMENT: 'bg-indigo-500',
+  DESIGNING: 'bg-violet-500',
+  MANAGEMENT: 'bg-amber-500',
+  RESEARCH: 'bg-teal-500',
 }
 
 const HEALTH_STYLES: Record<
   string,
-  { bg: string; text: string; dot: string; label: string }
+  { text: string; dot: string; label: string }
 > = {
   COMPLETED: {
-    bg: 'bg-emerald-50 border-emerald-200',
     text: 'text-emerald-700',
     dot: 'bg-emerald-500',
     label: 'Completed',
   },
   ON_TRACK: {
-    bg: 'bg-green-50 border-green-200',
-    text: 'text-green-700',
-    dot: 'bg-green-500',
+    text: 'text-emerald-700',
+    dot: 'bg-emerald-500',
     label: 'On track',
   },
   AT_RISK: {
-    bg: 'bg-amber-50 border-amber-200',
     text: 'text-amber-700',
     dot: 'bg-amber-500',
     label: 'At risk',
   },
   BEHIND: {
-    bg: 'bg-red-50 border-red-200',
-    text: 'text-red-700',
-    dot: 'bg-red-500',
+    text: 'text-rose-700',
+    dot: 'bg-rose-500',
     label: 'Behind',
   },
 }
@@ -91,7 +80,7 @@ export function ProjectHeader({
   const domain = (project.domain || 'DEVELOPMENT').toUpperCase()
   const health = status?.health
   const hc = health ? HEALTH_STYLES[health] ?? HEALTH_STYLES.ON_TRACK : null
-  const accent = DOMAIN_ACCENT[domain] ?? DOMAIN_ACCENT.DEVELOPMENT
+  const domainColor = DOMAIN_RULE[domain] ?? DOMAIN_RULE.DEVELOPMENT
 
   const visibleMembers = (project.members ?? []).slice(0, 4)
   const extraMembers = Math.max(0, (project.members?.length ?? 0) - visibleMembers.length)
@@ -106,64 +95,56 @@ export function ProjectHeader({
           : 'text-muted-foreground'
 
   return (
-    <Card className="relative overflow-hidden p-0">
-      {/* Domain accent strip */}
-      <div
-        className={cn(
-          'h-[3px] w-full bg-gradient-to-r',
-          accent
-        )}
-        aria-hidden="true"
-      />
-
-      <div className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-4">
-            <div
-              className={cn(
-                'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br shadow-md',
-                getProjectColor(project.name)
-              )}
-            >
-              <span className="text-xl font-bold text-white drop-shadow">
-                {project.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-2xl font-bold tracking-tight text-foreground">
-                  {project.name}
-                </h1>
+    <div className="border-b border-border/60 pb-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-stretch gap-4">
+          {/* Domain accent: a thin vertical rule keyed to category. Picks
+              up the same color as the dot beside the domain label below
+              so identity reads in one glance. */}
+          <span
+            aria-hidden
+            className={cn('w-[3px] shrink-0 rounded-full', domainColor)}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="truncate text-[26px] font-semibold leading-tight tracking-tight text-foreground">
+                {project.name}
+              </h1>
+              <span className="inline-flex items-baseline gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 <span
                   className={cn(
-                    'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-                    DOMAIN_PILL[domain] || 'bg-muted text-muted-foreground'
+                    'h-1.5 w-1.5 translate-y-[2px] self-center rounded-full',
+                    domainColor,
+                  )}
+                />
+                {DOMAIN_LABELS[domain as TaskDomain] || domain.toLowerCase()}
+              </span>
+              {hc && (
+                <span
+                  className={cn(
+                    'inline-flex items-baseline gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em]',
+                    hc.text,
                   )}
                 >
-                  {DOMAIN_LABELS[domain as TaskDomain] || domain.toLowerCase()}
-                </span>
-                {hc && (
                   <span
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-bold',
-                      hc.bg,
-                      hc.text
+                      'h-1.5 w-1.5 translate-y-[2px] self-center rounded-full',
+                      hc.dot,
                     )}
-                  >
-                    <span className={cn('h-1.5 w-1.5 rounded-full', hc.dot)} />
-                    {hc.label}
-                  </span>
-                )}
-              </div>
-              {project.description ? (
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  {project.description}
-                </p>
-              ) : (
-                <p className="mt-1 text-sm italic text-muted-foreground/60">
-                  No description
-                </p>
+                  />
+                  {hc.label}
+                </span>
               )}
+            </div>
+            {project.description ? (
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {project.description}
+              </p>
+            ) : (
+              <p className="mt-1.5 text-sm italic text-muted-foreground/60">
+                No description
+              </p>
+            )}
 
               {/* Metadata row — created / updated / creator + member avatars */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
@@ -259,26 +240,25 @@ export function ProjectHeader({
           )}
         </div>
 
-        {/* Overall project progress — a single dedicated row, clearly labeled */}
-        {totalTasks > 0 && (
-          <div className="mt-5 border-t border-border/60 pt-4">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Overall project progress
-              </span>
-              <span
-                className={cn(
-                  'text-sm font-bold tabular-nums',
-                  completionColor
-                )}
-              >
-                {completionPercent}%
-              </span>
-            </div>
-            <Progress value={completionPercent} className="h-1.5 w-full" />
+      {/* Overall project progress — a single dedicated row, clearly labeled */}
+      {totalTasks > 0 && (
+        <div className="mt-5 border-t border-border/40 pt-4">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Overall project progress
+            </span>
+            <span
+              className={cn(
+                'text-sm font-medium tabular-nums',
+                completionColor
+              )}
+            >
+              {completionPercent}%
+            </span>
           </div>
-        )}
-      </div>
-    </Card>
+          <Progress value={completionPercent} className="h-1 w-full" />
+        </div>
+      )}
+    </div>
   )
 }

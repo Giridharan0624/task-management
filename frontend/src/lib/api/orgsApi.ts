@@ -25,6 +25,8 @@ export type UpdateSettingsRequest = Partial<
     | 'faviconUrl'
     | 'primaryColor'
     | 'accentColor'
+    | 'fontFamily'
+    | 'theme'
     | 'terminology'
     | 'timezone'
     | 'locale'
@@ -35,6 +37,7 @@ export type UpdateSettingsRequest = Partial<
     | 'employeeIdPrefix'
     | 'features'
     | 'leaveTypes'
+    | 'departments'
   >
 >
 

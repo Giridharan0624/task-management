@@ -31,7 +31,6 @@ import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import { Input } from '@/components/ui/Input'
-import { Progress } from '@/components/ui/Progress'
 import { formatDuration } from '@/lib/utils/formatDuration'
 import { buildCsvName } from '@/lib/utils/csvFilename'
 import { cn } from '@/lib/utils'
@@ -51,11 +50,43 @@ import {
   Cell,
 } from 'recharts'
 
-const COLORS = [
-  '#6366f1', '#8b5cf6', '#a78bfa', '#c084fc',
-  '#34d399', '#2dd4bf', '#38bdf8', '#f97316',
-  '#f472b6', '#fb7185', '#facc15', '#818cf8',
+// Theme-driven chart palette. The 8 colors are read from CSS
+// variables (`--chart-1` … `--chart-8`) which `applyThemePreset`
+// rewrites on every theme change, so a Velour workspace renders
+// burgundy/rose bars and a Cypress workspace renders forest/bronze
+// — without this file knowing anything about the theme catalog.
+const APP_BAR_PALETTE = [
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+  'var(--chart-6)',
+  'var(--chart-7)',
+  'var(--chart-8)',
 ]
+
+// Active vs Idle: theme-driven so the donut tracks the workspace
+// palette. Index 0 = the theme's primary chart slot (the most
+// "alive" color); index 4 = the secondary/warning slot (amber-ish
+// for most themes, ochre/champagne for Atelier/Meridian).
+const ACTIVE_INK = 'var(--chart-1)'
+const IDLE_INK = 'var(--chart-5)'
+
+// Semantic status palette — vivid Tailwind 600s so the dots + value
+// numerals carry visual weight against the white card surface.
+const STATUS_INK: Record<'good' | 'mid' | 'low' | 'neutral', string> = {
+  good: '#059669',     // emerald-600
+  mid: '#d97706',      // amber-600
+  low: '#e11d48',      // rose-600
+  neutral: '#475569',  // slate-600
+}
+const STATUS_TINT: Record<'good' | 'mid' | 'low' | 'neutral', string> = {
+  good: 'rgba(5,150,105,0.08)',
+  mid: 'rgba(217,119,6,0.08)',
+  low: 'rgba(225,29,72,0.08)',
+  neutral: 'rgba(71,85,105,0.08)',
+}
 
 const ALL_USERS = 'ALL'
 
@@ -384,7 +415,7 @@ function ActivityCard({
   }
 
   return (
-    <Card className="overflow-hidden p-0 hover-lift-sm">
+    <Card className="overflow-hidden border border-border/70 bg-card p-0 shadow-none">
       {/* Header — click anywhere to expand. Identity on the left, key
           stats on the right. Secondary stats (KB/Mouse/Intervals) move
           into the expanded body so the header doesn't overflow. */}
@@ -393,17 +424,17 @@ function ActivityCard({
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
         className={cn(
-          'flex w-full flex-wrap items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:bg-muted/30',
+          'flex w-full flex-wrap items-center justify-between gap-3 px-6 py-5 text-left transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:bg-muted/20',
           expanded && 'border-b border-border/60',
         )}
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-4">
           <ChevronDown
             className={cn(
-              'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              'h-3.5 w-3.5 shrink-0 text-muted-foreground/80 transition-transform duration-200',
               !expanded && '-rotate-90',
             )}
-            strokeWidth={2.2}
+            strokeWidth={1.8}
           />
           <Avatar
             url={userInfo?.avatarUrl}
@@ -411,16 +442,16 @@ function ActivityCard({
             size="md"
           />
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-foreground">
+            <p className="truncate text-[15px] font-medium tracking-tight text-foreground">
               {activity.userName || 'User'}
             </p>
-            <p className="truncate text-[11px] text-muted-foreground">
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
               {userInfo?.employeeId && (
                 <>
-                  <span className="font-medium text-primary">
+                  <span className="font-medium tabular-nums text-foreground/70">
                     {userInfo.employeeId}
                   </span>
-                  <span className="mx-1">·</span>
+                  <span className="mx-1.5 text-muted-foreground/50">·</span>
                 </>
               )}
               {activity.userEmail}
@@ -428,25 +459,28 @@ function ActivityCard({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <HeaderStat
-            icon={Clock}
-            label="Active"
-            value={formatDuration(activity.totalActiveMinutes / 60)}
-            tone="good"
-          />
-          <HeaderStat
-            icon={PauseCircle}
-            label="Idle"
-            value={formatDuration(activity.totalIdleMinutes / 60)}
-            tone="mid"
-          />
-          <HeaderStat
-            icon={Gauge}
-            label="Score"
-            value={`${scorePercent}%`}
-            tone={scoreTone}
-          />
+        <div className="flex flex-wrap items-center divide-x divide-border/60">
+          <div className="px-5 first:pl-0 last:pr-0">
+            <HeaderStat
+              label="Active"
+              value={formatDuration(activity.totalActiveMinutes / 60)}
+              tone="good"
+            />
+          </div>
+          <div className="px-5">
+            <HeaderStat
+              label="Idle"
+              value={formatDuration(activity.totalIdleMinutes / 60)}
+              tone="mid"
+            />
+          </div>
+          <div className="px-5 last:pr-0">
+            <HeaderStat
+              label="Score"
+              value={`${scorePercent}%`}
+              tone={scoreTone}
+            />
+          </div>
         </div>
       </button>
 
@@ -454,24 +488,24 @@ function ActivityCard({
         <div className="animate-fade-in">
           {/* Secondary stats row — tinted icon badges per metric so the
               row reads as distinct tiles, not a uniform strip. */}
-          <div className="grid grid-cols-3 divide-x divide-border/60 border-b border-border/60 bg-muted/30">
+          <div className="grid grid-cols-3 divide-x divide-border/60 border-b border-border/60 bg-card">
             <SecondaryStat
               icon={Keyboard}
               label="Keystrokes"
               value={totalKeyboard.toLocaleString()}
-              tint="indigo"
+              accent="var(--chart-1)"
             />
             <SecondaryStat
               icon={Mouse}
               label="Mouse events"
               value={totalMouse.toLocaleString()}
-              tint="fuchsia"
+              accent="var(--chart-6)"
             />
             <SecondaryStat
               icon={Layers}
               label="Intervals"
               value={String(activity.bucketCount)}
-              tint="sky"
+              accent="var(--chart-3)"
             />
           </div>
 
@@ -480,63 +514,76 @@ function ActivityCard({
           {appData.length > 0 && (
             <div className="grid grid-cols-1 gap-px border-b border-border/60 bg-border/60 md:grid-cols-2">
               {/* App usage */}
-              <div className="flex flex-col gap-3 bg-card p-5 sm:p-6">
+              <div className="flex flex-col gap-4 bg-card p-6 sm:p-8">
                 <ChartHeader label="App usage" suffix="hours" />
                 <ResponsiveContainer
                   width="100%"
-                  height={Math.max(180, appData.length * 34)}
+                  height={Math.max(180, appData.length * 30)}
                 >
                   <BarChart
                     data={appData}
                     layout="vertical"
-                    margin={{ left: 0, right: 12, top: 4, bottom: 0 }}
+                    margin={{ left: 0, right: 16, top: 2, bottom: 0 }}
+                    barCategoryGap={6}
                   >
                     <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="rgba(0,0,0,0.05)"
+                      stroke="rgba(15,23,42,0.06)"
                       horizontal={false}
                     />
                     <XAxis
                       type="number"
-                      tick={{ fontSize: 10 }}
+                      tick={{
+                        fontSize: 10,
+                        fill: '#94a3b8',
+                        fontWeight: 500,
+                      }}
                       axisLine={false}
                       tickLine={false}
                     />
                     <YAxis
                       dataKey="name"
                       type="category"
-                      tick={{ fontSize: 11, fontWeight: 600 }}
-                      width={110}
+                      tick={{
+                        fontSize: 11,
+                        fill: '#475569',
+                        fontWeight: 500,
+                      }}
+                      width={120}
                       axisLine={false}
                       tickLine={false}
                     />
                     <Tooltip
-                      cursor={{ fill: 'rgba(99,102,241,0.06)' }}
+                      cursor={{ fill: 'rgba(15,23,42,0.04)' }}
                       contentStyle={{
                         fontSize: 11,
-                        borderRadius: 10,
-                        border: '1px solid rgba(0,0,0,0.08)',
-                        boxShadow: '0 8px 24px -8px rgba(0,0,0,0.12)',
+                        borderRadius: 4,
+                        border: '1px solid rgba(15,23,42,0.12)',
+                        boxShadow: 'none',
+                        padding: '6px 10px',
                       }}
                       formatter={(v) => `${v}h`}
                     />
                     <Bar
                       dataKey="hours"
-                      radius={[0, 6, 6, 0]}
-                      animationDuration={700}
+                      radius={[0, 1, 1, 0]}
+                      barSize={10}
+                      animationDuration={500}
                     >
                       {appData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        <Cell
+                          key={i}
+                          fill={APP_BAR_PALETTE[i % APP_BAR_PALETTE.length]}
+                        />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Active vs Idle donut + central label */}
-              <div className="flex flex-col gap-3 bg-card p-5 sm:p-6">
+              {/* Active vs Idle — thin ring + serif numeral hero */}
+              <div className="flex flex-col gap-4 bg-card p-6 sm:p-8">
                 <ChartHeader label="Active vs Idle" suffix="minutes" />
-                <div className="relative mx-auto w-full max-w-[260px]">
+                <div className="relative mx-auto w-full max-w-[240px]">
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
@@ -552,30 +599,34 @@ function ActivityCard({
                         ]}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={3}
+                        innerRadius={78}
+                        outerRadius={92}
+                        paddingAngle={0}
                         dataKey="value"
                         stroke="transparent"
-                        animationDuration={700}
+                        animationDuration={500}
                       >
-                        <Cell fill="#10b981" />
-                        <Cell fill="#f59e0b" />
+                        <Cell fill={ACTIVE_INK} />
+                        <Cell fill={IDLE_INK} />
                       </Pie>
                       <Tooltip
                         contentStyle={{
                           fontSize: 11,
-                          borderRadius: 10,
-                          border: '1px solid rgba(0,0,0,0.08)',
-                          boxShadow: '0 8px 24px -8px rgba(0,0,0,0.12)',
+                          borderRadius: 4,
+                          border: '1px solid rgba(15,23,42,0.12)',
+                          boxShadow: 'none',
+                          padding: '6px 10px',
                         }}
                         formatter={(v) => `${v}m`}
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  {/* Central ratio label — sits in the donut hole */}
+                  {/* Central ratio label — serif numeral, refined %  */}
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                    <p
+                      className="text-4xl font-normal leading-none tabular-nums [font-feature-settings:'tnum','lnum']"
+                      style={{ color: ACTIVE_INK }}
+                    >
                       {Math.round(
                         (activity.totalActiveMinutes /
                           Math.max(
@@ -585,29 +636,37 @@ function ActivityCard({
                           )) *
                           100,
                       )}
-                      <span className="text-base font-semibold text-muted-foreground">
+                      <span className="ml-0.5 align-super text-base font-light text-muted-foreground">
                         %
                       </span>
                     </p>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                       active
                     </p>
                   </div>
                 </div>
-                <div className="mt-1 flex items-center justify-center gap-5 text-[11px]">
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="font-semibold text-foreground">
+                <div className="mt-2 flex items-center justify-center gap-8 text-[11px]">
+                  <span className="flex items-baseline gap-2">
+                    <span
+                      className="h-2 w-2 self-center rounded-sm"
+                      style={{ backgroundColor: ACTIVE_INK }}
+                    />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                       Active
                     </span>
-                    <span className="font-mono tabular-nums text-muted-foreground">
+                    <span className="text-sm tabular-nums text-foreground">
                       {Math.round(activity.totalActiveMinutes)}m
                     </span>
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-amber-500" />
-                    <span className="font-semibold text-foreground">Idle</span>
-                    <span className="font-mono tabular-nums text-muted-foreground">
+                  <span className="flex items-baseline gap-2">
+                    <span
+                      className="h-2 w-2 self-center rounded-sm"
+                      style={{ backgroundColor: IDLE_INK }}
+                    />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Idle
+                    </span>
+                    <span className="text-sm tabular-nums text-foreground">
                       {Math.round(activity.totalIdleMinutes)}m
                     </span>
                   </span>
@@ -621,34 +680,36 @@ function ActivityCard({
             <ScreenshotGallery screenshots={activity.screenshots} />
           )}
 
-          {/* AI Summary — sits on a soft tinted surface when a summary
-              exists, flat when empty. The top hairline is a gradient so
-              the block reads as a deliberate, distinct section. */}
+          {/* AI Summary — soft indigo wash + accented top hairline so
+              the section reads as the app's primary "AI" surface,
+              tying into the brand's indigo accent. */}
           <div
-            className={cn(
-              'relative space-y-4 p-5 sm:p-6',
-              summary &&
-                'bg-gradient-to-br from-primary/[0.03] via-card to-accent/[0.03]',
-            )}
+            className="relative space-y-5 bg-primary/[0.04] p-6 sm:p-8"
           >
-            {summary && (
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
-              />
-            )}
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                <Sparkles className="h-3 w-3" />
-                AI work summary
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary"
+            />
+            <div className="flex items-baseline justify-between gap-3 border-b border-border/50 pb-3">
+              <div className="flex items-baseline gap-2 text-foreground">
+                <Sparkles
+                  className="h-3 w-3 translate-y-px text-primary"
+                  strokeWidth={1.8}
+                />
+                <p className="text-sm font-medium tracking-tight">
+                  AI work summary
+                </p>
               </div>
+              {/* Promoted from a typographic ghost label to a real
+                  button — the action is significant (kicks off a Groq
+                  call), so it should look clickable. Sparkle icon
+                  marks it as the AI affordance. */}
               <Button
-                variant={summary ? 'secondary' : 'primary'}
+                variant="secondary"
                 size="sm"
                 onClick={handleGenerate}
                 loading={generateMutation.isPending}
-                className="h-8 gap-1.5 text-xs"
+                className="gap-1.5"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 {generateMutation.isPending
@@ -662,19 +723,19 @@ function ActivityCard({
             {summary ? (
               <SummaryDisplay summary={summary} />
             ) : (
-              <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border/80 bg-muted/30 p-4">
-                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary/60" />
-                <p className="text-[13px] leading-relaxed text-muted-foreground">
-                  {generateMutation.isPending
-                    ? 'Analysing activity data — headline, themes, and concerns usually take 10–30 seconds.'
-                    : 'Click Generate summary for an AI narrative of this work session. It covers what apps were used, focus patterns, and any concerns.'}
-                </p>
-              </div>
+              <p className="max-w-prose text-[13px] leading-relaxed text-muted-foreground">
+                {generateMutation.isPending
+                  ? 'Analysing activity data — headline, themes, and concerns usually take 10–30 seconds.'
+                  : 'Generate an analyst narrative of this work session — apps used, focus patterns, and concerns surfaced from the raw activity stream.'}
+              </p>
             )}
 
             {generateMutation.error && (
-              <p className="flex items-center gap-1.5 text-[11px] text-destructive">
-                <AlertTriangle className="h-3 w-3" />
+              <p
+                className="flex items-center gap-1.5 text-[11px]"
+                style={{ color: STATUS_INK.low }}
+              >
+                <AlertTriangle className="h-3 w-3" strokeWidth={1.6} />
                 {generateMutation.error instanceof Error
                   ? generateMutation.error.message
                   : 'Failed to generate summary'}
@@ -687,45 +748,38 @@ function ActivityCard({
   )
 }
 
-/* ═══ Header stat — compact icon + value + label ═══ */
-
-const TONE_STYLES: Record<
-  'good' | 'mid' | 'low',
-  { icon: string; value: string }
-> = {
-  good: { icon: 'text-emerald-600 bg-emerald-50', value: 'text-emerald-700' },
-  mid: { icon: 'text-amber-700 bg-amber-50', value: 'text-amber-700' },
-  low: { icon: 'text-destructive bg-destructive/10', value: 'text-destructive' },
-}
+/* ═══ Header stat — label-over-value, status dot, hairline divider ═══ */
 
 function HeaderStat({
-  icon: Icon,
   label,
   value,
-  tone,
+  tone = 'neutral',
 }: {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  // `icon` retained in the call sites for source compatibility but no
+  // longer rendered — the editorial layout uses a status dot + label
+  // instead, dropping the tinted icon chip that read as gamified.
+  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
   label: string
   value: string
-  tone: 'good' | 'mid' | 'low'
+  tone?: 'good' | 'mid' | 'low' | 'neutral'
 }) {
-  const s = TONE_STYLES[tone]
   return (
-    <div className="flex items-center gap-2">
-      <div
-        className={cn(
-          'flex h-8 w-8 items-center justify-center rounded-lg',
-          s.icon,
-        )}
-      >
-        <Icon className="h-4 w-4" strokeWidth={2} />
-      </div>
-      <div className="leading-tight">
-        <p className={cn('text-sm font-bold tabular-nums', s.value)}>{value}</p>
-        <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="flex flex-col items-end leading-tight">
+      <div className="flex items-center gap-1.5">
+        <span
+          className="h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: STATUS_INK[tone] }}
+        />
+        <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </p>
       </div>
+      <p
+        className="mt-0.5 text-lg font-medium tabular-nums [font-feature-settings:'tnum','lnum']"
+        style={{ color: STATUS_INK[tone] }}
+      >
+        {value}
+      </p>
     </div>
   )
 }
@@ -738,15 +792,12 @@ function ChartHeader({
   suffix?: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
-        <span className="h-3 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
-          {label}
-        </p>
-      </div>
+    <div className="flex items-baseline justify-between gap-3 border-b border-border/50 pb-3">
+      <p className="text-sm font-medium tracking-tight text-foreground">
+        {label}
+      </p>
       {suffix && (
-        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/70">
           {suffix}
         </span>
       )}
@@ -758,36 +809,31 @@ function SecondaryStat({
   icon: Icon,
   label,
   value,
-  tint = 'indigo',
+  accent,
 }: {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   label: string
   value: string
-  tint?: 'indigo' | 'fuchsia' | 'sky'
+  accent: string
 }) {
-  const tintClass = {
-    indigo: 'bg-indigo-500/10 text-indigo-600 ring-indigo-500/20 dark:text-indigo-300',
-    fuchsia: 'bg-fuchsia-500/10 text-fuchsia-600 ring-fuchsia-500/20 dark:text-fuchsia-300',
-    sky: 'bg-sky-500/10 text-sky-600 ring-sky-500/20 dark:text-sky-300',
-  }[tint]
   return (
-    <div className="group flex items-center gap-3 px-5 py-4 transition-colors hover:bg-background/60">
-      <span
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset shadow-sm transition-transform duration-300 group-hover:scale-110',
-          tintClass,
-        )}
-      >
-        <Icon className="h-4 w-4" strokeWidth={1.9} />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="flex flex-col gap-2 px-6 py-5">
+      <div className="flex items-center gap-2">
+        <Icon
+          className="h-3 w-3"
+          strokeWidth={1.8}
+          style={{ color: accent }}
+        />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
           {label}
         </p>
-        <p className="truncate font-mono text-lg font-semibold tabular-nums text-foreground">
-          {value}
-        </p>
       </div>
+      <p
+        className="text-3xl font-normal tabular-nums [font-feature-settings:'tnum','lnum']"
+        style={{ color: accent }}
+      >
+        {value}
+      </p>
     </div>
   )
 }
@@ -803,65 +849,56 @@ function DaySummary({
   totalActiveHours: number
   avgScore: number
 }) {
-  const scoreTone =
-    avgScore >= 70
-      ? 'text-emerald-600'
-      : avgScore >= 40
-        ? 'text-amber-700'
-        : 'text-destructive'
+  const scoreDot =
+    avgScore >= 70 ? 'good' : avgScore >= 40 ? 'mid' : 'low'
 
   return (
     <Card className="grid grid-cols-3 divide-x divide-border/60 overflow-hidden p-0">
       <SummaryCell
-        icon={Users}
         label="Members active"
         value={String(activeCount)}
-        tone="text-primary"
       />
       <SummaryCell
-        icon={Clock}
         label="Total active"
         value={formatDuration(totalActiveHours)}
       />
       <SummaryCell
-        icon={Gauge}
         label="Avg score"
         value={`${avgScore}%`}
-        tone={scoreTone}
+        dot={scoreDot}
       />
     </Card>
   )
 }
 
 function SummaryCell({
-  icon: Icon,
   label,
   value,
-  tone,
+  dot,
 }: {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   label: string
   value: string
-  tone?: string
+  dot?: 'good' | 'mid' | 'low' | 'neutral'
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-        <Icon className="h-4 w-4" strokeWidth={2} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+    <div className="flex flex-col gap-1.5 px-6 py-5">
+      <div className="flex items-center gap-2">
+        {dot && (
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: STATUS_INK[dot] }}
+          />
+        )}
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
           {label}
         </p>
-        <p
-          className={cn(
-            'truncate text-base font-bold tabular-nums',
-            tone ?? 'text-foreground',
-          )}
-        >
-          {value}
-        </p>
       </div>
+      <p
+        className="text-2xl font-normal tabular-nums [font-feature-settings:'tnum','lnum']"
+        style={dot ? { color: STATUS_INK[dot] } : undefined}
+      >
+        {value}
+      </p>
     </div>
   )
 }
@@ -870,53 +907,84 @@ function SummaryCell({
 
 function SummaryDisplay({ summary }: { summary: DailySummary }) {
   const pct = Math.max(0, Math.min(100, summary.productivityScore * 10))
-  const prodColor =
+  const prodTone: 'good' | 'mid' | 'low' =
     summary.productivityScore >= 7
-      ? '[&>div]:!bg-emerald-500'
+      ? 'good'
       : summary.productivityScore >= 4
-        ? '[&>div]:!bg-amber-500'
-        : '[&>div]:!bg-destructive'
+        ? 'mid'
+        : 'low'
+  const prodInk = STATUS_INK[prodTone]
 
   return (
-    <div className="space-y-4">
-      {/* Narrative — sits on a slightly elevated card so it reads as the
-          hero of the section, not just a paragraph. */}
-      <p className="text-[14px] leading-relaxed text-foreground/90">
+    <div className="space-y-6">
+      {/* Narrative — drop-cap paragraph treatment lets it read as
+          editorial copy, not a notification body. */}
+      <p className="text-[14px] leading-[1.7] text-foreground/90">
         {summary.summary}
       </p>
 
       {summary.keyActivities.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {summary.keyActivities.map((a, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
-            >
-              <span className="h-1 w-1 rounded-full bg-primary" />
-              {a}
-            </span>
-          ))}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            Themes
+          </p>
+          <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-foreground">
+            {summary.keyActivities.map((a, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <span
+                  className="h-1 w-1 rounded-full"
+                  style={{
+                    backgroundColor:
+                      APP_BAR_PALETTE[i % APP_BAR_PALETTE.length],
+                  }}
+                />
+                {a}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/40 pt-3">
+      {summary.concerns.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            Concerns
+          </p>
+          <ul className="space-y-1 text-[13px] text-foreground/80">
+            {summary.concerns.map((c, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <AlertTriangle
+                  className="mt-[3px] h-3 w-3 shrink-0"
+                  strokeWidth={1.6}
+                  style={{ color: STATUS_INK.mid }}
+                />
+                {c}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/50 pt-4">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             Productivity
           </span>
-          <Progress
-            value={pct}
-            className={cn('h-2 w-32 overflow-hidden rounded-full', prodColor)}
-          />
-          <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+          <div className="h-[3px] w-40 overflow-hidden bg-border/60">
+            <div
+              className="h-full transition-[width] duration-500"
+              style={{ width: `${pct}%`, backgroundColor: prodInk }}
+            />
+          </div>
+          <span
+            className="text-base tabular-nums"
+            style={{ color: prodInk }}
+          >
             {summary.productivityScore}
-            <span className="text-xs font-semibold text-muted-foreground">
-              {' '}/10
-            </span>
+            <span className="text-xs text-muted-foreground"> / 10</span>
           </span>
         </div>
-        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          <Sparkles className="h-2.5 w-2.5" />
+        <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           Generated{' '}
           {new Date(summary.generatedAt).toLocaleTimeString('en-US', {
             hour: '2-digit',
@@ -924,20 +992,6 @@ function SummaryDisplay({ summary }: { summary: DailySummary }) {
           })}
         </span>
       </div>
-
-      {summary.concerns.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {summary.concerns.map((c, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700"
-            >
-              <AlertTriangle className="h-2.5 w-2.5" />
-              {c}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

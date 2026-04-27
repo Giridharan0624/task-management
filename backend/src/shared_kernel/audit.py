@@ -53,21 +53,20 @@ ROLE_CREATED = "role.created"
 ROLE_UPDATED = "role.updated"
 ROLE_DELETED = "role.deleted"
 
-# Pipelines
-PIPELINE_CREATED = "pipeline.created"
-PIPELINE_UPDATED = "pipeline.updated"
-PIPELINE_DELETED = "pipeline.deleted"
-
 # Users
 USER_INVITED = "user.invited"
 USER_CREATED = "user.created"
 USER_ROLE_CHANGED = "user.role_changed"
-USER_DELETED = "user.deleted"
-USER_SUSPENDED = "user.suspended"
 
-# Plan / billing
-PLAN_UPGRADED = "plan.upgraded"
-PLAN_DOWNGRADED = "plan.downgraded"
+# Note: PIPELINE_*, USER_DELETED, USER_SUSPENDED, PLAN_UPGRADED, and
+# PLAN_DOWNGRADED constants were removed in Session 9 — they were
+# defined but never emitted from any handler, which made the audit-
+# log filter UI promise events that never appeared. Re-introduce when
+# the corresponding handler actually fires the event:
+#   - pipelines_router → PIPELINE_CREATED/UPDATED/DELETED
+#   - delete_user handler → USER_DELETED
+#   - (future user-suspension feature) → USER_SUSPENDED
+#   - (future Stripe billing) → PLAN_UPGRADED / PLAN_DOWNGRADED
 
 
 @dataclass(frozen=True)

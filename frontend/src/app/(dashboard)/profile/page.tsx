@@ -309,33 +309,36 @@ export default function ProfilePage() {
           </div>
 
           {!isOwner && (
-            <div
-              className={cn(
-                'hidden shrink-0 flex-col items-center justify-center rounded-xl border px-4 py-3 sm:flex',
-                dayOffScore === 100
-                  ? 'border-emerald-200 bg-emerald-50'
-                  : dayOffScore >= 75
-                    ? 'border-blue-200 bg-blue-50'
-                    : dayOffScore >= 50
-                      ? 'border-amber-200 bg-amber-50'
-                      : 'border-red-200 bg-red-50'
-              )}
-            >
-              <span
-                className={cn(
-                  'text-2xl font-bold tabular-nums',
-                  dayOffScore === 100
-                    ? 'text-emerald-700'
-                    : dayOffScore >= 75
-                      ? 'text-blue-700'
-                      : dayOffScore >= 50
-                        ? 'text-amber-700'
-                        : 'text-red-700'
-                )}
-              >
-                {dayOffScore}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+            <div className="hidden shrink-0 flex-col items-center justify-center border-l border-border/60 pl-5 sm:flex">
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 self-center rounded-full',
+                    dayOffScore === 100
+                      ? 'bg-emerald-500'
+                      : dayOffScore >= 75
+                        ? 'bg-sky-500'
+                        : dayOffScore >= 50
+                          ? 'bg-amber-500'
+                          : 'bg-rose-500'
+                  )}
+                />
+                <span
+                  className={cn(
+                    'text-2xl font-medium tabular-nums leading-none',
+                    dayOffScore === 100
+                      ? 'text-emerald-700'
+                      : dayOffScore >= 75
+                        ? 'text-sky-700'
+                        : dayOffScore >= 50
+                          ? 'text-amber-700'
+                          : 'text-rose-700'
+                  )}
+                >
+                  {dayOffScore}
+                </span>
+              </div>
+              <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Day-off score
               </span>
             </div>
@@ -527,11 +530,15 @@ function TimezoneCard() {
     <Card className="p-5">
       <div className="mb-1 flex items-center gap-1.5">
         <Globe2 className="h-3.5 w-3.5 text-muted-foreground" />
-        <h3 className="text-sm font-bold text-foreground">Time zone</h3>
+        <h3 className="text-sm font-bold text-foreground">
+          Your display time zone
+        </h3>
       </div>
       <p className="mb-4 text-xs text-muted-foreground">
-        Used to render all absolute-time tooltips and scheduling dialogs for
-        this device.
+        Only affects how times look to you on this device — tooltips,
+        deadline labels, scheduling dialog defaults. The workspace
+        time zone (set by the owner in Organization settings) is what
+        anchors team-wide things like day-off boundaries and reports.
       </p>
       <Select
         value={timezone}

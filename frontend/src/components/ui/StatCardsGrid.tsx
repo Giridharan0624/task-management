@@ -35,67 +35,67 @@ const GRID_COLS: Record<NonNullable<StatCardsGridProps['columns']>, string> = {
 }
 
 /**
- * Big-card stat grid. Values render large and colored; labels are small and
- * uppercase. Cards become clickable filters when `onClick` is set, with a
- * distinct `selected` state (accent border + tinted background).
+ * Stat grid rendered as a single card with hairline-divided cells —
+ * not a row of independent rounded tiles. Each cell shows: an optional
+ * status dot, the metric label in tracked uppercase, and the value in
+ * a medium-weight tabular numeral.
  *
- * Motion: cards stagger-fade in on mount; numeric values count up from 0
- * to their target on first render and re-animate when the value changes.
+ * Click-through cells become filter buttons; the selected one gets a
+ * thin top accent rule + light surface tint, no shadow lift.
+ *
+ * Motion: numeric values still count up on mount (subtle, 800ms) but
+ * the per-card stagger fade is gone — the strip lands as a single
+ * data surface, not as a sequence of animations.
  */
 export function StatCardsGrid({ items, className, columns }: StatCardsGridProps) {
   const cols =
     columns ?? (items.length >= 5 ? 5 : (items.length as 3 | 4))
+  const gridCols =
+    GRID_COLS[cols as keyof typeof GRID_COLS] ?? 'grid-cols-2 sm:grid-cols-4'
+
   return (
     <div
       className={cn(
-        'grid gap-3',
-        GRID_COLS[cols as keyof typeof GRID_COLS] ?? 'grid-cols-2 sm:grid-cols-4',
-        className
+        'grid divide-x divide-y divide-border/60 overflow-hidden rounded-lg border border-border/70 bg-card sm:divide-y-0',
+        gridCols,
+        className,
       )}
     >
-      {items.map((item, i) => (
-        <StatCard key={item.key} item={item} index={i} />
+      {items.map((item) => (
+        <StatCard key={item.key} item={item} />
       ))}
     </div>
   )
 }
 
-function StatCard({ item, index }: { item: StatCardItem; index: number }) {
+function StatCard({ item }: { item: StatCardItem }) {
   const content = (
     <>
-      {item.icon && (
-        <div className="mb-2 text-muted-foreground [&>svg]:h-4 [&>svg]:w-4">
-          {item.icon}
-        </div>
-      )}
-      <div className="flex items-baseline gap-2">
-        <StatValue value={item.value} accent={item.accent} />
+      <div className="flex items-center gap-2">
         {item.live && <LiveDot size="xs" />}
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          {item.label}
+        </p>
       </div>
-      <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-        {item.label}
-      </p>
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <StatValue value={item.value} accent={item.accent} />
+      </div>
     </>
   )
 
-  const animationDelay = `${Math.min(index * 50, 400)}ms`
-
-  const baseClass =
-    'rounded-xl border bg-card p-4 shadow-card text-left transition-all duration-200 animate-in fade-in slide-in-from-bottom-1 fill-mode-backwards'
+  const baseClass = 'flex flex-col px-5 py-4 text-left transition-colors'
 
   if (item.onClick) {
     return (
       <button
         type="button"
         onClick={item.onClick}
-        style={{ animationDelay, animationDuration: '500ms' }}
         className={cn(
           baseClass,
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
-          'hover:-translate-y-0.5',
+          'focus:outline-none focus-visible:bg-muted/40',
           item.selected
-            ? 'border-primary/40 bg-primary/5 shadow-card-hover'
-            : 'border-border hover:border-border/80 hover:shadow-card-hover'
+            ? 'bg-primary/[0.04] shadow-[inset_0_2px_0_0_rgb(var(--color-primary))]'
+            : 'hover:bg-muted/30',
         )}
       >
         {content}
@@ -103,17 +103,7 @@ function StatCard({ item, index }: { item: StatCardItem; index: number }) {
     )
   }
 
-  return (
-    <div
-      style={{ animationDelay, animationDuration: '500ms' }}
-      className={cn(
-        baseClass,
-        'border-border hover:-translate-y-0.5 hover:shadow-card-hover'
-      )}
-    >
-      {content}
-    </div>
-  )
+  return <div className={baseClass}>{content}</div>
 }
 
 /** Numeric values count up; strings render as-is. */
@@ -132,8 +122,8 @@ function StatValue({
   return (
     <span
       className={cn(
-        'text-2xl font-bold tracking-tight tabular-nums',
-        accent ?? 'text-foreground'
+        'text-2xl font-medium tabular-nums leading-none [font-feature-settings:\'tnum\',\'lnum\']',
+        accent ?? 'text-foreground',
       )}
     >
       {numeric === null ? value : animated}

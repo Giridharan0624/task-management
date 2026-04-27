@@ -20,9 +20,9 @@ export default function SignupPage() {
   ]
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background lg:h-screen lg:overflow-hidden">
       {/* ─── Left — sophisticated dark brand panel ────────────────── */}
-      <div className="relative hidden w-[52%] flex-col justify-between overflow-hidden bg-[#0a0a14] p-12 text-white lg:flex xl:p-16">
+      <div className="relative hidden w-[52%] flex-col justify-between overflow-hidden bg-[#0a0a14] p-12 text-white lg:flex lg:h-screen xl:p-16">
         {/* Subtle color washes only at corners */}
         <div
           aria-hidden
@@ -122,9 +122,16 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* ─── Right — clean light surface ───────────────────────────── */}
-      <div className="flex flex-1 items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-md animate-fade-in">
+      {/* ─── Right — clean light surface. On lg+ this column scrolls
+          independently of the left brand panel. The inner uses
+          `m-auto`: when the form fits in the viewport the auto
+          margins centre it; when the form is taller than the
+          viewport the auto margins collapse to 0 and the form
+          anchors to the top so the heading stays visible (avoids
+          the items-center "scroll past the top" trap autoFocus
+          triggers). */}
+      <div className="flex flex-col flex-1 overflow-y-auto bg-background lg:h-screen">
+        <div className="m-auto w-full max-w-md px-6 py-12 animate-fade-in">
           {/* Mobile-only logo bar */}
           <div className="mb-10 flex justify-center lg:hidden">
             <Logo size="lg" hideSubline />

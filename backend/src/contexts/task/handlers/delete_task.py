@@ -1,5 +1,6 @@
 from contexts.task.application.use_cases import DeleteTaskUseCase
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require_not_suspended
 from shared_kernel.response import build_error, build_success
 from contexts.comment.infrastructure.dynamo_repository import CommentDynamoRepository
 from contexts.project.infrastructure.dynamo_repository import ProjectDynamoRepository
@@ -9,6 +10,7 @@ from contexts.task.infrastructure.dynamo_repository import TaskDynamoRepository
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        require_not_suspended(auth)
         path_params = event.get("pathParameters") or {}
         project_id = path_params.get("projectId", "")
         task_id = path_params.get("taskId", "")

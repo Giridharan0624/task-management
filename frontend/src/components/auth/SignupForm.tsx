@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AlertCircle, ArrowLeft, ArrowRight, Building2, Check, Mail, User as UserIcon } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, Building2, Check, IdCard, Mail, User as UserIcon } from 'lucide-react'
 
 import { orgsApi } from '@/lib/api/orgsApi'
 import { Button } from '@/components/ui/Button'
@@ -15,10 +15,39 @@ import { HCaptchaWidget } from '@/components/auth/HCaptchaWidget'
 
 interface SignupFormValues {
   orgName: string
+  employeeIdPrefix: string
   ownerName: string
   ownerEmail: string
   password: string
   confirmPassword: string
+}
+
+/** Browser-detected IANA timezone. Falls back to a sensible default
+ *  if Intl isn't available (very old browsers / SSR). The owner can
+ *  override this later in /settings/organization. */
+function detectTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
+  } catch {
+    return 'Asia/Kolkata'
+  }
+}
+
+/** Suggest a 3-char employee-ID prefix from the org name. Strips
+ *  non-letters, takes the initials of the first 3 words, falls back
+ *  to "EMP" if that yields nothing usable. Just a default — the
+ *  owner can edit before submitting. */
+function suggestPrefix(orgName: string): string {
+  const cleaned = orgName.toUpperCase().replace(/[^A-Z\s]/g, '').trim()
+  if (!cleaned) return 'EMP'
+  const initials = cleaned
+    .split(/\s+/)
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join('')
+  if (initials.length >= 2) return initials.slice(0, 4)
+  // Single-word org names: take the first 3-4 letters.
+  return cleaned.replace(/\s+/g, '').slice(0, 4) || 'EMP'
 }
 
 const slugify = (value: string) =>
@@ -52,6 +81,7 @@ export function SignupForm() {
     handleSubmit,
     trigger,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormValues>({ mode: 'onTouched' })
 
@@ -64,6 +94,11 @@ export function SignupForm() {
     const ok = await trigger(['orgName'])
     if (!ok) return
     setServerError(null)
+    // Pre-fill the employee-ID prefix from the org name so the owner
+    // doesn't have to think about it. They can edit before submitting.
+    setValue('employeeIdPrefix', suggestPrefix(orgName), {
+      shouldValidate: false,
+    })
     setStep(2)
   }
 
@@ -110,6 +145,11 @@ export function SignupForm() {
         ownerName: values.ownerName.trim(),
         ownerEmail: values.ownerEmail.trim().toLowerCase(),
         password: values.password,
+        // Strip trailing dashes the user may have typed; backend
+        // re-normalizes anyway, but keeping the wire payload tidy
+        // makes the server-side error path easier to read.
+        employeeIdPrefix: values.employeeIdPrefix?.trim().replace(/-+$/, '') || undefined,
+        timezone: detectTimezone(),
         captchaToken: captchaToken ?? undefined,
       })
       router.replace('/login?first_login=1')
@@ -192,6 +232,26 @@ export function SignupForm() {
             {...register('ownerEmail', {
               required: 'Email is required',
               pattern: { value: /.+@.+\..+/, message: 'Invalid email address' },
+            })}
+          />
+
+          <Input
+            label="Employee ID prefix"
+            type="text"
+            placeholder="ACME"
+            leftIcon={<IdCard />}
+            // Helper text appears below the input. Length limit (8)
+            // matches the backend validation; auto-uppercased on the
+            // wire but we don't force it client-side so the user
+            // can type naturally.
+            hint='Used in every employee ID — e.g. ACME-26AB12. Letters/numbers, up to 8 characters.'
+            error={errors.employeeIdPrefix?.message}
+            {...register('employeeIdPrefix', {
+              required: 'Employee ID prefix is required',
+              pattern: {
+                value: /^[A-Za-z0-9]{1,8}$/,
+                message: '1-8 letters or numbers, no spaces or symbols',
+              },
             })}
           />
 

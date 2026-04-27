@@ -57,6 +57,19 @@ class SignupRequest(BaseModel):
     owner_name: str
     owner_email: str
     password: str
+    # Set-once on signup so every employee ID generated for this tenant
+    # carries the right prefix from day one. Optional — falls back to
+    # the OrgSettings default ("EMP-") when omitted, which preserves
+    # the pre-Phase-3 behavior. Stored as <PREFIX>- (we tolerate either
+    # form on input and normalize). The owner can still edit this
+    # later in /settings/organization, but existing IDs aren't
+    # renamed, so getting it right here matters.
+    employee_id_prefix: Optional[str] = None
+    # Caller's IANA timezone (browser's `Intl.DateTimeFormat().resolved
+    # Options().timeZone`). Determines reports / day-off boundaries
+    # / scheduled-job timing. Optional — falls back to the OrgSettings
+    # default (`Asia/Kolkata`) for legacy callers that don't send it.
+    timezone: Optional[str] = None
     # hCaptcha token from the client widget. Verified in the handler
     # via shared_kernel.captcha.verify_captcha. When HCAPTCHA_SECRET is
     # unset (local/test), verification is skipped and this field is
@@ -137,7 +150,22 @@ class CreateOrganizationUseCase:
             created_at=now,
             updated_at=now,
         )
+        # Build settings with the owner's signup-time choices applied.
+        # Both fields are optional so legacy callers still work with the
+        # pre-existing defaults (`EMP-` and `Asia/Kolkata`).
         settings = OrgSettings.create_default(org_id=org_id, display_name=org_name)
+        settings_overrides: dict = {}
+        if req.employee_id_prefix:
+            normalized = req.employee_id_prefix.strip().upper().rstrip("-")
+            if normalized:
+                self._validate_employee_prefix(normalized)
+                settings_overrides["employee_id_prefix"] = f"{normalized}-"
+        if req.timezone:
+            tz = req.timezone.strip()
+            if tz:
+                settings_overrides["timezone"] = tz
+        if settings_overrides:
+            settings = settings.model_copy(update=settings_overrides)
         plan = plan_from_template(org_id, PlanTier.FREE)
         owner_user = User.create(
             user_id=owner_user_id,
@@ -214,6 +242,18 @@ class CreateOrganizationUseCase:
             raise ValidationError("Owner name is required.")
         if len(password) < 8:
             raise ValidationError("Password must be at least 8 characters.")
+
+    @staticmethod
+    def _validate_employee_prefix(raw: str) -> None:
+        """Employee prefixes show up in every employee ID (`{PREFIX}-26AB12`)
+        and feed into Cognito attributes, CSVs, and emails. Lock them down
+        early — letters/numbers only, 1-8 chars, no symbols that would
+        confuse the email/csv pipeline."""
+        import re
+        if not re.match(r"^[A-Za-z0-9]{1,8}$", raw):
+            raise ValidationError(
+                "Employee ID prefix must be 1-8 letters/numbers, no spaces or symbols."
+            )
 
     def _rollback_slug(self, slug: str) -> None:
         try:

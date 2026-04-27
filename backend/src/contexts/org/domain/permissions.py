@@ -13,6 +13,14 @@ custom roles to subset/superset them.
 SETTINGS_VIEW = "settings.view"
 SETTINGS_EDIT = "settings.edit"
 ROLE_MANAGE = "role.manage"
+# Reserved for the future billing/Stripe endpoints (invoices, payment
+# methods, plan changes). Today the only "billing" data exposed by the
+# backend is the plan tier and limits, which arrive bundled with
+# `GET /orgs/current` and are needed by every page (PlanLimitBanner,
+# dashboard tier badge, etc.) — so we don't gate them here. The
+# frontend already gates the Settings → Plan & Usage nav entry on
+# this constant; once dedicated billing endpoints land they'll
+# enforce it server-side too.
 BILLING_VIEW = "billing.view"
 
 # ---- Users ----

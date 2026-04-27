@@ -2,6 +2,7 @@ import json
 
 from contexts.attendance.application.use_cases import SignInUseCase
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require_not_suspended
 from shared_kernel.response import build_error, build_success
 from contexts.attendance.infrastructure.dynamo_repository import AttendanceDynamoRepository
 from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
@@ -11,6 +12,9 @@ from contexts.task.infrastructure.dynamo_repository import TaskDynamoRepository
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        # Block time tracking for SUSPENDED / PENDING_DELETION tenants —
+        # writing attendance is a mutation; same invariant as tasks.
+        require_not_suspended(auth)
 
         body = {}
         raw_body = event.get("body")

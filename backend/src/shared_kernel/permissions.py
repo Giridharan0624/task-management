@@ -111,6 +111,34 @@ def require_email_verified(ctx: AuthContext) -> None:
         raise EmailNotVerifiedError()
 
 
+def require_feature(ctx: AuthContext, feature: str) -> None:
+    """Block the handler when the caller's tenant has the named feature
+    disabled in OrgSettings.
+
+    Backend half of the FeatureGate UI pattern. The frontend hides
+    affordances behind `<FeatureGate feature="X">`, but a direct API
+    call (curl, stale cached page, custom script) still hits the
+    handler — this guard makes the disable actually disable.
+
+    Fail-OPEN on lookup error: a DDB hiccup or a missing settings record
+    (pre-Phase-3 tenant) lets the action through. Closing here would
+    mean a transient outage reads as "all features disabled", which is
+    much worse than a brief window where a disabled feature still
+    works. Same shape as `require_not_suspended`.
+    """
+    from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
+    from shared_kernel.errors import FeatureDisabledError
+
+    try:
+        settings = OrgDynamoRepository().get_settings(ctx.org_id)
+    except Exception:
+        return
+    if settings is None:
+        return
+    if settings.features.get(feature, True) is False:
+        raise FeatureDisabledError(feature)
+
+
 def require_not_suspended(ctx: AuthContext) -> None:
     """Block writes when the tenant is suspended or scheduled for
     deletion. See the docstring on the typed error classes in

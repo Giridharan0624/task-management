@@ -9,7 +9,8 @@ import React, {
 } from 'react'
 
 import { orgsApi } from '@/lib/api/orgsApi'
-import { applyTenantTheme } from '@/lib/tenant/theme'
+import { applyTenantTheme, applyThemePreset } from '@/lib/tenant/theme'
+import { applyTenantFont } from '@/lib/tenant/fonts'
 import type { CurrentOrgResponse, OrgSummary } from '@/types/org'
 
 const STORAGE_KEY = 'taskflow_workspace'
@@ -136,8 +137,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       // Apply the full (authed) branding payload — catches any
       // settings edits made since the public `/orgs/by-slug/{slug}`
       // response was cached.
+      //
+      // Theme is now the sole source of color truth: `applyThemePreset`
+      // writes the entire palette (background, card, primary, accent,
+      // sidebar, …) for the chosen preset. The legacy per-tenant
+      // `primaryColor` / `accentColor` hex fields are no longer applied
+      // here so a stale custom color from the old Branding tab can't
+      // override the active theme preset.
       if (c.settings) {
-        applyTenantTheme(c.settings.primaryColor, c.settings.accentColor)
+        applyThemePreset(c.settings.theme)
+        applyTenantFont(c.settings.fontFamily)
       }
     } catch {
       // Not logged in yet, or org not found — ignore.

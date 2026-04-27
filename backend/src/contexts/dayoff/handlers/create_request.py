@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from contexts.dayoff.application.use_cases import CreateDayOffRequestUseCase
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require_feature, require_not_suspended
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
 from contexts.dayoff.infrastructure.dynamo_repository import DayOffDynamoRepository
@@ -19,6 +20,11 @@ class CreateDayOffBody(BaseModel):
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        require_not_suspended(auth)
+        # Reject when the OWNER has disabled day-offs at the org level.
+        # Reads (my_requests, all_requests) stay open so the historical
+        # request log remains accessible.
+        require_feature(auth, "day_offs")
         body = validate_body(CreateDayOffBody, event.get("body"))
 
         dayoff_repo = DayOffDynamoRepository()

@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { BackToSettings } from '@/components/settings/BackToSettings'
 import { cn } from '@/lib/utils'
 
 const ACTION_FILTERS: { label: string; prefix: string }[] = [
@@ -141,7 +140,6 @@ export default function AuditLogPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-24 animate-fade-in">
-      <BackToSettings />
       <PageHeader
         title="Audit log"
         description="Who changed what in this workspace. Covers settings, roles, pipelines, users, plan."

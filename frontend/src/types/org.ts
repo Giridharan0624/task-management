@@ -34,6 +34,12 @@ export interface OrgSettings {
   faviconUrl: string | null
   primaryColor: string
   accentColor: string
+  /** Curated font id (see frontend/src/lib/tenant/fonts.ts). Null/empty
+   *  means use the app default (Outfit). */
+  fontFamily: string | null
+  /** Curated theme preset id (see frontend/src/lib/tenant/themes.ts).
+   *  Drives the workspace-wide surface palette. Defaults to "slate". */
+  theme: string
   terminology: Record<string, string>
   timezone: string
   locale: string
@@ -44,6 +50,9 @@ export interface OrgSettings {
   employeeIdPrefix: string
   features: Record<string, boolean>
   leaveTypes: Array<{ id: string; name: string; annualQuota: number }>
+  /** OWNER-managed department catalog. Drives the dropdown in the
+   *  user create/edit form and the filter on the admin Users page. */
+  departments: string[]
   createdAt: string
   updatedAt: string
 }
@@ -74,6 +83,17 @@ export interface SignupRequest {
   ownerName: string
   ownerEmail: string
   password: string
+  /** Employee-ID prefix for this tenant — gets baked into every
+   *  employee ID generated for the workspace (e.g. `ACME-26AB12`).
+   *  Backend strips trailing `-` and uppercases. Optional — falls
+   *  back to `EMP-` when omitted. The owner can change it later in
+   *  /settings/organization but existing IDs aren't renamed, so
+   *  setting it correctly here matters. */
+  employeeIdPrefix?: string
+  /** Caller's IANA timezone (browser-detected). Drives report
+   *  boundaries, day-off date math, and scheduled-job timing.
+   *  Optional — defaults to `Asia/Kolkata` for legacy clients. */
+  timezone?: string
   /** hCaptcha token from the widget. Optional — backend verification
    *  is skipped when HCAPTCHA_SECRET is unset (dev/staging). */
   captchaToken?: string

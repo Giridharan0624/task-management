@@ -65,3 +65,22 @@ class OrgPendingDeletionError(AuthorizationError):
         ),
     ):
         super().__init__(message, code="ORG_PENDING_DELETION")
+
+
+class FeatureDisabledError(AuthorizationError):
+    """Raised when an OWNER has turned a feature off in OrgSettings but
+    a handler for that feature is still being called. Returned as 403
+    rather than 404 so the frontend can surface a helpful "this feature
+    is disabled — ask your owner to enable it" message instead of a
+    generic not-found.
+
+    The frontend already hides affordances behind FeatureGate, but a
+    direct API call (curl, custom script, stale cached page) still hits
+    the handler. Defense-in-depth.
+    """
+
+    def __init__(self, feature: str):
+        super().__init__(
+            f"The '{feature}' feature is disabled for this workspace.",
+            code="FEATURE_DISABLED",
+        )

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useTenant } from '@/lib/tenant/TenantProvider'
 import {
   useUsers,
   useCreateUser,
@@ -47,6 +48,7 @@ import type { Attendance } from '@/types/attendance'
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth()
+  const { current: currentOrg } = useTenant()
   const systemPerms = useSystemPermission(currentUser?.systemRole)
   const { data: users, isLoading, error: usersError } = useUsers()
   const { data: todayAttendance } = useTodayAttendance()
@@ -92,6 +94,19 @@ export default function UsersPage() {
   const [newRole, setNewRole] = useState('MEMBER')
   const [newDepartment, setNewDepartment] = useState('')
   const [newDateOfJoining, setNewDateOfJoining] = useState('')
+
+  // Department choices for the Add user form — sourced from the OWNER-
+  // managed catalog in /settings/organization. Falls back to an empty
+  // list when settings haven't loaded yet (the Select will show its
+  // placeholder until they do).
+  const departmentOptions = useMemo(
+    () =>
+      (currentOrg?.settings?.departments ?? []).map((name) => ({
+        value: name,
+        label: name,
+      })),
+    [currentOrg?.settings?.departments]
+  )
 
   // Online users + attendance-by-userId for "last seen"
   const { onlineUserIds, attendanceByUserId } = useMemo(() => {
@@ -486,7 +501,7 @@ export default function UsersPage() {
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <div className="overflow-hidden rounded-lg border border-border/70 bg-card shadow-none">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/30">
@@ -498,7 +513,7 @@ export default function UsersPage() {
                   <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60 bg-card stagger-up">
+              <tbody className="divide-y divide-border/60 bg-card">
                 {displayedUsers.map((u) => {
                   const att = attendanceByUserId.get(u.userId)
                   const isOnline = onlineUserIds.has(u.userId)
@@ -673,13 +688,12 @@ export default function UsersPage() {
             <Select
               value={newDepartment}
               onChange={setNewDepartment}
-              placeholder="Select department"
-              options={[
-                { value: 'Development', label: 'Development' },
-                { value: 'Designing', label: 'Designing' },
-                { value: 'Management', label: 'Management' },
-                { value: 'Research', label: 'Research' },
-              ]}
+              placeholder={
+                departmentOptions.length === 0
+                  ? 'No departments configured'
+                  : 'Select department'
+              }
+              options={departmentOptions}
             />
           </div>
           <div>
@@ -970,7 +984,7 @@ function UserBioContent({
         })()}
 
       {/* Details grid */}
-      <div className="grid grid-cols-2 gap-3 stagger-up">
+      <div className="grid grid-cols-2 gap-3">
         <DetailTile label="Phone" value={viewUser.phone} />
         <DetailTile label="Department" value={viewUser.department} />
         <DetailTile label="Location" value={viewUser.location} />
@@ -1067,7 +1081,7 @@ function UserProgressModal({
         </div>
       ) : progress ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-3 stagger-up">
+          <div className="grid grid-cols-4 gap-3">
             <ProgressStat
               label="Total"
               value={progress.totalStats.total}

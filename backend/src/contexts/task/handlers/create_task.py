@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from contexts.task.application.use_cases import CreateTaskUseCase
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require_not_suspended
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
 from contexts.project.infrastructure.dynamo_repository import ProjectDynamoRepository
@@ -23,6 +24,10 @@ class CreateTaskRequest(BaseModel):
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        # Block writes for SUSPENDED / PENDING_DELETION tenants. The org
+        # handlers already enforce this; we add it here so the same
+        # invariant covers task mutations across non-org contexts.
+        require_not_suspended(auth)
         path_params = event.get("pathParameters") or {}
         project_id = path_params.get("projectId", "")
         body = validate_body(CreateTaskRequest, event.get("body"))

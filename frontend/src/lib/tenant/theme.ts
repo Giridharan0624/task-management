@@ -1,3 +1,5 @@
+import { getTheme, type ThemeId, type ThemePalette } from './themes'
+
 /** Convert a hex color (#rgb, #rrggbb, or #rrggbbaa) into the
  * `"R G B"` triplet string Tailwind's `rgb(var(--color) / <alpha-value>)`
  * format expects.
@@ -36,9 +38,11 @@ export function contrastingFg(triplet: string): string {
   return lum > 186 ? '0 0 0' : '255 255 255'
 }
 
-/** Apply tenant theme colors to the root element by setting the CSS
- * variables Tailwind reads. Invalid colors are silently ignored so the
- * defaults from globals.css stay in place. */
+/** Apply tenant brand colors (primary + accent only) to the root
+ * element. Used by the legacy code path where the OWNER customised
+ * colors via the Branding tab without picking a curated theme.
+ * Invalid colors are silently ignored so the defaults from globals.css
+ * stay in place. */
 export function applyTenantTheme(
   primaryColor: string | null | undefined,
   accentColor: string | null | undefined,
@@ -57,4 +61,64 @@ export function applyTenantTheme(
     root.style.setProperty('--color-accent', accent)
     root.style.setProperty('--color-accent-fg', contrastingFg(accent))
   }
+}
+
+/** CSS variable mapping: ThemePalette key → CSS custom property name.
+ * Centralised so adding a new variable is a one-line change.
+ *
+ * `dataviz` is intentionally absent — it's an array, not a scalar, so
+ * it's handled separately below and unrolled into 8 individual
+ * `--chart-1` … `--chart-8` properties. */
+const VAR_MAP: Record<Exclude<keyof ThemePalette, 'dataviz'>, string> = {
+  background: '--background',
+  foreground: '--foreground',
+  card: '--card',
+  cardForeground: '--card-foreground',
+  popover: '--popover',
+  popoverForeground: '--popover-foreground',
+  secondary: '--secondary',
+  secondaryForeground: '--secondary-foreground',
+  muted: '--muted',
+  mutedForeground: '--muted-foreground',
+  border: '--border',
+  input: '--input',
+  ring: '--ring',
+  primary: '--color-primary',
+  primaryFg: '--color-primary-fg',
+  accent: '--color-accent',
+  accentFg: '--color-accent-fg',
+  sidebarBackground: '--sidebar-background',
+  sidebarForeground: '--sidebar-foreground',
+  sidebarHover: '--sidebar-hover',
+  sidebarActive: '--sidebar-active',
+  sidebarBorder: '--sidebar-border',
+  sidebarMuted: '--sidebar-muted',
+}
+
+/** Apply a curated theme preset (one of the 5 in themes.ts) to the
+ * root element. Picks the light-vs-dark half based on whether the
+ * `<html>` element currently carries the `dark` class — so the call
+ * stays in sync with the per-user `ThemeProvider` toggle.
+ *
+ * Idempotent: safe to call on every render / hydration / mode flip.
+ * No-op on the server. */
+export function applyThemePreset(themeId: ThemeId | string | null | undefined): void {
+  if (typeof document === 'undefined') return
+  const root = document.documentElement
+  const theme = getTheme(themeId)
+  const isDark = root.classList.contains('dark')
+  const palette = isDark ? theme.dark : theme.light
+
+  for (const key of Object.keys(VAR_MAP) as (keyof typeof VAR_MAP)[]) {
+    root.style.setProperty(VAR_MAP[key], palette[key])
+  }
+  // Unroll the dataviz array into individual `--chart-1` ...
+  // `--chart-8` custom properties so chart code can pick up colors
+  // by index without having to import the theme catalog.
+  for (let i = 0; i < palette.dataviz.length; i++) {
+    root.style.setProperty(`--chart-${i + 1}`, palette.dataviz[i])
+  }
+  // Stamp the active theme on the root so debug tooling (and any
+  // future per-theme selectors) can branch on data-theme.
+  root.setAttribute('data-theme', theme.id)
 }

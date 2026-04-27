@@ -9,6 +9,13 @@ export interface AttendanceSession {
   taskTitle: string | null
   projectName: string | null
   description: string | null
+  /** Last heartbeat the backend received from the desktop client.
+   *  Used by the stale-session sweeper Lambda to close abandoned
+   *  sessions at the last-known-alive moment. The frontend doesn't
+   *  read this for display today, but the field is part of the
+   *  backend's response shape and was previously dropped on the
+   *  ground (silent type drift). */
+  lastHeartbeatAt?: string | null
 }
 
 export interface CurrentTask {

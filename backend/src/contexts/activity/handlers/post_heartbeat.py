@@ -7,6 +7,7 @@ from contexts.activity.infrastructure.dynamo_repository import ActivityDynamoRep
 from contexts.attendance.infrastructure.dynamo_repository import AttendanceDynamoRepository
 from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require_feature
 from shared_kernel.response import build_error, build_success
 
 logger = logging.getLogger()
@@ -15,6 +16,12 @@ logger = logging.getLogger()
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        # When activity monitoring is disabled at the org level, drop
+        # heartbeats. The desktop app's own settings fetch should hide
+        # the activity loop, but we gate at the API boundary too in
+        # case a tenant switches it off mid-session — old desktop
+        # clients keep sending heartbeats until they refetch settings.
+        require_feature(auth, "activity_monitoring")
 
         body = {}
         raw_body = event.get("body")

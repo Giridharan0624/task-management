@@ -48,6 +48,22 @@
     --sidebar-active: 234 89% 96%;
     --sidebar-border: 240 14% 93%;
     --sidebar-muted: 232 10% 60%;
+
+    /* ─── Dataviz palette (--chart-1 … --chart-8) ───────────────
+       8 hex colors used by chart series, app-usage bars, theme
+       markers. Per-theme overrides are applied at runtime by
+       `applyThemePreset` in lib/tenant/theme.ts. The seed defaults
+       here mirror the Aurora light palette so any chart that
+       renders before TenantProvider hydrates uses sensible colors
+       instead of falling back to `currentColor`. */
+    --chart-1: #5B5BF1;
+    --chart-2: #14C088;
+    --chart-3: #0EA5E9;
+    --chart-4: #8B5CF6;
+    --chart-5: #F59E0B;
+    --chart-6: #EC4899;
+    --chart-7: #14B8A6;
+    --chart-8: #F43F5E;
   }
 
   .dark {
@@ -102,6 +118,21 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    /* Authoritative app-wide font cascade.
+       `var(--font-tenant, var(--font-outfit))` chains the fallbacks
+       INSIDE the var() function — required, because a bare
+       `var(--font-tenant)` (no inline fallback) invalidates the
+       entire font-family declaration when the variable isn't set,
+       which would silently drop the property and revert to the
+       browser default serif. Every descendant inherits this so the
+       tenant choice cascades app-wide regardless of Tailwind classes. */
+    font-family:
+      var(--font-tenant, var(--font-outfit)),
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
     font-feature-settings: 'rlig' 1, 'calt' 1, 'cv11' 1, 'ss01' 1;
     -webkit-tap-highlight-color: transparent;
   }
@@ -446,28 +477,21 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  .stagger-up > * {
-    opacity: 0;
-    animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-  .stagger-up > *:nth-child(1)  { animation-delay: 0ms; }
-  .stagger-up > *:nth-child(2)  { animation-delay: 40ms; }
-  .stagger-up > *:nth-child(3)  { animation-delay: 80ms; }
-  .stagger-up > *:nth-child(4)  { animation-delay: 120ms; }
-  .stagger-up > *:nth-child(5)  { animation-delay: 160ms; }
-  .stagger-up > *:nth-child(6)  { animation-delay: 200ms; }
-  .stagger-up > *:nth-child(7)  { animation-delay: 240ms; }
-  .stagger-up > *:nth-child(8)  { animation-delay: 280ms; }
-  .stagger-up > *:nth-child(9)  { animation-delay: 320ms; }
-  .stagger-up > *:nth-child(10) { animation-delay: 360ms; }
-  .stagger-up > *:nth-child(n+11) { animation-delay: 400ms; }
+  /* `.stagger-up` was a per-child fade-up cascade. Disabled as part of
+     the professionalism pass — the effect made dashboards feel like
+     loading-state animations rather than data surfaces. Class is kept as
+     a no-op so existing consumers don't need a markup change. */
+  .stagger-up > * { opacity: 1; animation: none; }
 
   /* Gentle breathing — decorative backgrounds/badges/halos */
   @keyframes breathe {
     0%, 100% { opacity: 0.6; transform: scale(1); }
     50%      { opacity: 1;   transform: scale(1.02); }
   }
-  .animate-breathe { animation: breathe 4s ease-in-out infinite; }
+  /* `.animate-breathe` decorated empty-state icons + dashboard halos
+     with a slow scale pulse. Disabled — it added noise to surfaces
+     that should be at rest. Kept as a no-op for source compatibility. */
+  .animate-breathe { animation: none; }
 
   /* Subtle drifting gradient for hero cards */
   @keyframes drift {
@@ -479,13 +503,12 @@
     animation: drift 10s ease-in-out infinite;
   }
 
-  /* Icon pop on parent hover — subtle scale cue */
+  /* `.icon-pop` previously scaled icons on parent hover. Disabled —
+     the spring overshoot read as toy-like. Kept as a no-op so existing
+     markup that still includes the class doesn't break. */
+  .icon-pop { transition: none; transform: none; }
   .group:hover .icon-pop,
-  .group:focus-visible .icon-pop {
-    transform: scale(1.08);
-    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .icon-pop { transition: transform 220ms ease; transform-origin: center; }
+  .group:focus-visible .icon-pop { transform: none; }
 
   /* Page transitions — keyed on pathname in <PageTransition>. Multiple
      variants are available so the feel can be tuned from a single
@@ -599,13 +622,16 @@
                 opacity 180ms ease;
   }
 
-  /* Card hover-lift variants — small and medium shadow depths */
+  /* `.hover-lift-sm` floated cards 1px on hover with a soft drop
+     shadow — playful but inappropriate for data surfaces. Replaced
+     with a hairline border-color shift so hover still registers as
+     interactive without the lift. */
   .hover-lift-sm {
-    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    transition: border-color 180ms ease, background-color 180ms ease;
   }
   .hover-lift-sm:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    border-color: hsl(var(--border) / 1);
+    background-color: hsl(var(--muted) / 0.4);
   }
 
   /* Pressable — works with any button or clickable surface.
@@ -617,21 +643,9 @@
   /* Staggered grid rise — like stagger-up but with a 2D offset so
      grid children feel like they land instead of sliding linearly. */
   @media (prefers-reduced-motion: no-preference) {
-    .stagger-rise > * {
-      opacity: 0;
-      animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-    .stagger-rise > *:nth-child(1)  { animation-delay: 20ms; }
-    .stagger-rise > *:nth-child(2)  { animation-delay: 60ms; }
-    .stagger-rise > *:nth-child(3)  { animation-delay: 100ms; }
-    .stagger-rise > *:nth-child(4)  { animation-delay: 140ms; }
-    .stagger-rise > *:nth-child(5)  { animation-delay: 180ms; }
-    .stagger-rise > *:nth-child(6)  { animation-delay: 220ms; }
-    .stagger-rise > *:nth-child(7)  { animation-delay: 260ms; }
-    .stagger-rise > *:nth-child(8)  { animation-delay: 300ms; }
-    .stagger-rise > *:nth-child(9)  { animation-delay: 340ms; }
-    .stagger-rise > *:nth-child(10) { animation-delay: 380ms; }
-    .stagger-rise > *:nth-child(n+11) { animation-delay: 420ms; }
+    /* `.stagger-rise` (the 2D-offset variant of stagger-up) is also
+       disabled. See the `.stagger-up` note above. */
+    .stagger-rise > * { opacity: 1; animation: none; }
   }
 }
 

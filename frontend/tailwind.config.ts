@@ -15,7 +15,15 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
+        // `--font-tenant` is set by `applyTenantFont()` when the
+        // workspace owner picks a non-default font. Falls back to
+        // the bundled Outfit (`--font-outfit`) which next/font loads
+        // in the root layout, then to system fonts.
+        sans: [
+          'var(--font-tenant, var(--font-outfit))',
+          'system-ui',
+          'sans-serif',
+        ],
       },
       colors: {
         // ─── Shadcn semantic tokens (HSL, driven by CSS vars) ───

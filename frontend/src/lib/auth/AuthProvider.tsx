@@ -123,8 +123,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(storedToken)
       const decoded = decodeJwtForUser(storedToken)
       setUser(decoded)
+      // Hydrate tenant settings (font, theme, terminology, features,
+      // leave types) on every page load — not just after login. Without
+      // this, a hard-refresh would flash the default font/colors until
+      // some other page-level hook happened to fetch /orgs/current.
+      // Best-effort: if the call fails, dashboard hooks will retry on
+      // their own.
+      void refreshTenant()
     }
     setIsLoading(false)
+    // refreshTenant is stable (useCallback in TenantProvider); excluded
+    // from deps so this effect runs once per mount, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Periodic token expiry check — every 60 seconds

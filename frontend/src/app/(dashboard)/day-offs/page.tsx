@@ -87,11 +87,16 @@ function formatRange(start: string, end: string) {
 }
 
 function isThisMonth(iso: string): boolean {
-  const d = new Date(iso)
+  // Day-off dates come in as YYYY-MM-DD (date-only, no time). Comparing
+  // via `new Date(iso)` parses them as UTC midnight, then `getMonth()`
+  // converts to browser local — for a viewer west of UTC the date can
+  // shift back a day and report the wrong month at month boundaries.
+  // Slice the components straight from the string instead, matching
+  // how getDayOffScore below already handles the same data.
+  const ym = iso.slice(0, 7) // YYYY-MM
   const now = new Date()
-  return (
-    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-  )
+  const nowYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  return ym === nowYm
 }
 
 function getDayOffScore(userId: string, dayOffs: DayOffRequest[]) {
@@ -652,7 +657,7 @@ export default function DayOffsPage() {
                 description="All requests have been reviewed. You're all caught up."
               />
             ) : (
-              <div className="space-y-3 stagger-up">
+              <div className="space-y-3">
                 {pendingDayOffs.map((req) => (
                   <PendingRequestRow
                     key={req.requestId}
@@ -815,7 +820,7 @@ export default function DayOffsPage() {
                 }
               />
             ) : (
-              <Card className="overflow-hidden p-0 hover-lift-sm">
+              <Card className="overflow-hidden p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -827,7 +832,7 @@ export default function DayOffsPage() {
                       <TableHead className="text-right">Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody className="stagger-up">
+                  <TableBody>
                     {filteredAll.map((req) => {
                       const scoreData = getDayOffScore(
                         req.userId,
@@ -938,7 +943,7 @@ export default function DayOffsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <Card className="overflow-hidden p-0 hover-lift-sm">
+                <Card className="overflow-hidden p-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -950,7 +955,7 @@ export default function DayOffsPage() {
                         <TableHead className="w-[100px]" />
                       </TableRow>
                     </TableHeader>
-                    <TableBody className="stagger-up">
+                    <TableBody>
                       {sortedMyDayOffs.map((req) => (
                         <TableRow key={req.requestId}>
                           <TableCell className="font-semibold text-foreground">

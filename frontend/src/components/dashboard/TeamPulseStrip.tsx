@@ -1,17 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import {
-  Users,
-  Clock,
-  CheckCircle2,
-  AlertOctagon,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  type LucideIcon,
-} from 'lucide-react'
-import { Card } from '@/components/ui/Card'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import {
   useTodayAttendance,
@@ -21,6 +11,7 @@ import {
 import { useMyTasks, useUsers } from '@/lib/hooks/useUsers'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { isOverdue as checkOverdue } from '@/lib/utils/deadline'
+import { useTenant } from '@/lib/tenant/TenantProvider'
 import { cn } from '@/lib/utils'
 
 type Trend = 'up' | 'down' | 'flat'
@@ -29,8 +20,6 @@ interface Metric {
   key: string
   label: string
   value: number | string
-  icon: LucideIcon
-  accent: string
   trend?: Trend
   trendLabel?: string
   live?: boolean
@@ -46,17 +35,28 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
   const { data: users } = useUsers()
   const { data: projects } = useProjects()
   const { data: myAttendance } = useMyAttendance()
+  const { current } = useTenant()
 
-  // 7-day report for week-over-week trends (owner only)
+  // Calendar-week aligned window for "this week" / "last week" buckets.
+  // Bucket boundaries follow the tenant's `weekStartDay` (0 = Sunday, 1 =
+  // Monday, …) — a rolling 7-day window swept hours from the prior
+  // calendar week into "this week" on Monday/Tuesday and confused owners
+  // who expected Sun-Sat (or Mon-Sun) totals.
+  const weekStartDay = current?.settings?.weekStartDay ?? 1
   const dates = useMemo(() => {
-    const end = new Date()
-    const start = new Date()
-    start.setDate(start.getDate() - 13) // 2 weeks back so we can diff
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const offsetIntoWeek = (today.getDay() - weekStartDay + 7) % 7
+    const thisWeekStart = new Date(today)
+    thisWeekStart.setDate(today.getDate() - offsetIntoWeek)
+    const lastWeekStart = new Date(thisWeekStart)
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7)
     return {
-      start: start.toISOString().slice(0, 10),
-      end: end.toISOString().slice(0, 10),
+      start: ymd(lastWeekStart),
+      end: ymd(today),
+      thisWeekStart,
     }
-  }, [])
+  }, [weekStartDay])
   const { data: report } = useAttendanceReport(dates.start, dates.end)
 
   const workingNow = (todayAttendance ?? []).filter(
@@ -108,26 +108,27 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
     [myTasks]
   )
 
-  // Weekly aggregates for owner view
+  // Weekly aggregates for owner view — buckets days by their position
+  // relative to `thisWeekStart` (calendar week aligned to tenant config).
   const { thisWeek, lastWeek } = useMemo(() => {
-    const now = new Date()
-    const midpoint = new Date(now)
-    midpoint.setDate(midpoint.getDate() - 7)
-
+    const boundary = dates.thisWeekStart.getTime()
     let thisWeek = 0
     let lastWeek = 0
     for (const r of report ?? []) {
-      const d = new Date(r.date)
+      // r.date is YYYY-MM-DD from the API; parse as a local-midnight date
+      // so the comparison aligns with `thisWeekStart` (also local midnight).
+      const [y, m, d] = r.date.split('-').map(Number)
+      const day = new Date(y, (m ?? 1) - 1, d ?? 1).getTime()
       const hrs = r.sessions.reduce(
         (s, se) =>
           s + (se.hours ?? computeLiveHours(se.signInAt, se.signOutAt)),
         0
       )
-      if (d >= midpoint) thisWeek += hrs
+      if (day >= boundary) thisWeek += hrs
       else lastWeek += hrs
     }
     return { thisWeek, lastWeek }
-  }, [report])
+  }, [report, dates.thisWeekStart])
 
   const weekTrend = computeTrend(thisWeek, lastWeek)
 
@@ -139,39 +140,16 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
   const metrics: Metric[] =
     role === 'OWNER'
       ? [
-          {
-            key: 'team',
-            label: 'Team members',
-            value: teamSize,
-            icon: Users,
-            accent: 'text-indigo-600 bg-indigo-50',
-          },
+          { key: 'team', label: 'Team members', value: teamSize },
           {
             key: 'week-hours',
             label: 'Hours this week',
             value: formatHours(thisWeek),
-            icon: Clock,
-            accent: 'text-blue-600 bg-blue-50',
             trend: weekTrend,
             trendLabel: trendDelta(thisWeek, lastWeek, 'hrs'),
           },
-          {
-            key: 'projects',
-            label: 'Active projects',
-            value: projectCount,
-            icon: CheckCircle2,
-            accent: 'text-emerald-600 bg-emerald-50',
-          },
-          {
-            key: 'overdue',
-            label: 'Overdue',
-            value: overdueCount,
-            icon: AlertOctagon,
-            accent:
-              overdueCount > 0
-                ? 'text-destructive bg-destructive/10'
-                : 'text-muted-foreground bg-muted',
-          },
+          { key: 'projects', label: 'Active projects', value: projectCount },
+          { key: 'overdue', label: 'Overdue', value: overdueCount },
         ]
       : role === 'MEMBER'
         ? [
@@ -180,126 +158,75 @@ export function TeamPulseStrip({ role }: TeamPulseStripProps) {
               key: 'my-hours-today',
               label: 'My hours today',
               value: formatHours(myHoursToday),
-              icon: Clock,
-              accent: 'text-blue-600 bg-blue-50',
               live: myAttendance?.status === 'SIGNED_IN',
             },
-            {
-              key: 'my-active',
-              label: 'Active tasks',
-              value: myActiveCount,
-              icon: Users,
-              accent: 'text-indigo-600 bg-indigo-50',
-            },
-            {
-              key: 'my-completed',
-              label: 'Completed today',
-              value: completedToday,
-              icon: CheckCircle2,
-              accent: 'text-emerald-600 bg-emerald-50',
-            },
-            {
-              key: 'my-overdue',
-              label: 'Overdue',
-              value: overdueCount,
-              icon: AlertOctagon,
-              accent:
-                overdueCount > 0
-                  ? 'text-destructive bg-destructive/10'
-                  : 'text-muted-foreground bg-muted',
-            },
+            { key: 'my-active', label: 'Active tasks', value: myActiveCount },
+            { key: 'my-completed', label: 'Completed today', value: completedToday },
+            { key: 'my-overdue', label: 'Overdue', value: overdueCount },
           ]
         : [
             {
               key: 'working',
               label: 'Working now',
               value: workingNow,
-              icon: Users,
-              accent: 'text-emerald-600 bg-emerald-50',
               live: workingNow > 0,
             },
-            {
-              key: 'today-hours',
-              label: 'Hours today',
-              value: formatHours(hoursToday),
-              icon: Clock,
-              accent: 'text-blue-600 bg-blue-50',
-            },
-            {
-              key: 'completed',
-              label: 'Completed today',
-              value: completedToday,
-              icon: CheckCircle2,
-              accent: 'text-indigo-600 bg-indigo-50',
-            },
-            {
-              key: 'overdue',
-              label: 'Overdue',
-              value: overdueCount,
-              icon: AlertOctagon,
-              accent:
-                overdueCount > 0
-                  ? 'text-destructive bg-destructive/10'
-                  : 'text-muted-foreground bg-muted',
-            },
+            { key: 'today-hours', label: 'Hours today', value: formatHours(hoursToday) },
+            { key: 'completed', label: 'Completed today', value: completedToday },
+            { key: 'overdue', label: 'Overdue', value: overdueCount },
           ]
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 stagger-rise">
-      {metrics.map((m) => {
-        const Icon = m.icon
-        return (
-          <Card
-            key={m.key}
-            className="group flex items-center gap-3 p-4 transition-all hover:shadow-card-hover hover-lift-sm"
-          >
-            <div
-              className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform icon-pop',
-                m.accent
+    <div className="grid grid-cols-2 divide-x divide-y divide-border/60 overflow-hidden rounded-lg border border-border/70 bg-card lg:grid-cols-4 lg:divide-y-0">
+      {metrics.map((m) => (
+        <div key={m.key} className="flex flex-col px-5 py-4">
+          <div className="flex items-center gap-2">
+            {m.live && (
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </span>
+            )}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              {m.label}
+            </p>
+          </div>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <p className="text-2xl font-medium leading-none tabular-nums text-foreground [font-feature-settings:'tnum','lnum']">
+              {typeof m.value === 'number' ? (
+                <AnimatedNumber value={m.value} />
+              ) : (
+                m.value
               )}
-            >
-              <Icon className="h-4 w-4" strokeWidth={2} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2">
-                <p className="text-xl font-bold tabular-nums text-foreground">
-                  {typeof m.value === 'number' ? (
-                    <AnimatedNumber value={m.value} />
-                  ) : (
-                    m.value
-                  )}
-                </p>
-                {m.live && (
-                  <span className="relative flex h-1.5 w-1.5 shrink-0">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  </span>
-                )}
-                {m.trend && <TrendBadge trend={m.trend} label={m.trendLabel} />}
-              </div>
-              <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {m.label}
-              </p>
-            </div>
-          </Card>
-        )
-      })}
+            </p>
+            {m.trend && <TrendBadge trend={m.trend} label={m.trendLabel} />}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
 
 function TrendBadge({ trend, label }: { trend: Trend; label?: string }) {
   const styles = {
-    up: 'text-emerald-600',
-    down: 'text-destructive',
+    up: 'text-emerald-700',
+    down: 'text-rose-700',
     flat: 'text-muted-foreground',
   }[trend]
-  const Icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
+  const Icon =
+    trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
   return (
-    <span className={cn('inline-flex items-center gap-0.5 text-[10px] font-bold', styles)}>
-      <Icon className="h-3 w-3" strokeWidth={2.5} />
-      {label && <span>{label}</span>}
+    <span
+      className={cn(
+        'inline-flex items-baseline gap-1 text-[10px] font-medium uppercase tracking-[0.12em]',
+        styles,
+      )}
+    >
+      <Icon
+        className="h-3 w-3 translate-y-[1px] self-center"
+        strokeWidth={1.8}
+      />
+      {label && <span className="tabular-nums">{label}</span>}
     </span>
   )
 }
@@ -322,6 +249,13 @@ function trendDelta(current: number, previous: number, unit: string): string {
 function computeLiveHours(signInAt: string, signOutAt: string | null): number {
   if (signOutAt) return 0
   return Math.max(0, (Date.now() - new Date(signInAt).getTime()) / 3_600_000)
+}
+
+function ymd(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function formatHours(h: number): string {

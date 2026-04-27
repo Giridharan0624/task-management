@@ -90,6 +90,18 @@ class OrgSettings(BaseModel):
     favicon_url: Optional[str] = None
     primary_color: str = "#4F46E5"
     accent_color: str = "#10B981"
+    # Optional font family identifier from the curated catalog
+    # (frontend/src/lib/tenant/fonts.ts). When None / unset the app
+    # falls back to its default display face (Outfit). Stored as a
+    # short id ("inter", "lexend") rather than a CSS family string so
+    # the frontend controls casing, fallbacks, and weight loading.
+    font_family: Optional[str] = None
+    # Curated theme preset id from frontend/src/lib/tenant/themes.ts.
+    # Drives the entire surface palette (background, card, border,
+    # primary, accent, dataviz). Five opinionated themes; "aurora" is
+    # the default for new orgs. Legacy v1 ids are aliased to their
+    # v2 successors by the frontend's `getTheme` helper.
+    theme: str = "aurora"
     terminology: dict[str, str] = {}
     timezone: str = "Asia/Kolkata"
     locale: str = "en-IN"
@@ -117,6 +129,20 @@ class OrgSettings(BaseModel):
         {"id": "casual", "name": "Casual", "annual_quota": 12},
         {"id": "sick", "name": "Sick", "annual_quota": 10},
         {"id": "earned", "name": "Earned", "annual_quota": 15},
+    ]
+    # OWNER-managed catalog of departments. Surfaced in the user
+    # create/edit form's department dropdown and as a filter on the
+    # admin Users page. Stored as a list of plain strings (no ids
+    # because departments don't carry attributes — pure labels).
+    # Existing user records keep their free-text department field;
+    # changing this list does NOT rename historical assignments.
+    departments: list[str] = [
+        "Engineering",
+        "Design",
+        "Product",
+        "Marketing",
+        "Operations",
+        "People",
     ]
     created_at: str
     updated_at: str

@@ -9,8 +9,6 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { useMyTasks } from '@/lib/hooks/useUsers'
 import { usePendingDayOffs } from '@/lib/hooks/useDayOffs'
 import { useTodayAttendance, useMyAttendance } from '@/lib/hooks/useAttendance'
@@ -35,24 +33,23 @@ interface ActionPrompt {
   count: number
 }
 
-const toneStyles: Record<Tone, { bg: string; border: string; icon: string; text: string }> = {
+// Tone styles flattened: a single colored leading rule + colored
+// label text instead of a tinted card surface + icon chip.
+const toneStyles: Record<Tone, { rule: string; text: string; icon: string }> = {
   danger: {
-    bg: 'bg-destructive/5',
-    border: 'border-destructive/20',
-    icon: 'text-destructive bg-destructive/10',
+    rule: 'before:bg-destructive',
     text: 'text-destructive',
+    icon: 'text-destructive',
   },
   warning: {
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
-    icon: 'text-amber-700 bg-amber-100',
-    text: 'text-amber-800',
+    rule: 'before:bg-amber-500',
+    text: 'text-amber-700',
+    icon: 'text-amber-600',
   },
   info: {
-    bg: 'bg-primary/5',
-    border: 'border-primary/20',
-    icon: 'text-primary bg-primary/10',
+    rule: 'before:bg-primary',
     text: 'text-primary',
+    icon: 'text-primary',
   },
 }
 
@@ -160,89 +157,81 @@ export function TodayHero({ userName, role }: TodayHeroProps) {
   })
 
   return (
-    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/[0.03] via-card to-card">
-      <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-start lg:gap-8">
-        {/* Greeting column */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {dateStr}
-            </p>
-            <Badge tone="primary" size="sm">
-              {role}
-            </Badge>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground text-balance sm:text-3xl">
-            {greeting}, {firstName}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {prompts.length === 0
-              ? "You're all caught up. Enjoy the calm."
-              : prompts.length === 1
-                ? 'One item needs your attention.'
-                : `${prompts.length} items need your attention.`}
+    <div className="flex flex-col gap-6 border-b border-border/60 pb-6 lg:flex-row lg:items-start lg:gap-10 lg:pb-8">
+      {/* Greeting column */}
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            {dateStr}
+          </p>
+          <span className="text-[10px] text-muted-foreground/40">·</span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            {role}
           </p>
         </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance sm:text-3xl">
+          {greeting}, {firstName}
+        </h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          {prompts.length === 0
+            ? "You're all caught up."
+            : prompts.length === 1
+              ? '1 item needs your attention.'
+              : `${prompts.length} items need your attention.`}
+        </p>
+      </div>
 
-        {/* Action prompts column */}
-        <div className="flex w-full flex-col gap-2 lg:w-[360px] lg:shrink-0">
-          {prompts.length === 0 ? (
-            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-emerald-900">
-                  All clear
-                </p>
-                <p className="text-xs text-emerald-700/80">
-                  No overdue tasks, all updates submitted, no pending approvals.
-                </p>
-              </div>
-            </div>
-          ) : (
-            prompts.map((p) => {
+      {/* Action prompts column — flat list with leading colored rules */}
+      <div className="flex w-full flex-col lg:w-[400px] lg:shrink-0">
+        {prompts.length === 0 ? (
+          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <Sparkles
+              className="h-3.5 w-3.5 text-emerald-600"
+              strokeWidth={1.8}
+            />
+            <span>
+              No overdue tasks, all updates submitted, no pending approvals.
+            </span>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border/50">
+            {prompts.map((p) => {
               const Icon = p.icon
               const s = toneStyles[p.tone]
               return (
-                <Link
-                  key={p.key}
-                  href={p.href}
-                  className={cn(
-                    'group flex items-center gap-3 rounded-xl border p-3 transition-all hover:shadow-sm',
-                    s.bg,
-                    s.border
-                  )}
-                >
-                  <div
+                <li key={p.key}>
+                  <Link
+                    href={p.href}
                     className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                      s.icon
+                      'group relative flex items-center gap-3 py-2.5 pl-4 pr-1 transition-colors hover:bg-muted/30',
+                      'before:absolute before:left-0 before:top-2.5 before:h-[calc(100%-1.25rem)] before:w-px',
+                      s.rule,
                     )}
                   >
-                    <Icon className="h-4 w-4" strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className={cn('text-sm font-semibold', s.text)}>
+                    <Icon
+                      className={cn('h-3.5 w-3.5 shrink-0', s.icon)}
+                      strokeWidth={1.8}
+                    />
+                    <p className="min-w-0 flex-1 text-sm text-foreground">
                       {p.message}
                     </p>
-                  </div>
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 text-xs font-semibold transition-transform group-hover:translate-x-0.5',
-                      s.text
-                    )}
-                  >
-                    {p.cta}
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </span>
-                </Link>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] transition-transform group-hover:translate-x-0.5',
+                        s.text,
+                      )}
+                    >
+                      {p.cta}
+                      <ChevronRight className="h-3 w-3" strokeWidth={1.8} />
+                    </span>
+                  </Link>
+                </li>
               )
-            })
-          )}
-        </div>
+            })}
+          </ul>
+        )}
       </div>
-    </Card>
+    </div>
   )
 }
 

@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Daily attendance — preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+  /* ────────────────────────────────────────────────────────────────
+     DAILY ATTENDANCE — restyled to match the existing app theme
+     (shadcn HSL tokens, Outfit + JetBrains Mono, indigo primary,
+     0.75rem radius). Same data shape as the original; tighter
+     hierarchy, better-readable gauge, subtle motion.
+     ──────────────────────────────────────────────────────────────── */
+  :root {
+    --background:   hsl(240 20% 97%);
+    --card:         hsl(0 0% 100%);
+    --card-2:       hsl(240 18% 99%);
+    --foreground:   hsl(240 26% 14%);
+    --muted:        hsl(240 14% 95%);
+    --muted-fg:     hsl(233 10% 47%);
+    --border:       hsl(240 14% 92%);
+    --border-soft:  hsl(240 14% 96%);
+    --primary:      rgb(99 102 241);
+    --primary-soft: rgb(99 102 241 / 0.10);
+    --primary-tint: rgb(99 102 241 / 0.04);
+    --primary-fg:   #fff;
+    --warn:         rgb(245 158 11);
+    --warn-soft:    rgb(245 158 11 / 0.12);
+    --weekend:      hsl(240 14% 97%);
+    --weekend-text: hsl(232 8% 60%);
+    --radius:       0.75rem;
+    --radius-sm:    calc(var(--radius) - 4px);
+    --shadow-sm:    0 1px 2px rgba(15, 17, 35, 0.04);
+    --shadow:       0 1px 2px rgba(15, 17, 35, 0.05), 0 8px 24px -12px rgba(15, 17, 35, 0.08);
+    --shadow-pop:   0 4px 12px -2px rgba(15, 17, 35, 0.10), 0 24px 60px -28px rgba(15, 17, 35, 0.16);
+    font-family: "Outfit", system-ui, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    padding: 32px 24px 80px;
+    font-feature-settings: "ss01", "cv02", "cv11";
+  }
+
+  .wrap { width: min(1280px, 100%); margin: 0 auto; }
+
+  /* ─── Card ─── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    animation: card-in 0.32s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Header ─── */
+  .head {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 20px;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    background:
+      linear-gradient(180deg, var(--primary-tint), transparent 60%);
+  }
+  .head .title-row {
+    display: flex; align-items: center; gap: 12px; min-width: 0;
+  }
+  .head .icon-pill {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    display: grid; place-items: center;
+    flex: 0 0 auto;
+  }
+  .head .icon-pill svg { width: 16px; height: 16px; }
+  .head h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+  }
+  .head .sub {
+    color: var(--muted-fg);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+  }
+  .head .sub::before {
+    content: "·";
+    margin: 0 8px;
+    color: var(--muted-fg);
+    opacity: 0.5;
+  }
+
+  .head .peak {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 6px 12px;
+    background: var(--muted);
+    border-radius: 999px;
+    font-size: 12.5px;
+  }
+  .head .peak .label {
+    color: var(--muted-fg);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .head .peak .figs {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 600;
+    color: var(--foreground);
+    font-feature-settings: "tnum", "zero";
+    font-size: 12.5px;
+  }
+  .head .peak .figs .total { color: var(--muted-fg); font-weight: 500; }
+
+  .head .export {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--foreground);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.05s;
+    box-shadow: var(--shadow-sm);
+  }
+  .head .export:hover {
+    background: var(--card-2);
+    border-color: hsl(240 14% 86%);
+  }
+  .head .export:active { transform: translateY(1px); }
+  .head .export svg { width: 14px; height: 14px; color: var(--muted-fg); }
+
+  /* ─── Calendar grid ─── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .dow {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border-soft);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted-fg);
+    background: var(--card-2);
+  }
+  .dow:last-child { border-right: none; }
+  .dow.weekend { color: hsl(232 10% 55%); }
+
+  .day {
+    aspect-ratio: 1.45 / 1;
+    min-height: 116px;
+    padding: 12px 14px 14px;
+    border-right: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: background 0.18s ease;
+    background: var(--card);
+  }
+  .day:nth-child(7n+7) { border-right: none; }
+  /* Strip the bottom border on the actual last-row cells — for an
+     April-2026 layout that's days 24..30 (week-4 Fri/Sat/Sun + the
+     four cells of the partial week 5). Kept as a hardcoded selector
+     because the static markup is fixed for this preview; a dynamic
+     calendar would set this with a `.last-row` modifier instead. */
+  .grid > .day:nth-last-child(-n+7) { border-bottom: none; }
+  .day:hover { background: var(--primary-tint); }
+  .day:hover .date { color: var(--primary); }
+
+  .day.empty {
+    cursor: default; pointer-events: none;
+    background: var(--card-2);
+  }
+  .day.empty .date { color: hsl(240 12% 80%); }
+
+  .day.weekend { background: var(--weekend); }
+  .day.weekend .date { color: var(--weekend-text); }
+  .day.weekend.has-data { background: var(--card); }
+  .day.weekend.has-data .date { color: var(--foreground); }
+
+  .day .top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 8px; margin-bottom: auto;
+  }
+
+  .date {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+    transition: color 0.15s;
+    font-feature-settings: "tnum";
+  }
+
+  .day.today .date {
+    color: var(--primary);
+  }
+  .day.today::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--primary);
+    border-radius: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* Smooth border on the corners that meet the card edge */
+  .day.today.first-col::before { border-bottom-left-radius: var(--radius); }
+  .day.today.last-col::before { border-bottom-right-radius: var(--radius); }
+
+  .absent {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px 2px 5px;
+    background: var(--warn-soft);
+    color: hsl(32 80% 38%);
+    border-radius: 999px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1;
+    font-feature-settings: "tnum";
+  }
+  .absent svg { width: 10px; height: 10px; }
+
+  /* ─── Attendance read-out + gauge ─── */
+  .attend {
+    display: flex; align-items: center; gap: 6px;
+    margin: 8px 0 10px;
+    color: var(--muted-fg);
+    font-size: 12.5px;
+  }
+  .attend svg { width: 12px; height: 12px; flex: 0 0 auto; }
+  .attend .count {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 600;
+    color: var(--foreground);
+    font-feature-settings: "tnum", "zero";
+  }
+  .attend .total {
+    color: var(--muted-fg);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+  }
+  .attend .total::before { content: " / "; color: hsl(232 10% 78%); }
+
+  /* Gauge: a thicker, segmented bar so it's actually readable.
+     8 segments per row, gap visible. Filled in primary, unfilled
+     in border-soft. */
+  .gauge {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    gap: 2px;
+    height: 6px;
+    margin-top: auto;
+  }
+  .gauge .seg {
+    background: hsl(240 14% 94%);
+    border-radius: 1px;
+    transition: background 0.4s cubic-bezier(.2,.7,.2,1);
+  }
+  .gauge .seg.on { background: var(--primary); }
+  .day:hover .gauge .seg.on { background: hsl(239 84% 60%); }
+
+  /* Low-attendance day → mute the bar so it visually distinguishes
+     from full-attendance days at a glance */
+  .day.low .gauge .seg.on { background: var(--warn); }
+  .day.low:hover .gauge .seg.on { background: rgb(217 119 6); }
+
+  /* ─── Page-load stagger ─── */
+  .day { animation: rise 0.32s cubic-bezier(.2,.7,.2,1) both; }
+  .grid > .day:nth-child(7n+8)  { animation-delay: 0.02s; }
+  .grid > .day:nth-child(7n+9)  { animation-delay: 0.04s; }
+  .grid > .day:nth-child(7n+10) { animation-delay: 0.06s; }
+  .grid > .day:nth-child(7n+11) { animation-delay: 0.08s; }
+  .grid > .day:nth-child(7n+12) { animation-delay: 0.10s; }
+  .grid > .day:nth-child(7n+13) { animation-delay: 0.12s; }
+  .grid > .day:nth-child(7n+14) { animation-delay: 0.14s; }
+  .grid > .day:nth-child(n+15) { animation-delay: 0.16s; }
+  .grid > .day:nth-child(n+22) { animation-delay: 0.20s; }
+  .grid > .day:nth-child(n+29) { animation-delay: 0.24s; }
+  .grid > .day:nth-child(n+36) { animation-delay: 0.28s; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Hover preview popover ─── */
+  .pop {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-pop);
+    padding: 10px 12px;
+    width: max-content;
+    min-width: 168px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s, transform 0.12s;
+    z-index: 10;
+  }
+  .day:hover .pop {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .pop .pop-head {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--foreground);
+    margin-bottom: 6px;
+  }
+  .pop .pop-row {
+    display: flex; justify-content: space-between; gap: 16px;
+    font-size: 11.5px;
+    color: var(--muted-fg);
+    margin: 2px 0;
+  }
+  .pop .pop-row .v {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 600;
+    color: var(--foreground);
+    font-feature-settings: "tnum";
+  }
+  .pop .pop-row .v.warn { color: hsl(32 80% 38%); }
+
+  /* ─── Detail strip below grid ─── */
+  .detail {
+    border-top: 1px solid var(--border);
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items: center;
+    background: var(--card-2);
+  }
+  .detail .seal {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  .detail .seal .num {
+    width: 56px; height: 56px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-radius: var(--radius-sm);
+    display: grid; place-items: center;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
+  }
+  .detail .seal .meta .label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--muted-fg);
+    margin-bottom: 2px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  .detail .seal .meta .name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--foreground);
+    letter-spacing: -0.01em;
+  }
+  .detail .summary {
+    font-size: 13px;
+    color: var(--muted-fg);
+    line-height: 1.55;
+    max-width: 56ch;
+  }
+  .detail .summary strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  .detail .stats {
+    display: grid;
+    grid-auto-flow: column;
+    gap: 22px;
+  }
+  .detail .stats > div {
+    display: flex; flex-direction: column; gap: 2px;
+    text-align: right;
+  }
+  .detail .stats .k {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted-fg);
+  }
+  .detail .stats .v {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--foreground);
+    font-feature-settings: "tnum";
+  }
+  .detail .stats .v.primary { color: var(--primary); }
+  .detail .stats .v.warn { color: hsl(32 80% 38%); }
+
+  @media (max-width: 880px) {
+    body { padding: 16px; }
+    .head { grid-template-columns: 1fr; gap: 12px; }
+    .head .peak, .head .export { justify-self: start; }
+    .day { min-height: 90px; padding: 8px 10px; }
+    .date { font-size: 14px; }
+    .attend { font-size: 11px; margin: 6px 0 8px; }
+    .gauge { grid-template-columns: repeat(10, 1fr); }
+    .pop { display: none; }
+    .detail { grid-template-columns: 1fr; padding: 14px 16px; }
+    .detail .stats { grid-auto-flow: row; }
+    .detail .stats > div { text-align: left; flex-direction: row; justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <section class="card">
+
+    <!-- ─── Header ─── -->
+    <div class="head">
+      <div class="title-row">
+        <span class="icon-pill" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+        </span>
+        <h2>Daily attendance</h2>
+        <span class="sub">click a day for details</span>
+      </div>
+
+      <div class="peak" title="Highest attendance this month">
+        <span class="label">Peak</span>
+        <span class="figs">49<span class="total">&nbsp;/&nbsp;51</span></span>
+      </div>
+
+      <button class="export" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+        Export CSV
+      </button>
+    </div>
+
+    <!-- ─── Grid ─── -->
+    <div class="grid">
+      <div class="dow">Mon</div>
+      <div class="dow">Tue</div>
+      <div class="dow">Wed</div>
+      <div class="dow">Thu</div>
+      <div class="dow">Fri</div>
+      <div class="dow weekend">Sat</div>
+      <div class="dow weekend">Sun</div>
+
+      <!-- WEEK 1 — Apr 2026 starts Wed Apr 1 -->
+      <div class="day empty"></div>
+      <div class="day empty"></div>
+      <div class="day" data-date="1"><div class="top"><div class="date">1</div></div></div>
+      <div class="day" data-date="2"><div class="top"><div class="date">2</div></div></div>
+      <div class="day" data-date="3"><div class="top"><div class="date">3</div></div></div>
+      <div class="day weekend" data-date="4"><div class="top"><div class="date">4</div></div></div>
+      <div class="day weekend" data-date="5"><div class="top"><div class="date">5</div></div></div>
+
+      <!-- WEEK 2 -->
+      <div class="day" data-date="6"><div class="top"><div class="date">6</div></div></div>
+      <div class="day" data-date="7"><div class="top"><div class="date">7</div></div></div>
+      <div class="day" data-date="8" data-attendance="45/49"><div class="top"><div class="date">8</div></div></div>
+      <div class="day" data-date="9" data-attendance="46/49"><div class="top"><div class="date">9</div></div></div>
+      <div class="day" data-date="10" data-attendance="49/49"><div class="top"><div class="date">10</div></div></div>
+      <div class="day weekend" data-date="11" data-absent="1">
+        <div class="top">
+          <div class="date">11</div>
+          <span class="absent" title="Absences"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+      <div class="day weekend" data-date="12" data-absent="1">
+        <div class="top">
+          <div class="date">12</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+
+      <!-- WEEK 3 -->
+      <div class="day" data-date="13" data-attendance="48/49"><div class="top"><div class="date">13</div></div></div>
+      <div class="day" data-date="14" data-attendance="48/49"><div class="top"><div class="date">14</div></div></div>
+      <div class="day" data-date="15" data-attendance="45/49" data-absent="1">
+        <div class="top">
+          <div class="date">15</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+      <div class="day" data-date="16" data-attendance="45/49" data-absent="3">
+        <div class="top">
+          <div class="date">16</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>3</span>
+        </div>
+      </div>
+      <div class="day" data-date="17" data-attendance="43/49"><div class="top"><div class="date">17</div></div></div>
+      <div class="day weekend" data-date="18" data-absent="1">
+        <div class="top">
+          <div class="date">18</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+      <div class="day weekend" data-date="19" data-absent="1">
+        <div class="top">
+          <div class="date">19</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+
+      <!-- WEEK 4 -->
+      <div class="day" data-date="20" data-attendance="47/49" data-absent="1">
+        <div class="top">
+          <div class="date">20</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+      <div class="day" data-date="21" data-attendance="44/49"><div class="top"><div class="date">21</div></div></div>
+      <div class="day" data-date="22" data-absent="1">
+        <div class="top">
+          <div class="date">22</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+      <div class="day low" data-date="23" data-attendance="1/49"><div class="top"><div class="date">23</div></div></div>
+      <div class="day low" data-date="24" data-attendance="1/49"><div class="top"><div class="date">24</div></div></div>
+      <div class="day weekend" data-date="25"><div class="top"><div class="date">25</div></div></div>
+      <div class="day weekend" data-date="26" data-absent="1">
+        <div class="top">
+          <div class="date">26</div>
+          <span class="absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /></svg>1</span>
+        </div>
+      </div>
+
+      <!-- WEEK 5 — Apr 30 is a Thursday, so Fri/Sat/Sun spill into May.
+           We deliberately omit the 3 trailing cells: drawing empty Fri/Sat/
+           Sun would render a useless row of dead space at the bottom of
+           the calendar. CSS Grid leaves those positions blank and the
+           card's own border closes the edge cleanly. -->
+      <div class="day today first-col" data-date="27">
+        <div class="top"><div class="date">27</div></div>
+      </div>
+      <div class="day" data-date="28"><div class="top"><div class="date">28</div></div></div>
+      <div class="day" data-date="29"><div class="top"><div class="date">29</div></div></div>
+      <div class="day last-col" data-date="30"><div class="top"><div class="date">30</div></div></div>
+    </div>
+
+    <!-- ─── Detail strip ─── -->
+    <section class="detail">
+      <div class="seal">
+        <div class="num" id="detail-num">27</div>
+        <div class="meta">
+          <div class="label">Selected</div>
+          <div class="name" id="detail-name">Monday, Apr 27 · today</div>
+        </div>
+      </div>
+      <p class="summary" id="detail-summary">
+        <strong>In progress.</strong> Today's session is still being recorded — the closing register will be finalized at end-of-shift.
+      </p>
+      <div class="stats">
+        <div><span class="k">Roster</span><span class="v">49</span></div>
+        <div><span class="k">Signed-in</span><span class="v primary" id="detail-signed">live</span></div>
+        <div><span class="k">Absences</span><span class="v warn" id="detail-absent">0</span></div>
+        <div><span class="k">Score</span><span class="v" id="detail-score">—</span></div>
+      </div>
+    </section>
+
+  </section>
+</div>
+
+<script>
+  // ─── Render gauges from data-attendance ───
+  // 20 segments per row → readable-but-compact density. Each
+  // segment maps to ~5% so a single segment difference is
+  // perceptible at a glance.
+  const SEGS = 20;
+  document.querySelectorAll('.day[data-attendance]').forEach((cell, idx) => {
+    const [present, total] = cell.dataset.attendance.split('/').map(Number);
+    const filled = Math.round((present / total) * SEGS);
+    const pct = Math.round((present / total) * 100);
+
+    // attendance read-out (icon + count)
+    const att = document.createElement('div');
+    att.className = 'attend';
+    att.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>' +
+      '<circle cx="9" cy="7" r="4"/>' +
+      '<path d="M22 21v-2a4 4 0 0 0-3-3.87"/>' +
+      '<path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
+      '<span class="count">' + present + '</span>' +
+      '<span class="total">' + total + '</span>';
+
+    const gauge = document.createElement('div');
+    gauge.className = 'gauge';
+    for (let i = 0; i < SEGS; i++) {
+      const s = document.createElement('span');
+      s.className = 'seg' + (i < filled ? ' on' : '');
+      s.style.transitionDelay = (idx * 0.006 + i * 0.015) + 's';
+      gauge.appendChild(s);
+    }
+
+    cell.appendChild(att);
+    cell.appendChild(gauge);
+
+    // hover popover
+    const pop = document.createElement('div');
+    pop.className = 'pop';
+    const absent = cell.dataset.absent || '0';
+    pop.innerHTML =
+      '<div class="pop-head">Apr ' + cell.dataset.date + '</div>' +
+      '<div class="pop-row"><span>Signed-in</span><span class="v">' + present + ' / ' + total + '</span></div>' +
+      '<div class="pop-row"><span>Score</span><span class="v">' + pct + '%</span></div>' +
+      (absent !== '0' ? '<div class="pop-row"><span>Absences</span><span class="v warn">' + absent + '</span></div>' : '');
+    cell.appendChild(pop);
+  });
+
+  // ─── Click → update detail strip ───
+  const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  // Apr 1 2026 = Wednesday
+  const dowFor = (d) => DOW[(new Date(2026, 3, d).getDay())];
+
+  const num     = document.getElementById('detail-num');
+  const name    = document.getElementById('detail-name');
+  const summary = document.getElementById('detail-summary');
+  const signed  = document.getElementById('detail-signed');
+  const absent  = document.getElementById('detail-absent');
+  const score   = document.getElementById('detail-score');
+
+  document.querySelectorAll('.day:not(.empty)').forEach((cell) => {
+    cell.addEventListener('click', () => {
+      const d = cell.dataset.date || '';
+      const att = cell.dataset.attendance;
+      const ab = cell.dataset.absent || '0';
+      const today = cell.classList.contains('today');
+
+      num.textContent = d;
+      name.textContent = dowFor(parseInt(d, 10)) + ', Apr ' + d + (today ? ' · today' : '');
+      absent.textContent = ab;
+
+      if (today) {
+        summary.innerHTML = '<strong>In progress.</strong> Today\'s session is still being recorded — the closing register will be finalized at end-of-shift.';
+        signed.textContent = 'live';
+        signed.className = 'v primary';
+        score.textContent = '—';
+        return;
+      }
+      if (att) {
+        const [p, t] = att.split('/').map(Number);
+        signed.textContent = p + ' / ' + t;
+        signed.className = 'v';
+        const s = Math.round((p/t)*100);
+        score.textContent = s + '%';
+        summary.innerHTML = '<strong>' + p + ' of ' + t + ' signed in.</strong> ' +
+          (s >= 95 ? 'Near-full attendance for the day.' :
+           s >= 85 ? 'Healthy attendance — within the typical band.' :
+           s >= 50 ? 'Below the usual attendance rate; review absences below.' :
+                     'Sparse attendance — likely a holiday or low-coverage day.');
+      } else if (cell.classList.contains('weekend')) {
+        signed.textContent = '—';
+        score.textContent = 'off';
+        summary.innerHTML = '<strong>Off-roster day.</strong> Weekend or non-working day; no scheduled shift.';
+      } else {
+        signed.textContent = '—';
+        score.textContent = '—';
+        summary.innerHTML = '<strong>No data.</strong> No shift was recorded for this day.';
+      }
+    });
+  });
+</script>
+</body>
+</html>

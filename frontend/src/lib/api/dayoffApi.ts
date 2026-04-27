@@ -38,10 +38,6 @@ export function rejectDayOff(requestId: string): Promise<DayOffRequest> {
   return apiClient.put<DayOffRequest>(`/day-offs/${requestId}/reject`, {})
 }
 
-export function forwardDayOff(requestId: string, forwardToId: string): Promise<DayOffRequest> {
-  return apiClient.put<DayOffRequest>(`/day-offs/${requestId}/forward`, { forwardToId })
-}
-
 export function cancelDayOff(requestId: string): Promise<DayOffRequest> {
   return apiClient.put<DayOffRequest>(`/day-offs/${requestId}/cancel`, {})
 }

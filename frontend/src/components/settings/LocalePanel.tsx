@@ -73,7 +73,7 @@ export function LocalePanel({ value, onChange }: LocalePanelProps) {
       <Card className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-foreground/85">
-            Timezone
+            Workspace time zone
           </label>
           <Select
             options={TIMEZONE_OPTIONS}
@@ -81,7 +81,9 @@ export function LocalePanel({ value, onChange }: LocalePanelProps) {
             onChange={(v) => onChange({ ...value, timezone: v })}
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            Used for attendance, reports, and scheduled jobs.
+            Source of truth for the team — anchors day-off boundaries,
+            attendance reports, and scheduled jobs. Each member can set
+            their own display zone for tooltips in their profile.
           </p>
         </div>
 

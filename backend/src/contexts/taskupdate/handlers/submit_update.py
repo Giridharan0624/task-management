@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 
 from contexts.taskupdate.domain.entities import TaskUpdate
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require_feature
 from shared_kernel.response import build_error, build_success
 from contexts.taskupdate.infrastructure.dynamo_repository import TaskUpdateDynamoRepository
 from contexts.attendance.infrastructure.dynamo_repository import AttendanceDynamoRepository
@@ -32,6 +33,9 @@ def _hms(hours: float) -> tuple[int, int, int]:
 def handler(event, context):
     try:
         auth = extract_auth_context(event)
+        # Reject when daily updates are disabled at the org level. Past
+        # submissions remain readable via list_updates / my_update.
+        require_feature(auth, "task_updates")
 
         update_repo = TaskUpdateDynamoRepository()
         attendance_repo = AttendanceDynamoRepository()

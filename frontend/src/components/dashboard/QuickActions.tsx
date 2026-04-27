@@ -8,10 +8,9 @@ import {
   CheckSquare,
   FileText,
   Calendar,
+  ArrowUpRight,
   type LucideIcon,
 } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
-import { cn } from '@/lib/utils'
 
 interface Action {
   key: string
@@ -19,7 +18,6 @@ interface Action {
   description: string
   href: string
   icon: LucideIcon
-  accent: string
 }
 
 interface QuickActionsProps {
@@ -37,8 +35,6 @@ export function QuickActions({ role }: QuickActionsProps) {
       description: 'Jump to your list',
       href: '/my-tasks',
       icon: CheckSquare,
-      accent:
-        'bg-gradient-to-br from-primary/10 to-primary/5 text-primary hover:from-primary/15 hover:to-primary/10',
     },
     {
       key: 'daily-update',
@@ -46,8 +42,6 @@ export function QuickActions({ role }: QuickActionsProps) {
       description: "Submit today's work",
       href: '/task-updates',
       icon: FileText,
-      accent:
-        'bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-700 hover:from-emerald-200 hover:to-emerald-100',
     },
     {
       key: 'day-off',
@@ -55,8 +49,6 @@ export function QuickActions({ role }: QuickActionsProps) {
       description: 'Time away from work',
       href: '/day-offs',
       icon: Calendar,
-      accent:
-        'bg-gradient-to-br from-amber-100 to-amber-50 text-amber-700 hover:from-amber-200 hover:to-amber-100',
     },
   ]
 
@@ -67,8 +59,6 @@ export function QuickActions({ role }: QuickActionsProps) {
       description: 'Start a workspace',
       href: '/projects',
       icon: FolderPlus,
-      accent:
-        'bg-gradient-to-br from-primary/10 to-primary/5 text-primary hover:from-primary/15 hover:to-primary/10',
     },
     {
       key: 'invite',
@@ -76,8 +66,6 @@ export function QuickActions({ role }: QuickActionsProps) {
       description: 'Add a teammate',
       href: '/admin/users',
       icon: UserPlus,
-      accent:
-        'bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-700 hover:from-emerald-200 hover:to-emerald-100',
     },
     {
       key: 'report',
@@ -85,41 +73,39 @@ export function QuickActions({ role }: QuickActionsProps) {
       description: 'Time & activity',
       href: '/reports',
       icon: BarChart3,
-      accent:
-        'bg-gradient-to-br from-amber-100 to-amber-50 text-amber-700 hover:from-amber-200 hover:to-amber-100',
     },
   ]
 
   const visible = role === 'MEMBER' ? memberActions : adminActions
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 stagger-up">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {visible.map((a) => {
         const Icon = a.icon
         return (
-          <Link key={a.key} href={a.href} className="pressable">
-            <Card
-              className={cn(
-                'group flex items-center gap-3 p-4 transition-all hover:-translate-y-0.5 hover:shadow-card-hover hover-lift-sm'
-              )}
-            >
-              <div
-                className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
-                  a.accent
-                )}
-              >
-                <Icon className="h-5 w-5" strokeWidth={2} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-foreground">
+          <Link
+            key={a.key}
+            href={a.href}
+            className="group flex items-start justify-between gap-3 rounded-md border border-border/70 bg-card px-4 py-3.5 transition-colors hover:border-foreground/30 hover:bg-muted/30"
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <Icon
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
+                strokeWidth={1.8}
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
                   {a.label}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {a.description}
                 </p>
               </div>
-            </Card>
+            </div>
+            <ArrowUpRight
+              className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground"
+              strokeWidth={1.8}
+            />
           </Link>
         )
       })}

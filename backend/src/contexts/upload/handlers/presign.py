@@ -8,7 +8,7 @@ from botocore.config import Config as BotoConfig
 from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
 from shared_kernel.auth_context import extract_auth_context
 from shared_kernel.errors import ValidationError
-from shared_kernel.permissions import require_not_suspended
+from shared_kernel.permissions import require_feature, require_not_suspended
 from shared_kernel.response import build_error, build_success
 
 BUCKET = os.environ.get("UPLOADS_BUCKET", "")
@@ -74,6 +74,12 @@ def handler(event, context):
         # Validate upload type
         if upload_type not in UPLOAD_TYPES:
             raise ValidationError(f"Invalid type. Must be one of: {', '.join(UPLOAD_TYPES.keys())}")
+
+        # Screenshot uploads are gated by the `screenshots` feature
+        # toggle. Avatars and attachments are always available — those
+        # aren't tied to the activity-monitoring feature set.
+        if upload_type == "screenshot":
+            require_feature(auth, "screenshots")
 
         config = UPLOAD_TYPES[upload_type]
 

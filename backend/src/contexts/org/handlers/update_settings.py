@@ -31,6 +31,10 @@ class UpdateSettingsRequest(BaseModel):
     favicon_url: Optional[str] = None
     primary_color: Optional[str] = None
     accent_color: Optional[str] = None
+    # Curated-font picker — id from frontend/src/lib/tenant/fonts.ts
+    font_family: Optional[str] = None
+    # Curated theme preset — id from frontend/src/lib/tenant/themes.ts
+    theme: Optional[str] = None
     # Terminology overrides (i18n)
     terminology: Optional[dict[str, str]] = None
     # Locale
@@ -46,6 +50,8 @@ class UpdateSettingsRequest(BaseModel):
     features: Optional[dict[str, bool]] = None
     # Leave types
     leave_types: Optional[list[dict]] = None
+    # Department catalog (OWNER-managed). List of plain strings.
+    departments: Optional[list[str]] = None
 
 
 def handler(event, context):
@@ -94,6 +100,30 @@ def handler(event, context):
 
 _HEX_COLOR_LEN = {4, 7, 9}  # #rgb, #rrggbb, #rrggbbaa
 
+# Whitelist of theme preset ids — must stay in sync with the
+# `THEMES` catalog in frontend/src/lib/tenant/themes.ts. Stored as
+# a short id rather than the palette payload so the canonical
+# definition lives in one place (the frontend catalog) and the
+# backend just validates the identifier.
+#
+# Legacy ids (slate/graphite/sapphire/forest/claret) from the v1
+# staging catalog are still accepted because the frontend `getTheme`
+# helper aliases them onto the v2 successors — preserving the choice
+# any early-tester tenant made without a hard migration step.
+_ALLOWED_THEMES = {
+    "aurora",
+    "atelier",
+    "meridian",
+    "cypress",
+    "velour",
+    # Legacy aliases — accepted for backward compatibility.
+    "slate",
+    "graphite",
+    "sapphire",
+    "forest",
+    "claret",
+}
+
 
 def _validate_updates(updates: dict) -> None:
     """Server-side validation of a partial settings payload."""
@@ -115,6 +145,12 @@ def _validate_updates(updates: dict) -> None:
         _validate_time_str(updates["working_hours_end"], "working_hours_end")
     if "timezone" in updates and not isinstance(updates["timezone"], str):
         raise ValidationError("timezone must be a string.")
+    if "theme" in updates:
+        theme = updates["theme"]
+        if not isinstance(theme, str) or theme not in _ALLOWED_THEMES:
+            raise ValidationError(
+                f"Unknown theme. Pick one of: {', '.join(sorted(_ALLOWED_THEMES))}."
+            )
 
 
 def _validate_hex_color(value: str, field: str) -> None:

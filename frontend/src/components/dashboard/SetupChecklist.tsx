@@ -174,7 +174,7 @@ export function SetupChecklist() {
 
   return (
     <Card className="overflow-hidden p-0 animate-fade-in">
-      <div className="flex items-start justify-between gap-3 border-b border-border/60 bg-gradient-to-br from-primary/8 to-accent/5 px-5 py-4">
+      <div className="flex items-start justify-between gap-3 border-b border-border/60 bg-muted/30 px-5 py-4">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
             Get started

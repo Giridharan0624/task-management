@@ -405,18 +405,16 @@ function RollupContent({ data }: { data: RollupData }) {
   return (
     <div className="flex flex-col gap-6">
       {/* ── 1. AI summary hero with inline metrics ── */}
-      <Card className="relative overflow-hidden p-6 sm:p-8">
+      <Card className="relative overflow-hidden p-6 shadow-none sm:p-8">
+        {/* Single-color top hairline replaces the blurred halo + gradient
+            fade — analyst-page chrome rather than marketing surface. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary"
         />
         <div className="relative">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
-            <Sparkles className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
+            <Sparkles className="h-3 w-3" strokeWidth={1.8} />
             AI summary
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -429,12 +427,12 @@ function RollupContent({ data }: { data: RollupData }) {
           )}
 
           {/* Inline metric strip — replaces the three previous strips. */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 divide-x divide-y divide-border/60 overflow-hidden rounded-lg border border-border/70 bg-card sm:grid-cols-4 sm:divide-y-0">
             <HeroMetric
               Icon={Clock}
               label="Tracked hours"
               value={`${trackedHours}h`}
-              tint="from-blue-500/12 text-blue-600 dark:text-blue-300"
+              tint="text-sky-700"
             />
             <HeroMetric
               Icon={Users}
@@ -442,19 +440,19 @@ function RollupContent({ data }: { data: RollupData }) {
               value={`${activeMembers}${
                 data.teamSize > 0 ? ` / ${data.teamSize}` : ''
               }`}
-              tint="from-emerald-500/12 text-emerald-600 dark:text-emerald-300"
+              tint="text-emerald-700"
             />
             <HeroMetric
               Icon={ListTodo}
               label="Updates"
               value={metrics.totalUpdates}
-              tint="from-indigo-500/12 text-indigo-600 dark:text-indigo-300"
+              tint="text-indigo-700"
             />
             <HeroMetric
               Icon={Gauge}
               label="Avg focus"
               value={`${metrics.activityAvgScore}%`}
-              tint="from-violet-500/12 text-violet-600 dark:text-violet-300"
+              tint="text-violet-700"
             />
           </div>
 
@@ -486,10 +484,8 @@ function RollupContent({ data }: { data: RollupData }) {
                   <div className="flex h-32 w-full items-end">
                     <div
                       className={cn(
-                        'w-full rounded-t-md transition-all',
-                        empty
-                          ? 'bg-muted'
-                          : 'bg-gradient-to-t from-primary to-accent',
+                        'w-full rounded-sm transition-all',
+                        empty ? 'bg-muted' : 'bg-foreground/85',
                       )}
                       style={{ height: `${Math.max(heightPct, 3)}%` }}
                       title={`${d.hours.toFixed(1)}h`}
@@ -661,31 +657,20 @@ interface HeroMetricProps {
 
 function HeroMetric({ Icon, label, value, tint }: HeroMetricProps) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border/60 bg-card/60 p-3 backdrop-blur-sm">
-      <span
-        aria-hidden
-        className={cn(
-          'pointer-events-none absolute inset-0 bg-gradient-to-br opacity-70',
-          tint.split(' ')[0],
-        )}
-      />
-      <div className="relative flex items-center gap-2.5">
-        <div
-          className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-inset ring-white/20',
-            tint,
-          )}
-        >
-          <Icon className="h-4 w-4" strokeWidth={1.8} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-            {label}
-          </p>
-          <p className="text-base font-bold tabular-nums text-foreground">
-            {value}
-          </p>
-        </div>
+    <div className="flex flex-col gap-2 px-5 py-4">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon
+          className={cn('h-3 w-3', tint)}
+          strokeWidth={1.8}
+        />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">
+          {label}
+        </p>
+      </div>
+      <div className="min-w-0">
+        <p className={cn('text-2xl font-medium tabular-nums leading-none', tint)}>
+          {value}
+        </p>
       </div>
     </div>
   )

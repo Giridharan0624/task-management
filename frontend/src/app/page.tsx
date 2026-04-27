@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { Lexend } from 'next/font/google'
 import {
   Activity,
   Apple,
@@ -45,14 +44,10 @@ import {
 } from '@/components/landing/interactions'
 import { cn } from '@/lib/utils'
 
-// Landing page uses Lexend instead of the rest of the app's Outfit —
-// the marketing surface gets a calmer, more readable display face.
-// Loaded only on this route, so the dashboard bundle is unaffected.
-const lexend = Lexend({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['300', '400', '500', '600', '700', '800'],
-})
+// Note: this page used to hardcode Lexend via next/font, but that
+// overrode the tenant-font cascade for any logged-in user landing
+// here. The page now inherits the app-wide font (tenant choice when
+// set, otherwise the bundled Outfit) like every other surface.
 
 /* ────────────────────────────────────────────────────────────────────
  * Page metadata + structured data
@@ -107,7 +102,7 @@ const structuredData = {
 
 export default function LandingPage() {
   return (
-    <div className={cn(lexend.className, 'flex min-h-screen flex-col bg-background text-foreground')}>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <MaybeRedirectIfAuthed />
 
       <a

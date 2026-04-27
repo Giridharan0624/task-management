@@ -173,14 +173,6 @@
 
 **Response:** `200` — Updated task object
 
-### `POST /direct-tasks` — Create standalone task
-Same body as `POST /projects/{projectId}/tasks` (project_id auto-set to "DIRECT")
-
-**Response:** `201` — Task object
-
-### `GET /direct-tasks` — List standalone tasks
-**Response:** `200` — Array of task objects
-
 ---
 
 ## Comments

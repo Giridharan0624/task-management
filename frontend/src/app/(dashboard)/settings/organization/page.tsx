@@ -1,25 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  AlertCircle,
-  ChevronRight,
-  CheckCircle2,
-  ClipboardList,
-  KanbanSquare,
-  Key,
-  RotateCcw,
-  ShieldCheck,
-  Sparkles,
-  Trash2,
-  Webhook,
-} from 'lucide-react'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 
 import { useAuth } from '@/lib/auth/AuthProvider'
 import { useTenant } from '@/lib/tenant/TenantProvider'
-import { applyTenantTheme } from '@/lib/tenant/theme'
+import { applyTenantFont } from '@/lib/tenant/fonts'
+import { applyThemePreset } from '@/lib/tenant/theme'
+import { DEFAULT_THEME_ID, type ThemeId } from '@/lib/tenant/themes'
 import { orgsApi, type UpdateSettingsRequest } from '@/lib/api/orgsApi'
 import { getProfile, updateProfile } from '@/lib/api/userApi'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -35,8 +24,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/Tabs'
-import { ColorField } from '@/components/settings/ColorField'
-import { BrandingPreview } from '@/components/settings/BrandingPreview'
+import { FontPicker } from '@/components/settings/FontPicker'
 import { GlossaryPanel } from '@/components/settings/GlossaryPanel'
 import { FeaturesPanel } from '@/components/settings/FeaturesPanel'
 import { LocalePanel, type LocaleState } from '@/components/settings/LocalePanel'
@@ -44,13 +32,26 @@ import {
   LeaveTypesPanel,
   type LeaveType,
 } from '@/components/settings/LeaveTypesPanel'
+import {
+  DepartmentsPanel,
+  DEFAULT_DEPARTMENTS,
+} from '@/components/settings/DepartmentsPanel'
+import { ThemePicker } from '@/components/settings/ThemePicker'
 
-type Tab = 'branding' | 'terminology' | 'features' | 'locale' | 'leave'
+type Tab =
+  | 'branding'
+  | 'theme'
+  | 'terminology'
+  | 'features'
+  | 'locale'
+  | 'leave'
+  | 'departments'
 
 interface BrandingState {
   displayName: string
-  primaryColor: string
-  accentColor: string
+  /** Curated font id (or null = app default Outfit). See
+   *  frontend/src/lib/tenant/fonts.ts for the catalog. */
+  fontFamily: string | null
   /** Per-tenant prefix on generated employee IDs. Stored on the owner's
    *  user profile (not org settings), but edited here alongside the other
    *  workspace-identity fields because that's where owners expect it. */
@@ -65,9 +66,6 @@ const DEFAULT_LOCALE: LocaleState = {
   workingHoursStart: '09:00',
   workingHoursEnd: '18:00',
 }
-
-const DEFAULT_PRIMARY = '#4F46E5'
-const DEFAULT_ACCENT = '#10B981'
 
 function shallowEqual<T extends object>(a: T, b: T): boolean {
   const aKeys = Object.keys(a) as (keyof T)[]
@@ -90,14 +88,15 @@ export default function OrgSettingsPage() {
   // Per-tab form state — kept separate so we can detect dirty per tab
   const [branding, setBranding] = useState<BrandingState>({
     displayName: '',
-    primaryColor: DEFAULT_PRIMARY,
-    accentColor: DEFAULT_ACCENT,
+    fontFamily: null,
     companyPrefix: 'NS',
   })
   const [terminology, setTerminology] = useState<Record<string, string>>({})
   const [features, setFeatures] = useState<Record<string, boolean>>({})
   const [locale, setLocale] = useState<LocaleState>(DEFAULT_LOCALE)
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
+  const [departments, setDepartments] = useState<string[]>([])
+  const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME_ID)
 
   // Snapshot of last-saved values for dirty checks
   const [savedBranding, setSavedBranding] = useState<BrandingState>(branding)
@@ -109,6 +108,8 @@ export default function OrgSettingsPage() {
   )
   const [savedLocale, setSavedLocale] = useState<LocaleState>(DEFAULT_LOCALE)
   const [savedLeaveTypes, setSavedLeaveTypes] = useState<LeaveType[]>([])
+  const [savedDepartments, setSavedDepartments] = useState<string[]>([])
+  const [savedTheme, setSavedTheme] = useState<ThemeId>(DEFAULT_THEME_ID)
 
   // Authz — only OWNER can see this page
   useEffect(() => {
@@ -145,8 +146,7 @@ export default function OrgSettingsPage() {
     const s = current.settings
     const initialBranding: BrandingState = {
       displayName: s.displayName ?? '',
-      primaryColor: s.primaryColor ?? DEFAULT_PRIMARY,
-      accentColor: s.accentColor ?? DEFAULT_ACCENT,
+      fontFamily: s.fontFamily ?? null,
       // companyPrefix is hydrated from the owner's user profile in the
       // effect below — preserve whatever value is already in state.
       companyPrefix: branding.companyPrefix,
@@ -163,16 +163,29 @@ export default function OrgSettingsPage() {
       workingHoursEnd: s.workingHoursEnd ?? DEFAULT_LOCALE.workingHoursEnd,
     }
     const initialLeaveTypes = s.leaveTypes ?? []
+    // Legacy tenants saved before the `departments` field shipped read
+    // back as `null` / undefined here. Seed from the canonical default
+    // list so the panel renders a starting point instead of an empty
+    // shell — owner can prune or restore from there.
+    const initialDepartments =
+      s.departments && s.departments.length > 0
+        ? s.departments
+        : [...DEFAULT_DEPARTMENTS]
+    const initialTheme = (s.theme as ThemeId) || DEFAULT_THEME_ID
     setBranding(initialBranding)
     setTerminology(initialTerminology)
     setFeatures(initialFeatures)
     setLocale(initialLocale)
     setLeaveTypes(initialLeaveTypes)
+    setDepartments(initialDepartments)
+    setTheme(initialTheme)
     setSavedBranding(initialBranding)
     setSavedTerminology(initialTerminology)
     setSavedFeatures(initialFeatures)
     setSavedLocale(initialLocale)
     setSavedLeaveTypes(initialLeaveTypes)
+    setSavedDepartments(initialDepartments)
+    setSavedTheme(initialTheme)
   }, [current, refreshCurrent])
 
   // Dirty checks
@@ -197,17 +210,26 @@ export default function OrgSettingsPage() {
     () => JSON.stringify(leaveTypes) !== JSON.stringify(savedLeaveTypes),
     [leaveTypes, savedLeaveTypes]
   )
+  const departmentsDirty = useMemo(
+    () => JSON.stringify(departments) !== JSON.stringify(savedDepartments),
+    [departments, savedDepartments]
+  )
+  const themeDirty = theme !== savedTheme
 
   const dirtyForTab =
     tab === 'branding'
       ? brandingDirty
-      : tab === 'terminology'
-        ? terminologyDirty
-        : tab === 'features'
-          ? featuresDirty
-          : tab === 'locale'
-            ? localeDirty
-            : leaveTypesDirty
+      : tab === 'theme'
+        ? themeDirty
+        : tab === 'terminology'
+          ? terminologyDirty
+          : tab === 'features'
+            ? featuresDirty
+            : tab === 'locale'
+              ? localeDirty
+              : tab === 'leave'
+                ? leaveTypesDirty
+                : departmentsDirty
 
   const onSave = async () => {
     setSaving(true)
@@ -220,8 +242,10 @@ export default function OrgSettingsPage() {
           // Logo / favicon are intentionally omitted — feature removed from
           // the UI. Leaving them out of the payload preserves any legacy
           // values the backend may still hold for this tenant.
-          primaryColor: branding.primaryColor,
-          accentColor: branding.accentColor,
+          //
+          // Colors are owned by the Theme tab now and are NOT sent here,
+          // so a Branding-tab save can't override the active theme preset.
+          fontFamily: branding.fontFamily,
         }
         // Prefix lives on the owner's user profile. Only send a profile
         // update when the value actually changed, so we don't churn the
@@ -245,8 +269,12 @@ export default function OrgSettingsPage() {
           workingHoursStart: locale.workingHoursStart,
           workingHoursEnd: locale.workingHoursEnd,
         }
-      } else {
+      } else if (tab === 'leave') {
         payload = { leaveTypes }
+      } else if (tab === 'theme') {
+        payload = { theme }
+      } else {
+        payload = { departments }
       }
 
       await orgsApi.updateSettings(payload)
@@ -257,14 +285,23 @@ export default function OrgSettingsPage() {
       else if (tab === 'terminology') setSavedTerminology(terminology)
       else if (tab === 'features') setSavedFeatures(features)
       else if (tab === 'locale') setSavedLocale(locale)
-      else setSavedLeaveTypes(leaveTypes)
+      else if (tab === 'leave') setSavedLeaveTypes(leaveTypes)
+      else if (tab === 'theme') setSavedTheme(theme)
+      else setSavedDepartments(departments)
 
-      // Re-apply theme immediately when colors change
-      if (payload.primaryColor || payload.accentColor) {
-        applyTenantTheme(
-          payload.primaryColor ?? branding.primaryColor,
-          payload.accentColor ?? branding.accentColor
-        )
+      // Re-apply font on save so the active session reflects the new
+      // typeface without a reload. `payload.fontFamily` may be null
+      // (user picked the default) — applyTenantFont handles that.
+      if ('fontFamily' in payload) {
+        applyTenantFont(payload.fontFamily ?? null)
+      }
+      // Theme follows the same pattern: the picker no longer applies
+      // on click, so this is the moment the workspace actually
+      // re-themes. TenantProvider would also re-apply on next refresh,
+      // but doing it inline here is instant — no flash of the old
+      // palette while we wait for /orgs/current to round-trip.
+      if ('theme' in payload && payload.theme) {
+        applyThemePreset(payload.theme)
       }
       toast.success('Settings saved')
     } catch (e) {
@@ -281,7 +318,9 @@ export default function OrgSettingsPage() {
     else if (tab === 'terminology') setTerminology(savedTerminology)
     else if (tab === 'features') setFeatures(savedFeatures)
     else if (tab === 'locale') setLocale(savedLocale)
-    else setLeaveTypes(savedLeaveTypes)
+    else if (tab === 'leave') setLeaveTypes(savedLeaveTypes)
+    else if (tab === 'theme') setTheme(savedTheme)
+    else setDepartments(savedDepartments)
     setError(null)
   }
 
@@ -304,59 +343,9 @@ export default function OrgSettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 pb-24 animate-fade-in">
       <PageHeader
-        title="Organization settings"
-        description="These changes apply to everyone in your workspace."
+        title="General"
+        description="Branding, terminology, locale, features, and leave types. Other admin surfaces (Roles, Pipelines, Plan, Audit, Webhooks, Transfer, Delete) are in the left-rail nav."
       />
-
-      {/* Admin areas — pages too rich for a single tab live behind these
-          links. Add more entries here as new admin domains land
-          (pipelines, plans, audit log, etc.). */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <AdminLink
-          href="/settings/roles"
-          icon={ShieldCheck}
-          title="Roles & permissions"
-          subtitle="Define who can do what."
-        />
-        <AdminLink
-          href="/settings/pipelines"
-          icon={KanbanSquare}
-          title="Task pipelines"
-          subtitle="Custom task workflows + colors."
-        />
-        <AdminLink
-          href="/settings/plan"
-          icon={Sparkles}
-          title="Plan & usage"
-          subtitle="Seats, projects, retention."
-        />
-        <AdminLink
-          href="/settings/audit"
-          icon={ClipboardList}
-          title="Audit log"
-          subtitle="Who changed what, when."
-        />
-        <AdminLink
-          href="/settings/webhooks"
-          icon={Webhook}
-          title="Webhooks"
-          subtitle="HMAC-signed event delivery to your endpoints."
-        />
-        <AdminLink
-          href="/settings/transfer-ownership"
-          icon={Key}
-          title="Transfer ownership"
-          subtitle="Hand off OWNER to another member."
-          danger
-        />
-        <AdminLink
-          href="/settings/delete-workspace"
-          icon={Trash2}
-          title="Delete workspace"
-          subtitle="Schedule permanent deletion or export data."
-          danger
-        />
-      </div>
 
       {error && (
         <Alert variant="destructive">
@@ -370,6 +359,10 @@ export default function OrgSettingsPage() {
           <TabsTrigger value="branding" className="gap-2">
             Branding
             {brandingDirty && <DirtyDot />}
+          </TabsTrigger>
+          <TabsTrigger value="theme" className="gap-2">
+            Theme
+            {themeDirty && <DirtyDot />}
           </TabsTrigger>
           <TabsTrigger value="terminology" className="gap-2">
             Terminology
@@ -387,9 +380,13 @@ export default function OrgSettingsPage() {
             Leave types
             {leaveTypesDirty && <DirtyDot />}
           </TabsTrigger>
+          <TabsTrigger value="departments" className="gap-2">
+            Departments
+            {departmentsDirty && <DirtyDot />}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="branding" className="mt-4">
+        <TabsContent value="branding" className="mt-4 space-y-5">
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <Card className="space-y-5 p-5">
               <Input
@@ -422,47 +419,46 @@ export default function OrgSettingsPage() {
                 className="font-mono uppercase"
                 hint="Used at the start of every generated employee ID."
               />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <ColorField
-                  label="Primary color"
-                  value={branding.primaryColor}
-                  onChange={(v) =>
-                    setBranding((b) => ({ ...b, primaryColor: v }))
-                  }
-                  hint="Buttons, links, focus rings."
-                />
-                <ColorField
-                  label="Accent color"
-                  value={branding.accentColor}
-                  onChange={(v) =>
-                    setBranding((b) => ({ ...b, accentColor: v }))
-                  }
-                  hint="Status pills, success states."
-                />
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setBranding((b) => ({
-                    ...b,
-                    primaryColor: DEFAULT_PRIMARY,
-                    accentColor: DEFAULT_ACCENT,
-                  }))
-                }
-                className="gap-1.5 text-muted-foreground"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Reset colors to defaults
-              </Button>
+              <p className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5 text-[12px] leading-relaxed text-muted-foreground">
+                Workspace colors are now managed in the{' '}
+                <button
+                  type="button"
+                  onClick={() => setTab('theme')}
+                  className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+                >
+                  Theme
+                </button>{' '}
+                tab. Pick one of five curated palettes — every member
+                sees it in both light and dark mode.
+              </p>
             </Card>
-
-            <BrandingPreview
-              primaryColor={branding.primaryColor}
-              accentColor={branding.accentColor}
-              displayName={branding.displayName}
-            />
           </div>
+
+          {/* Typography — workspace-wide font picker. Curated list of
+              professional sans-serifs only; deliberately not a full
+              Google Fonts catalog so the workspace stays clean. */}
+          <Card className="space-y-4 p-5">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Typography</h3>
+              <p className="text-[12px] text-muted-foreground">
+                Choose the typeface every page in this workspace uses.
+              </p>
+            </div>
+            <FontPicker
+              value={branding.fontFamily}
+              onChange={(next) =>
+                setBranding((b) => ({ ...b, fontFamily: next }))
+              }
+            />
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="theme" className="mt-4">
+          <ThemePicker
+            value={theme}
+            savedValue={savedTheme}
+            onChange={setTheme}
+          />
         </TabsContent>
 
         <TabsContent value="terminology" className="mt-4">
@@ -479,6 +475,10 @@ export default function OrgSettingsPage() {
 
         <TabsContent value="leave" className="mt-4">
           <LeaveTypesPanel value={leaveTypes} onChange={setLeaveTypes} />
+        </TabsContent>
+
+        <TabsContent value="departments" className="mt-4">
+          <DepartmentsPanel value={departments} onChange={setDepartments} />
         </TabsContent>
       </Tabs>
 
@@ -501,7 +501,9 @@ export default function OrgSettingsPage() {
                       ? 'Features'
                       : tab === 'locale'
                         ? 'Locale'
-                        : 'Leave types'}
+                        : tab === 'leave'
+                          ? 'Leave types'
+                          : 'Departments'}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -528,42 +530,3 @@ function DirtyDot() {
   )
 }
 
-function AdminLink({
-  href,
-  icon: Icon,
-  title,
-  subtitle,
-  danger = false,
-}: {
-  href: string
-  icon: typeof ShieldCheck
-  title: string
-  subtitle: string
-  danger?: boolean
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        danger
-          ? 'group flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.03] p-3.5 transition-all hover:-translate-y-0.5 hover:border-destructive/60 hover:shadow-card-hover'
-          : 'group flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover'
-      }
-    >
-      <div
-        className={
-          danger
-            ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive'
-            : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'
-        }
-      >
-        <Icon className="h-4.5 w-4.5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-    </Link>
-  )
-}

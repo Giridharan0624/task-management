@@ -27,7 +27,6 @@ import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { BackToSettings } from '@/components/settings/BackToSettings'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { cn } from '@/lib/utils'
@@ -94,7 +93,6 @@ export default function PipelinesSettingsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-24 animate-fade-in">
-      <BackToSettings />
       <PageHeader
         title="Task pipelines"
         description="Workflows your tasks move through. Customize columns, colors, and statuses for each domain of work."

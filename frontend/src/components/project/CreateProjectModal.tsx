@@ -447,7 +447,14 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
             <Button variant="secondary" type="button" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" loading={isSubmitting}>
+            {/* Gate on BOTH the form's isSubmitting AND the mutation's
+                pending state. isSubmitting goes false when validation
+                resolves; the network round-trip can still be in flight,
+                and without the second flag a double-click submits twice. */}
+            <Button
+              type="submit"
+              loading={isSubmitting || createProject.isPending}
+            >
               Create Project
             </Button>
           </div>

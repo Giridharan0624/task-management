@@ -29,7 +29,7 @@ export async function initSentry(): Promise<void> {
     // isn't installed. The `@ts-ignore` is intentional — `@sentry/browser`
     // is optional and may not be resolvable at compile time.
     // @ts-expect-error optional peer
-    const Sentry = await import('@sentry/browser')
+    const Sentry = await import(/* webpackIgnore: true */ '@sentry/browser')
     Sentry.init({
       dsn,
       environment: process.env.NEXT_PUBLIC_ENV ?? 'unknown',

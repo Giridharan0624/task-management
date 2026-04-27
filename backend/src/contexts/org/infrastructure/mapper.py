@@ -38,6 +38,48 @@ def _leave_types_or_default(raw) -> list[dict]:
     return parsed
 
 
+_DEFAULT_DEPARTMENTS = [
+    "Engineering",
+    "Design",
+    "Product",
+    "Marketing",
+    "Operations",
+    "People",
+]
+
+
+def _departments_or_default(raw) -> list[str]:
+    """Parse stored departments — falls back to defaults when the column
+    is missing or unparseable. Unlike leave_types, an empty list IS a
+    valid OWNER choice (a workspace might not need departments at all),
+    so we only restore defaults when the value was never set."""
+    if raw is None:
+        return list(_DEFAULT_DEPARTMENTS)
+    if isinstance(raw, str):
+        if raw == "":
+            return list(_DEFAULT_DEPARTMENTS)
+        try:
+            parsed = json.loads(raw)
+        except (ValueError, TypeError):
+            return list(_DEFAULT_DEPARTMENTS)
+    else:
+        parsed = raw
+    if not isinstance(parsed, list):
+        return list(_DEFAULT_DEPARTMENTS)
+    # Coerce to strings + dedupe while preserving order.
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in parsed:
+        if not isinstance(item, str):
+            continue
+        clean = item.strip()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        out.append(clean)
+    return out
+
+
 class OrgMapper:
     # ------------------------------------------------------------------
     # Organization
@@ -103,6 +145,8 @@ class OrgMapper:
             "favicon_url": s.favicon_url or "",
             "primary_color": s.primary_color,
             "accent_color": s.accent_color,
+            "font_family": s.font_family or "",
+            "theme": s.theme or "aurora",
             "terminology": json.dumps(s.terminology),
             "timezone": s.timezone,
             "locale": s.locale,
@@ -113,6 +157,7 @@ class OrgMapper:
             "employee_id_prefix": s.employee_id_prefix,
             "features": json.dumps(s.features),
             "leave_types": json.dumps(s.leave_types),
+            "departments": json.dumps(s.departments),
             "created_at": s.created_at,
             "updated_at": s.updated_at,
         }
@@ -136,6 +181,8 @@ class OrgMapper:
             favicon_url=item.get("favicon_url") or None,
             primary_color=item.get("primary_color", "#4F46E5"),
             accent_color=item.get("accent_color", "#10B981"),
+            font_family=item.get("font_family") or None,
+            theme=item.get("theme") or "aurora",
             terminology=_json_or(item.get("terminology"), {}),
             timezone=item.get("timezone", "Asia/Kolkata"),
             locale=item.get("locale", "en-IN"),
@@ -153,6 +200,10 @@ class OrgMapper:
             # the Request day-off dialog. Owners that genuinely want to
             # disable day-offs should toggle the `day_offs` feature flag.
             leave_types=_leave_types_or_default(item.get("leave_types")),
+            # Departments — stored as JSON array of strings. Falls back
+            # to the entity default when the column is missing (older
+            # tenants) or unparseable.
+            departments=_departments_or_default(item.get("departments")),
             created_at=item["created_at"],
             updated_at=item["updated_at"],
         )

@@ -119,7 +119,16 @@ const navBase: NavItem[] = [
   { nameKey: 'nav.reports', name: 'Reports', href: '/reports', icon: BarChart3, requiredPermission: 'user.progress.view' },
   { nameKey: 'nav.attendance', name: 'Attendance', href: '/attendance', icon: Clock, feature: 'activity_monitoring' },
   { nameKey: 'nav.day_offs', name: 'Day Offs', href: '/day-offs', icon: Calendar, feature: 'day_offs' },
-  { nameKey: 'nav.settings', name: 'Settings', href: '/settings/organization', icon: Settings, requiredPermission: 'settings.view' },
+  // /settings index redirects to /settings/organization (General). Pointing
+  // the sidebar at /settings keeps the active highlight on the Settings
+  // item across every sub-route (Roles, Pipelines, Audit, Webhooks, etc.)
+  // because the active-match logic in SidebarContent uses startsWith.
+  //
+  // Gated on settings.edit (OWNER-only by default) rather than settings.view
+  // because every page under /settings currently redirects non-OWNERs back
+  // to /dashboard. Showing the link to ADMIN/MEMBER would be a dead UX —
+  // they'd click it and bounce. Custom roles with settings.edit see it.
+  { nameKey: 'nav.settings', name: 'Settings', href: '/settings', icon: Settings, requiredPermission: 'settings.edit' },
 ]
 
 /** Returns the master nav list with the `/my-tasks` label swapped to

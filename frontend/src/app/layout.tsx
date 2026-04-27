@@ -29,7 +29,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={outfit.variable}>
-      <body className={outfit.className}>
+      {/* `font-sans` reads tailwind.config.ts → `var(--font-tenant,
+          var(--font-outfit))`, so the tenant's chosen font (when set)
+          wins, otherwise the bundled Outfit ships in the base CSS. */}
+      <body className="font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

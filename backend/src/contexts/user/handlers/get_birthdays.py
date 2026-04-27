@@ -2,13 +2,19 @@ from datetime import datetime, timezone, timedelta
 
 from shared_kernel.response import build_success, build_error
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.permissions import require_feature
 from contexts.user.infrastructure.dynamo_repository import UserDynamoRepository
 
 
 def handler(event, context):
     """Return today's birthdays and upcoming birthdays (next 7 days)."""
     try:
-        extract_auth_context(event)  # Ensure authenticated
+        auth = extract_auth_context(event)
+        # birthday_wishes is a pure read feature — no separate "create"
+        # path. When the OWNER toggles it off, the read endpoint itself
+        # is what we gate, so the BirthdayBanner UI sees an empty
+        # response (or the FeatureGate hides the affordance entirely).
+        require_feature(auth, "birthday_wishes")
 
         user_repo = UserDynamoRepository()
         users = user_repo.find_all()
