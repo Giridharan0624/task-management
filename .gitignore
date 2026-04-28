@@ -13,12 +13,20 @@ build/
 venv/
 env/
 pip-log.txt
+.ruff_cache/
+.mypy_cache/
+.tox/
 
 # ─── Lambda Layer dependencies (pip install -t layers/python) ─────────────────
 backend/layers/
 
 # ─── CDK / AWS ────────────────────────────────────────────────────────────────
+# `cdk.out*` catches the per-stage variants `cdk deploy --app "python
+# app_staging.py"` produces (cdk.out.staging/, cdk.out.company/, …)
+# in addition to the default `cdk.out/`. These are CFN synth artifacts
+# and the layer asset zips — never check them in.
 cdk.out/
+cdk.out.*/
 .aws-sam/
 *.zip
 
@@ -27,6 +35,10 @@ node_modules/
 .next/
 out/
 .cache/
+.turbo/
+.vercel/
+.swc/
+.eslintcache
 *.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
@@ -39,8 +51,14 @@ pnpm-debug.log*
 .env.*.local
 .env.development
 .env.production
+.env.*.backup
 *.pem
+*.key
+*.p12
 credentials
+secrets.json
+secrets/
+.aws/credentials
 
 # ─── Claude Code ──────────────────────────────────────────────────────────────
 .claude/
@@ -50,21 +68,42 @@ credentials
 .idea/
 *.swp
 *.swo
+*.swn
+*~
 .DS_Store
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.code-workspace
 
 # ─── Test / Coverage ──────────────────────────────────────────────────────────
 .coverage
+coverage.xml
 htmlcov/
 .pytest_cache/
 coverage/
 *.lcov
+playwright-report/
+test-results/
+.nyc_output/
 
 # ─── Desktop App (separate repo) ─────────────────────────────────────────────
 desktop/
 
 # ─── Backend Outputs ──────────────────────────────────────────────────────────
 backend/output.json
+backend/output.*.json
+
+# ─── Local scratch / Dev utilities ───────────────────────────────────────────
+# `scratch/`, `tmp/`, and `.local/` are conventional places for dev-only
+# experiments, throwaway scripts, and per-developer notes that should
+# never reach the repo. Add new dev artifacts under one of these
+# instead of inventing fresh top-level folders.
+scratch/
+tmp/
+.local/
+*.bak
+*.orig
 
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 *.log

@@ -1,30 +1,69 @@
-# Dependencies
+# ─── Dependencies ─────────────────────────────────────────────────────────────
 node_modules/
+.pnp/
+.pnp.js
+.yarn/install-state.gz
 
-# Next.js
+# ─── Next.js ──────────────────────────────────────────────────────────────────
 .next/
 out/
 
-# Build
+# ─── Build / cache ────────────────────────────────────────────────────────────
 dist/
+build/
+.cache/
+.turbo/
+.swc/
+.eslintcache
+.parcel-cache/
 
-# Environment
+# ─── Vercel ───────────────────────────────────────────────────────────────────
+.vercel/
+
+# ─── Environment & Secrets ────────────────────────────────────────────────────
+# Anything matching `.env*` is ignored — both the dot-only `.env` and
+# every named variant (`.env.local`, `.env.production`, …). The backup
+# pattern catches `.env.*.backup` files devs sometimes save before
+# rewriting credentials.
 .env
 .env*.local
 .env.development
 .env.production
+.env.*.backup
+*.pem
+*.key
 
-# Debug
+# ─── Logs / debug ─────────────────────────────────────────────────────────────
+*.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# IDE
+# ─── Test / Coverage ──────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+*.lcov
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# OS
+# ─── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# TypeScript
+# ─── TypeScript ───────────────────────────────────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
+
+# ─── Local scratch ────────────────────────────────────────────────────────────
+tmp/
+.local/
+*.bak
+*.orig
