@@ -583,11 +583,12 @@ export default function UsersPage() {
                       </td>
                       <td className="whitespace-nowrap px-5 py-3">
                         {u.department ? (
-                          <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                            <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
                             {u.department}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground/60">
                             —
                           </span>
                         )}
@@ -776,7 +777,7 @@ function Th({
 }) {
   return (
     <th
-      className={`px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground ${className}`}
+      className={`px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground ${className}`}
     >
       {children}
     </th>
@@ -939,12 +940,12 @@ function UserBioContent({
                   : 25
           const tone =
             score === 100
-              ? { c: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' }
+              ? { ink: 'text-emerald-700', dot: 'bg-emerald-500' }
               : score >= 75
-                ? { c: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' }
+                ? { ink: 'text-sky-700', dot: 'bg-sky-500' }
                 : score >= 50
-                  ? { c: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' }
-                  : { c: 'text-red-600', bg: 'bg-red-50 border-red-200' }
+                  ? { ink: 'text-amber-700', dot: 'bg-amber-500' }
+                  : { ink: 'text-rose-700', dot: 'bg-rose-500' }
           const label =
             score === 100
               ? 'Excellent'
@@ -956,26 +957,32 @@ function UserBioContent({
           const monthName = now.toLocaleDateString('en-US', { month: 'long' })
 
           return (
-            <div className={`rounded-xl border p-3.5 ${tone.bg}`}>
-              <div className="flex items-center justify-between">
+            <div className="rounded-lg border border-border/70 bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Day-off score · {monthName}
-                  </p>
                   <div className="flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Day-off score · {monthName}
+                    </p>
+                  </div>
+                  <div className="mt-1.5 flex items-baseline gap-2">
                     <span
-                      className={`text-2xl font-bold tabular-nums ${tone.c}`}
+                      className={`text-2xl font-medium tabular-nums leading-none ${tone.ink}`}
                     >
                       {score}
                     </span>
-                    <span className={`text-[11px] font-semibold ${tone.c}`}>
+                    <span className={`text-[11px] font-medium ${tone.ink}`}>
                       {label}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[11px] text-muted-foreground">
-                    {daysOff} day{daysOff !== 1 ? 's' : ''} off
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Days off
+                  </p>
+                  <p className="mt-1 text-2xl font-medium leading-none tabular-nums text-foreground">
+                    {daysOff}
                   </p>
                 </div>
               </div>
@@ -1086,25 +1093,25 @@ function UserProgressModal({
               label="Total"
               value={progress.totalStats.total}
               accent="text-foreground"
-              tone="bg-muted/40"
+              dot="bg-slate-400"
             />
             <ProgressStat
               label="To Do"
               value={progress.totalStats.TODO}
               accent="text-amber-700"
-              tone="bg-amber-50 border-amber-200"
+              dot="bg-amber-500"
             />
             <ProgressStat
               label="In Progress"
               value={progress.totalStats.IN_PROGRESS}
-              accent="text-blue-700"
-              tone="bg-blue-50 border-blue-200"
+              accent="text-sky-700"
+              dot="bg-sky-500"
             />
             <ProgressStat
               label="Done"
               value={progress.totalStats.DONE}
               accent="text-emerald-700"
-              tone="bg-emerald-50 border-emerald-200"
+              dot="bg-emerald-500"
             />
           </div>
 
@@ -1118,51 +1125,63 @@ function UserProgressModal({
               return (
                 <div
                   key={project.projectId}
-                  className="rounded-xl border border-border p-4"
+                  className="rounded-md border border-border/70 p-4"
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <h4 className="truncate text-sm font-bold text-foreground">
+                    <h4 className="truncate text-sm font-medium text-foreground">
                       {project.projectName}
                     </h4>
-                    <span className="shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
+                    <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
                       {project.stats.DONE}/{total} done
                     </span>
                   </div>
-                  <Progress value={pct} className="mb-2 h-1.5" />
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="rounded bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                  <Progress value={pct} className="mb-3 h-1" />
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px]">
+                    <span className="inline-flex items-center gap-1.5 text-amber-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                       {project.stats.TODO} to do
                     </span>
-                    <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                    <span className="inline-flex items-center gap-1.5 text-sky-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                       {project.stats.IN_PROGRESS} in progress
                     </span>
-                    <span className="rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <span className="inline-flex items-center gap-1.5 text-emerald-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       {project.stats.DONE} done
                     </span>
                   </div>
                   {project.tasks.length > 0 && (
-                    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
-                      {project.tasks.map((task) => (
-                        <li
-                          key={task.taskId}
-                          className="flex items-center justify-between text-xs"
-                        >
-                          <span className="truncate text-foreground/90">
-                            {task.title}
-                          </span>
-                          <span
-                            className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                              task.status === 'DONE'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : task.status === 'IN_PROGRESS'
-                                  ? 'bg-blue-50 text-blue-700'
-                                  : 'bg-amber-50 text-amber-700'
-                            }`}
+                    <ul className="mt-3 space-y-1.5 border-t border-border/50 pt-3">
+                      {project.tasks.map((task) => {
+                        const dot =
+                          task.status === 'DONE'
+                            ? 'bg-emerald-500'
+                            : task.status === 'IN_PROGRESS'
+                              ? 'bg-sky-500'
+                              : 'bg-amber-500'
+                        const ink =
+                          task.status === 'DONE'
+                            ? 'text-emerald-700'
+                            : task.status === 'IN_PROGRESS'
+                              ? 'text-sky-700'
+                              : 'text-amber-700'
+                        return (
+                          <li
+                            key={task.taskId}
+                            className="flex items-center justify-between gap-3 text-xs"
                           >
-                            {task.status.replace('_', ' ')}
-                          </span>
-                        </li>
-                      ))}
+                            <span className="truncate text-foreground/85">
+                              {task.title}
+                            </span>
+                            <span
+                              className={`inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] ${ink}`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                              {task.status.replace('_', ' ')}
+                            </span>
+                          </li>
+                        )
+                      })}
                     </ul>
                   )}
                 </div>
@@ -1186,18 +1205,30 @@ function ProgressStat({
   label,
   value,
   accent,
-  tone,
+  dot,
 }: {
   label: string
   value: number
   accent: string
-  tone: string
+  /** Status dot color (e.g. `bg-amber-500`) — paired with `accent`
+   *  to give the tile a single-color identity without the previous
+   *  full tinted card surface. */
+  dot: string
+  /** Legacy `tone` prop kept for source compat with old callers
+   *  (parent passes both); ignored — the flat treatment doesn't
+   *  use a tinted background anymore. */
+  tone?: string
 }) {
   return (
-    <div className={`rounded-lg border border-transparent p-3 text-center ${tone}`}>
-      <div className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</div>
-      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        {label}
+    <div className="flex flex-col gap-1.5 rounded-md border border-border/70 bg-card p-3">
+      <div className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {label}
+        </span>
+      </div>
+      <div className={`text-2xl font-medium leading-none tabular-nums ${accent}`}>
+        {value}
       </div>
     </div>
   )
