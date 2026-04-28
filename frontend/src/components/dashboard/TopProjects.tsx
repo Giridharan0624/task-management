@@ -36,7 +36,7 @@ export function TopProjects() {
     <Card className="flex flex-col overflow-hidden p-0 shadow-none">
       <div className="flex items-baseline justify-between border-b border-border/60 px-5 py-3">
         <h3 className="text-sm font-medium text-foreground">
-          Most active projects
+          Active projects
         </h3>
         <Link
           href="/projects"
