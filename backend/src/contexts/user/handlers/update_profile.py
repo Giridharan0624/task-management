@@ -28,6 +28,7 @@ class UpdateProfileRequest(BaseModel):
     area_of_interest: Optional[str] = None
     hobby: Optional[str] = None
     company_prefix: Optional[str] = None
+    walkthrough_seen: Optional[bool] = None
 
 
 def handler(event, context):
@@ -62,6 +63,7 @@ def handler(event, context):
             area_of_interest=body.area_of_interest if body.area_of_interest is not None else user.area_of_interest,
             hobby=body.hobby if body.hobby is not None else user.hobby,
             company_prefix=body.company_prefix.upper().strip() if body.company_prefix is not None else user.company_prefix,
+            walkthrough_seen=body.walkthrough_seen if body.walkthrough_seen is not None else user.walkthrough_seen,
             created_at=user.created_at,
             updated_at=datetime.now(timezone.utc).isoformat(),
         )

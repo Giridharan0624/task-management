@@ -32,6 +32,7 @@ class UserMapper:
             area_of_interest=item.get("area_of_interest"),
             hobby=item.get("hobby"),
             company_prefix=item.get("company_prefix"),
+            walkthrough_seen=bool(item.get("walkthrough_seen", False)),
             created_at=item.get("created_at") or item.get("createdAt", ""),
             updated_at=item.get("updated_at") or item.get("updatedAt", ""),
         )
@@ -81,4 +82,9 @@ class UserMapper:
             item["hobby"] = user.hobby
         if user.company_prefix:
             item["company_prefix"] = user.company_prefix
+        # walkthrough_seen — only persist when True so we don't waste a
+        # column on the dominant case (newly-created users where the
+        # default False is implied by the field's absence).
+        if user.walkthrough_seen:
+            item["walkthrough_seen"] = True
         return item

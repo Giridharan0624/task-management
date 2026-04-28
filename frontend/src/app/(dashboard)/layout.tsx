@@ -200,7 +200,10 @@ function DesktopDownloadLink() {
   ]
 
   return (
-    <div className="mx-3 mb-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5">
+    <div
+      data-tour="desktop-card"
+      className="mx-3 mb-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5"
+    >
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-1.5">
           <Download className="h-3.5 w-3.5 text-primary" />
@@ -347,10 +350,12 @@ function SidebarContent({
       <div className="flex items-center justify-between border-b border-sidebar-border px-5 py-4">
         <Logo size="md" />
         <div className="flex items-center gap-1">
-          <div className="hidden lg:block">
+          <div className="hidden lg:block" data-tour="notifications">
             <NotificationCenter />
           </div>
-          <ThemeToggle />
+          <div data-tour="theme-toggle">
+            <ThemeToggle />
+          </div>
           {onNavClick && (
             <Button
               variant="ghost"
@@ -400,11 +405,15 @@ function SidebarContent({
             pathname === item.href || pathname.startsWith(item.href + '/')
           const badgeCount = getBadgeCount(item.href)
           const Icon = item.icon
+          // Guided-tour anchor — derived from href so each nav item
+          // can be spotlighted by a step (e.g. data-tour="nav-day-offs").
+          const tourKey = item.href.replace(/^\//, '').replace(/\//g, '-') || 'dashboard'
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onNavClick}
+              data-tour={`nav-${tourKey}`}
               className={cn(
                 'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200 pressable',
                 isActive
@@ -589,7 +598,7 @@ export default function DashboardLayout({
       </a>
       <div className="flex h-screen bg-background">
         {/* Desktop sidebar — fixed 260px */}
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col border-r border-sidebar-border lg:flex safe-bottom">
+        <aside data-tour="sidebar" className="fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col border-r border-sidebar-border lg:flex safe-bottom">
           <SidebarContent
             user={user}
             navItems={navItems}

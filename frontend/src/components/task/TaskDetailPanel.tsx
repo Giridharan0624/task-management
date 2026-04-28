@@ -22,6 +22,7 @@ import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
 import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
 import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
 import type { Permissions } from '@/lib/hooks/usePermission'
+import { useFeatureFlag } from '@/components/tenant/FeatureGate'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -324,7 +325,12 @@ export function TaskDetailPanel({ task, projectId, permissions, onClose }: TaskD
 
   const isAssigned = task.assignedTo?.includes(user?.userId ?? '')
   const isOwnerOrAdmin = user?.systemRole === 'OWNER' || user?.systemRole === 'ADMIN'
-  const canComment = isAssigned || isOwnerOrAdmin
+  // Tenant-level feature toggle. When the OWNER turns `comments` off
+  // in /settings/organization → Features, the comment box AND the
+  // Updates section header disappear — backend rejects POSTs anyway,
+  // but hiding the affordance avoids the "click → 403 toast" UX.
+  const commentsFeatureEnabled = useFeatureFlag('comments')
+  const canComment = (isAssigned || isOwnerOrAdmin) && commentsFeatureEnabled
   const assignedSet = new Set(task.assignedTo ?? [])
   const availableMembers = members.filter((m) => !assignedSet.has(m.userId))
 

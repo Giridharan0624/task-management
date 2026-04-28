@@ -34,6 +34,7 @@ export interface UpdateProfileData {
   areaOfInterest?: string
   hobby?: string
   companyPrefix?: string
+  walkthroughSeen?: boolean
 }
 
 export function updateProfile(data: UpdateProfileData): Promise<User> {

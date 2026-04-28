@@ -114,11 +114,15 @@ export function useMyTasks() {
   })
 }
 
-export function useBirthdays() {
+export function useBirthdays(options: { enabled?: boolean } = {}) {
+  const enabled = options.enabled ?? true
   return useQuery({
     queryKey: ['birthdays'],
     queryFn: getBirthdays,
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    // Skip the polling refetch when disabled (feature gate off) so we
+    // don't keep hitting the now-403 endpoint every 5 minutes.
+    refetchInterval: enabled ? 5 * 60 * 1000 : false,
+    enabled,
   })
 }

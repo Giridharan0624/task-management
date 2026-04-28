@@ -29,6 +29,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
+import { useFeatureFlag } from '@/components/tenant/FeatureGate'
 import { cn } from '@/lib/utils'
 
 /** Returns the Monday of the week that contains `d` in local time. */
@@ -292,6 +293,11 @@ function RollupContent({ data }: { data: RollupData }) {
   const byTask = data.byTask ?? []
   const dayoffRequests = data.dayoffsRequests ?? []
   const anomalies = data.anomalies ?? []
+  // When the tenant has `ai_summaries` off, hide the LLM-generated
+  // narrative pieces (eyebrow label, AI headline, summary paragraph,
+  // highlights/concerns/patterns lists) but keep the factual metric
+  // strips and tables visible — those are non-AI aggregations.
+  const aiSummariesEnabled = useFeatureFlag('ai_summaries')
 
   // Members table merges the task-update slice (updates / tasks per
   // person) with the timer slice (objective hours per person). One
@@ -413,14 +419,18 @@ function RollupContent({ data }: { data: RollupData }) {
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary"
         />
         <div className="relative">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
-            <Sparkles className="h-3 w-3" strokeWidth={1.8} />
-            AI summary
-          </span>
+          {aiSummariesEnabled && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
+              <Sparkles className="h-3 w-3" strokeWidth={1.8} />
+              AI summary
+            </span>
+          )}
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            {narrative.headline || 'Weekly digest'}
+            {aiSummariesEnabled
+              ? narrative.headline || 'Weekly digest'
+              : 'Weekly digest'}
           </h2>
-          {narrative.summary && (
+          {aiSummariesEnabled && narrative.summary && (
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
               {narrative.summary}
             </p>
@@ -509,10 +519,13 @@ function RollupContent({ data }: { data: RollupData }) {
         </Card>
       )}
 
-      {/* ── 3. Insights — Highlights / Patterns / Concerns in one card ── */}
-      {(narrative.highlights.length > 0 ||
-        narrative.notablePatterns.length > 0 ||
-        concerns.length > 0) && (
+      {/* ── 3. Insights — Highlights / Patterns / Concerns in one card.
+              Hidden entirely when ai_summaries is off; the lists are
+              LLM output not raw aggregations. ── */}
+      {aiSummariesEnabled &&
+        (narrative.highlights.length > 0 ||
+          narrative.notablePatterns.length > 0 ||
+          concerns.length > 0) && (
         <Card className="p-5 sm:p-6">
           <div className="mb-4 flex items-center gap-2">
             <h3 className="text-sm font-bold text-foreground">Insights</h3>

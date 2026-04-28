@@ -15,7 +15,6 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
-import { Card } from '@/components/ui/Card'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { useToast } from '@/components/ui/Toast'
 import {
@@ -386,9 +385,25 @@ export default function OrgSettingsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="branding" className="mt-4 space-y-5">
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <Card className="space-y-5 p-5">
+        <TabsContent value="branding" className="mt-4 space-y-10">
+          {/* ─── Identity ──────────────────────────────────────
+              Two stacked inputs at full content width — no card
+              chrome, hairline divider above the typography block
+              below. The previous 2-col layout left a dead right
+              half after BrandingPreview was retired; this version
+              reflows the surface so it doesn't look unfinished. */}
+          <section className="flex flex-col gap-5">
+            <header className="flex flex-col gap-1">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                Identity
+              </h2>
+              <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
+                The workspace name and employee-ID prefix members see
+                across the app and in their generated IDs.
+              </p>
+            </header>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Input
                 label="Display name"
                 type="text"
@@ -419,38 +434,30 @@ export default function OrgSettingsPage() {
                 className="font-mono uppercase"
                 hint="Used at the start of every generated employee ID."
               />
-              <p className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5 text-[12px] leading-relaxed text-muted-foreground">
-                Workspace colors are now managed in the{' '}
-                <button
-                  type="button"
-                  onClick={() => setTab('theme')}
-                  className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
-                >
-                  Theme
-                </button>{' '}
-                tab. Pick one of five curated palettes — every member
-                sees it in both light and dark mode.
-              </p>
-            </Card>
-          </div>
-
-          {/* Typography — workspace-wide font picker. Curated list of
-              professional sans-serifs only; deliberately not a full
-              Google Fonts catalog so the workspace stays clean. */}
-          <Card className="space-y-4 p-5">
-            <div>
-              <h3 className="text-sm font-bold text-foreground">Typography</h3>
-              <p className="text-[12px] text-muted-foreground">
-                Choose the typeface every page in this workspace uses.
-              </p>
             </div>
+
+          </section>
+
+          {/* ─── Typography ────────────────────────────────────
+              Hairline divider separates the section above; the
+              FontPicker takes care of its own card grid. */}
+          <section className="flex flex-col gap-5 border-t border-border/60 pt-8">
+            <header className="flex flex-col gap-1">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                Typography
+              </h2>
+              <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
+                Pick a typeface for the whole workspace. Members see
+                the change on their next page load.
+              </p>
+            </header>
             <FontPicker
               value={branding.fontFamily}
               onChange={(next) =>
                 setBranding((b) => ({ ...b, fontFamily: next }))
               }
             />
-          </Card>
+          </section>
         </TabsContent>
 
         <TabsContent value="theme" className="mt-4">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { Check, Type } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 import {
   DEFAULT_FONT_ID,
@@ -60,27 +60,18 @@ export function FontPicker({ value, onChange }: FontPickerProps) {
   const tiles = useMemo(() => PROFESSIONAL_FONTS, [])
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Type className="h-4 w-4 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Pick a typeface for your workspace. Members see the change on
-          their next page load.
-        </p>
-      </div>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {tiles.map((font) => (
-          <FontTile
-            key={font.id}
-            font={font}
-            active={activeId === font.id}
-            onSelect={() =>
-              onChange(font.id === DEFAULT_FONT_ID ? null : font.id)
-            }
-          />
-        ))}
-      </ul>
-    </div>
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {tiles.map((font) => (
+        <FontTile
+          key={font.id}
+          font={font}
+          active={activeId === font.id}
+          onSelect={() =>
+            onChange(font.id === DEFAULT_FONT_ID ? null : font.id)
+          }
+        />
+      ))}
+    </ul>
   )
 }
 
@@ -104,35 +95,37 @@ function FontTile({ font, active, onSelect }: FontTileProps) {
         onClick={onSelect}
         aria-pressed={active}
         className={cn(
-          'group relative flex w-full flex-col gap-2 rounded-xl border bg-card p-4 text-left transition-all',
+          'group relative flex w-full flex-col gap-2.5 rounded-lg border bg-card p-4 text-left transition-colors',
           active
-            ? 'border-primary ring-1 ring-inset ring-primary/40'
-            : 'border-border hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-sm',
+            ? 'border-foreground/40 shadow-[inset_0_2px_0_0_rgb(var(--color-primary))]'
+            : 'border-border/70 hover:border-foreground/30 hover:bg-muted/20',
         )}
       >
-        {active && (
-          <span className="absolute right-3 top-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Check className="h-3 w-3" strokeWidth={3} />
-          </span>
-        )}
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline justify-between gap-2">
           <span
-            className="text-lg font-bold tracking-tight text-foreground"
+            className="text-lg font-medium tracking-tight text-foreground"
             style={previewStyle}
           >
             {font.name}
           </span>
-          {font.id === 'outfit' && (
-            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-              Default
+          {active ? (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
+              <Check className="h-3 w-3" strokeWidth={2} />
+              Active
             </span>
+          ) : (
+            font.id === 'outfit' && (
+              <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
+                Default
+              </span>
+            )
           )}
         </div>
         <p className="text-[12px] leading-snug text-muted-foreground">
           {font.description}
         </p>
         <p
-          className="text-base text-foreground/80"
+          className="text-base leading-snug text-foreground/85"
           style={previewStyle}
         >
           The quick brown fox jumps over the lazy dog

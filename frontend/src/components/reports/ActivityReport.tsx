@@ -35,6 +35,7 @@ import { formatDuration } from '@/lib/utils/formatDuration'
 import { buildCsvName } from '@/lib/utils/csvFilename'
 import { cn } from '@/lib/utils'
 import { ScreenshotGallery } from './ScreenshotGallery'
+import { useFeatureFlag } from '@/components/tenant/FeatureGate'
 import type { UserActivity, DailySummary } from '@/lib/api/activityApi'
 import type { User } from '@/types/user'
 import {
@@ -389,6 +390,12 @@ function ActivityCard({
   const { data: summary } = useSummary(activity.userId, date)
   const generateMutation = useGenerateSummary()
   const [expanded, setExpanded] = useState(false)
+  // Tenant-level feature toggle. When ai_summaries is off, hide both
+  // the existing-summary block and the Generate button — backend
+  // already rejects the call, but suppressing the UI avoids the
+  // "click → 403 toast" UX. Existing rendered summaries (data already
+  // returned by useSummary before the toggle flipped) also vanish.
+  const aiSummariesEnabled = useFeatureFlag('ai_summaries')
 
   const scorePercent = Math.round(activity.activityScore * 100)
   const scoreTone: 'good' | 'mid' | 'low' =
@@ -682,7 +689,9 @@ function ActivityCard({
 
           {/* AI Summary — soft indigo wash + accented top hairline so
               the section reads as the app's primary "AI" surface,
-              tying into the brand's indigo accent. */}
+              tying into the brand's indigo accent. Hidden entirely
+              when the tenant has the `ai_summaries` feature off. */}
+          {aiSummariesEnabled && (
           <div
             className="relative space-y-5 bg-primary/[0.04] p-6 sm:p-8"
           >
@@ -742,6 +751,7 @@ function ActivityCard({
               </p>
             )}
           </div>
+          )}
         </div>
       )}
     </Card>

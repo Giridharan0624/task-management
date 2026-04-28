@@ -39,6 +39,11 @@ class User(BaseModel):
     area_of_interest: Optional[str] = None
     hobby: Optional[str] = None
     company_prefix: Optional[str] = None
+    # First-login guided tour completion flag. False until the user
+    # finishes or skips the in-app walkthrough; setting it server-side
+    # (instead of localStorage-only) means the tour stays dismissed
+    # across browsers, devices, and incognito sessions.
+    walkthrough_seen: bool = False
     created_at: str
     updated_at: str
 
@@ -97,6 +102,7 @@ class User(BaseModel):
             "area_of_interest": self.area_of_interest,
             "hobby": self.hobby,
             "company_prefix": self.company_prefix,
+            "walkthrough_seen": self.walkthrough_seen,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

@@ -26,6 +26,10 @@ export interface User {
   areaOfInterest?: string
   hobby?: string
   companyPrefix?: string
+  /** Server-persisted flag — true once the user has finished or
+   *  skipped the first-login guided tour. Surviving across browsers,
+   *  devices, and incognito sessions instead of localStorage-only. */
+  walkthroughSeen?: boolean
   createdAt: string
   updatedAt: string
 }

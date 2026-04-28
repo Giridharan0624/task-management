@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useBirthdays } from '@/lib/hooks/useUsers'
 import { useAuth } from '@/lib/auth/AuthProvider'
+import { useFeatureFlag } from '@/components/tenant/FeatureGate'
 import { BirthdayCakeCut } from './BirthdayCakeCut'
 
 function ConfettiPiece({ delay, left }: { delay: number; left: number }) {
@@ -45,7 +46,13 @@ function AvatarOrInitial({ name, avatarUrl }: { name: string; avatarUrl?: string
 }
 
 export function BirthdayBanner() {
-  const { data, isLoading } = useBirthdays()
+  // Tenant-level feature gate. Disabling birthday_wishes in
+  // /settings/organization → Features fully removes this affordance:
+  // the banner doesn't render, useBirthdays is never enabled (so no
+  // 403 hits the network log), and no localStorage dismissal state
+  // accumulates for an org that doesn't use the feature.
+  const birthdayFeatureEnabled = useFeatureFlag('birthday_wishes')
+  const { data, isLoading } = useBirthdays({ enabled: birthdayFeatureEnabled })
   const { user } = useAuth()
   const [dismissed, setDismissed] = useState(false)
   const [cakeCutDone, setCakeCutDone] = useState(false)
@@ -58,6 +65,7 @@ export function BirthdayBanner() {
     if (localStorage.getItem(`birthday-cake-cut-${today}`)) setCakeCutDone(true)
   }, [])
 
+  if (!birthdayFeatureEnabled) return null
   if (isLoading || dismissed || !data?.today?.length) return null
 
   const handleDismiss = () => {
@@ -153,8 +161,12 @@ export function BirthdayBanner() {
 }
 
 export function UpcomingBirthdays() {
-  const { data, isLoading } = useBirthdays()
+  // Same gate as BirthdayBanner — when birthday_wishes is off the
+  // sidebar widget hides too and the underlying query stays disabled.
+  const birthdayFeatureEnabled = useFeatureFlag('birthday_wishes')
+  const { data, isLoading } = useBirthdays({ enabled: birthdayFeatureEnabled })
 
+  if (!birthdayFeatureEnabled) return null
   if (isLoading || (!data?.upcoming?.length && !data?.today?.length)) return null
 
   const upcoming = data?.upcoming ?? []

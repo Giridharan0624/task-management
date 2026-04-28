@@ -1,8 +1,7 @@
 'use client'
 
-import { Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Plus, RotateCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -85,18 +84,22 @@ export function LeaveTypesPanel({ value, onChange }: LeaveTypesPanelProps) {
           }
         />
       ) : (
-        <Card className="overflow-hidden p-0">
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_44px] gap-3 border-b border-border bg-muted/30 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="overflow-hidden rounded-lg border border-border/70 bg-card">
+          {/* Column headers — uppercase tracked-caps eyebrow row, hairline below */}
+          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_120px_36px] gap-4 border-b border-border/60 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             <span>Name</span>
             <span>ID</span>
             <span>Annual quota</span>
-            <span></span>
+            <span className="sr-only">Remove</span>
           </div>
-          <div className="divide-y divide-border/60">
+          {/* Body rows — hairline-divided, no per-row card chrome. Each
+              cell uses the bare Input (label rendered in the header row
+              above, not per-cell). */}
+          <div className="divide-y divide-border/50">
             {value.map((row, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_44px] items-center gap-3 px-4 py-2"
+                className="group grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_120px_36px] items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/20"
               >
                 <Input
                   type="text"
@@ -109,14 +112,15 @@ export function LeaveTypesPanel({ value, onChange }: LeaveTypesPanelProps) {
                     updateRow(i, { name, id: newId })
                   }}
                   placeholder="Casual"
-                  className="h-9"
+                  aria-label="Leave type name"
                 />
                 <Input
                   type="text"
                   value={row.id}
                   onChange={(e) => updateRow(i, { id: slugify(e.target.value) })}
                   placeholder="casual"
-                  className="h-9 font-mono text-xs"
+                  aria-label="Leave type identifier"
+                  className="font-mono text-xs"
                 />
                 <Input
                   type="number"
@@ -125,20 +129,25 @@ export function LeaveTypesPanel({ value, onChange }: LeaveTypesPanelProps) {
                   onChange={(e) =>
                     updateRow(i, { annualQuota: Number(e.target.value) || 0 })
                   }
-                  className="h-9"
+                  aria-label="Annual quota in days"
+                  rightIcon={
+                    <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
+                      d
+                    </span>
+                  }
                 />
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => removeRow(i)}
-                  aria-label="Remove leave type"
+                  aria-label={`Remove ${row.name || 'leave type'}`}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/60 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                </Button>
+                  <X className="h-3.5 w-3.5" strokeWidth={1.8} />
+                </button>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
     </div>
   )
