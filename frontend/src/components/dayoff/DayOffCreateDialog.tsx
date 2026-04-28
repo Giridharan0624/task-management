@@ -19,6 +19,13 @@ import { DraftRestoreBanner } from '@/components/ui/DraftRestoreBanner'
 import { useAutosaveDraft } from '@/lib/hooks/useAutosaveDraft'
 import { useTenant } from '@/lib/tenant/TenantProvider'
 import { useDayOffBalance } from '@/lib/hooks/useDayOffs'
+import { useFormErrors } from '@/lib/hooks/useFormErrors'
+import {
+  compose,
+  required,
+  minLength,
+  maxLength,
+} from '@/lib/utils/validators'
 import { cn } from '@/lib/utils'
 
 interface DayOffCreateDialogProps {
@@ -131,15 +138,60 @@ export function DayOffCreateDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const canSubmit =
-    reason.trim().length > 0 &&
-    !!leaveTypeId &&
-    ((mode === 'single' && !!singleDate) ||
-      (mode === 'multiple' && !!startDate && !!endDate))
+  // Field-level validation: leaveType required (always), reason required
+  // (3-500 chars), and a date for the active mode. The mode-dependent
+  // date rules can't be expressed in a static rules object, so we run
+  // those checks inline in handleSubmit and call setError for them.
+  const { errors, validate, clear, setError, reset: resetErrors } = useFormErrors<{
+    leaveTypeId: string
+    reason: string
+    singleDate: string
+    startDate: string
+    endDate: string
+  }>({
+    leaveTypeId: required('Pick a leave type'),
+    reason: compose(
+      required('Tell your admin why you need time off'),
+      minLength(3, 'Reason should be at least 3 characters'),
+      maxLength(500, 'Reason should be under 500 characters'),
+    ),
+  })
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!canSubmit) return
+
+    // Run static rules first (leave type + reason).
+    const baseValid = validate({
+      leaveTypeId,
+      reason,
+      singleDate,
+      startDate,
+      endDate,
+    })
+
+    // Mode-dependent date validation — runs even when baseValid is true
+    // so all errors surface at once instead of one-at-a-time.
+    let dateValid = true
+    if (mode === 'single') {
+      if (!singleDate) {
+        setError('singleDate', 'Pick a date')
+        dateValid = false
+      }
+    } else {
+      if (!startDate) {
+        setError('startDate', 'Pick a start date')
+        dateValid = false
+      }
+      if (!endDate) {
+        setError('endDate', 'Pick an end date')
+        dateValid = false
+      } else if (startDate && endDate < startDate) {
+        setError('endDate', 'End date must be on or after start')
+        dateValid = false
+      }
+    }
+
+    if (!baseValid || !dateValid) return
 
     if (mode === 'single') {
       const start = startTime ? `${singleDate}T${startTime}` : singleDate
@@ -165,6 +217,7 @@ export function DayOffCreateDialog({
     setEndDate('')
     setReason('')
     setLeaveTypeId('')
+    resetErrors()
   }
 
   const handleClose = () => {
@@ -197,19 +250,27 @@ export function DayOffCreateDialog({
 
           {/* Leave type */}
           <div>
-            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Leave type
             </label>
             <Select
               value={leaveTypeId}
-              onChange={setLeaveTypeId}
+              onChange={(v) => {
+                setLeaveTypeId(v)
+                clear('leaveTypeId')
+              }}
               options={leaveTypes.map((lt) => ({
                 value: lt.id,
                 label: lt.name || lt.id,
               }))}
               placeholder="Pick a leave type"
             />
-            {selectedBalance && selectedBalance.quota > 0 && (
+            {errors.leaveTypeId && (
+              <p className="mt-1 text-xs font-medium text-destructive" role="alert">
+                {errors.leaveTypeId}
+              </p>
+            )}
+            {!errors.leaveTypeId && selectedBalance && selectedBalance.quota > 0 && (
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 {selectedBalance.remaining} of {selectedBalance.quota} day
                 {selectedBalance.quota !== 1 ? 's' : ''} remaining this year
@@ -249,14 +310,22 @@ export function DayOffCreateDialog({
           {mode === 'single' && (
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   Date
                 </label>
                 <DatePicker
                   value={singleDate}
-                  onChange={setSingleDate}
+                  onChange={(v) => {
+                    setSingleDate(v)
+                    clear('singleDate')
+                  }}
                   min={minDate}
                 />
+                {errors.singleDate && (
+                  <p className="mt-1 text-xs font-medium text-destructive" role="alert">
+                    {errors.singleDate}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -282,26 +351,42 @@ export function DayOffCreateDialog({
           )}
 
           {mode === 'multiple' && (
-            <div className="grid grid-cols-2 gap-3 stagger-up">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   Start date
                 </label>
                 <DatePicker
                   value={startDate}
-                  onChange={setStartDate}
+                  onChange={(v) => {
+                    setStartDate(v)
+                    clear('startDate')
+                  }}
                   min={minDate}
                 />
+                {errors.startDate && (
+                  <p className="mt-1 text-xs font-medium text-destructive" role="alert">
+                    {errors.startDate}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   End date
                 </label>
                 <DatePicker
                   value={endDate}
-                  onChange={setEndDate}
+                  onChange={(v) => {
+                    setEndDate(v)
+                    clear('endDate')
+                  }}
                   min={startDate || minDate}
                 />
+                {errors.endDate && (
+                  <p className="mt-1 text-xs font-medium text-destructive" role="alert">
+                    {errors.endDate}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -309,16 +394,20 @@ export function DayOffCreateDialog({
           <Textarea
             label="Reason"
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value)
+              clear('reason')
+            }}
             rows={3}
             placeholder="Why do you need time off?"
+            error={errors.reason}
           />
 
           <DialogFooter>
             <Button variant="secondary" type="button" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" loading={isPending} disabled={!canSubmit}>
+            <Button type="submit" loading={isPending}>
               Submit request
             </Button>
           </DialogFooter>
