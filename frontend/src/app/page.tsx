@@ -160,77 +160,154 @@ function Hero() {
       size={520}
     >
       <section className="relative">
+        {/* Atmospheric backdrop — replaces the four bouncing blur orbs
+            and the slow-spin concentric rings with a single calm
+            gradient mesh. Three soft color anchors drifting at
+            different speeds is enough atmosphere; more was theatre. */}
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
           <div
-            className="absolute left-[10%] top-[10%] h-72 w-72 rounded-full bg-primary/25 blur-3xl animate-drift-slow"
+            className="absolute -left-[15%] top-[8%] h-[520px] w-[520px] rounded-full bg-primary/20 blur-[120px] animate-drift-slow"
             style={{ animationDelay: '-2s' }}
           />
           <div
-            className="absolute right-[8%] top-[25%] h-64 w-64 rounded-full bg-accent/25 blur-3xl animate-drift-slower"
+            className="absolute -right-[10%] top-[30%] h-[440px] w-[440px] rounded-full bg-accent/20 blur-[120px] animate-drift-slower"
             style={{ animationDelay: '-6s' }}
           />
+          {/* Hairline grid texture — barely visible at full zoom but
+              gives the page a sense of architectural structure under
+              the soft color. CSS-only, no image asset. */}
           <div
-            className="absolute left-[40%] bottom-[10%] h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl animate-drift-slow"
-            style={{ animationDelay: '-10s' }}
+            className="absolute inset-0 opacity-[0.04] dark:opacity-[0.06]"
+            style={{
+              backgroundImage:
+                'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)',
+              backgroundSize: '64px 64px',
+              backgroundPosition: '-1px -1px',
+              maskImage:
+                'radial-gradient(ellipse 80% 60% at 50% 40%, black, transparent 80%)',
+              WebkitMaskImage:
+                'radial-gradient(ellipse 80% 60% at 50% 40%, black, transparent 80%)',
+            }}
           />
-          <div className="absolute left-1/2 top-1/2 h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 animate-slow-spin">
-            <div className="absolute inset-0 rounded-full border border-primary/10" />
-            <div className="absolute inset-8 rounded-full border border-accent/10" />
-          </div>
         </div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:px-8 lg:py-24">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-8 lg:py-28">
           <div>
+            {/* Eyebrow — flat tracked-uppercase label with a leading
+                bullet, replaces the glass pill chip. Reads as a
+                category label, not a sticker. */}
             <Reveal direction="up">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_20px_-8px_rgba(99,102,241,0.25)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
-                <Sparkles className="h-3 w-3 animate-pulse-soft" />
+              <div className="mb-7 inline-flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                <span
+                  aria-hidden
+                  className="h-px w-6 bg-primary/60"
+                />
                 A unified workspace for modern teams
               </div>
             </Reveal>
 
+            {/* Headline — single-color foreground (gradient text was
+                dated and clashed with the tenant theme system).
+                Tracking-tight and a refined font weight. The break
+                between lines is intentional rhythm, not a wrap. */}
             <Reveal direction="up" delay={80}>
-              <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Tasks, time, and team operations{' '}
-                <span
-                  className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
-                  style={{ backgroundSize: '200% 200%' }}
-                >
-                  unified in one platform.
+              <h1 className="text-[40px] font-semibold leading-[1.04] tracking-[-0.02em] text-foreground sm:text-[56px] lg:text-[64px]">
+                One workspace for{' '}
+                <span className="text-foreground/70">tasks,</span>{' '}
+                <span className="text-foreground/70">time,</span>{' '}
+                <span className="text-foreground/70">and</span>{' '}
+                <span className="relative inline-block whitespace-nowrap">
+                  team ops
+                  {/* Hand-drawn underline — SVG so it scales with the
+                      type. Subtle primary accent without resorting
+                      to gradient text. */}
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 220 12"
+                    className="absolute -bottom-1 left-0 h-3 w-full text-primary/70"
+                    fill="none"
+                  >
+                    <path
+                      d="M2 8 C 60 2, 140 2, 218 7"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 </span>
+                .
               </h1>
             </Reveal>
 
             <Reveal direction="up" delay={160}>
-              <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-                Plan projects, capture working hours, manage time-off requests,
-                and review team output — all from a single platform. Replace
-                four disconnected tools with one integrated workspace, backed
-                by a desktop companion for precise time tracking.
+              <p className="mt-6 max-w-[480px] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
+                Stop wiring four tools together. TaskFlow is the
+                project tracker, the timer, the leave manager, and the
+                reports — one workspace, one bill, one URL. The
+                desktop companion captures the hours so your team
+                doesn&apos;t have to.
               </p>
             </Reveal>
 
             <Reveal direction="up" delay={240}>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                {/* Primary CTA — hairline border around solid primary,
+                    no glassmorphic shadow, no hover-lift. Arrow
+                    nudges on hover for tactile affordance. */}
                 <Link
                   href="/signup"
-                  className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+                  className="group inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   Start free
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                    strokeWidth={2}
+                  />
                 </Link>
+                {/* Secondary — text link with arrow, no chrome. The
+                    "two equal CTAs" anti-pattern is gone; sign-in is
+                    clearly the lower-priority action. */}
                 <Link
                   href="/login"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/40 px-5 py-3 text-sm font-semibold text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_8px_24px_-12px_rgba(15,23,42,0.2)] backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10"
+                  className="group inline-flex h-11 items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Sign in
+                  Sign in to your workspace
+                  <ArrowUpRight
+                    className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    strokeWidth={1.8}
+                  />
                 </Link>
               </div>
             </Reveal>
 
+            {/* Trust strip — three signals as dot+text instead of
+                a single muted line. Each item gets its own concrete
+                claim, so the strip feels like a feature row, not a
+                disclaimer. */}
             <Reveal direction="up" delay={320}>
-              <p className="mt-5 text-xs text-muted-foreground">
-                No credit card required · Workspace provisioned in under a minute
-              </p>
+              <ul className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-muted-foreground">
+                <li className="inline-flex items-center gap-1.5">
+                  <CheckCircle2
+                    className="h-3.5 w-3.5 text-emerald-600"
+                    strokeWidth={1.8}
+                  />
+                  No card required
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <CheckCircle2
+                    className="h-3.5 w-3.5 text-emerald-600"
+                    strokeWidth={1.8}
+                  />
+                  Workspace ready in under a minute
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <CheckCircle2
+                    className="h-3.5 w-3.5 text-emerald-600"
+                    strokeWidth={1.8}
+                  />
+                  Cancel anytime
+                </li>
+              </ul>
             </Reveal>
           </div>
 
@@ -1877,38 +1954,29 @@ function FinalCTA() {
         aria-hidden
         className="pointer-events-none absolute -left-32 top-10 h-[500px] w-[500px] rounded-full bg-primary/20 blur-3xl animate-drift-slow"
       />
+      {/* Single drift orb — replaces the two blur orbs + slow-spin
+          concentric circles. The CTA section is meant to focus the
+          eye, not perform a background animation. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-32 bottom-0 h-[500px] w-[500px] rounded-full bg-accent/20 blur-3xl animate-drift-slower"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[120px]"
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 animate-slow-spin opacity-40"
-      >
-        <div className="absolute inset-0 rounded-full border border-primary/15" />
-        <div className="absolute inset-10 rounded-full border border-accent/15" />
-      </div>
 
       <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         <Reveal direction="up">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_6px_20px_-8px_rgba(99,102,241,0.3)] backdrop-blur-xl dark:border-white/15 dark:bg-white/5">
-            <Sparkles className="h-3 w-3 animate-pulse-soft" />
+          <div className="mb-6 inline-flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+            <span aria-hidden className="h-px w-6 bg-primary/60" />
             Ready when you are
+            <span aria-hidden className="h-px w-6 bg-primary/60" />
           </div>
         </Reveal>
         <Reveal direction="up" delay={80}>
-          <h2 className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Run your team&apos;s next week{' '}
-            <span
-              className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
-              style={{ backgroundSize: '200% 200%' }}
-            >
-              on TaskFlow.
-            </span>
+          <h2 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-foreground sm:text-[44px] lg:text-[52px]">
+            Run your team&apos;s next week on TaskFlow.
           </h2>
         </Reveal>
         <Reveal direction="up" delay={160}>
-          <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-[520px] text-[15px] leading-relaxed text-muted-foreground sm:text-base">
             Provision a workspace, invite your team, and deploy the desktop
             companion. Your first daily summary will be ready by tomorrow
             morning.
@@ -1916,28 +1984,45 @@ function FinalCTA() {
         </Reveal>
 
         <Reveal direction="up" delay={240}>
-          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/signup"
-              className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
+              className="group inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               Start free
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <ArrowRight
+                className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                strokeWidth={2}
+              />
             </Link>
             <Link
               href="/login"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/35 px-5 py-3 text-sm font-semibold text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_10px_28px_-14px_rgba(15,23,42,0.2)] backdrop-blur-2xl transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10"
+              className="group inline-flex h-11 items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Sign in
+              Sign in to your workspace
+              <ArrowUpRight
+                className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                strokeWidth={1.8}
+              />
             </Link>
           </div>
         </Reveal>
 
         <Reveal direction="up" delay={320}>
-          <p className="mt-5 text-xs text-muted-foreground">
-            No credit card required · Provisioned in under a minute · Cancel
-            at any time
-          </p>
+          <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12px] text-muted-foreground">
+            <li className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" strokeWidth={1.8} />
+              No card required
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" strokeWidth={1.8} />
+              Provisioned in under a minute
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" strokeWidth={1.8} />
+              Cancel anytime
+            </li>
+          </ul>
         </Reveal>
       </div>
     </section>
