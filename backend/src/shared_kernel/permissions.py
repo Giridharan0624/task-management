@@ -112,25 +112,45 @@ def require_email_verified(ctx: AuthContext) -> None:
 
 
 def require_feature(ctx: AuthContext, feature: str) -> None:
-    """Block the handler when the caller's tenant has the named feature
-    disabled in OrgSettings.
+    """Block the handler when the caller's tenant can't use the named
+    feature — either because their plan doesn't include it (PRO-only on
+    a FREE plan) or the OWNER has toggled it off in OrgSettings.
+
+    Two distinct gates with two distinct error codes:
+    - `PLAN_FEATURE_LOCKED` — plan tier doesn't include the feature.
+      Frontend shows an "Upgrade to PRO" upsell. The OWNER can't fix
+      this from /settings; they need to change plan.
+    - `FEATURE_DISABLED` — plan allows it, but the OWNER turned it off
+      in /settings/organization. Fix is a setting toggle.
 
     Backend half of the FeatureGate UI pattern. The frontend hides
     affordances behind `<FeatureGate feature="X">`, but a direct API
     call (curl, stale cached page, custom script) still hits the
     handler — this guard makes the disable actually disable.
 
-    Fail-OPEN on lookup error: a DDB hiccup or a missing settings record
-    (pre-Phase-3 tenant) lets the action through. Closing here would
-    mean a transient outage reads as "all features disabled", which is
-    much worse than a brief window where a disabled feature still
-    works. Same shape as `require_not_suspended`.
+    Fail-OPEN on lookup error: a DDB hiccup or a missing settings/plan
+    record (pre-Phase-3 tenant) lets the action through. Closing here
+    would mean a transient outage reads as "all features disabled",
+    which is much worse than a brief window where a disabled feature
+    still works. Same shape as `require_not_suspended`.
     """
     from contexts.org.infrastructure.dynamo_repository import OrgDynamoRepository
-    from shared_kernel.errors import FeatureDisabledError
+    from shared_kernel.errors import FeatureDisabledError, PlanFeatureLockedError
+
+    repo = OrgDynamoRepository()
+
+    # Plan-tier gate first — if the plan doesn't allow it, the settings
+    # toggle is moot. Failing open on lookup error keeps the same posture
+    # as the settings check below.
+    try:
+        plan = repo.get_plan(ctx.org_id)
+    except Exception:
+        plan = None
+    if plan is not None and feature not in plan.features_allowed:
+        raise PlanFeatureLockedError(feature)
 
     try:
-        settings = OrgDynamoRepository().get_settings(ctx.org_id)
+        settings = repo.get_settings(ctx.org_id)
     except Exception:
         return
     if settings is None:

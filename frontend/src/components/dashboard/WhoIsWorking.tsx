@@ -54,8 +54,12 @@ export function WhoIsWorking() {
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-border/50">
-          {working.slice(0, 8).map((a) => (
+        // Cap height at ~8 rows so a busy day doesn't push the rest of
+        // the dashboard offscreen — past that the list scrolls inside
+        // the card. `overflow-y-auto` keeps the divider rules and the
+        // sticky "All attendance" header intact above the scrollarea.
+        <ul className="max-h-[464px] divide-y divide-border/50 overflow-y-auto">
+          {working.map((a) => (
             <li
               key={a.userId}
               className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/30"
@@ -80,16 +84,6 @@ export function WhoIsWorking() {
               </span>
             </li>
           ))}
-          {working.length > 8 && (
-            <li className="bg-muted/20 px-5 py-2 text-center">
-              <Link
-                href="/attendance"
-                className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground"
-              >
-                +{working.length - 8} more working
-              </Link>
-            </li>
-          )}
         </ul>
       )}
     </Card>

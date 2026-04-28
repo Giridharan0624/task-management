@@ -1,7 +1,27 @@
 """
-AI service for generating work summaries.
-Uses Groq API (LLaMA 3.3 70B).
+AI service for generating daily-activity summaries.
+
+Multimodal call against Groq's Llama 4 Scout. The model receives:
+  · the activity-metadata prompt (active time, app usage, scores)
+  · every screenshot the day captured, as image-URL parts
+
+Llama 4 Scout was chosen over Maverick because Scout is cheaper per
+token at comparable vision quality for our use case (UI / app-window
+inference, not photo understanding). If you switch to Maverick, only
+GROQ_VISION_MODEL needs to change — the message shape is identical.
+
 API key loaded from AWS Secrets Manager at runtime.
+
+Model constants are split into two roles:
+  - GROQ_VISION_MODEL: multimodal — daily summary (this file)
+  - GROQ_TEXT_MODEL:   text-only — weekly rollup, future text paths
+
+Decoupling them lets each surface pick the right model without
+silently dragging the other along when one changes. Previously both
+imported a single `GROQ_MODEL` constant, which meant flipping the
+activity context to a multimodal model also flipped the weekly
+rollup to a smaller multimodal model that was a quality regression
+for its text-only workload.
 """
 import json
 import os
@@ -10,7 +30,34 @@ import urllib.error
 import boto3
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+
+# Vision-capable model — daily activity summary.
+# Llama 4 Scout (17B params, 16-expert MoE) is Groq's cheap
+# multimodal default. Pre-Llama-4 Groq vision models
+# (llama-3.2-90b-vision-preview, etc.) have been retired.
+GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+
+# Text-only model — weekly rollup, anomaly explanation, any future
+# text path. 70B params, dense (no MoE), tuned for analytical text.
+# Cheaper per call than Scout for text workloads because the prompt
+# is much shorter (no image tokens) and Groq's pricing on the dense
+# 70B is competitive with the MoE Scout for text-only requests.
+GROQ_TEXT_MODEL = "llama-3.3-70b-versatile"
+
+# Backwards-compatible alias. External callers that imported
+# GROQ_MODEL continue to work — they get the vision model, which
+# matches the historical behaviour of "the model that handles the
+# activity summary". New code should pick the role-appropriate
+# constant explicitly. Remove this alias once no callers reference
+# it (search the repo for GROQ_MODEL before removing).
+GROQ_MODEL = GROQ_VISION_MODEL
+
+# Hard cap on images per request. A user with the timer running for
+# a full 8h day generates ~48 screenshots (one every ~9.5 min). The
+# cap is intentionally above that so a normal day always fits, but
+# bounded to keep cost predictable on an outlier "ran the timer for
+# 16 hours straight" session.
+MAX_SCREENSHOTS_PER_SUMMARY = 64
 
 _cached_api_key = None
 
@@ -43,8 +90,16 @@ def _get_api_key() -> str:
 
 def generate_work_summary(activity_data: dict, task_context: str = "") -> dict:
     """
-    Calls Groq LLaMA 3.3 70B to generate a work summary from activity data.
-    Returns: { summary, key_activities, productivity_score, concerns }
+    Calls Groq's Llama 4 Scout vision model with the day's activity
+    metadata AND every captured screenshot. Returns:
+      { summary, key_activities, productivity_score, concerns }
+
+    Screenshots are referenced by URL — Groq fetches them server-side
+    from the public CloudFront distribution we already use for the
+    in-app gallery. No image bytes leave AWS through us; the model
+    fetches directly. Frame count is capped at
+    MAX_SCREENSHOTS_PER_SUMMARY to bound runaway cost on extreme
+    sessions.
     """
     api_key = _get_api_key()
     if not api_key:
@@ -87,6 +142,32 @@ def generate_work_summary(activity_data: dict, task_context: str = "") -> dict:
         f"<task_context>\n{task_context.strip()}\n</task_context>"
         if task_context
         else ""
+    )
+
+    # Pull the screenshot CDN URLs out of the activity payload.
+    # `screenshots` is a list of {url, timestamp} (see UserActivity.to_dict)
+    # — chronological. Cap at MAX_SCREENSHOTS_PER_SUMMARY to bound
+    # cost; anything longer than 64 frames is almost always
+    # repetitive idle frames anyway.
+    raw_screenshots = activity_data.get("screenshots", []) or []
+    screenshot_entries = [
+        s for s in raw_screenshots
+        if isinstance(s, dict) and s.get("url")
+    ][:MAX_SCREENSHOTS_PER_SUMMARY]
+    screenshot_count = len(screenshot_entries)
+    truncated = len(raw_screenshots) > MAX_SCREENSHOTS_PER_SUMMARY
+    screenshot_note = (
+        f"You have been given {screenshot_count} screenshot(s) captured "
+        "throughout the day, evenly spaced ~9-10 minutes apart. Use them "
+        "to identify the actual content the user was working on (file "
+        "names, document titles, IDE projects, browser tabs). "
+        + ("(Day was long — frames after the cap are not shown.) "
+           if truncated else "")
+        + "Cite specifics from screenshots ('opened payments-v2 PR', "
+        "'reviewed Q3 OKR doc') instead of generic claims. If frames "
+        "look repetitive or idle, say so."
+        if screenshot_count > 0
+        else "No screenshots were captured for this session."
     )
 
     prompt = f"""<role>
@@ -132,6 +213,10 @@ numbers that disagree with them.
 {app_text}
 </app_usage>
 
+<screenshots>
+{screenshot_note}
+</screenshots>
+
 {task_block}
 </inputs>
 
@@ -154,6 +239,9 @@ manager, not the person being summarised.
 DO:
 - Name specific apps and time blocks ("4h 12m in VS Code").
 - Hedge inferences ("appears to", "likely", "consistent with").
+- Use the screenshots to ground specifics: file names, branch names,
+  document titles, browser tabs visible at the time. "Working on
+  src/api/client.go in VS Code" beats "coding".
 - Reconcile with the objective scores. If composite < 50%, do not
   call the day "highly productive". If intensity < 30%, name the
   low throughput as part of the picture.
@@ -165,7 +253,13 @@ DO NOT:
 - Pretend to know what the user "meant" to do or how they felt.
 - Pad with empty phrases ("a wide range of activities").
 - Invent numbers. The only numbers you may quote are those above.
+- Make up content you can't see in the screenshots. If a frame is
+  blurry, locked-screen, or a desktop wallpaper, say so honestly.
 - Repeat the same point in summary AND concerns.
+- Quote text verbatim from screenshots that looks personal,
+  sensitive, or credentials-like (passwords, API keys, customer
+  PII). Reference the activity at the level of "edited an API
+  client" not "typed CUSTOMER_SECRET=…".
 </style_guide>
 
 <productivity_scale>
@@ -218,23 +312,41 @@ Empty array `[]` if nothing worth flagging.
 </bad_example>
 """
 
+    # Multimodal user message: text prompt first (so the model sees
+    # the rules and the metadata before the imagery), then every
+    # screenshot URL as a separate image part. Groq fetches each URL
+    # server-side; the bytes never pass through our backend.
+    user_content: list = [{"type": "text", "text": prompt}]
+    for shot in screenshot_entries:
+        user_content.append({
+            "type": "image_url",
+            "image_url": {"url": shot["url"]},
+        })
+
     payload = json.dumps({
-        "model": GROQ_MODEL,
+        "model": GROQ_VISION_MODEL,
         "messages": [
             {
                 "role": "system",
                 "content": (
-                    "You are TaskFlow's Daily Activity Analyst. Output ONLY a "
-                    "single JSON object matching the schema in the user "
-                    "message — no markdown, no code fences, no commentary "
-                    "before or after. Be specific, hedge inferences, and "
-                    "never contradict the objective scores you are given."
+                    "You are TaskFlow's Daily Activity Analyst. You receive "
+                    "activity metadata AND a chronological set of desktop "
+                    "screenshots. Output ONLY a single JSON object matching "
+                    "the schema in the user message — no markdown, no code "
+                    "fences, no commentary before or after. Be specific, "
+                    "hedge inferences, ground claims in what you see in the "
+                    "screenshots, and never contradict the objective scores "
+                    "you are given. Never echo sensitive text (passwords, "
+                    "API keys, customer PII) from the screenshots."
                 ),
             },
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": user_content},
         ],
         "temperature": 0.3,
-        "max_tokens": 500,
+        # Bumped from 500 — vision summaries cite specifics
+        # (file names, branches, tab titles) and can need a bit
+        # more budget than the text-only path used.
+        "max_tokens": 700,
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -247,8 +359,13 @@ Empty array `[]` if nothing worth flagging.
         },
     )
 
+    # Vision calls fetch every image-URL server-side and run
+    # multimodal inference, so they're meaningfully slower than the
+    # text-only path was. 90s gives a 64-image day plenty of room
+    # without locking up the Lambda for too long when Groq is
+    # slow / backed up.
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=90) as resp:
             result = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8") if e.fp else ""

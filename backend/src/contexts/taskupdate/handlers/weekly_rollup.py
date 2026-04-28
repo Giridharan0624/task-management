@@ -53,7 +53,7 @@ from shared_kernel import tenant_keys
 from shared_kernel.auth_context import extract_auth_context
 from shared_kernel.dynamo_client import get_table
 from shared_kernel.errors import ValidationError
-from shared_kernel.permissions import require
+from shared_kernel.permissions import require, require_feature
 from shared_kernel.response import build_error, build_success
 
 log = logging.getLogger("taskflow.weekly_rollup")
@@ -134,6 +134,10 @@ def handler(event, context):
     try:
         auth = extract_auth_context(event)
         require(auth, P.TASKUPDATE_LIST_ALL)
+        # Plan gate — the rollup is a Groq round-trip + anomaly detector,
+        # both PRO-tier features. Same `ai_summaries` umbrella flag the
+        # activity day-summary handler uses.
+        require_feature(auth, "ai_summaries")
 
         query_params = event.get("queryStringParameters") or {}
         week_start = _parse_or_default_week_start(query_params.get("week_start"))

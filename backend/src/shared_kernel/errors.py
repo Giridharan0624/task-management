@@ -84,3 +84,18 @@ class FeatureDisabledError(AuthorizationError):
             f"The '{feature}' feature is disabled for this workspace.",
             code="FEATURE_DISABLED",
         )
+
+
+class PlanFeatureLockedError(AuthorizationError):
+    """Raised when a feature is gated by plan tier (e.g. ai_summaries on
+    PRO+) and the calling tenant is on a lower plan. Distinct from
+    FeatureDisabledError because the remediation is different — the
+    OWNER can't toggle this on in settings; they need to upgrade. The
+    frontend uses this code to render an "Upgrade to PRO" upsell modal
+    instead of the generic "feature disabled" copy."""
+
+    def __init__(self, feature: str):
+        super().__init__(
+            f"The '{feature}' feature requires a higher plan tier.",
+            code="PLAN_FEATURE_LOCKED",
+        )

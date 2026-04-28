@@ -33,23 +33,33 @@ interface ActionPrompt {
   count: number
 }
 
-// Tone styles flattened: a single colored leading rule + colored
-// label text instead of a tinted card surface + icon chip.
-const toneStyles: Record<Tone, { rule: string; text: string; icon: string }> = {
+// Tone styles for the chip pills — subtle tinted surface + matching
+// icon/text color. Kept light so a row of 3-5 chips doesn't visually
+// shout louder than the greeting next to it.
+const toneStyles: Record<
+  Tone,
+  { surface: string; text: string; icon: string; cta: string }
+> = {
   danger: {
-    rule: 'before:bg-destructive',
-    text: 'text-destructive',
+    surface:
+      'border-destructive/25 bg-destructive/5 hover:border-destructive/40 hover:bg-destructive/10',
+    text: 'text-foreground',
     icon: 'text-destructive',
+    cta: 'text-destructive',
   },
   warning: {
-    rule: 'before:bg-amber-500',
-    text: 'text-amber-700',
+    surface:
+      'border-amber-300/40 bg-amber-50 hover:border-amber-400/60 hover:bg-amber-100/60 dark:bg-amber-500/5 dark:border-amber-500/30 dark:hover:bg-amber-500/10',
+    text: 'text-foreground',
     icon: 'text-amber-600',
+    cta: 'text-amber-700 dark:text-amber-400',
   },
   info: {
-    rule: 'before:bg-primary',
-    text: 'text-primary',
+    surface:
+      'border-primary/25 bg-primary/5 hover:border-primary/40 hover:bg-primary/10',
+    text: 'text-foreground',
     icon: 'text-primary',
+    cta: 'text-primary',
   },
 }
 
@@ -157,7 +167,7 @@ export function TodayHero({ userName, role }: TodayHeroProps) {
   })
 
   return (
-    <div className="flex flex-col gap-6 border-b border-border/60 pb-6 lg:flex-row lg:items-start lg:gap-10 lg:pb-8">
+    <div className="flex flex-col gap-4 border-b border-border/60 pb-4 lg:flex-row lg:items-start lg:gap-10 lg:pb-5">
       {/* Greeting column */}
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center gap-2">
@@ -181,8 +191,11 @@ export function TodayHero({ userName, role }: TodayHeroProps) {
         </p>
       </div>
 
-      {/* Action prompts column — flat list with leading colored rules */}
-      <div className="flex w-full flex-col lg:w-[400px] lg:shrink-0">
+      {/* Action prompts — wrap-row of compact chips. Wrapping keeps the
+          column from growing taller than the greeting no matter how many
+          items there are; 4-6 chips just spill onto a second row instead
+          of stretching the hero vertically. */}
+      <div className="flex w-full min-w-0 flex-col lg:max-w-[560px] lg:shrink-0">
         {prompts.length === 0 ? (
           <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
             <Sparkles
@@ -194,7 +207,7 @@ export function TodayHero({ userName, role }: TodayHeroProps) {
             </span>
           </div>
         ) : (
-          <ul className="divide-y divide-border/50">
+          <ul className="flex flex-wrap gap-2 lg:justify-end">
             {prompts.map((p) => {
               const Icon = p.icon
               const s = toneStyles[p.tone]
@@ -203,26 +216,25 @@ export function TodayHero({ userName, role }: TodayHeroProps) {
                   <Link
                     href={p.href}
                     className={cn(
-                      'group relative flex items-center gap-3 py-2.5 pl-4 pr-1 transition-colors hover:bg-muted/30',
-                      'before:absolute before:left-0 before:top-2.5 before:h-[calc(100%-1.25rem)] before:w-px',
-                      s.rule,
+                      'group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] transition-colors',
+                      s.surface,
                     )}
                   >
                     <Icon
                       className={cn('h-3.5 w-3.5 shrink-0', s.icon)}
-                      strokeWidth={1.8}
+                      strokeWidth={1.9}
                     />
-                    <p className="min-w-0 flex-1 text-sm text-foreground">
+                    <span className={cn('font-medium', s.text)}>
                       {p.message}
-                    </p>
+                    </span>
                     <span
                       className={cn(
-                        'inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] transition-transform group-hover:translate-x-0.5',
-                        s.text,
+                        'inline-flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition-transform group-hover:translate-x-0.5',
+                        s.cta,
                       )}
                     >
                       {p.cta}
-                      <ChevronRight className="h-3 w-3" strokeWidth={1.8} />
+                      <ChevronRight className="h-3 w-3" strokeWidth={2} />
                     </span>
                   </Link>
                 </li>

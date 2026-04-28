@@ -1,11 +1,38 @@
 'use client'
 
+import { Lock } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useTenant } from '@/lib/tenant/TenantProvider'
 
 interface FeaturesPanelProps {
   value: Record<string, boolean>
   onChange: (next: Record<string, boolean>) => void
+}
+
+/** snake_case feature key as stored on the backend → camelCase as
+ *  the API client returns it. Kept tiny — only the keys the panel
+ *  needs to map back when checking against `plan.featuresAllowed`
+ *  (the plan ships snake_case, the settings dict ships camelCase). */
+const CAMEL_TO_SNAKE: Record<string, string> = {
+  activityMonitoring: 'activity_monitoring',
+  screenshots: 'screenshots',
+  aiSummaries: 'ai_summaries',
+  dayOffs: 'day_offs',
+  taskUpdates: 'task_updates',
+  comments: 'comments',
+  birthdayWishes: 'birthday_wishes',
+  notifications: 'notifications',
+  attendance: 'attendance',
+  reports: 'reports',
+  desktopApp: 'desktop_app',
+  customPipelines: 'custom_pipelines',
+  customRoles: 'custom_roles',
+  apiAccess: 'api_access',
+  sso: 'sso',
+  auditLogs: 'audit_logs',
+  whiteLabel: 'white_label',
+  customDomain: 'custom_domain',
 }
 
 /**
@@ -152,6 +179,20 @@ function humanize(key: string): string {
 }
 
 export function FeaturesPanel({ value, onChange }: FeaturesPanelProps) {
+  const { current } = useTenant()
+  const planFeatures = current?.plan?.featuresAllowed
+  const planTier = current?.plan?.tier
+
+  /** A feature is plan-locked when the tenant's plan ships an explicit
+   *  features list AND the feature isn't in it. The OWNER can see the
+   *  row but the toggle is disabled — flipping it server-side would
+   *  bounce off `require_feature` anyway. */
+  const isPlanLocked = (camelKey: string): boolean => {
+    if (!Array.isArray(planFeatures) || planFeatures.length === 0) return false
+    const snakeKey = CAMEL_TO_SNAKE[camelKey] ?? camelKey
+    return !planFeatures.includes(snakeKey)
+  }
+
   const visibleEntries = Object.entries(value).filter(
     ([key]) => !INTERNAL_FLAGS.has(key),
   )
@@ -210,24 +251,45 @@ export function FeaturesPanel({ value, onChange }: FeaturesPanelProps) {
                 const meta = FEATURE_META[key]
                 const label = meta?.label ?? humanize(key)
                 const description = meta?.description
+                const locked = isPlanLocked(key)
                 return (
                   <label
                     key={key}
-                    className="flex cursor-pointer items-start justify-between gap-6 px-5 py-4 transition-colors hover:bg-muted/30"
+                    className={
+                      locked
+                        ? 'flex cursor-not-allowed items-start justify-between gap-6 px-5 py-4 opacity-70'
+                        : 'flex cursor-pointer items-start justify-between gap-6 px-5 py-4 transition-colors hover:bg-muted/30'
+                    }
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {label}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">
+                          {label}
+                        </p>
+                        {locked && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/50 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400">
+                            <Lock className="h-2.5 w-2.5" />
+                            Pro
+                          </span>
+                        )}
+                      </div>
                       {description && (
                         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                           {description}
                         </p>
                       )}
+                      {locked && (
+                        <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                          {planTier === 'FREE'
+                            ? 'Upgrade to Pro to enable this feature.'
+                            : 'Not included on your current plan.'}
+                        </p>
+                      )}
                     </div>
                     <div className="shrink-0 pt-0.5">
                       <Switch
-                        checked={enabled}
+                        checked={enabled && !locked}
+                        disabled={locked}
                         onCheckedChange={(v) =>
                           onChange({ ...value, [key]: !!v })
                         }

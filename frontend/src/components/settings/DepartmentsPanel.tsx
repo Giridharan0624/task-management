@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { GripVertical, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -29,16 +29,24 @@ export function DepartmentsPanel({ value, onChange }: DepartmentsPanelProps) {
   const [draftName, setDraftName] = useState('')
   const [editIndex, setEditIndex] = useState<number | null>(null)
   const [editValue, setEditValue] = useState('')
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   const trimmedDraft = draftName.trim()
   const draftCollides =
     !!trimmedDraft &&
     value.some((d) => d.toLowerCase() === trimmedDraft.toLowerCase())
 
+  // Add stays clickable even when the input is empty — instead of being
+  // greyed out, it bounces focus back to the field. Users were getting
+  // confused by the disabled state and assumed the panel was broken.
   const addDepartment = () => {
-    if (!trimmedDraft || draftCollides) return
+    if (!trimmedDraft || draftCollides) {
+      inputRef.current?.focus()
+      return
+    }
     onChange([...value, trimmedDraft])
     setDraftName('')
+    inputRef.current?.focus()
   }
 
   const removeDepartment = (index: number) => {
@@ -100,9 +108,10 @@ export function DepartmentsPanel({ value, onChange }: DepartmentsPanelProps) {
       </p>
 
       {/* Add new */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <div className="flex-1">
           <Input
+            ref={inputRef}
             type="text"
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
@@ -112,7 +121,7 @@ export function DepartmentsPanel({ value, onChange }: DepartmentsPanelProps) {
                 addDepartment()
               }
             }}
-            placeholder="e.g. Customer Success"
+            placeholder="Type a department name and press Enter"
             className="h-9"
           />
           {draftCollides && (
@@ -123,8 +132,9 @@ export function DepartmentsPanel({ value, onChange }: DepartmentsPanelProps) {
         </div>
         <Button
           onClick={addDepartment}
-          disabled={!trimmedDraft || draftCollides}
+          disabled={draftCollides}
           size="sm"
+          className="h-9"
         >
           <Plus className="mr-1.5 h-3.5 w-3.5" />
           Add

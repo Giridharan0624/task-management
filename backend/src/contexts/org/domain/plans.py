@@ -18,13 +18,17 @@ class PlanTemplate(BaseModel):
 FREE_FEATURES = {
     "birthday_wishes",
     "activity_monitoring",
-    "ai_summaries",
     "day_offs",
     "comments",
     "task_updates",
 }
 
+# AI-powered features (activity day-summaries via Groq + AI weekly
+# rollup with anomaly detection) are PRO-tier only. They both call the
+# `ai_summaries` flag — the umbrella covers every Groq round-trip the
+# product makes, so a single plan upgrade unlocks both surfaces.
 PRO_FEATURES = FREE_FEATURES | {
+    "ai_summaries",
     "screenshots",
     "custom_pipelines",
     "custom_roles",

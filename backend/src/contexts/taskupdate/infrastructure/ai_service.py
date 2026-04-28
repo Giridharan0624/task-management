@@ -4,8 +4,10 @@ Feeds the structured per-user daily-update records into Groq (LLaMA 3.3 70B)
 and returns a digest an owner would actually want to read — headline summary,
 top projects/themes, top contributors, notable patterns, concerns.
 
-We reuse the Groq credential flow from the activity context so there's a
-single secret, single caching layer, single code path for auth.
+Text-only path — explicitly imports GROQ_TEXT_MODEL rather than the
+generic GROQ_MODEL alias so future model swaps in the activity (vision)
+service don't silently drag the rollup along. Reuses the credential
+loader from the activity context for a single secret + cache.
 """
 from __future__ import annotations
 
@@ -19,7 +21,7 @@ from typing import Any, Iterable
 
 from contexts.activity.infrastructure.groq_service import (
     GROQ_API_URL,
-    GROQ_MODEL,
+    GROQ_TEXT_MODEL,
     _get_api_key,  # re-used credential loader (cached, Secrets-Manager-aware)
 )
 from contexts.taskupdate.domain.entities import TaskUpdate
@@ -845,7 +847,7 @@ Rules:
 
     payload = json.dumps(
         {
-            "model": GROQ_MODEL,
+            "model": GROQ_TEXT_MODEL,
             "messages": [
                 {
                     "role": "system",

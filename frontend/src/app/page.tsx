@@ -1038,10 +1038,11 @@ function ScreenshotDemo() {
 
 // `tier` mirrors backend/src/contexts/org/domain/plans.py — features
 // without a tier field are available on every plan (Free included).
-// "Pro" gates `screenshots`, `custom_roles`, `custom_pipelines`,
-// `api_access`. "Enterprise" gates `sso`, `audit_logs`, `white_label`,
-// `custom_domain`. Audit log itself is Free-included (capped at 30d
-// retention); the Enterprise unlock is "audit_logs" custom retention.
+// "Pro" gates `ai_summaries`, `screenshots`, `custom_roles`,
+// `custom_pipelines`, `api_access`. "Enterprise" gates `sso`,
+// `audit_logs`, `white_label`, `custom_domain`. Audit log itself is
+// Free-included (capped at 30d retention); the Enterprise unlock is
+// "audit_logs" custom retention.
 type FeatureTier = 'Pro' | 'Enterprise'
 
 interface FeatureCardData {
@@ -1087,6 +1088,7 @@ const FEATURES: FeatureCardData[] = [
       'Daily per-member productivity summaries plus a weekly editorial digest covering task updates, attendance, and activity. Consistent with the math, never invents numbers.',
     tint: 'from-purple-500/15',
     iconClass: 'bg-purple-500/15 text-purple-600 dark:text-purple-300',
+    tier: 'Pro',
   },
   {
     icon: Calendar,
@@ -1612,7 +1614,6 @@ function Pricing() {
       features: [
         { label: 'Up to 10 members and 3 projects' },
         { label: 'Unlimited tasks, comments, and reporting' },
-        { label: 'AI daily summaries and weekly rollups' },
         { label: 'Desktop apps for Windows, macOS, and Linux' },
         { label: 'Activity tracking for accurate time capture' },
         { label: '30-day audit-log retention' },
@@ -1629,7 +1630,7 @@ function Pricing() {
       priceUnit: '/ member / month',
       priceFootnote: 'Annual billing — coming soon',
       description:
-        'For growing teams that need more headroom — bigger seat counts, tighter controls, and the audit features customers ask about.',
+        'For growing teams that want AI-assisted reporting, bigger seat counts, and the audit and admin controls customers ask about.',
       cta: {
         label: 'Notify me at launch',
         href: 'mailto:support@neurostack.in?subject=TaskFlow%20Pro%20launch%20notification',
@@ -1637,6 +1638,7 @@ function Pricing() {
       },
       features: [
         { label: 'Up to 50 members and 50 projects' },
+        { label: 'AI daily summaries and weekly rollups' },
         { label: 'Periodic screenshot capture for time accuracy' },
         { label: 'Custom roles with per-permission editing' },
         { label: 'Custom workflow pipelines for your team' },

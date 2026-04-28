@@ -154,9 +154,9 @@ export function SettingsNav() {
 
       {dangerItems.length > 0 && (
         <>
-          <div className="mt-4 mb-1 flex items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-destructive/70">
+          <div className="mt-4 mb-1 flex items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <AlertTriangle className="h-3 w-3" />
-            Danger zone
+            Workspace controls
           </div>
           {dangerItems.map((item) => (
             <SettingsNavLink
@@ -183,7 +183,7 @@ function SettingsNavLink({ item, active }: { item: NavItem; active: boolean }) {
             ? 'bg-destructive/10 text-destructive'
             : 'bg-primary/10 text-primary'
           : item.danger
-            ? 'text-muted-foreground hover:bg-destructive/5 hover:text-destructive'
+            ? 'text-foreground/85 hover:bg-destructive/5 hover:text-destructive'
             : 'text-foreground/85 hover:bg-muted hover:text-foreground',
       )}
     >

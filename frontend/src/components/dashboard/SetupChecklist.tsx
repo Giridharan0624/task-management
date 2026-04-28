@@ -18,6 +18,7 @@ import { useUsers } from '@/lib/hooks/useUsers'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { useTenant } from '@/lib/tenant/TenantProvider'
 import { orgsApi } from '@/lib/api/orgsApi'
+import { DEFAULT_THEME_ID } from '@/lib/tenant/themes'
 import { cn } from '@/lib/utils'
 
 // Server-persisted flag keys inside OrgSettings.features. The dashboard
@@ -94,14 +95,24 @@ export function SetupChecklist() {
   const hasTeammates = nonOwnerUsers.length > 0
   const hasProject = (projects ?? []).length > 0
   // Branding step ticks when EITHER the owner explicitly marked it OR
-  // they have saved a colour that differs from the seeded defaults. The
-  // explicit flag is the primary source of truth; the colour heuristic
-  // covers tenants that customised before the flag existed.
+  // they have customised any of the brand surfaces — theme preset, font,
+  // or the legacy primary/accent colour fields. The explicit flag is the
+  // primary source of truth; the heuristics below cover tenants who set
+  // up branding without clicking "Mark done".
+  //
+  // Theme picker is now the canonical color surface (post-migration —
+  // the old standalone colour swatches in /settings/organization were
+  // replaced by the curated five-up Theme tab). A non-default theme id
+  // means the OWNER actually visited the Theme tab and chose something.
+  const themeCustomised =
+    !!settings?.theme && settings.theme !== DEFAULT_THEME_ID
+  const fontCustomised = !!settings?.fontFamily
   const colorsCustomised =
     !!settings &&
     (settings.primaryColor?.toLowerCase() !== DEFAULT_PRIMARY ||
       settings.accentColor?.toLowerCase() !== DEFAULT_ACCENT)
-  const hasBranding = brandingMarkedDone || colorsCustomised
+  const hasBranding =
+    brandingMarkedDone || themeCustomised || fontCustomised || colorsCustomised
 
   const steps: Step[] = [
     {
