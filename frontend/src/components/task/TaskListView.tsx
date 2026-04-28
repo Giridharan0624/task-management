@@ -94,7 +94,7 @@ export function TaskListView({
               : undefined
           }
         />
-        <ul className="divide-y divide-border/60 stagger-up">
+        <ul className="divide-y divide-border/60">
           {tasks.map((task) => (
             <TaskRow
               key={task.taskId}
@@ -174,7 +174,7 @@ function CollapsibleGroup({
                 : undefined
             }
           />
-          <ul className="divide-y divide-border/60 stagger-up">
+          <ul className="divide-y divide-border/60">
             {group.tasks.map((task) => (
               <TaskRow
                 key={task.taskId}

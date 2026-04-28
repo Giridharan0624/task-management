@@ -69,7 +69,7 @@ function SessionPreview({ sessions, isTimerActive, label }: { sessions: Attendan
       {label && (
         <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{label}</p>
       )}
-      <div className="grid grid-cols-2 gap-3 stagger-up">
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-muted/40 rounded-xl p-3">
           <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Sign In</p>
           <p className="text-sm font-semibold text-foreground">{signIn}</p>
@@ -151,7 +151,7 @@ export function TaskUpdateCard() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 stagger-up">
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-muted/40 rounded-xl p-3">
               <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-0.5">Sign In</p>
               <p className="text-sm font-semibold text-foreground">{existingUpdate.signIn}</p>

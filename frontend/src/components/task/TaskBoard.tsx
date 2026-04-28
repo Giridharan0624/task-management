@@ -7,7 +7,6 @@ import { DeadlineLabel } from '@/components/ui/DeadlineLabel'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { usePrefetchTask } from '@/lib/hooks/usePrefetchTask'
 import {
-  TASK_STATUS_COLORS,
   TASK_STATUS_LABEL,
   DOMAIN_STATUSES,
 } from '@/types/task'
@@ -32,9 +31,9 @@ const PRIORITY_DOT: Record<string, string> = {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  HIGH: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
-  MEDIUM: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-  LOW: 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200',
+  HIGH: 'text-rose-700 dark:text-rose-300',
+  MEDIUM: 'text-amber-700 dark:text-amber-300',
+  LOW: 'text-muted-foreground',
 }
 
 /**
@@ -73,7 +72,7 @@ export function TaskBoard({ tasks, onSelectTask }: TaskBoardProps) {
   return (
     <div className="kanban-scroll -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
       <div
-        className="grid auto-cols-[minmax(280px,1fr)] grid-flow-col gap-3 stagger-rise"
+        className="grid auto-cols-[minmax(280px,1fr)] grid-flow-col gap-3"
         style={{ minWidth: `${columns.length * 288}px` }}
       >
         {columns.map((col) => (
@@ -98,39 +97,39 @@ function BoardColumn({
   statusIndex: ReturnType<typeof buildStatusIndex>
   onSelectTask: (task: MyTask) => void
 }) {
-  // Tenant-defined label/color win; fall back to hardcoded constants for
-  // legacy statuses not present in any pipeline.
+  // Tenant-defined label/color win; fall back to legacy label for
+  // statuses not present in any pipeline. The dot+text label below
+  // reads `meta.color` directly via inline style so Tailwind doesn't
+  // need to know the dynamic hex.
   const meta = statusIndex.get(column.status)
   const label = meta?.label ?? TASK_STATUS_LABEL[column.status] ?? column.status
-  const statusClass = meta
-    ? // Inline tenant color via style — Tailwind classes can't reach a
-      // dynamic hex. The class still provides padding/rounding/font.
-      'bg-muted text-foreground'
-    : TASK_STATUS_COLORS[column.status] || 'bg-muted text-muted-foreground'
 
   return (
-    <div className="flex h-full min-h-[200px] flex-col rounded-2xl border border-border bg-muted/30">
+    <div className="flex h-full min-h-[200px] flex-col rounded-lg border border-border/70 bg-muted/20">
       <div className="flex items-center justify-between border-b border-border/60 px-3 py-2.5">
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest',
-              statusClass
+              'inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.18em]',
+              !meta && 'text-muted-foreground',
             )}
-            style={
-              meta
-                ? { backgroundColor: `${meta.color}20`, color: meta.color }
-                : undefined
-            }
+            style={meta ? { color: meta.color } : undefined}
           >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{
+                backgroundColor: meta?.color ?? 'currentColor',
+                opacity: meta ? 1 : 0.5,
+              }}
+            />
             {label}
           </span>
-          <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+          <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
             {column.tasks.length}
           </span>
         </div>
       </div>
-      <div className="flex flex-col gap-2 p-2 stagger-up">
+      <div className="flex flex-col gap-2 p-2">
         {column.tasks.map((task) => (
           <BoardCard
             key={task.taskId}
@@ -157,7 +156,7 @@ function BoardCard({
       onClick={onClick}
       onMouseEnter={() => prefetchTask(task.projectId, task.taskId)}
       onFocus={() => prefetchTask(task.projectId, task.taskId)}
-      className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ring pressable"
+      className="group flex flex-col gap-2 rounded-md border border-border/70 bg-card p-3 text-left transition-colors hover:border-foreground/30 hover:bg-muted/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex items-start gap-2">
         <span

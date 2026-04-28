@@ -64,7 +64,7 @@ export function SubmittedUpdateCard({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={`Open ${update.userName}'s daily update`}
-        className="group w-full rounded-2xl border border-border bg-card p-5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-border/80 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="group w-full rounded-lg border border-border/70 bg-card p-5 text-left transition-colors hover:border-foreground/30 hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">

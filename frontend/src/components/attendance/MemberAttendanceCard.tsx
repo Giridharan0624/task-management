@@ -31,10 +31,10 @@ interface MemberAttendanceCardProps {
   sharePercent?: number
 }
 
-const ROLE_PILL: Record<string, string> = {
-  OWNER: 'bg-purple-100 text-purple-700',
-  ADMIN: 'bg-red-100 text-red-700',
-  MEMBER: 'bg-blue-100 text-blue-700',
+const ROLE_DOT: Record<string, string> = {
+  OWNER: 'bg-violet-500',
+  ADMIN: 'bg-rose-500',
+  MEMBER: 'bg-sky-500',
 }
 
 export function MemberAttendanceCard({
@@ -42,16 +42,16 @@ export function MemberAttendanceCard({
   onClick,
   sharePercent,
 }: MemberAttendanceCardProps) {
-  const rolePill = ROLE_PILL[member.role] || 'bg-muted text-muted-foreground'
+  const roleDot = ROLE_DOT[member.role] || 'bg-muted-foreground/50'
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'group flex w-full flex-col gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-all pressable',
-        'hover:-translate-y-0.5 hover:border-border/70 hover:shadow-card-hover',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
+        'group flex w-full flex-col gap-3 rounded-lg border border-border/70 bg-card p-4 text-left transition-colors',
+        'hover:border-foreground/30 hover:bg-muted/20',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
       )}
     >
       {/* Header row: avatar + name + role + active indicator */}
@@ -65,33 +65,29 @@ export function MemberAttendanceCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+          <p className="truncate text-sm font-medium text-foreground">
             {member.name}
           </p>
-          <div className="mt-0.5 flex items-center gap-1.5">
-            <span
-              className={cn(
-                'inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider',
-                rolePill
-              )}
-            >
+          <div className="mt-0.5 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <span className={cn('h-1.5 w-1.5 rounded-full', roleDot)} />
               {member.role}
             </span>
-            <span className="truncate text-[11px] text-muted-foreground">
+            <span className="truncate text-[11px] text-muted-foreground/80">
               {member.email}
             </span>
           </div>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-muted-foreground" strokeWidth={1.8} />
       </div>
 
       {/* Big total + sparkline */}
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground">
+          <p className="text-2xl font-medium tabular-nums leading-none text-foreground">
             {formatDuration(member.totalHours)}
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Total this month
           </p>
         </div>
@@ -133,13 +129,13 @@ export function MemberAttendanceCard({
       {/* Top task */}
       {member.topTask && (
         <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2">
-          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Top
           </span>
           <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
             {member.topTask.name}
           </span>
-          <span className="shrink-0 text-xs font-bold tabular-nums text-primary">
+          <span className="shrink-0 text-xs font-medium tabular-nums text-foreground">
             {formatDuration(member.topTask.hours)}
           </span>
         </div>

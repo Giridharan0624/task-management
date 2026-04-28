@@ -77,7 +77,7 @@ export function AttendanceTable() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-fade stagger-up">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-fade">
         <div className="bg-emerald-50 rounded-2xl p-3.5 text-center border border-emerald-100">
           <p className="text-xl font-bold text-emerald-700">{signedIn.length}</p>
           <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">Working Now</p>

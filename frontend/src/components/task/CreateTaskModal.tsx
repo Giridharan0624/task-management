@@ -165,7 +165,7 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
         {/* Deadline */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1 block">Deadline</label>
-          <div className="grid grid-cols-2 gap-3 stagger-up">
+          <div className="grid grid-cols-2 gap-3">
             <DatePicker
               value={watch('deadlineDate') || ''}
               onChange={(v) => setValue('deadlineDate', v, { shouldValidate: true })}

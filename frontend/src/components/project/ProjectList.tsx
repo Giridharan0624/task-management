@@ -246,7 +246,7 @@ export function ProjectList() {
           />
         )
       ) : view === 'grid' ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-rise">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((project) => (
             <ProjectCard
               key={project.projectId}
@@ -259,7 +259,7 @@ export function ProjectList() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-          <div className="stagger-up">
+          <div >
             {visible.map((project) => (
               <ProjectListRow
                 key={project.projectId}

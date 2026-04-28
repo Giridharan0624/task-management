@@ -212,7 +212,7 @@ export function MyAttendanceView() {
   ]
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 animate-fade-in stagger-up">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 animate-fade-in">
       <PageHeader
         title="My Attendance"
         description={monthLabel}
@@ -266,7 +266,7 @@ export function MyAttendanceView() {
             maxHours={maxDailyHours}
           />
 
-          <Card className="overflow-hidden p-5 hover-lift-sm">
+          <Card className="overflow-hidden p-5">
             <Tabs defaultValue="daily" className="w-full">
               <TabsList>
                 <TabsTrigger value="daily" className="gap-2">
@@ -280,7 +280,7 @@ export function MyAttendanceView() {
               </TabsList>
 
               <TabsContent value="daily" className="mt-4">
-                <div className="space-y-3 stagger-up">
+                <div className="space-y-3">
                   {sortedDaily.map((r) => {
                     const hours = getRecordHours(r)
                     const anyActive = r.sessions.some((s) => !s.signOutAt)
@@ -361,7 +361,7 @@ export function MyAttendanceView() {
                     className="border-0 py-6"
                   />
                 ) : (
-                  <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card stagger-up">
+                  <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card">
                     {taskStats.map((t) => {
                       const pct =
                         totalHours > 0
@@ -428,7 +428,7 @@ function MonthHeatmap({
   const todayDay = today.getDate()
 
   return (
-    <Card className="p-5 hover-lift-sm">
+    <Card className="p-5">
       <div className="mb-3 flex items-center gap-2">
         <CalendarIcon className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-bold text-foreground">Daily activity</h3>

@@ -142,7 +142,7 @@ export function AttendanceButton() {
 
         {/* Session list (read-only) */}
         {groupedTasks.length > 0 && (
-          <div className="border-t border-emerald-200/50 bg-card/50 divide-y divide-border/60 stagger-up">
+          <div className="border-t border-emerald-200/50 bg-card/50 divide-y divide-border/60">
             {groupedTasks.map((t, i) => (
               <SessionRow key={i} task={t} />
             ))}
@@ -176,7 +176,7 @@ export function AttendanceButton() {
           </div>
 
           {/* Sessions */}
-          <div className="divide-y divide-border/60 stagger-up">
+          <div className="divide-y divide-border/60">
             {groupedTasks.map((t, i) => (
               <SessionRow key={i} task={t} />
             ))}

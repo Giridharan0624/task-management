@@ -175,7 +175,7 @@ export function WeeklyLeaderboard({
                   <span className="text-right">Hours</span>
                   <span className="w-[140px]">Share</span>
                 </div>
-                <ul className="divide-y divide-border/60 stagger-up">
+                <ul className="divide-y divide-border/60">
                   {entries.map((e, i) => (
                     <LeaderboardRow
                       key={e.userId}

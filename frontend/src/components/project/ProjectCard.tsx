@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation'
 import { Users, Clock } from 'lucide-react'
 import type { Project } from '@/types/project'
-import { getProjectColor } from '@/lib/utils/projectColor'
 import { Progress } from '@/components/ui/Progress'
 import { RelativeTime } from '@/components/ui/RelativeTime'
 import { usePrefetchProject } from '@/lib/hooks/usePrefetchProject'
@@ -18,16 +17,18 @@ interface ProjectCardProps {
   creatorName?: string
 }
 
-function getGradient(name: string): string {
-  return getProjectColor(name)
+// Domain identity → vertical accent color rule, matching the
+// ProjectHeader convention. No more pill chips with bg+ring at full
+// saturation; the rule + small dot+text label below carry the same
+// signal in much less ink.
+const DOMAIN_RULE: Record<string, string> = {
+  DEVELOPMENT: 'bg-indigo-500',
+  DESIGNING: 'bg-violet-500',
+  MANAGEMENT: 'bg-amber-500',
+  RESEARCH: 'bg-teal-500',
 }
 
-const DOMAIN_PILL: Record<string, string> = {
-  DEVELOPMENT: 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200',
-  DESIGNING: 'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200',
-  MANAGEMENT: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-  RESEARCH: 'bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200',
-}
+const DOMAIN_PILL: Record<string, string> = DOMAIN_RULE
 
 export function ProjectCard({
   project,
@@ -54,113 +55,108 @@ export function ProjectCard({
     router.push(`/projects/${project.projectId}`)
   }
 
+  const domainColor = DOMAIN_RULE[domain] ?? DOMAIN_RULE.DEVELOPMENT
+
   return (
     <div
       onClick={handleCardClick}
       onMouseEnter={() => prefetchProject(project.projectId)}
       onFocus={() => prefetchProject(project.projectId)}
-      className="group hover-lift relative flex cursor-pointer flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:border-border/80 hover:shadow-md"
+      className="group relative flex cursor-pointer items-stretch gap-4 rounded-lg border border-border/70 bg-card p-5 transition-colors hover:border-foreground/30 hover:bg-muted/20"
     >
-      {/* Header */}
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ${getGradient(project.name)}`}
-          >
-            <span className="text-sm font-bold text-white drop-shadow-sm">
-              {project.name.charAt(0).toUpperCase()}
-            </span>
-          </div>
+      {/* Domain accent rule — matches ProjectHeader convention */}
+      <span
+        aria-hidden
+        className={cn('w-[3px] shrink-0 rounded-full', domainColor)}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Header */}
+        <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="line-clamp-1 text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+            <h3 className="line-clamp-1 text-sm font-medium text-foreground">
               {project.name}
             </h3>
+            <div className="mt-0.5 flex items-center gap-2">
+              {domain && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  <span className={cn('h-1.5 w-1.5 rounded-full', domainColor)} />
+                  {domain.toLowerCase()}
+                </span>
+              )}
+            </div>
             {project.description ? (
-              <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+              <p className="mt-1.5 line-clamp-1 text-xs text-muted-foreground">
                 {project.description}
               </p>
             ) : (
-              <p className="mt-0.5 text-xs text-muted-foreground/60 italic">
+              <p className="mt-1.5 text-xs italic text-muted-foreground/60">
                 No description
               </p>
             )}
           </div>
+          <ProjectActionsMenu
+            projectId={project.projectId}
+            onDelete={
+              canDeleteProject ? () => onDelete(project.projectId) : undefined
+            }
+          />
         </div>
-        <ProjectActionsMenu
-          projectId={project.projectId}
-          onDelete={
-            canDeleteProject ? () => onDelete(project.projectId) : undefined
-          }
-        />
-      </div>
 
-      {/* Domain pill */}
-      {domain && (
-        <div className="mb-3">
-          <span
-            className={cn(
-              'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-              DOMAIN_PILL[domain] || 'bg-muted text-muted-foreground'
-            )}
-          >
-            {domain.toLowerCase()}
-          </span>
-        </div>
-      )}
-
-      {/* Progress bar */}
-      {taskCount > 0 ? (
-        <div className="mb-3">
-          <div className="mb-1.5 flex items-center justify-between text-xs">
-            <span className="font-medium text-muted-foreground">Progress</span>
-            <span
-              className={cn(
-                'font-bold tabular-nums',
-                completionPercent >= 100
-                  ? 'text-emerald-600'
-                  : completionPercent >= 50
-                    ? 'text-primary'
-                    : 'text-amber-600'
-              )}
-            >
-              {completionPercent}%
+        {/* Progress bar */}
+        {taskCount > 0 ? (
+          <div className="mb-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Progress
+              </span>
+              <span
+                className={cn(
+                  'text-xs font-medium tabular-nums',
+                  completionPercent >= 100
+                    ? 'text-emerald-700'
+                    : 'text-foreground',
+                )}
+              >
+                {completionPercent}%
+              </span>
+            </div>
+            <Progress value={completionPercent} className="h-1" />
+          </div>
+        ) : (
+          <div className="mb-3">
+            <span className="text-xs italic text-muted-foreground/70">
+              No tasks yet
             </span>
           </div>
-          <Progress value={completionPercent} className="h-1.5" />
-        </div>
-      ) : (
-        <div className="mb-3">
-          <span className="text-xs italic text-muted-foreground/70">
-            No tasks yet
+        )}
+
+        {/* Task stats */}
+        {taskCount > 0 && (
+          <div className="mb-3 flex items-center gap-3">
+            <StatDot color="bg-amber-500" label={`${todoCount} todo`} />
+            <StatDot color="bg-sky-500" label={`${inProgressCount} active`} />
+            <StatDot color="bg-emerald-500" label={`${doneCount} done`} />
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Users className="h-3 w-3" strokeWidth={1.8} />
+            {memberCount} member{memberCount !== 1 ? 's' : ''}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Clock className="h-3 w-3" strokeWidth={1.8} />
+            <RelativeTime value={lastActivity} />
           </span>
         </div>
-      )}
-
-      {/* Task stats */}
-      {taskCount > 0 && (
-        <div className="mb-3 flex items-center gap-3">
-          <StatDot color="bg-amber-400" label={`${todoCount} todo`} />
-          <StatDot color="bg-blue-500" label={`${inProgressCount} active`} />
-          <StatDot color="bg-emerald-500" label={`${doneCount} done`} />
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-3 text-[11px] font-medium text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <Users className="h-3 w-3" />
-          {memberCount} member{memberCount !== 1 ? 's' : ''}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Clock className="h-3 w-3" />
-          <RelativeTime value={lastActivity} />
-        </span>
+        {creatorName && (
+          <p className="mt-1 text-[10px] text-muted-foreground/60">
+            Created by {creatorName}
+          </p>
+        )}
       </div>
-      {creatorName && (
-        <p className="mt-1 text-[10px] text-muted-foreground/60">
-          Created by {creatorName}
-        </p>
-      )}
     </div>
   )
 }
