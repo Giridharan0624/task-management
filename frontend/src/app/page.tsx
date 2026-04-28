@@ -93,7 +93,7 @@ const structuredData = {
     priceCurrency: 'USD',
   },
   description:
-    'An integrated platform for task management, time tracking, attendance, and daily reporting.',
+    'Tasks, time tracking, attendance, and daily updates in one app — replaces the four tools your team is duct-taping together today.',
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ function Hero() {
                   aria-hidden
                   className="h-px w-6 bg-primary/60"
                 />
-                A unified workspace for modern teams
+                One app for project teams
               </div>
             </Reveal>
 
@@ -240,12 +240,11 @@ function Hero() {
             </Reveal>
 
             <Reveal direction="up" delay={160}>
-              <p className="mt-6 max-w-[480px] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-                Stop wiring four tools together. TaskFlow is the
-                project tracker, the timer, the leave manager, and the
-                reports — one workspace, one bill, one URL. The
-                desktop companion captures the hours so your team
-                doesn&apos;t have to.
+              <p className="mt-6 max-w-[500px] text-base leading-relaxed text-muted-foreground sm:text-[17px]">
+                Your project tracker, your timer, your leave manager,
+                and your weekly reports — one URL, one bill, one
+                login. The desktop app logs the hours so nobody fills
+                a timesheet on Friday.
               </p>
             </Reveal>
 
@@ -328,27 +327,27 @@ function ProblemSection() {
   const pains = [
     {
       icon: Shuffle,
-      title: 'Fragmented tooling erodes productivity.',
+      title: 'Tool fragmentation taxes the day.',
       blurb:
-        'A dedicated task tool, a separate timer, an inbox for leave requests, and a spreadsheet for reporting. Context switching between them routinely consumes more time than the underlying work.',
+        'A task tool, a separate timer, an inbox for leave requests, a spreadsheet for reports. Switching between them quietly costs more time than the work they were bought to support.',
       tone: 'text-rose-600 dark:text-rose-300',
       ring: 'ring-rose-500/20',
       bg: 'bg-rose-500/10',
     },
     {
       icon: MessageSquare,
-      title: 'Daily visibility relies on memory.',
+      title: 'Visibility runs on memory.',
       blurb:
-        'Standups become end-of-day recall exercises. By the time leadership assembles a picture of the day, the detail that matters has already faded.',
+        'Standups turn into end-of-day recall exercises. By the time a manager pieces together what shipped, the detail that matters is already gone.',
       tone: 'text-amber-600 dark:text-amber-300',
       ring: 'ring-amber-500/20',
       bg: 'bg-amber-500/10',
     },
     {
       icon: TrendingDown,
-      title: 'Timesheets rarely reflect reality.',
+      title: 'Timesheets rarely match reality.',
       blurb:
-        'Manually entered hours are negotiable; hours of actual focused work are not. Without objective data, both sides lose confidence when a billing review surfaces the discrepancy.',
+        'Hours typed in on Friday are guesses. Hours captured while you actually worked aren&apos;t. Without the second number, billing reviews turn into arguments nobody wins.',
       tone: 'text-slate-600 dark:text-slate-300',
       ring: 'ring-slate-500/20',
       bg: 'bg-slate-500/10',
@@ -357,9 +356,9 @@ function ProblemSection() {
       // Fourth pain — matches the "four disconnected systems" headline
       // and the "inbox for leave requests" tool named in card #1.
       icon: Calendar,
-      title: 'Leave tracking lives in email.',
+      title: 'Leave lives in your inbox.',
       blurb:
-        'Approvals, balances, and return dates scatter across inboxes and HR spreadsheets. When a manager needs to know who is out this week, they end up asking Slack instead of a system of record.',
+        'Approvals, balances, and return dates scatter across email threads and HR spreadsheets. To find out who&apos;s out this week, someone ends up posting to Slack instead of opening a system.',
       tone: 'text-sky-600 dark:text-sky-300',
       ring: 'ring-sky-500/20',
       bg: 'bg-sky-500/10',
@@ -396,7 +395,7 @@ function ProblemSection() {
           </Reveal>
           <Reveal direction="up" delay={80}>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Operating a team should not require four disconnected systems.
+              Running a team shouldn&apos;t take four logins.
             </h2>
           </Reveal>
         </div>
@@ -431,12 +430,9 @@ function ProblemSection() {
         </ul>
 
         <Reveal direction="up" delay={320}>
-          <p className="mx-auto mt-10 max-w-2xl text-center text-base font-semibold text-foreground/80 sm:text-lg">
-            TaskFlow consolidates all four into{' '}
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              one integrated platform
-            </span>
-            .
+          <p className="mx-auto mt-10 max-w-2xl text-center text-base text-foreground/80 sm:text-lg">
+            TaskFlow does all four{' '}
+            <span className="font-semibold text-foreground">in one app</span>.
           </p>
         </Reveal>
       </div>
@@ -453,21 +449,21 @@ function SolutionPillars() {
     {
       icon: Clock,
       title: 'Capture.',
-      body: 'Objective time and activity data is recorded automatically by the desktop companion — session timers, activity signals, and periodic screenshots — eliminating reliance on manual entry.',
+      body: 'The desktop app records hours, activity signals, and (optionally) periodic screenshots while you work. No timesheets, no end-of-week guesswork.',
       tint: 'from-primary/20 via-primary/5 to-transparent',
       iconTint: 'bg-primary/15 text-primary',
     },
     {
       icon: Brain,
       title: 'Understand.',
-      body: 'AI-generated daily summaries consolidate task progress, attendance, and ownership into one operational view. Leadership sees the answers before the questions are asked.',
+      body: 'AI summaries roll up each member&apos;s day — what shipped, hours per task, blockers — into a single readable digest. Managers get the answers before they have to ask the questions.',
       tint: 'from-accent/20 via-accent/5 to-transparent',
       iconTint: 'bg-accent/15 text-accent',
     },
     {
       icon: BarChart3,
       title: 'Report.',
-      body: 'Cross-project hours, per-member performance, CSV exports, and deep-linkable filters. Every view of the week is shareable through a persistent URL.',
+      body: 'Cross-project hours, per-member breakdowns, CSV exports, deep-linkable filters. Every view of the week is a URL you can paste into a Slack thread.',
       tint: 'from-fuchsia-500/20 via-fuchsia-500/5 to-transparent',
       iconTint: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-300',
     },
@@ -479,17 +475,13 @@ function SolutionPillars() {
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              One platform.{' '}
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Three core capabilities.
-              </span>
+              One app. <span className="text-foreground/70">Three jobs.</span>
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
             <p className="mt-3 text-base text-muted-foreground">
-              Every capability a modern team needs to plan, observe, and
-              report — delivered as a single integrated product rather than
-              four separate subscriptions.
+              Capture the work as it happens. Understand what got done.
+              Report it without anyone reformatting a spreadsheet.
             </p>
           </Reveal>
         </div>
@@ -557,26 +549,21 @@ function Differentiator() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <Reveal direction="up">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
-              <Sparkles className="h-3 w-3" />
-              Capabilities that set us apart
+            <div className="mb-4 inline-flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+              <span aria-hidden className="h-px w-6 bg-primary/60" />
+              Why teams pick us
             </div>
           </Reveal>
           <Reveal direction="up" delay={80}>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              Built for organizations with{' '}
-              <span
-                className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
-                style={{ backgroundSize: '200% 200%' }}
-              >
-                real accountability requirements.
-              </span>
+            <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl">
+              Three things a generic task tracker can&apos;t do.
             </h2>
           </Reveal>
           <Reveal direction="up" delay={160}>
-            <p className="mt-3 text-base text-muted-foreground">
-              Three capabilities that distinguish TaskFlow from general-purpose
-              task trackers.
+            <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
+              If your team bills by the hour, ships against deadlines, or
+              answers to a client about how time was spent — these are the
+              parts you can&apos;t fake with sticky notes.
             </p>
           </Reveal>
         </div>
@@ -593,13 +580,13 @@ function Differentiator() {
               gradient: 'from-fuchsia-500 via-pink-500 to-rose-500',
               halo: 'bg-fuchsia-500/15',
             }}
-            titleLead="Measure focused work"
-            titleAccent="with objective data."
-            blurb="The desktop companion records aggregate keystroke and mouse-event counters — never content — and reports them alongside each timer session. Periods of low activity are surfaced on the dashboard automatically, without subjective assessment."
+            titleLead="See actual focus time"
+            titleAccent="not just hours logged."
+            blurb="The desktop app counts keystrokes and mouse events while a timer is running — never the keys themselves, just the count. The dashboard turns those counters into a per-session activity score so idle time stops counting as work."
             bullets={[
-              'Per-session activity score replaces subjective time reporting',
-              'Runs silently in the background with no additional monitoring software',
-              'Counters record event frequency only; no content is captured or stored',
+              'Activity score per session — replaces self-reported productivity',
+              'Runs in the background; no extra monitoring software to install',
+              'Counts events only — no keystrokes, no clipboard, no content',
             ]}
             visual={<ActivityDemo />}
           />
@@ -616,13 +603,13 @@ function Differentiator() {
               gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
               halo: 'bg-purple-500/15',
             }}
-            titleLead="Daily summaries"
-            titleAccent="generated automatically."
-            blurb="A large language model processes each member's structured session log — tasks completed, hours per task, and comments — and produces the end-of-day report that leadership receives. Manual recall is eliminated from the reporting loop."
+            titleLead="Daily updates"
+            titleAccent="that write themselves."
+            blurb="At end of day, an AI reads each member&apos;s session log — tasks closed, hours per task, comments — and drafts the daily update. The member reviews, edits if they want, hits submit. Managers stop chasing recap emails."
             bullets={[
-              'Structured natural-language recap, organized by project',
-              'Generated server-side at sign-out; credentials never reach the browser',
-              'Members may review and revise the draft before submission',
+              'Drafted from real session data — not vibes, not guesses',
+              'Run server-side at sign-out; the AI key never touches the browser',
+              'Member edits before submitting — AI is a starting point, not the source of truth',
             ]}
             visual={<AiDemo />}
           />
@@ -638,13 +625,13 @@ function Differentiator() {
               gradient: 'from-sky-500 via-blue-500 to-indigo-500',
               halo: 'bg-blue-500/15',
             }}
-            titleLead="Verifiable output"
-            titleAccent="without intrusive oversight."
-            blurb="The desktop application captures compressed screenshots at regular intervals during active sessions and uploads them exclusively to your organization's S3 prefix. Leadership performs periodic spot checks without disrupting the individual contributor."
+            titleLead="Spot-check the work"
+            titleAccent="without breathing down necks."
+            blurb="The desktop app takes a compressed screenshot every 9-10 minutes while the timer is running, uploaded straight into your workspace&apos;s own S3 prefix. Managers can verify deliverables without standing behind anyone&apos;s monitor."
             bullets={[
-              'Storage is scoped to your organization prefix; cross-tenant access is architecturally prevented',
-              'Captures are compressed; a full working day typically consumes a few megabytes',
-              'Capture halts immediately when the timer stops',
+              'Scoped to your workspace prefix — no other tenant can read your captures',
+              'Compressed JPEGs — a full day is a few megabytes, not gigabytes',
+              'The capture loop stops the moment a member stops the timer',
             ]}
             visual={<ScreenshotDemo />}
           />
@@ -1208,19 +1195,18 @@ function FeatureGrid() {
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              The complete operational toolkit.
+            <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl">
+              Everything you&apos;d normally pay four vendors for.
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
             <p className="mt-3 text-base text-muted-foreground">
-              The capabilities typically distributed across four separate
-              subscriptions, delivered in a single integrated platform.{' '}
+              One subscription, one workspace, one URL.{' '}
               <a
                 href="#pricing"
-                className="font-semibold text-primary underline-offset-4 hover:underline"
+                className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
               >
-                See what's on each plan ↓
+                See what&apos;s in each plan ↓
               </a>
             </p>
           </Reveal>
@@ -1328,10 +1314,10 @@ function DesktopDownload() {
   ]
 
   const benefits = [
-    'Accurate session timer available from the system tray',
-    'Aggregate activity capture with no content logging',
-    'Automatic daily summaries submitted at sign-out',
-    'Offline resilient — sessions sync on reconnection',
+    'Start, stop, and switch tasks from your system tray',
+    'Activity counters only — no keystrokes, no clipboard, no content',
+    'Drafts the daily update from your session log when you sign out',
+    'Works offline — queued sessions sync the moment you reconnect',
   ]
 
   return (
@@ -1365,22 +1351,17 @@ function DesktopDownload() {
           </Reveal>
 
           <Reveal direction="up" delay={80}>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              The capabilities that matter{' '}
-              <span
-                className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent animate-gradient-shift"
-                style={{ backgroundSize: '200% 200%' }}
-              >
-                live in the native app.
-              </span>
+            <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl">
+              The work happens here. The desktop app captures it.
             </h2>
           </Reveal>
 
           <Reveal direction="up" delay={160}>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Install the TaskFlow desktop companion for accurate time tracking,
-              automatic activity capture, and AI-generated daily summaries.
-              Signed installers are available for every major operating system.
+              A signed installer for Windows, macOS, and Linux. It runs the
+              timer, counts activity, takes the optional periodic
+              screenshot, and queues the data for upload — even offline.
+              No browser tab to forget.
             </p>
           </Reveal>
 
@@ -1504,21 +1485,21 @@ function HowItWorks() {
   const steps = [
     {
       n: '01',
-      title: 'Provision your workspace',
+      title: 'Spin up your workspace',
       blurb:
-        'Choose a workspace code your team will use to sign in. Configure branding, terminology, and core settings to align with your organization.',
+        'Pick a workspace code your team will sign in with. Set the theme, the leave types, the departments. About 60 seconds.',
     },
     {
       n: '02',
-      title: 'Invite your team',
+      title: 'Invite the team',
       blurb:
-        'Send email invitations. Invitees set a password and land directly on their dashboard. Role-based access governs visibility and permissions.',
+        'Send email invites. They set a password, land on their dashboard, and go. Roles decide what each person can see and edit.',
     },
     {
       n: '03',
-      title: 'Deploy the desktop companion',
+      title: 'Hand out the desktop app',
       blurb:
-        'Time tracking, activity capture, and end-of-day summaries run in the desktop application. A single installation enables automatic session recording and reporting.',
+        'One installer per teammate. From then on, hours, activity, and the end-of-day update happen automatically while they work.',
     },
   ]
 
@@ -1540,8 +1521,8 @@ function HowItWorks() {
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal direction="up">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Operational in three steps.
+            <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl">
+              Up and running in three steps.
             </h2>
           </Reveal>
           <Reveal direction="up" delay={80}>
@@ -1626,7 +1607,7 @@ function Pricing() {
       priceUnit: '/ workspace',
       priceFootnote: 'No card required',
       description:
-        'Everything a small team needs to plan work, track time, and ship.',
+        'Enough room for a team of ten to plan work, track time, and ship — at no cost.',
       cta: { label: 'Start free', href: '/signup', variant: 'primary' },
       features: [
         { label: 'Up to 10 members and 3 projects' },
@@ -1648,7 +1629,7 @@ function Pricing() {
       priceUnit: '/ member / month',
       priceFootnote: 'Annual billing — coming soon',
       description:
-        'Built for growing teams that need more headroom and finer-grained controls.',
+        'For growing teams that need more headroom — bigger seat counts, tighter controls, and the audit features customers ask about.',
       cta: {
         label: 'Notify me at launch',
         href: 'mailto:support@neurostack.in?subject=TaskFlow%20Pro%20launch%20notification',
@@ -1675,7 +1656,7 @@ function Pricing() {
       priceUnit: null,
       priceFootnote: 'Tailored to your scale and compliance needs',
       description:
-        'For large organisations with security, residency, or scale requirements.',
+        'For large organizations with security, data-residency, or compliance requirements that warrant a contract.',
       cta: {
         label: 'Contact sales',
         href: 'mailto:support@neurostack.in?subject=TaskFlow%20Enterprise%20enquiry',
@@ -1727,19 +1708,15 @@ function Pricing() {
             </div>
           </Reveal>
           <Reveal direction="up" delay={80}>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              Plans that{' '}
-              <span className="bg-gradient-to-r from-primary via-accent to-fuchsia-500 bg-clip-text text-transparent">
-                scale with you
-              </span>
-              .
+            <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl lg:text-5xl">
+              Pricing that grows with the team.
             </h2>
           </Reveal>
           <Reveal direction="up" delay={160}>
             <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
-              Start free with the full product. Upgrade to Pro when your team
-              outgrows the seat cap, or move to Enterprise for SSO, custom
-              retention, and dedicated infrastructure.
+              Start free with the full product — no card, no demo call.
+              Move to Pro when your team outgrows the seat cap. Talk to us
+              about Enterprise when your procurement team gets involved.
             </p>
           </Reveal>
         </div>
@@ -2130,9 +2107,10 @@ function LandingFooter() {
           <div className="md:col-span-3 lg:col-span-3">
             <Logo size="md" hideSubline />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              A unified workspace for tasks, time tracking, daily summaries,
-              and time-off management. Built for modern teams that value
-              accountability and operational clarity.
+              Tasks, time tracking, daily updates, and time-off — in one
+              app. Built for teams that bill by the hour, ship against
+              deadlines, or owe a client an honest answer about how the
+              week was spent.
             </p>
 
             {/* Availability strip — immediately communicates multi-platform */}
