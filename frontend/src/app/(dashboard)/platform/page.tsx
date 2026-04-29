@@ -318,7 +318,7 @@ export default function PlatformAdminPage() {
               </Button>
             ) : (
               <Button
-                variant="destructive"
+                variant="danger"
                 onClick={onSuspend}
                 loading={suspending}
               >
