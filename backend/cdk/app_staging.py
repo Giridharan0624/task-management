@@ -3,9 +3,12 @@ import aws_cdk as cdk
 from stack import TaskManagementStack
 
 STAGING_CONFIG = {
-    "cors_origins": ["http://localhost:3000"],
-    "allowed_origin": "http://localhost:3000",
-    "app_url": "http://localhost:3000",
+    "cors_origins": [
+        "https://taskflow-ns.vercel.app",
+        "http://localhost:3000",
+    ],
+    "allowed_origin": "https://taskflow-ns.vercel.app",
+    "app_url": "https://taskflow-ns.vercel.app",
     "api_stage": "staging",
     "gmail_secret_name": "taskflow-staging/gmail-credentials",
     "groq_secret_name": "taskflow-staging/groq-api-key",
