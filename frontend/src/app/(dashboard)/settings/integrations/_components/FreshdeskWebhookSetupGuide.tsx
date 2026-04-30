@@ -31,7 +31,7 @@ export function FreshdeskWebhookSetupGuide({
 
   function copy(text: string, label: string) {
     void navigator.clipboard.writeText(text)
-    toast.show(`${label} copied`, 'success')
+    toast.success(`${label} copied`)
   }
 
   return (

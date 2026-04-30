@@ -32,7 +32,7 @@ export default function IntegrationsPage() {
       <PageHeader
         title="Integrations"
         description="Connect 3rd-party tools — sync tickets, contacts, and events with your TaskFlow tasks."
-        action={
+        actions={
           planAllowed ? (
             <Link href="/settings/integrations/browse">
               <Button>

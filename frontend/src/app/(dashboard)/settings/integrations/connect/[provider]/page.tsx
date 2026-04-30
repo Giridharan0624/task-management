@@ -44,7 +44,7 @@ export default function ConnectProviderPage() {
 
   function copy(text: string, label: string) {
     void navigator.clipboard.writeText(text)
-    toast.show(`${label} copied to clipboard`, 'success')
+    toast.success(`${label} copied to clipboard`)
   }
 
   if (isLoading) {

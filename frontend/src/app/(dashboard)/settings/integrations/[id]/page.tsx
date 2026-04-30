@@ -53,13 +53,10 @@ export default function IntegrationDetailPage() {
 
     try {
       await disconnect.mutateAsync(integration.integrationId)
-      toast.show('Integration disconnected', 'success')
+      toast.success('Integration disconnected')
       router.push('/settings/integrations')
     } catch (e) {
-      toast.show(
-        e instanceof Error ? e.message : 'Could not disconnect',
-        'error',
-      )
+      toast.error(e instanceof Error ? e.message : 'Could not disconnect')
     }
   }
 
@@ -76,7 +73,7 @@ export default function IntegrationDetailPage() {
       <PageHeader
         title={integration.displayName}
         description={`Provider: ${integration.provider}`}
-        action={
+        actions={
           <Button variant="danger" onClick={handleDisconnect} disabled={disconnect.isPending}>
             <Trash2 className="mr-2 h-4 w-4" />
             Disconnect
