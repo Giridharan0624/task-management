@@ -616,7 +616,11 @@ export default function DashboardLayout({
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent
             side="left"
-            className="w-[280px] p-0 border-r border-sidebar-border"
+            // 85vw on phones leaves a thumb-sized gutter so swiping closed
+            // is easy and the page underneath is still legible. Caps at
+            // 280px from sm+ so the drawer never grows wider than the
+            // desktop rail it mirrors.
+            className="w-[85vw] max-w-[320px] p-0 border-r border-sidebar-border sm:w-[280px]"
           >
             <SidebarContent
               user={user}

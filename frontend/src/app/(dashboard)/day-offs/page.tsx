@@ -821,6 +821,10 @@ export default function DayOffsPage() {
               />
             ) : (
               <Card className="overflow-hidden p-0">
+                {/* Wrapper allows horizontal scroll on mobile — six
+                    columns (Employee / Dates / Reason / Decision /
+                    Score / Status) blow past 640px viewports otherwise. */}
+                <div className="w-full overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -883,6 +887,7 @@ export default function DayOffsPage() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             )}
           </TabsContent>
@@ -944,6 +949,7 @@ export default function DayOffsPage() {
                   </DropdownMenu>
                 </div>
                 <Card className="overflow-hidden p-0">
+                  <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1004,6 +1010,7 @@ export default function DayOffsPage() {
                       ))}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
               </>
             )}
@@ -1052,6 +1059,7 @@ export default function DayOffsPage() {
                   </DropdownMenu>
                 </div>
                 <Card className="overflow-hidden p-0">
+                  <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1104,6 +1112,7 @@ export default function DayOffsPage() {
                       )}
                     </TableBody>
                   </Table>
+                  </div>
                 </Card>
               </>
             )}

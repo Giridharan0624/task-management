@@ -359,7 +359,7 @@ function PreviewPhase({
         </Alert>
       )}
 
-      <div className="max-h-[320px] overflow-y-auto rounded-lg border border-border">
+      <div className="max-h-[320px] overflow-x-auto overflow-y-auto rounded-lg border border-border">
         <table className="min-w-full text-xs">
           <thead className="sticky top-0 bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
             <tr>
@@ -551,7 +551,7 @@ function ResultSection({
       >
         {title}
       </div>
-      <div className="max-h-[240px] overflow-y-auto">{children}</div>
+      <div className="max-h-[240px] overflow-x-auto overflow-y-auto">{children}</div>
     </div>
   )
 }

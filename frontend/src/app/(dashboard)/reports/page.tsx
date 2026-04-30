@@ -1418,6 +1418,9 @@ function WeeklyView({
 
   return (
     <Card className="overflow-hidden p-0">
+      {/* Member-hours table runs 5+ wide columns; force horizontal scroll
+          on phones rather than letting it overflow the card. */}
+      <div className="w-full overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -1518,6 +1521,7 @@ function WeeklyView({
           </TableFooter>
         )}
       </Table>
+      </div>
     </Card>
   )
 }

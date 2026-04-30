@@ -168,12 +168,14 @@ export function WeeklyLeaderboard({
                 topEntry={entries[0]}
               />
 
-              <div className="px-5 py-3 animate-fade-in">
-                <div className="grid grid-cols-[36px_minmax(0,1fr)_auto_auto] items-center gap-x-4 border-b border-border/60 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <div className="px-3 py-3 animate-fade-in sm:px-5">
+                {/* Share column shrinks to a slim progress bar on phones
+                    (80px) and expands to its full label-width on tablet+. */}
+                <div className="grid grid-cols-[28px_minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b border-border/60 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:grid-cols-[36px_minmax(0,1fr)_auto_auto] sm:gap-x-4">
                   <span className="text-center">Rank</span>
                   <span>Member</span>
                   <span className="text-right">Hours</span>
-                  <span className="w-[140px]">Share</span>
+                  <span className="w-[80px] sm:w-[140px]">Share</span>
                 </div>
                 <ul className="divide-y divide-border/60">
                   {entries.map((e, i) => (
@@ -214,7 +216,7 @@ function LeaderboardRow({
   const isTop = rank === 1
 
   const baseClass =
-    'grid grid-cols-[36px_minmax(0,1fr)_auto_auto] items-center gap-x-4 py-2.5 text-left transition-colors'
+    'grid grid-cols-[28px_minmax(0,1fr)_auto_auto] items-center gap-x-3 py-2.5 text-left transition-colors sm:grid-cols-[36px_minmax(0,1fr)_auto_auto] sm:gap-x-4'
 
   const content = (
     <>
@@ -255,7 +257,7 @@ function LeaderboardRow({
         {formatDuration(entry.hours)}
       </span>
 
-      <div className="flex w-[140px] items-center gap-2">
+      <div className="flex w-[80px] items-center gap-2 sm:w-[140px]">
         <Progress
           value={pct}
           className={cn(

@@ -46,8 +46,8 @@ export default function IntegrationDetailPage() {
       title: `Disconnect ${integration.displayName}?`,
       description:
         'Existing linked tasks will remain in TaskFlow. Inbound webhooks will be rejected. You can reconnect at any time.',
-      confirmText: 'Disconnect',
-      destructive: true,
+      confirmLabel: 'Disconnect',
+      variant: 'danger',
     })
     if (!ok) return
 

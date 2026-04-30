@@ -150,7 +150,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   return (
     <div
       role="status"
-      className={`pointer-events-auto flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm animate-fade-in-scale min-w-[280px] max-w-[420px] ${bg[toast.type]}`}
+      className={`pointer-events-auto flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm animate-fade-in-scale w-[calc(100vw-2rem)] max-w-[420px] sm:w-auto sm:min-w-[280px] ${bg[toast.type]}`}
       style={{ animationDuration: '0.2s' }}
     >
       {icons[toast.type]}

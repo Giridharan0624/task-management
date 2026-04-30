@@ -655,10 +655,11 @@ function MemberBreakdown({ records, totalHours }: { records: Attendance[]; total
                 </div>
               </button>
 
-              {/* Expanded session details */}
+              {/* Expanded session details — 6 columns scroll horizontally
+                  on phones rather than overflowing the parent card. */}
               {isOpen && (
-                <div className="bg-muted/40 px-6 pb-4">
-                  <table className="w-full text-xs">
+                <div className="overflow-x-auto bg-muted/40 px-6 pb-4">
+                  <table className="w-full min-w-[560px] text-xs">
                     <thead>
                       <tr className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold">
                         <th className="text-left py-2 pr-3">Date</th>
