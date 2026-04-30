@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from contexts.task.application.use_cases import AssignTaskUseCase
 from shared_kernel import notifications, webhooks
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.integration_emitter import emit_item_changed
 from shared_kernel.permissions import require_not_suspended
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
@@ -59,6 +60,7 @@ def handler(event, context):
                 "task": result,
             },
         )
+        emit_item_changed(auth.org_id, "TASK", task_id, "UPDATED")
         return build_success(200, result)
     except Exception as e:
         return build_error(e)

@@ -263,3 +263,72 @@ Auto-built from attendance records. Returns update with task summaries and time 
 
 ### `GET /task-updates/me` — My updates
 **Response:** `200` — Array of my task update objects
+
+---
+
+## Integrations (3rd-party connectors)
+
+Pro / Enterprise plans only. The integration platform lets each org connect 3rd-party tools (Freshdesk first, others later). TaskFlow consumes the provider's API and webhooks; nothing is deployed into the 3rd-party product.
+
+> **Different host:** All integration endpoints live on a **dedicated API Gateway** separate from the main TaskFlow API. Frontend uses `NEXT_PUBLIC_INTEGRATIONS_API_URL`; the value comes from the `IntegrationsApiUrl` CFN output of `IntegrationsNestedStack` after deploy. Auth is the same Cognito JWT as the main API.
+
+See [docs/planning/INTEGRATION-PLATFORM-PLAN.md](../planning/INTEGRATION-PLATFORM-PLAN.md) for architecture detail and the additivity contract.
+
+### `GET /integrations/providers` — List installed connectors
+Public catalog (any authenticated user can read it). Drives the connect-wizard UI.
+
+**Response:** `200`
+```json
+{
+  "providers": [
+    {
+      "provider": "freshdesk",
+      "display_name": "Freshdesk / Freshservice",
+      "auth_method": "API_KEY",
+      "capabilities": ["READ_ITEMS", "WRITE_ITEMS", "RECEIVE_WEBHOOKS"],
+      "connect_form_schema": { "title": "Connect Freshdesk", "fields": [] }
+    }
+  ]
+}
+```
+
+### `GET /integrations` — List the org's connections
+**Response:** `200` — array of public integration records (no credentials, no webhook secret).
+
+### `POST /integrations/{provider}` — Connect a new integration
+| Field | Type | Required |
+|-------|------|----------|
+| form | object | yes — keys match the provider's `connect_form_schema.fields` |
+| assignee_mode | `STRICT` \| `FALLBACK` \| `AUTO_INVITE` | no (default `STRICT`) |
+| fallback_assignee_id | string \| null | no — required when mode=FALLBACK |
+| linked_project_id | string \| null | no |
+
+**Plan gate:** Free/Starter blocked (`INTEGRATIONS_PLAN_BLOCKED`); Pro capped at 3 active integrations across all providers (`INTEGRATIONS_PLAN_LIMIT_REACHED`); Enterprise unlimited.
+
+**Response:** `201`
+```json
+{
+  "integration": {},
+  "webhook_secret": "<one-time plaintext, store now>",
+  "webhook_url_path": "/integration-webhooks/freshdesk/webhook/{org_id}/{integration_id}"
+}
+```
+The `webhook_secret` is shown ONCE. Only its SHA-256 hash is persisted server-side. Admins paste it into their provider's webhook configuration as the `Authorization: Bearer ...` header value.
+
+### `GET /integrations/{integration_id}` — Inspect one integration
+**Response:** `200` — public integration record.
+
+### `DELETE /integrations/{integration_id}` — Disconnect
+Removes the credential row. ExternalLink rows (task ↔ external item bindings) are kept for audit; admins can clear them via a separate purge action (Phase 2).
+
+**Response:** `200` — `{ "status": "disconnected" }`
+
+### `POST /integration-webhooks/{provider}/webhook/{org_id}/{integration_id}` — Provider callback
+**Unauthenticated by Cognito** — bearer auth via the per-integration secret hash stored at connect time. Callers must send `Authorization: Bearer <secret>`. Body shape is provider-specific (Workflow Automator templated payload for Freshdesk).
+
+**Response:** `200` — `{ "status": "queued", "event_id": "..." }` (the dispatcher returns fast; reconciliation happens off the SQS sync queue).
+
+**Failure modes:**
+- `401` — invalid bearer
+- `404` — unknown provider, integration, or path mismatch
+- `503` — sync queue unavailable; provider should retry

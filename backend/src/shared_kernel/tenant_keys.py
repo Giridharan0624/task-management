@@ -278,3 +278,41 @@ def audit_sk(created_at: str, event_id: str) -> str:
     chronological order, and `event_id` breaks ties for events recorded
     in the same millisecond."""
     return f"EVENT#{created_at}#{event_id}"
+
+
+# ---------------------------------------------------------------------------
+# Integrations (3rd-party connectors — Freshdesk, Slack, Jira, ...)
+#
+# Provider-namespaced so the same schema serves every connector. The
+# integration platform is purely additive; nothing outside contexts/integrations
+# reads or writes these keys.
+# ---------------------------------------------------------------------------
+
+def integration_sk(provider: str, integration_id: str) -> str:
+    """One row per (org, provider, integration). Holds the encrypted
+    credentials blob, status, mode, webhook secret hash, etc."""
+    return f"INTEGRATION#{provider}#{integration_id}"
+
+
+def integration_event_sk(integration_id: str, received_at: str, event_id: str) -> str:
+    """Audit row for a single inbound webhook delivery. 30-day TTL."""
+    return f"INTEGRATION#{integration_id}#EVENT#{received_at}#{event_id}"
+
+
+def integration_outbox_sk(integration_id: str, sync_id: str) -> str:
+    """Sentinel for a recently-pushed outbound write so the webhook it
+    triggers can be detected as our own echo. 5-minute TTL."""
+    return f"INTEGRATION#{integration_id}#OUTBOX#{sync_id}"
+
+
+def extlink_external_sk(provider: str, external_id: str) -> str:
+    """Lookup row keyed by (provider, external_id) — used when an inbound
+    webhook arrives and we need the corresponding TaskFlow item."""
+    return f"EXTLINK#{provider}#{external_id}"
+
+
+def extlink_item_sk(item_type: str, item_id: str, provider: str) -> str:
+    """Reverse lookup keyed by the TaskFlow item — the item type is
+    intentionally first so a single Begins-With query lists every external
+    binding for an item across all providers."""
+    return f"EXTLINK#ITEM#{item_type}#{item_id}#{provider}"

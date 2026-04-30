@@ -23,6 +23,7 @@ import {
   KanbanSquare,
   Key,
   Palette,
+  Plug,
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
@@ -92,6 +93,13 @@ const ITEMS: NavItem[] = [
     label: 'Webhooks',
     description: 'HMAC-signed event delivery',
     icon: Webhook,
+    requiredPermission: 'settings.edit',
+  },
+  {
+    href: '/settings/integrations',
+    label: 'Integrations',
+    description: 'Connect Freshdesk and other 3rd-party tools',
+    icon: Plug,
     requiredPermission: 'settings.edit',
   },
   {

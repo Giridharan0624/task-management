@@ -1,6 +1,11 @@
 import type { ApiError } from '@/types/api'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
+// Integrations have their own dedicated API Gateway (see
+// IntegrationsNestedStack). Falls back to the main BASE_URL when the env
+// var isn't set so dev/legacy environments keep working.
+const INTEGRATIONS_BASE_URL =
+  process.env.NEXT_PUBLIC_INTEGRATIONS_API_URL ?? BASE_URL
 
 function snakeToCamel(str: string): string {
   return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
@@ -50,7 +55,8 @@ function getToken(): string | null {
 async function request<T>(
   method: string,
   path: string,
-  body?: unknown
+  body?: unknown,
+  baseUrl: string = BASE_URL
 ): Promise<T> {
   const token = getToken()
   const headers: Record<string, string> = {
@@ -69,7 +75,7 @@ async function request<T>(
     init.body = JSON.stringify(transformKeysToSnake(body))
   }
 
-  const url = `${BASE_URL}${path}`
+  const url = `${baseUrl}${path}`
   const response = await fetch(url, init)
 
   if (!response.ok) {
@@ -126,5 +132,32 @@ export const apiClient = {
   },
   del<T>(path: string): Promise<T> {
     return request<T>('DELETE', path)
+  },
+}
+
+/**
+ * Dedicated client for the integration platform — calls the separate
+ * RestApi instantiated by IntegrationsNestedStack. Set
+ * NEXT_PUBLIC_INTEGRATIONS_API_URL to the CFN output `IntegrationsApiUrl`
+ * after staging deploy.
+ *
+ * Same JWT, same camel/snake transforms, same auth-error handling — only
+ * the base URL differs.
+ */
+export const integrationsApiClient = {
+  get<T>(path: string): Promise<T> {
+    return request<T>('GET', path, undefined, INTEGRATIONS_BASE_URL)
+  },
+  post<T>(path: string, body: unknown): Promise<T> {
+    return request<T>('POST', path, body, INTEGRATIONS_BASE_URL)
+  },
+  put<T>(path: string, body: unknown): Promise<T> {
+    return request<T>('PUT', path, body, INTEGRATIONS_BASE_URL)
+  },
+  patch<T>(path: string, body: unknown): Promise<T> {
+    return request<T>('PATCH', path, body, INTEGRATIONS_BASE_URL)
+  },
+  del<T>(path: string): Promise<T> {
+    return request<T>('DELETE', path, undefined, INTEGRATIONS_BASE_URL)
   },
 }

@@ -10,7 +10,9 @@ Three deployable units in one monorepo:
 - `frontend/` — Next.js 16 (App Router) web app deployed to Vercel. Uses `amazon-cognito-identity-js` (SRP) for auth and React Query for state.
 - `desktop/` — Go 1.22 + Wails v2 + Preact companion app (Windows/Linux/macOS) for timer, activity counters, and screenshots. Talks to the same API with a Cognito token.
 
-[docs/saas/SAAS-MIGRATION.md](docs/saas/SAAS-MIGRATION.md) and [docs/saas/SAAS-CHANGES.md](docs/saas/SAAS-CHANGES.md) describe the multi-tenant conversion currently on the `saas-migration` branch; read them before touching anything under `contexts/org/` or `shared_kernel/tenant_keys.py`.
+`frontend/` and `desktop/` are **nested standalone git repos**, not git submodules — there is no `.gitmodules`. Pulling/pushing each unit happens inside its own repo; commits on the root repo do not capture changes inside them.
+
+[docs/saas/SAAS-MIGRATION.md](docs/saas/SAAS-MIGRATION.md) and [docs/saas/SAAS-CHANGES.md](docs/saas/SAAS-CHANGES.md) describe the multi-tenant conversion currently on the `saas-migration` branch; read them before touching anything under `contexts/org/` or `shared_kernel/tenant_keys.py`. Live tracking docs (also worth checking before claiming a phase is done): [docs/saas/SAAS-PROGRESS.md](docs/saas/SAAS-PROGRESS.md), [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md), [docs/saas/SAAS-ROADMAP.md](docs/saas/SAAS-ROADMAP.md), [docs/saas/PHASE-1-STAGING-DEPLOY.md](docs/saas/PHASE-1-STAGING-DEPLOY.md).
 
 ## Common commands
 
@@ -26,18 +28,19 @@ CDK lives in `backend/cdk/`:
 
 ```bash
 cd backend/cdk
-cdk bootstrap                             # first time only
-cdk deploy                                # PROD via app.py — uses --profile company
-cdk deploy --app "python app_staging.py"  # STAGING — default (personal) AWS profile
-cdk deploy --app "python app_company.py"  # NEUROSTACK prod tenant with custom domain
+cdk bootstrap --profile company                                # first time only
+cdk deploy --app "python app_company_v2.py" --profile company  # ACTIVE — taskflow-v2 (V2)
+cdk deploy --profile company                                   # LEGACY PROD via app.py — DO NOT TOUCH
+cdk deploy --app "python app_company.py"  --profile company    # LEGACY NEUROSTACK prod tenant — DO NOT TOUCH
 ```
 
-Deployment profile convention (do not deviate):
+Deployment landscape after the 2026-04-30 staging decommission:
 
-- Staging → default AWS profile (personal account); entry point `app_staging.py`.
-- Prod → `--profile company`; entry point `app.py` or `app_company.py`.
-- Never deploy to prod without first verifying end-to-end on staging.
-- Never edit `app.py` to add staging-only knobs; add them to `app_staging.py`.
+- **`taskflow-v2`** (active) — entry point `app_company_v2.py`, on `--profile company`. All non-customer-facing development lands here. Has the integration platform.
+- **`taskflow`** (legacy prod) — entry point `app.py` / `app_company.py`. Hosts live customers. **DO NOT TOUCH** until the user explicitly says "cut over to legacy prod" — see the `no-touch-legacy-taskflow` memory.
+- The **personal-account staging stack was destroyed 2026-04-30**. `app_staging.py` may still exist in the repo but the stack it deployed is gone. Don't recreate it without explicit user request.
+- Never edit `app.py` / `app_company.py` to add experimental knobs; add them to `app_company_v2.py`.
+- Promotion order: V2 → (verify) → legacy prod cutover, gated by explicit user authorization.
 
 ### Frontend (run from `frontend/`)
 
@@ -48,7 +51,7 @@ npm run build      # production build
 npm run lint       # next lint
 ```
 
-Env file `frontend/.env.local` must define `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`, `NEXT_PUBLIC_AWS_REGION=ap-south-1`. Values come from the CDK stack outputs (`backend/output.json`).
+Env file `frontend/.env.local` must define `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`, `NEXT_PUBLIC_AWS_REGION=ap-south-1`, and `NEXT_PUBLIC_INTEGRATIONS_API_URL` (the dedicated integrations API Gateway hostname — separate from the main API). Values come from V2 CDK stack outputs (parent stack + `IntegrationsNestedStack` outputs for the integrations URL).
 
 ### Desktop (run from `desktop/`)
 
@@ -66,7 +69,7 @@ Config values (API URL, Cognito IDs, dashboard URL, version) are injected at bui
 
 ### Backend — DDD bounded contexts on a single Lambda stack
 
-Each bounded context in [backend/src/contexts/](backend/src/contexts/) has the same four-layer split: `domain/` (entities, value objects, repo interfaces), `application/` (use cases + authorization), `infrastructure/` (DynamoDB repo, mappers, external services), `handlers/` (Lambda entry points). Contexts: `user`, `project`, `task`, `comment`, `attendance`, `dayoff`, `taskupdate`, `activity`, `upload`, `org`.
+Each bounded context in [backend/src/contexts/](backend/src/contexts/) has the same four-layer split: `domain/` (entities, value objects, repo interfaces), `application/` (use cases + authorization), `infrastructure/` (DynamoDB repo, mappers, external services), `handlers/` (Lambda entry points). Contexts (12 total): `user`, `project`, `task`, `comment`, `attendance`, `dayoff`, `taskupdate`, `activity`, `upload`, `org`, `system`. `org` is by far the largest (~45 files — Cognito, RBAC, invites, multi-tenant logic); expect ripple effects when changing it.
 
 CDK [backend/cdk/stack.py](backend/cdk/stack.py) wires every handler module to an API Gateway route and a dedicated Lambda. The stack is parameterized by a `stage_config` dict (table name, Cognito pool name, CORS origins, Gmail/Groq secret names, etc.) passed from the app entry point. There are ~32 Lambdas and ~51 routes; adding a new endpoint means both a new handler module *and* a new route binding in `stack.py`.
 
@@ -111,7 +114,7 @@ SRP authentication (password never leaves the browser). The ID token carries `cu
 
 ### Frontend shape
 
-`frontend/src/app/` uses Next.js App Router route groups: `(auth)` for login/signup, `(dashboard)` for authenticated pages. `frontend/src/lib/api/` is a per-resource API client thin layer on `fetch`; `frontend/src/lib/hooks/` wraps each call in a React Query hook. `frontend/src/lib/tenant/` and `frontend/src/components/tenant/` hold the workspace-code resolver, tenant context, and branding overrides for the SaaS migration.
+`frontend/src/app/` uses Next.js App Router route groups: `(auth)` for login/signup, `(dashboard)` for authenticated pages. `frontend/src/lib/api/` is a per-resource API client thin layer on `fetch` (~14 clients); `frontend/src/lib/hooks/` wraps each call in a React Query hook (~27 hooks — domain hooks plus heavy UX helpers like `useAutosaveDraft`, `useUndoableDelete`, `useUnsavedChangesGuard`, `useUrlState`, `useValueFlash`). The hook layer is foundational; touching it ripples across many pages. `frontend/src/lib/tenant/` and `frontend/src/components/tenant/` hold the workspace-code resolver, tenant context, and branding overrides for the SaaS migration.
 
 ### Desktop shape
 
@@ -127,11 +130,15 @@ The timer is migrating from web to desktop-only — both surfaces run today, but
 - Gmail SMTP and Groq API keys live in Secrets Manager (`taskflow/gmail-credentials`, `taskflow/groq-api-key`; staging prefix `taskflow-staging/...`). Do not embed them in env vars.
 - Backfill script [backend/scripts/backfill_neurostack.py](backend/scripts/backfill_neurostack.py) is idempotent and non-destructive (always honors `attribute_not_exists(PK) AND attribute_not_exists(SK)`); run `--dry-run` first, always against staging before prod.
 - Domain ruff line length is 100 (`backend/pyproject.toml`).
+- Backend tests are sparse and flat: ~6 files in [backend/tests/](backend/tests/) covering 12 contexts, all in one directory (no per-context split). When adding a new context or major use case, bootstrap matching test scaffolding — coverage gaps are real.
 
 ## Documentation worth reading before larger changes
 
 - [docs/saas/SAAS-MIGRATION.md](docs/saas/SAAS-MIGRATION.md) — full phased plan for the multi-tenant conversion
 - [docs/saas/SAAS-CHANGES.md](docs/saas/SAAS-CHANGES.md) — running log of what each phase actually shipped
+- [docs/saas/SAAS-PROGRESS.md](docs/saas/SAAS-PROGRESS.md) / [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) — live P0/P1/P2 tracking; check before declaring a phase done
+- [docs/saas/SAAS-ROADMAP.md](docs/saas/SAAS-ROADMAP.md) — future phases
+- [docs/saas/PHASE-1-STAGING-DEPLOY.md](docs/saas/PHASE-1-STAGING-DEPLOY.md) — step-by-step staging deploy checklist
 - [docs/architecture/RBAC-DOCUMENTATION.md](docs/architecture/RBAC-DOCUMENTATION.md) — system roles vs. project roles, permission matrix
 - [docs/architecture/TIMER-ARCHITECTURE.md](docs/architecture/TIMER-ARCHITECTURE.md) — timer state machine across web + desktop
 - [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) — plan tiers, capacity caps, feature gating

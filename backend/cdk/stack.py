@@ -23,6 +23,8 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+from nested.core_stack import CoreNestedStack
+from nested.integrations_stack import IntegrationsNestedStack
 from nested.org_stack import OrgNestedStack
 from nested.workflow_stack import WorkflowNestedStack
 
@@ -352,18 +354,13 @@ class TaskManagementStack(Stack):
         add_api_lambda("RemoveMember", "contexts.project.handlers.remove_member.handler", "DELETE", member)
         add_api_lambda("UpdateMemberRole", "contexts.project.handlers.update_member_role.handler", "PUT", member_role)
 
-        # ─── Task handlers ───────────────────────────────────────────────────
-        add_api_lambda("CreateTask", "contexts.task.handlers.create_task.handler", "POST", tasks)
-        # ListTasks method + Lambda live in Org nested stack.
-        add_api_lambda("GetTask", "contexts.task.handlers.get_task.handler", "GET", task)
-        add_api_lambda("UpdateTask", "contexts.task.handlers.update_task.handler", "PUT", task)
-        add_api_lambda("DeleteTask", "contexts.task.handlers.delete_task.handler", "DELETE", task)
-        add_api_lambda("AssignTask", "contexts.task.handlers.assign_task.handler", "PUT", task_assign)
-
-
-        # ─── Comment handlers ────────────────────────────────────────────────
-        add_api_lambda("CreateComment", "contexts.comment.handlers.create_comment.handler", "POST", comments)
-        # ListComments method + Lambda live in Org nested stack.
+        # ─── Task + Comment handlers (nested) ───────────────────────────────
+        # Carved out into CoreNestedStack to free CFN resource budget on the
+        # parent. Methods + Lambdas live in the nested stack; the API GW
+        # Resources (tasks, {taskId}, assign, comments) stay here in the
+        # parent because they're shared with handlers in OrgNestedStack
+        # (ListTasks / ListComments etc.).
+        # ListTasks + ListComments methods + Lambdas live in Org nested stack.
 
         # ─── User handlers ───────────────────────────────────────────────────
         # GetProfile + MyTasks methods + Lambdas live in Org nested stack.
@@ -488,6 +485,29 @@ class TaskManagementStack(Stack):
             user_progress_resource=user_progress,
         )
 
+        # ─── Task + Comment handlers (nested) ───────────────────────────────
+        # Migrated from inline parent-stack handlers to a nested stack to
+        # free CFN resource budget. The parent was sitting at ~499/500
+        # resources with WAF + integrations enabled; this saves ~29 in the
+        # parent (6 handlers × ~5 CFN resources, minus the +1 nested
+        # stack reference). API GW Resources stay in parent — only the
+        # Methods + Lambdas move here.
+        CoreNestedStack(
+            self,
+            "Core",
+            api=api,
+            authorizer=authorizer,
+            table=table,
+            deps_layer=deps_layer,
+            lambda_src=LAMBDA_SRC,
+            lambda_env=lambda_env,
+            log_retention=log_retention,
+            tasks_resource=tasks,
+            task_resource=task,
+            task_assign_resource=task_assign,
+            comments_resource=comments,
+        )
+
         # ─── Attendance + Day-off handlers (nested) ─────────────────────────
         # Same pattern as OrgNestedStack: free CFN resource budget by
         # putting these context handlers in their own nested stack.
@@ -503,6 +523,31 @@ class TaskManagementStack(Stack):
             lambda_env=lambda_env,
             log_retention=log_retention,
         )
+
+        # ─── Integrations platform (opt-in per stage) ────────────────────────
+        # Pure-additive integration platform (Freshdesk + future connectors).
+        # Only instantiated when the stage explicitly opts in via
+        # `integrations_enabled=True` — staging does, prod stays off until
+        # explicit cut-over per the no-prod-during-saas-migration memory.
+        # When disabled: zero resources, zero Lambdas, zero IAM, zero impact.
+        #
+        # Owns its OWN dedicated RestApi (separate hostname). This isolates
+        # the integration platform's API surface entirely from the parent
+        # stack's ~500-resource budget. Frontend wires the new host via
+        # NEXT_PUBLIC_INTEGRATIONS_API_URL — see CfnOutput in the nested stack.
+        if config.get("integrations_enabled"):
+            IntegrationsNestedStack(
+                self,
+                "Integrations",
+                user_pool=user_pool,
+                table=table,
+                deps_layer=deps_layer,
+                lambda_src=LAMBDA_SRC,
+                lambda_env=lambda_env,
+                cors_origins=config["cors_origins"],
+                api_stage_name=config.get("api_stage", "prod"),
+                log_retention=log_retention,
+            )
 
         # ─── Activity handlers (desktop app heartbeats) ───────────────────
         activity = api.root.add_resource("activity")
@@ -729,7 +774,7 @@ class TaskManagementStack(Stack):
                 ],
             )
 
-            wafv2.CfnWebACLAssociation(
+            web_acl_assoc = wafv2.CfnWebACLAssociation(
                 self,
                 "ApiWebAclAssoc",
                 web_acl_arn=web_acl.attr_arn,
@@ -737,6 +782,16 @@ class TaskManagementStack(Stack):
                     f"arn:aws:apigateway:{self.region}::/restapis/"
                     f"{api.rest_api_id}/stages/{config['api_stage']}"
                 ),
+            )
+            # The resource_arn is a string built from `api.rest_api_id` —
+            # CDK has no way to infer that the association depends on the
+            # API Gateway stage being deployed first. Without this explicit
+            # dependency, fresh CREATE (not UPDATE) deploys race the
+            # association against the stage and fail with `NotFound`.
+            # Anchor on the API GW Deployment Stage that ApiGateway creates
+            # for `config['api_stage']`.
+            web_acl_assoc.add_dependency(
+                api.deployment_stage.node.default_child  # AWS::ApiGateway::Stage
             )
 
         # ─── CloudWatch alarms (ops visibility) ─────────────────────────────

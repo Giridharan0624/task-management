@@ -15,6 +15,11 @@ STAGING_CONFIG = {
     "table_name": "TaskManagementTable-staging",
     "user_pool_name": "TaskManagementUserPool-staging",
     "user_pool_client_name": "TaskManagementClient-staging",
+    # Phase 1P — integration platform deployed on staging only.
+    # Production app.py / app_company.py do NOT set this flag, so the
+    # IntegrationsNestedStack is not synthesized for prod stacks until
+    # the explicit cut-over step (Phase 1e.3).
+    "integrations_enabled": True,
 }
 
 app = cdk.App()

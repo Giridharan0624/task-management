@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from contexts.task.application.use_cases import UpdateTaskUseCase
 from shared_kernel.auth_context import extract_auth_context
+from shared_kernel.integration_emitter import emit_item_changed
 from shared_kernel.permissions import require_not_suspended
 from shared_kernel.response import build_error, build_success
 from shared_kernel.validate_body import validate_body
@@ -36,6 +37,7 @@ def handler(event, context):
         project_repo = ProjectDynamoRepository()
         use_case = UpdateTaskUseCase(task_repo, project_repo)
         result = use_case.execute(dto, auth.user_id, auth.system_role)
+        emit_item_changed(auth.org_id, "TASK", task_id, "UPDATED")
         return build_success(200, result)
     except Exception as e:
         return build_error(e)
