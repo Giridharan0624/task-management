@@ -1,8 +1,8 @@
 # TaskFlow — Product Requirements Document
 
-**Version:** 2.3 (post-Session 8)
-**Status:** Staging verified, prod cutover pending
-**Last updated:** 2026-04-24
+**Version:** 2.4 (post-Session 9)
+**Status:** V2 verified on staging + prod V2; legacy-prod cutover pending
+**Last updated:** 2026-04-30
 
 ---
 
@@ -90,23 +90,26 @@ System roles are seeded at signup (`owner`, `admin`, `member`) but are backed by
 
 ### 4.6 Reports & AI summaries
 - Summary / detailed / weekly / activity views with Recharts
-- Groq LLaMA 3.3 generates daily productivity summaries (feature-flagged per tenant)
-- **Weekly AI rollup** (Session 8): aggregates a full week's task updates **plus attendance, activity, and day-off** records into a single editorial recap; each data source is wrapped so a single repo failure can't torpedo the rollup
+- Groq LLaMA 3.3 generates daily productivity summaries (**PRO-tier**, feature-flagged per tenant)
+- **Weekly AI rollup** (Session 8): aggregates a full week's task updates **plus attendance, activity, and day-off** records into a single editorial recap; each data source is wrapped so a single repo failure can't torpedo the rollup. Also **PRO-tier** as of Session 9.
+- **AI plan-tier migration (Session 9)**: `ai_summaries` moved from `FREE_FEATURES` into `PRO_FEATURES`. Both AI surfaces share the umbrella `ai_summaries` flag; one plan upgrade unlocks both. The `require_feature()` backend helper now checks `plan.features_allowed` first (raises typed `PLAN_FEATURE_LOCKED`) before checking the OWNER's settings toggle (raises `FEATURE_DISABLED`); the frontend `<FeatureGate>` and `<FeaturesPanel>` mirror both checks so PRO-only affordances hide cleanly on FREE plans.
 - **Project Reports tab** restructured (Session 8) into inner tabs (Overview / Workload / Sessions) with a consolidated period+navigator+export toolbar, pixel-grid metric strip, and donut without tooltip-collision
 - CSV export for attendance
 
 ### 4.7 Branding & terminology
-- Per-org primary + accent colors propagated via CSS variables
+- **5-up curated theme picker** (Session 9): one of five professionally-paired light+dark palettes (Aurora / Slate / Sunset / Forest / Mono) seeded into `OrgSettings.theme`. The picker writes the entire palette (background, card, primary, accent, sidebar) for both modes — members get the same look in light AND dark without per-mode tuning.
+- **Curated font picker** (Session 9): seven professional sans-serifs (Outfit/Inter/Manrope/Plus Jakarta Sans/Lexend/DM Sans/IBM Plex Sans) selectable per workspace via `OrgSettings.fontFamily`. Lazy-loads stylesheet on apply; falls back to the default Outfit when null.
 - Logo + favicon uploads (S3 + CDN)
 - Terminology overrides: tenant can rename "Task" → "Ticket", "Project" → "Engagement", etc. Runtime `useT()` hook reads the override map.
 - Locale: timezone, currency, week-start day, working hours
+- **Settings nav rename** (Session 9): the destructive group ("Transfer ownership" + "Delete workspace") is now labelled **"Workspace controls"** instead of "Danger zone" — neutral enterprise-grade phrasing, with link colors restored from muted-grey to normal nav weight (hover still flips destructive-red to preserve gravity signal).
 
 ### 4.8 Plans & quotas
-- **FREE**: 10 users, 3 projects, 30-day retention. Includes activity tracking, AI daily summaries + weekly rollups, desktop apps.
-- **PRO**: 50 users, 50 projects, 365-day retention. Adds screenshots, custom roles, custom pipelines, HMAC webhooks, public REST API (planned), priority email support.
+- **FREE**: 10 users, 3 projects, 30-day retention. Includes activity tracking (counts only), desktop apps, day-offs, comments, daily updates, birthday wishes.
+- **PRO**: 50 users, 50 projects, 365-day retention. Adds **AI daily summaries + weekly rollup**, periodic screenshots, custom roles, custom pipelines, HMAC webhooks, **3rd-party integrations** (Freshworks today; more connectors planned), public REST API (planned), priority email support.
 - **ENTERPRISE**: unlimited members/projects, unlimited retention, white-label branding, dedicated infra on request, named CSM + SLA. SAML/OIDC SSO, SCIM provisioning, and custom domain are on the roadmap (visible on the pricing page with a "Soon" tag, not yet shipping).
 - **Capacity caps** (`max_users`, `max_projects`) enforced **at write-time** in `CreateUserUseCase`, `SendInviteUseCase`, and `CreateProjectUseCase` — the user gets an actionable error before the row is created. Belt-and-braces: a nightly seat-reconciliation Lambda audits any race-induced overflow.
-- **Feature flags** (`screenshots`, `custom_roles`, `custom_pipelines`, `audit_logs`, `sso`, `white_label`, `custom_domain`, `api_access`) live on `Plan.features_allowed` and are checked at handler entry. `screenshots` is the only flag actively gated today; the rest are declared and waiting for the shared `plan_limits` helper to land.
+- **Feature flags** (`ai_summaries`, `screenshots`, `custom_roles`, `custom_pipelines`, `audit_logs`, `sso`, `white_label`, `custom_domain`, `api_access`) live on `Plan.features_allowed` and are checked at handler entry. **As of Session 9 the actively gated flags are `ai_summaries` and `screenshots`** — the rest still rely on the shared `plan_limits` helper to land. `require_feature()` distinguishes plan-locked (raises `PLAN_FEATURE_LOCKED` for upsell prompts) from settings-disabled (raises `FEATURE_DISABLED` for "ask your owner") — both gates fail-open on lookup error to avoid transient outages locking everyone out.
 - **Retention** enforced by a nightly sweeper (`activity/handlers/retention_sweeper.py`) that deletes rows past `plan.retention_days`. Currently sweeps `ACTIVITY#` items only — extending to `EVENT#` audit rows is a known gap.
 - Stripe integration not yet implemented; plan tier is set manually on the Org record. Full design and rollout plan in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md).
 
@@ -153,23 +156,54 @@ System roles are seeded at signup (`owner`, `admin`, `member`) but are backed by
 - **State persists in `OrgSettings.features`** under `onboarding_checklist_dismissed`, `onboarding_desktop_installed`, `onboarding_branding_done` — same dismiss state on every browser/device, no per-device localStorage drift
 - Card hides itself when all four steps are done OR the OWNER clicks the dismiss ✕
 
-### 4.16 Marketing surface (Session 8)
-- Landing page at `/` rebuilt with the Lexend display face and **glassmorphism** treatments across Hero, Problem, Features, How-it-works, FAQ, and Final-CTA sections
-- Pricing card replaced with a three-tier glass grid (Free / Pro / Enterprise); aspirational items (SSO, SCIM, custom domain, public REST API) carry a muted **"Soon"** pill so claims stay honest
+### 4.16a Departments catalog (Session 9)
+- OWNER-managed list of departments under Settings → Organization → Departments. Stored as `OrgSettings.departments` (a JSON array of strings) on the existing settings record — no separate partition needed.
+- Drives:
+  - The Department dropdown on the **Add user** form in `/admin/users` (replaces the previous hardcoded `Development / Designing / Management / Research` list)
+  - The Department filter chip on the admin Users page
+- Empty list is a valid OWNER choice (a workspace might not need departments at all). Legacy tenants without the field are seeded with a six-item default (Engineering / Design / Product / Marketing / Operations / People) the first time the panel renders.
+- Inline rename, drag-handle reorder via ▲▼ chevrons, delete with optional "Restore defaults" empty-state action.
+
+### 4.16b Integrations platform (Session 9)
+- Pluggable connector framework so 3rd-party tools (helpdesks, chat, source control, calendar) can sync work into TaskFlow tasks. Lives in its own bounded context (`backend/src/contexts/integrations/`) with a strict connector protocol contract enforced by CI tests.
+- **PRO-tier** feature, gated by `require_feature(auth, "integrations")` and the new `plan_gate.py` use case.
+- **First connector: Freshworks** (covers Freshdesk + Freshservice). Inbound webhook → idempotent `upsert_task_from_external` flow that creates or updates a TaskFlow task per ticket. Field mapping is per-connector and unit-tested.
+- HMAC-SHA256 webhook signature verification on inbound traffic; KMS-encrypted credentials at rest; per-tenant + per-provider isolation enforced by namespace tests so a Freshdesk webhook can't write into a Freshservice integration's data.
+- Dedicated nested CDK stack (`IntegrationsNestedStack`) with its own API Gateway domain (configured via `NEXT_PUBLIC_INTEGRATIONS_API_URL` on the frontend) so integration traffic stays isolated from the main API.
+- Frontend surface under `/settings/integrations` — browse providers, dynamic connect form (per-provider schema), per-integration detail page with disconnect, Freshdesk webhook setup guide with copy-to-clipboard helpers.
+- 8 contract/connector tests in `backend/tests/integrations/` (protocol compliance, namespace isolation, error swallowing, field mapping, inbound/outbound flow, webhook signature, parser).
+
+### 4.16 Marketing surface (Session 8, refined Session 9)
+- Landing page at `/` rebuilt with **glassmorphism** treatments across Hero, Problem, Features, How-it-works, FAQ, and Final-CTA sections (Lexend display face replaced by the tenant-cascade font system in Session 9 so the landing inherits whatever the workspace picks)
+- Pricing card is a three-tier glass grid (Free / Pro / Enterprise); aspirational items (SSO, SCIM, custom domain, public REST API) carry a muted **"Soon"** pill. **Session 9 fix**: AI bullet correctly placed under Pro (was previously listed under Free); Pro tier description leads with "AI-assisted reporting"
 - Page transitions use a pure-opacity `fade` variant — the previous `rise` variant created a CSS containing block on the wrapper that defeated `position: fixed` for the landing header, so the bar would scroll with the page
 - Public legal/security/status pages: `/privacy`, `/terms`, `/security`, `/status`, `/download`
+
+### 4.17 Responsive UX (Session 9)
+- Mobile-safe modals: `Dialog` content uses `w-[calc(100vw-2rem)]` mobile gutter, `sm:w-full` from tablet+; tighter padding on phones so dialogs no longer touch screen edges
+- Mobile sidebar drawer: `Sheet` width `w-[85vw] max-w-[320px] sm:w-[280px]` so phones get a thumb-sized swipe gutter
+- Wide tables (day-offs ×3, reports member-hours, bulk-import preview/result, time-report sessions) wrapped in `overflow-x-auto` so they scroll horizontally inside their card on phones rather than overflowing
+- Weekly leaderboard: rank column 36→28px, share bar 140→80px, gap and padding tightened on mobile; row template grid mirrors the header at every breakpoint so columns stay aligned
+- TodayHero alerts converted from a tall vertical list into a wrap-row of compact chips, so the column never grows taller than the greeting regardless of alert count
+- Toast width clamped to `w-[calc(100vw-2rem)] max-w-[420px] sm:w-auto sm:min-w-[280px]` — toasts no longer require horizontal scroll on narrow viewports
+
+### 4.18 Operational tooling (Session 9)
+- **`backend/scripts/force_signout_all.py`** — one-off CLI to close every currently-signed-in attendance session for a tenant. Use when "Working now" gets stuck full of demo seed users or clients that crashed before posting sign-out. Different from the scheduled stale-session sweeper — unconditional and immediate, scoped to today + yesterday in IST. Dry-run by default.
+- Lint script swap: `next lint` was removed in Next.js 16, replaced with `tsc --noEmit` in `frontend/package.json`. CI now runs the typechecker as the gate.
+- React 18 → React 19 upgrade — Next 16's internal Router uses React-19-only hook semantics; pairing it with React 18 produced random "Rendered more hooks" errors in the app router.
 
 ---
 
 ## 5. What ships today vs. what's planned
 
-### Production-ready (verified on staging)
-Multi-tenancy, signup, invites, system + project-scope RBAC (per-org), custom pipelines, audit viewer with friendly labels, suspension endpoint + UI, ownership transfer, health check, hCaptcha, Sentry scaffold, CI/CD, WAFv2 rate limiting, DynamoDB PITR, CloudWatch alarms, seat reconciliation, activity retention sweeper, email verification, TOTP 2FA, 30-day soft-delete + JSON export + hard-delete sweeper, change-email self-service, bulk CSV user import, in-app notifications, outbound webhooks with HMAC signing, platform operator console, i18n foundation, **composite activity score formula, weekly AI rollup with multi-source enrichment, server-persisted onboarding checklist, glass landing + 3-tier pricing surface, restructured Project Reports with inner tabs.**
+### Production-ready (verified on V2)
+Multi-tenancy, signup, invites, system + project-scope RBAC (per-org), custom pipelines, audit viewer with friendly labels, suspension endpoint + UI, ownership transfer, health check, hCaptcha, Sentry scaffold, CI/CD, WAFv2 rate limiting, DynamoDB PITR, CloudWatch alarms, seat reconciliation, activity retention sweeper, email verification, TOTP 2FA, 30-day soft-delete + JSON export + hard-delete sweeper, change-email self-service, bulk CSV user import, in-app notifications, outbound webhooks with HMAC signing, platform operator console, i18n foundation, composite activity score formula, weekly AI rollup with multi-source enrichment, server-persisted onboarding checklist, glass landing + 3-tier pricing surface, restructured Project Reports with inner tabs, **AI features migrated to PRO (`require_feature` now plan-aware), 5-up theme picker, curated font picker, departments catalog, Freshworks integration platform on the new IntegrationsNestedStack, "Workspace controls" settings nav rename, full responsive overhaul, force-signout admin script.**
 
-### Before prod cutover
-- Run backfill script against the company AWS account
+### Before legacy-prod cutover
+- Run backfill script against the company AWS account legacy stack
 - Set operator env vars (`PLATFORM_ADMIN_USER_IDS` + frontend mirror) for the platform console
 - Optional: set `HCAPTCHA_SECRET` + `SENTRY_DSN` to activate those systems
+- Verify the integrations webhook DNS + KMS key align with legacy expectations
 
 ### Post-launch backlog
 - SES migration from Gmail SMTP (current cap ~500/day via Gmail)

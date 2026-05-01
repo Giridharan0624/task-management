@@ -60,12 +60,14 @@ See [TDD.md](TDD.md) for the full system design.
 | **Attendance & timer** | Live timer (web + desktop), task switching, meeting mode, mandatory descriptions |
 | **Activity monitoring** | Desktop keyboard/mouse counts + screenshots (opt-in per tenant via feature flag) |
 | **Day-offs** | Request/approve/reject, per-org leave types, self-approval blocked |
-| **Reports** | Summary/detailed/weekly/activity, Recharts + CSV export, AI summaries via Groq, **weekly AI-rollup digest** that pulls task updates + attendance + activity + day-offs into one editorial recap |
+| **Reports** | Summary/detailed/weekly/activity, Recharts + CSV export, AI summaries via Groq (**PRO-tier**), **weekly AI-rollup digest** (PRO-tier) that pulls task updates + attendance + activity + day-offs into one editorial recap |
 | **Project Reports tab** | Inner tabs (Overview / Workload / Sessions), consolidated period+navigator+export toolbar, pixel-grid metric strip, donut without tooltip-collision |
 | **Activity score** | Composite `0.7 × presence + 0.3 × intensity` formula — punishes wiggle-farming, caps power-typists at 1.0, fed directly into the AI summary prompt |
-| **Branding & i18n** | Per-org colors (CSS vars), logo + favicon, terminology overrides (`useT()` hook), **locale-bound date/number/currency formatters** (`useFormat()` hook) |
-| **Onboarding** | Server-persisted first-run checklist on the OWNER dashboard; dismissal + per-step ticks live in `OrgSettings.features` so they survive across browsers |
-| **Marketing** | Glass-morphism landing with Lexend display face; 3-tier pricing card (Free/Pro/Enterprise) with honest "Soon" tags on aspirational items; legal/security/status/download pages |
+| **Branding & theming** | Per-org **5-up curated theme picker** (light + dark palettes per preset), **curated font picker** (7 professional sans-serifs), logo + favicon, terminology overrides (`useT()` hook), **locale-bound date/number/currency formatters** (`useFormat()` hook) |
+| **Departments** | OWNER-managed department catalog under Settings → Organization → Departments. Drives the dropdown on the user create form and the filter on the admin Users page; rename/reorder/delete inline with one-click "Restore defaults" |
+| **Integrations** | Pluggable connector platform (PRO-tier) with a Freshworks (Freshdesk + Freshservice) connector shipping today. HMAC-signed inbound webhooks, KMS-encrypted credentials, idempotent event ingestion, normalized field mapping into TaskFlow tasks |
+| **Onboarding** | Server-persisted first-run checklist on the OWNER dashboard; dismissal + per-step ticks live in `OrgSettings.features` so they survive across browsers; branding step ticks on theme/font/color customization |
+| **Marketing** | Glass-morphism landing; 3-tier pricing card (Free/Pro/Enterprise) with honest "Soon" tags on aspirational items; AI bullet correctly placed under Pro; legal/security/status/download pages |
 | **Ownership** | OWNER-only transfer with typed-email confirmation + forced token refresh |
 | **Suspension** | Platform-operator env-allowlist endpoint + fullscreen SuspendedScreen |
 | **Deletion** | OWNER-initiated soft-delete (30-day grace) + JSON export to S3 + nightly hard-delete sweeper |
@@ -82,7 +84,7 @@ See [TDD.md](TDD.md) for the full system design.
 | **Data protection** | DynamoDB PITR (7d staging / 35d prod), S3 encryption, presigned uploads scoped to `orgs/{orgId}/` |
 | **CI** | GitHub Actions: backend pytest + frontend lint/build, path-filtered |
 | **Scheduled jobs** | Nightly retention sweeper, seat reconciliation, daily AI summaries, 5-min stale session sweeper |
-| **Plans** | FREE (10u/3p/30d), PRO (50u/50p/365d), ENTERPRISE (unlimited). Capacity enforced at create sites + nightly seat reconciliation. Feature gating design in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md). |
+| **Plans** | FREE (10u/3p/30d), PRO (50u/50p/365d, +AI summaries +weekly rollup +screenshots +custom roles +custom pipelines +integrations +API access), ENTERPRISE (unlimited, +SSO/SAML +audit retention +white-label +custom domain). Capacity enforced at create sites + nightly seat reconciliation. **`require_feature()` now gates against `plan.features_allowed` first** (raises `PLAN_FEATURE_LOCKED`), then the OWNER's settings toggle (raises `FEATURE_DISABLED`); frontend `<FeatureGate>` mirrors both checks so PRO-only affordances hide on FREE plans. Full design in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md). |
 
 ---
 
@@ -214,28 +216,37 @@ Key construction is centralized in [backend/src/shared_kernel/tenant_keys.py](ba
 
 ## Environments
 
-| Environment | API | Web | AWS profile | CDK entry |
-|---|---|---|---|---|
-| **Staging** | `4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/` | `localhost:3000` / Vercel preview | default (personal) | `app_staging.py` |
-| **Production** | (company account) | `taskflow.neurostack.in` | `company` | `app.py` / `app_company.py` |
+| Environment | API | Web | AWS profile | CDK entry | Notes |
+|---|---|---|---|---|---|
+| **Staging (V2 — active)** | `4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/` | `taskflow-ns.vercel.app` / `localhost:3000` | `company` | `app_staging.py` | All non-customer-facing development lands here. Has the integration platform. CORS includes the Vercel URL. |
+| **Production V2** | `taskflow-v2` stack on company AWS | (Vercel) | `company` | `app_company_v2.py` | Where new features promote after staging verification. Has the integration platform. |
+| **Production (legacy)** | `taskflow` stack on company AWS | `taskflow.neurostack.in` | `company` | `app.py` / `app_company.py` | Hosts live customers. **Do not touch** until explicit cutover authorization — see `no-touch-legacy-taskflow` in CLAUDE.md memory. |
 
-Deployment rule (from `CLAUDE.md`): **no prod deploy until the full change is verified end-to-end on staging.** All SaaS-migration work is on staging only until the cutover ticket opens.
+Personal-account staging stack was destroyed 2026-04-30. Promotion path: `taskflow-v2` → (verify) → legacy prod cutover, gated by explicit user authorization. Deployment rule (from `CLAUDE.md`): **no prod deploy until the full change is verified end-to-end on V2.**
 
 ---
 
 ## Status
 
-P0 + most of P1 is **functionally complete on staging** after 8 post-phase sessions. See [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) for the live checklist.
+P0 + most of P1 is **functionally complete on V2** after 9 post-phase sessions. See [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) for the live checklist.
 
-Shipped across Sessions 1–7: 2FA TOTP, 30-day deletion lifecycle with export + sweeper, change-email, bulk CSV import, `ProjectRole` → per-org roles refactor, in-app notifications, outbound webhooks, platform operator console, audit log viewer UI, i18n foundation, CI/CD, Sentry scaffold, CAPTCHA on signup, health check, ownership transfer UI, suspension.
+Shipped across Sessions 1–8: 2FA TOTP, 30-day deletion lifecycle with export + sweeper, change-email, bulk CSV import, `ProjectRole` → per-org roles refactor, in-app notifications, outbound webhooks, platform operator console, audit log viewer UI, i18n foundation, CI/CD, Sentry scaffold, CAPTCHA on signup, health check, ownership transfer UI, suspension, composite activity score, weekly AI rollup with multi-source enrichment, glass landing redesign, 3-tier pricing card, server-persisted onboarding checklist, restructured Project Reports tab.
 
-Shipped in Session 8 (2026-04-23/24): composite activity score formula + 11 unit tests, AI prompt restructured for the new score, weekly rollup enriched with attendance/activity/day-off context, glass landing redesign with Lexend display face, 3-tier pricing card with honest "Soon" tags, server-persisted onboarding checklist, page-transition fix so the landing header stays viewport-fixed, Project Reports tab restructured into Overview/Workload/Sessions, audit log viewer (writes were already shipping; reader now wired in CDK), [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) design, docs reorganised into 8 categorised subfolders.
+Shipped in Session 9 (2026-04-25 → 2026-04-30):
+- **Integration platform** — pluggable connector framework + Freshworks (Freshdesk + Freshservice) connector live on V2; HMAC-signed webhooks, KMS-encrypted credentials, idempotent ingestion, 8 contract/connector tests; deployed via the new `IntegrationsNestedStack`
+- **AI features migrated to PRO** — `ai_summaries` moved out of `FREE_FEATURES`; `require_feature()` now checks `plan.features_allowed` first and raises `PLAN_FEATURE_LOCKED`; weekly rollup handler newly gated; frontend `<FeatureGate>` and `<FeaturesPanel>` reflect plan + settings together
+- **Theme picker + font picker** — 5 curated theme presets (`OrgSettings.theme`) and 7 professional sans-serif typefaces (`OrgSettings.fontFamily`) replace the old standalone color swatches in Settings → Branding
+- **Departments catalog** — OWNER-managed `OrgSettings.departments` list drives the user create form + admin filter; full CRUD UI under Settings → Organization → Departments
+- **V2 cutover** — `taskflow-v2` is now the active deploy target; personal-account staging stack destroyed 2026-04-30; `taskflow-ns.vercel.app` is the Vercel front-end URL with CORS allowed in V2 staging
+- **Settings nav rename** — "Danger zone" → "Workspace controls", muted-grey link colors corrected to match the rest of the nav
+- **Responsive overhaul** — Dialog/Modal mobile gutters, Sheet drawer width on phones, table `overflow-x-auto` wrappers on every wide table (day-offs, reports, bulk import, time-report sessions), Toast width clamping, leaderboard column compression, TodayHero alert-chip wrap layout
+- **Operational** — `force_signout_all.py` script for cleaning stuck attendance sessions; lint script swapped from removed `next lint` to `tsc --noEmit`; React 18 → 19 upgrade to match Next 16 hook semantics
 
-The only remaining gates before prod cutover are operational:
+The only remaining gates before legacy-prod cutover are operational:
 1. **Prod backfill rehearsal** — dry-run `backfill_neurostack.py` against a company-account snapshot
-2. **Cutover window** — CDK deploy to company account + Vercel env swap
+2. **Cutover window** — CDK deploy to legacy `taskflow` stack + Vercel env swap
 
-P1/P2 backlog (desktop code-signing, macOS build, SES, SSO/SAML, SCIM, custom-domain-per-tenant, Stripe billing, `shared_kernel/plan_limits.py` helper, audit-log retention sweep, full i18n sweep) is deliberately waiting on tenant-driven priority.
+P1/P2 backlog (desktop code-signing, macOS build, SES, SSO/SAML, SCIM, custom-domain-per-tenant, Stripe billing, `shared_kernel/plan_limits.py` helper for the remaining declared-but-not-enforced flags, audit-log retention sweep, full i18n sweep) is deliberately waiting on tenant-driven priority.
 
 ---
 

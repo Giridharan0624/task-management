@@ -1,8 +1,8 @@
 # TaskFlow — Technical Design Document
 
 **Scope:** how the multi-tenant SaaS is built. Complements [PRD.md](PRD.md) (product surface) and [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) (shipped vs. not).
-**Version:** 2.3 (post-Session 8)
-**Last updated:** 2026-04-24
+**Version:** 2.4 (post-Session 9)
+**Last updated:** 2026-04-30
 
 ---
 
@@ -44,9 +44,11 @@ Three deployable units in one monorepo:
 | `frontend/` | Next.js 16 (App Router) | Vercel | `git push` → Vercel auto-deploy |
 | `desktop/` | Go 1.22 + Wails v2 + Preact | GitHub releases (separate repo, gitignored here) | tag push → GitHub Actions builds Win/Linux/macOS |
 
-### Stages
-- **Staging**: personal AWS account, default profile, `app_staging.py` entry point. Safe for experimental deploys.
-- **Prod**: company AWS account, `--profile company`, `app.py` or `app_company.py`. Has live users — no SaaS-migration work touches prod until the user explicitly says "cut over."
+### Stages (updated Session 9)
+- **Staging V2** (active): company AWS account, `--profile company`, `app_staging.py` entry point. All non-customer-facing development lands here. Has the integration platform. Personal-account staging stack was destroyed 2026-04-30 — `app_staging.py` may still exist in the repo but the legacy stack it deployed is gone.
+- **Production V2**: company AWS account, `--profile company`, `app_company_v2.py` entry point. Promotes from V2 staging after explicit verification. Has the integration platform.
+- **Production (legacy)**: company AWS account, `--profile company`, `app.py` / `app_company.py`. Has live users — **no work touches the `taskflow` legacy stack** until the user explicitly says "cut over to legacy prod" (see `no-touch-legacy-taskflow` memory in CLAUDE.md).
+- Promotion order: V2 staging → V2 prod → (verify) → legacy prod cutover, gated by explicit user authorization.
 
 ---
 
@@ -78,7 +80,7 @@ GSI2PK=ORG#{org}#EMPLOYEE#{eid}                       # per-tenant employee IDs
 ### Aggregate keys are forbidden
 No `ORG#{id}#USER#LIST` or similar — they concentrate writes on one partition. Always query scoped PKs.
 
-### `OrgSettings.features` evolution (Session 8)
+### `OrgSettings.features` evolution (Sessions 8 + 9)
 The `features` dict on `OrgSettings` is the per-tenant feature-toggle map. Originally seven booleans (`birthday_wishes`, `activity_monitoring`, `screenshots`, `ai_summaries`, `day_offs`, `comments`, `task_updates`). Session 8 added three onboarding-state booleans:
 
 ```python
@@ -88,6 +90,36 @@ The `features` dict on `OrgSettings` is the per-tenant feature-toggle map. Origi
 ```
 
 These back the dashboard's [SetupChecklist](frontend/src/components/dashboard/SetupChecklist.tsx) so dismissal and per-step ticks survive across browsers/devices. Reusing `features` (rather than adding a new `OrgSettings.onboarding` field) keeps the surface flat — the existing `PUT /orgs/current/settings` handler accepts the field unchanged. Caveat: the partial-update merge in `model_copy(update=...)` REPLACES the whole `features` dict, so writers MUST send `{...current.settings.features, [key]: value}` rather than just the changed pair.
+
+### `OrgSettings` new fields (Session 9)
+Three new top-level scalars/lists added to the entity, all accepting partial updates via `PUT /orgs/current/settings`:
+
+```python
+theme: str            # curated preset id from frontend/src/lib/tenant/themes.ts (default 'aurora')
+font_family: Optional[str]  # curated id from frontend/src/lib/tenant/fonts.ts (None = default Outfit)
+departments: list[str]      # OWNER-managed department catalog (empty list is a valid choice)
+```
+
+- `theme` replaces the old standalone `primary_color` / `accent_color` swatches as the canonical colour surface. The five presets each carry a full light + dark palette (background, card, primary, accent, sidebar). `applyThemePreset(themeId)` writes every CSS variable for the active mode at once. The legacy `primary_color` / `accent_color` fields stay on the entity for backward compatibility but are no longer applied at runtime.
+- `font_family` is a stable id, not a CSS string — the frontend's `applyTenantFont(id)` lazy-loads the corresponding stylesheet via an injected `<link>` and sets the `--font-tenant` CSS variable. Falls back to Outfit (the next/font-bundled default) when null.
+- `departments` is parsed from JSON-stringified DDB attribute. Empty list IS a valid OWNER choice (a workspace might not need departments at all), so the mapper only restores defaults when the attribute is missing or unparseable. Persistent OWNER-controlled list drives the user-create form Department dropdown and the admin Users page filter.
+
+### Plan-tier gating evolution (Session 9)
+`require_feature(ctx, feature)` was extended to gate against `plan.features_allowed` BEFORE checking `OrgSettings.features`:
+
+```python
+def require_feature(ctx, feature):
+    plan = repo.get_plan(ctx.org_id)
+    if plan and feature not in plan.features_allowed:
+        raise PlanFeatureLockedError(feature)   # code: PLAN_FEATURE_LOCKED
+    settings = repo.get_settings(ctx.org_id)
+    if settings.features.get(feature, True) is False:
+        raise FeatureDisabledError(feature)     # code: FEATURE_DISABLED
+```
+
+`PlanFeatureLockedError` is a new typed exception — distinct from `FeatureDisabledError` because the remediation is different (upgrade plan vs. flip a toggle). The frontend uses the code to show an "Upgrade to PRO" upsell modal instead of the generic "feature disabled" copy. Both gates fail-open on lookup errors to keep the same posture as `require_not_suspended` — a transient DDB hiccup must not look like "all features off."
+
+`<FeatureGate>` and `useFeatureFlag()` mirror this on the frontend via a shared `isFeatureAvailable()` helper that checks plan AND settings.
 
 ### PITR
 Enabled on both stages. Staging: 7-day retention. Prod: 35-day. Uses `PointInTimeRecoverySpecification` (not the deprecated `point_in_time_recovery=True`).
@@ -176,12 +208,14 @@ A second axis of authorisation, orthogonal to the permission system in §5. Perm
 ### Currently enforced
 - `max_users` — `user/application/use_cases.py:CreateUserUseCase` and `org/application/invite_use_cases.py:SendInviteUseCase` (counts pending invites too, so a tenant can't blow past the cap by issuing 1000 invites)
 - `max_projects` — `project/application/use_cases.py:CreateProjectUseCase`
+- `ai_summaries` feature — `activity/handlers/generate_summary.py` (daily summaries) AND `taskupdate/handlers/weekly_rollup.py` (weekly rollup) — both gated as of Session 9. Plan-locked on FREE; raises `PLAN_FEATURE_LOCKED` for upsell.
 - `screenshots` feature — `upload/handlers/presign.py` (rejects upload if absent; fail-open on DDB errors)
+- `integrations` (implicit via `integrations/application/plan_gate.py`) — connector platform PRO+ only
 - `retention_days` — `activity/handlers/retention_sweeper.py` (nightly EventBridge → Lambda)
 - Belt-and-braces: nightly `seat_reconciliation.py` audits any race-induced overflow as `plan.seats_overflow`
 
 ### Declared but not yet enforced
-`custom_roles`, `custom_pipelines`, `api_access` (PRO+); `audit_logs`, `sso`, `white_label`, `custom_domain` (ENTERPRISE). The shared helper that closes these gaps in one place is the proposed `shared_kernel/plan_limits.py` module — see [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) for the design, the helper API, the per-feature gating map, and the rollout order.
+`custom_roles`, `custom_pipelines`, `api_access` (PRO+); `audit_logs`, `sso`, `white_label`, `custom_domain` (ENTERPRISE). The shared helper that closes these gaps in one place is the proposed `shared_kernel/plan_limits.py` module — see [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) for the design, the helper API, the per-feature gating map, and the rollout order. Note: now that `require_feature()` itself does plan+settings checks (Session 9), the helper's job is mostly the per-feature wiring, not the gate-mechanism itself.
 
 ### Why fail-open
 Plan lookup failures are TaskFlow problems, not customer problems. Falling open means a transient DDB error doesn't manifest as "I can't invite users." The audit log + nightly reconciler catch anything that slips through.
@@ -200,7 +234,7 @@ contexts/{context}/
 └── handlers/         # Lambda entry points (event → usecase → response)
 ```
 
-Contexts: `user`, `project`, `task`, `comment`, `attendance`, `dayoff`, `taskupdate`, `activity`, `upload`, `org`, `system`.
+Contexts: `user`, `project`, `task`, `comment`, `attendance`, `dayoff`, `taskupdate`, `activity`, `upload`, `org`, `system`, **`integrations` (Session 9)**.
 
 ### Shared kernel
 [backend/src/shared_kernel/](backend/src/shared_kernel/) holds cross-cutting concerns used by every context:
@@ -241,6 +275,14 @@ TaskManagementStack (parent, ~475/500 resources)
 └── Workflow.NestedStack (WorkflowNestedStack)
     ├── Attendance handlers (5)
     └── Day-off handlers (7)
+└── Integrations.NestedStack (IntegrationsNestedStack — Session 9)
+    ├── Connect/disconnect/list/get integration handlers
+    ├── List providers (catalog from connector_registry)
+    ├── Webhook router + dispatcher (HMAC-verified inbound)
+    ├── Pusher + sync worker (outbound + reconciliation)
+    └── Dedicated API Gateway domain — surfaced to frontend as
+        NEXT_PUBLIC_INTEGRATIONS_API_URL so integration traffic
+        doesn't share quota or rate-limit budget with the main API
 ```
 
 ### Why nested stacks
@@ -431,6 +473,49 @@ Scheduled Lambda at 04:00 UTC (after retention sweeper + seat reconciliation). S
 
 Frontend `/settings/delete-workspace` wires all three surfaces: export (always available), delete (typed-slug confirm, hidden once pending), recover (only visible during grace). Dashboard layout grows a `PendingDeletionBanner` showing days-remaining to every org user.
 
+## 10e. Integrations platform (Session 9)
+
+Pluggable 3rd-party connector framework. Lives in `backend/src/contexts/integrations/` as its own bounded context with the four-layer DDD split.
+
+### Connector protocol
+[backend/src/contexts/integrations/domain/connector_protocol.py](backend/src/contexts/integrations/domain/connector_protocol.py) defines the runtime-checkable Protocol every connector must satisfy: `provider_id`, `display_name`, `connect_form_schema()`, `validate_credentials()`, `parse_inbound_webhook()`, `verify_inbound_signature()`, `outbound_emit()`. The `connector_registry.py` in the same package is the lookup table — each connector self-registers via `bootstrap.py` import side-effects.
+
+A contract test (`test_connector_protocol_compliance.py`) iterates the registry and asserts every entry implements the Protocol — adding a connector that forgets a method fails CI before it ships.
+
+### Per-provider isolation
+Each connector lives under `connectors/{provider}/` with its own client modules, field map, parser, and connector class. **`test_no_inbound_imports.py`** enforces that domain/application code never imports from a specific connectors namespace — connectors are plugins, not first-class siblings. **`test_provider_namespace_isolation.py`** asserts a Freshdesk webhook can't write into a Freshservice integration's data.
+
+### Freshworks connector (first shipping)
+Covers Freshdesk + Freshservice via shared REST + webhook patterns:
+
+- `freshdesk_client.py` / `freshservice_client.py` — thin REST wrappers (auth, pagination, retry semantics)
+- `webhook_parser.py` — normalises inbound payloads into `NormalizedTaskEvent` (HMAC-verified before parsing)
+- `field_map.py` — declarative mapping from external ticket fields (subject, status, priority, requester, etc.) into TaskFlow task attributes; unit-tested per direction
+- `connector.py` — orchestrates the protocol methods
+
+### Inbound flow
+`POST /webhooks/{provider}` (no auth — protected by HMAC signature):
+1. `webhook_router.py` resolves the provider by URL segment
+2. `webhook_dispatch.py` looks up the integration record by `external_workspace_id`, verifies the signature against the stored secret
+3. Parsed event hits `upsert_task_from_external` — idempotent on `(integration_id, external_id)`. Updates an existing TaskFlow task or creates a new one with the configured assignee resolution rules.
+
+### Outbound flow
+TaskFlow domain events emit via `shared_kernel/integration_emitter.py` (fire-and-forget — never raises, never blocks). The `pusher.py` Lambda picks events out of the outbox and pushes them to the connector's `outbound_emit()` method. `sync_worker.py` handles reconciliation backfills. **Test contract**: `test_emitter_swallows_all_errors.py` asserts a misbehaving connector can never break the host action.
+
+### Storage
+- `IntegrationRecord` at `PK=ORG#{org}#INTEGRATION#{integrationId}` — credentials stored encrypted via KMS (`infrastructure/kms_credentials.py`)
+- `ExternalLink` at `PK=ORG#{org}#EXT#{provider}#{externalId}` — `(integration, externalId) → (taskflowTaskId)` mapping
+- `OutboxEvent` at `PK=ORG#{org}#OUTBOX` — pending outbound deliveries
+- `SyncEvent` audit trail at `PK=ORG#{org}#SYNCEVT`
+
+### Plan gating
+Pulled through the new `integrations/application/plan_gate.py` use case — PRO-tier minimum. Calls `require_feature(auth, "integrations")` so a FREE tenant gets `PLAN_FEATURE_LOCKED` before any connector code runs.
+
+### Frontend surface
+`/settings/integrations` — provider browse page, dynamic connect form (per-connector schema), per-integration detail page with disconnect, Freshdesk webhook setup guide with copy-to-clipboard helpers. Hits a separate API origin set by `NEXT_PUBLIC_INTEGRATIONS_API_URL` (configured from the `IntegrationsNestedStack`'s API Gateway URL output).
+
+---
+
 ## 11. Scheduled jobs
 
 | Job | Schedule (UTC) | Purpose |
@@ -451,42 +536,52 @@ Frontend `/settings/delete-workspace` wires all three surfaces: export (always a
 - Attendance sweep use-case tests with fake repos
 - **Composite activity score tests** ([backend/tests/test_domain_activity.py](backend/tests/test_domain_activity.py)) — 11 tests pinning formula behaviour: empty day, full-presence, wiggle-farmer punishment, power-typist cap, keyboard-vs-mouse weighting, breakdown serialization
 - **Multitenancy contract tests** ([backend/tests/test_multitenancy.py](backend/tests/test_multitenancy.py)) — moto-backed DynamoDB, two orgs in one table, assert cross-tenant reads return None/empty
-- Current count: 44 tests across 5 test files, passing
+- **Integrations contract tests** ([backend/tests/integrations/](backend/tests/integrations/)) — 8 tests added in Session 9: connector protocol compliance, namespace isolation between providers, no-inbound-imports enforcement, emitter error swallowing, Freshworks field map (per-direction), inbound flow, outbound flow, webhook parser, signature verification
+- Current count: 52 tests across 6 test files, passing
 
 ### Frontend
 - No test harness yet. Backlog — add Vitest / React Testing Library when a feature regression forces it.
+- `npm run lint` now runs `tsc --noEmit` (Session 9): Next.js 16 dropped `next lint`, the repo never had an ESLint config installed, so the typechecker is the CI gate. Same intent — catches broken code before merge.
 
 ### CI
 - **backend-ci.yml** — pytest on push/PR to `main` / `saas-migration` (path-filtered to `backend/**`)
-- **frontend-ci.yml** — lint + production build on push/PR (path-filtered to `frontend/**`)
-- Both cancel in-progress runs on new pushes to the same branch
+- **frontend-ci.yml** — typecheck + production build on push/PR (path-filtered to `frontend/**`)
+- **integrations-additivity.yml** (Session 9) — enforces the "integrations contracts can only grow, never shrink" invariant. Stops a PR from accidentally removing a connector field or event type that external installations depend on.
+- All three cancel in-progress runs on new pushes to the same branch.
 
 ---
 
 ## 13. Deployment & cutover
 
-### Current deploy commands
+### Current deploy commands (post-V2 cutover, Session 9)
 ```bash
-# Staging (personal profile, default)
-cd backend/cdk && cdk deploy --app "python app_staging.py"
+# Staging V2 (active dev target)
+cd backend/cdk && cdk deploy --app "python app_staging.py" --profile company
 
-# Production — NEUROSTACK (currently live users)
-cd backend/cdk && cdk deploy --app "python app.py" --profile company
+# Production V2 (post-staging-verify target)
+cd backend/cdk && cdk deploy --app "python app_company_v2.py" --profile company
+
+# Production (legacy — DO NOT TOUCH without explicit cutover authorization)
+cd backend/cdk && cdk deploy --app "python app_company.py" --profile company
 ```
 
-### Prod cutover rehearsal (outstanding)
+### Vercel front-end
+Staging Vercel project: `taskflow-ns.vercel.app`. CORS allowlist on the V2 staging stack now includes this URL alongside `localhost:3000`. The Vercel env vars (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_INTEGRATIONS_API_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`) come from the CDK stack outputs (parent + `IntegrationsNestedStack`).
+
+### Legacy-prod cutover rehearsal (outstanding)
 1. Snapshot prod DynamoDB
 2. Run `backfill_neurostack.py --dry-run` against snapshot
 3. Inspect item counts, spot-check 10 items
 4. Run real backfill during maintenance window
-5. Deploy CDK to company account
-6. Flip Vercel env vars to point at prod API
+5. Deploy CDK to legacy `taskflow` stack
+6. Flip Vercel env vars to point at legacy prod API
 7. Monitor for 24h before closing the cutover ticket
 
 ### Rollback
 - DynamoDB PITR gives 35-day point-in-time recovery on prod
 - CDK stack rollback via CloudFormation UpdateStack revert
 - Vercel: redeploy previous commit
+- For stuck attendance sessions after a bad seed/script: `python backend/scripts/force_signout_all.py --org-id {org} --confirm`
 
 ---
 
@@ -505,8 +600,9 @@ See [docs/saas/SAAS-STATUS.md](docs/saas/SAAS-STATUS.md) for the full living sta
 | Desktop | macOS build + code-signing + first-run UI | Separate repo; needs Mac host + CA certs + focused session |
 | Billing | Stripe integration | Plan tier set manually today |
 | SSO | SAML / OIDC federation | Waiting on enterprise prospect |
-| Plan gating | Shared `shared_kernel/plan_limits.py` helper | Four enforcement sites duplicate boilerplate today; consolidating unblocks gating for `custom_roles`, `custom_pipelines`, `audit_logs`, `white_label`, `api_access`, `sso`. Design in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) |
+| Plan gating | `custom_roles`, `custom_pipelines`, `audit_logs`, `api_access`, `sso`, `white_label`, `custom_domain` still declared-but-not-enforced | The gate-mechanism question is solved (Session 9 made `require_feature()` plan-aware); each remaining flag now needs the per-feature wiring at the right call sites. Design in [docs/architecture/PLAN-LIMITS.md](docs/architecture/PLAN-LIMITS.md) |
 | Audit retention | Sweeper extends to `EVENT#` rows | Today only `ACTIVITY#` rows are pruned; audit events accumulate forever, making the per-tier retention claim partially aspirational |
+| Integrations | Webhook retry queue + dead-letter; additional connectors (Slack, GitHub, Jira, Google Calendar) | Freshworks is the proof-point; add more once a paying tenant requests one. Slack design draft at [docs/planning/SLACK-CONNECTOR-PLAN.md](docs/planning/SLACK-CONNECTOR-PLAN.md). |
 
 ---
 
