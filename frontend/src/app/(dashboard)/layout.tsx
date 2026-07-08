@@ -160,7 +160,7 @@ function DesktopDownloadLink() {
   const userOS = getOS()
 
   useEffect(() => {
-    fetch('https://dp2uotzxlo5a5.cloudfront.net/releases/latest.json')
+    fetch('/api/download/version')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) setLatest(data)

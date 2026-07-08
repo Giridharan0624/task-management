@@ -72,7 +72,7 @@ export function DesktopAppCard() {
   // actual download URLs go through our API route so we always get the most
   // recent asset even if the manifest isn't up to date.
   useEffect(() => {
-    fetch('https://dp2uotzxlo5a5.cloudfront.net/releases/latest.json')
+    fetch('/api/download/version')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) setLatest(data as Release)
