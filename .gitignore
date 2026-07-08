@@ -89,7 +89,7 @@ test-results/
 
 # ─── Desktop App (separate repo) ─────────────────────────────────────────────
 desktop/
-desktop-new/
+desktop-rust/
 
 # ─── Backend Outputs ──────────────────────────────────────────────────────────
 backend/output.json
