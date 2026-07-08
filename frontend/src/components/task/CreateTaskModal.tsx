@@ -77,7 +77,10 @@ export function CreateTaskModal({ projectId, isOpen, onClose }: CreateTaskModalP
   const clearAll = () => setSelectedAssignees([])
 
   const onSubmit = async (values: FormValues) => {
-    if (!values.deadlineDate) return
+    if (!values.deadlineDate) {
+      alert('Please select a deadline date.')
+      return
+    }
     const time = values.deadlineTime || defaultDeadlineTime
     const deadlineIso = `${values.deadlineDate}T${time}`
     // Last-chance validation — UI's `min` prop can be bypassed via keyboard

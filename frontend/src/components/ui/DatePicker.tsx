@@ -154,7 +154,7 @@ export function DatePicker({ value, onChange, max, min, placeholder = 'Select da
       {open && createPortal(
         <div
           data-datepicker-dropdown
-          className="fixed z-[9999] w-[280px] bg-card rounded-2xl shadow-2xl ring-1 ring-border/60 p-4 animate-fade-in-scale"
+          className="fixed z-[9999] pointer-events-auto w-[280px] bg-card rounded-2xl shadow-2xl ring-1 ring-border/60 p-4 animate-fade-in-scale"
           style={{ animationDuration: '0.15s', top: pos.top, left: pos.left }}
         >
           {/* Month/Year header */}
