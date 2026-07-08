@@ -218,7 +218,7 @@ Key construction is centralized in [backend/src/shared_kernel/tenant_keys.py](ba
 
 | Environment | API | Web | AWS profile | CDK entry | Notes |
 |---|---|---|---|---|---|
-| **Staging (V2 — active)** | `4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/` | `taskflow-ns.vercel.app` / `localhost:3000` | `company` | `app_staging.py` | All non-customer-facing development lands here. Has the integration platform. CORS includes the Vercel URL. |
+| **Staging (V2 — active)** | `mcx0iyvisf.execute-api.ap-south-1.amazonaws.com/prod/` | `localhost:3000` | `company` | `app_company_v2.py` | The `taskflow-v2` stack. All non-customer-facing development lands here. Has the integration platform. |
 | **Production V2** | `taskflow-v2` stack on company AWS | (Vercel) | `company` | `app_company_v2.py` | Where new features promote after staging verification. Has the integration platform. |
 | **Production (legacy)** | `taskflow` stack on company AWS | `taskflow.neurostack.in` | `company` | `app.py` / `app_company.py` | Hosts live customers. **Do not touch** until explicit cutover authorization — see `no-touch-legacy-taskflow` in CLAUDE.md memory. |
 

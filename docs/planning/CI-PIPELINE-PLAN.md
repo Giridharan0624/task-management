@@ -100,9 +100,8 @@ Each build injects environment-specific config via Go `-ldflags`:
 
 | Environment | API URL | Pool ID | Dashboard |
 |-------------|---------|---------|-----------|
-| **Staging** | `https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging` | `ap-south-1_NedaPlHsx` | `http://localhost:3000` |
-| **Production** | `https://3syc4x99a7.execute-api.ap-south-1.amazonaws.com/prod` | `ap-south-1_72qWKeSH5` | `https://taskflow-ns.vercel.app` |
-| **Company** | `https://qhh92ze0rc.execute-api.ap-south-1.amazonaws.com/prod` | `ap-south-1_KvHp1RVEE` | `https://taskflow.neurostack.in` |
+| **Staging** (`taskflow-v2`) | `https://mcx0iyvisf.execute-api.ap-south-1.amazonaws.com/prod` | `ap-south-1_yWxQYrYXp` | `http://localhost:3000` |
+| **Production** (`taskflow`) | `https://qhh92ze0rc.execute-api.ap-south-1.amazonaws.com/prod` | `ap-south-1_KvHp1RVEE` | `https://taskflow.neurostack.in` |
 
 Store these as GitHub Secrets (`STAGING_API_URL`, `PROD_API_URL`, etc.) for the CI pipeline.
 

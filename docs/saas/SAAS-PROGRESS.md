@@ -331,8 +331,8 @@ All visible changes shipped across phases:
 
 ## Staging deployment
 
-- [x] Deployed end-to-end — stack `task-management-staging`, API URL `https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/`
-- [x] AWS identity: `giri-dev` account `013484737418` (personal/staging)
+- [x] Deployed end-to-end — stack `task-management-staging`, API URL `https://4saz9agwdi.execute-api.ap-south-1.amazonaws.com/staging/` _(decommissioned 2026-04-30; staging role superseded by the `taskflow-v2` company stack)_
+- [x] AWS identity: `giri-dev` account `013484737418` (personal/staging — decommissioned)
 - [x] Backfills applied — 3 role records populated (owner=35 perms, admin=31, member=9), 4 default pipelines inserted
 - [x] `features.screenshots: true` live for NEUROSTACK
 - [x] **Nested-stack refactor deployed** — parent split into:

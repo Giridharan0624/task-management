@@ -128,7 +128,7 @@
 ## Recording notes
 
 ### Before you hit record
-- Point [frontend/.env.local](frontend/.env.local) at the staging Cognito pool (`ap-south-1_NedaPlHsx`, region `ap-south-1`). Confirm `npm run dev` serves the staging-backed app on `localhost:3000`.
+- Point [frontend/.env.local](frontend/.env.local) at the staging Cognito pool (`ap-south-1_yWxQYrYXp`, the `taskflow-v2` stack, region `ap-south-1`). Confirm `npm run dev` serves the staging-backed app on `localhost:3000`.
 - Log in once manually to prime caches.
 - Close Slack/email/notifications. Silence the phone.
 - Browser: Chrome, clean profile, 100% zoom, 1920×1080, bookmarks bar hidden.

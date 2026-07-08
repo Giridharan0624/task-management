@@ -89,6 +89,7 @@ test-results/
 
 # ─── Desktop App (separate repo) ─────────────────────────────────────────────
 desktop/
+desktop-new/
 
 # ─── Backend Outputs ──────────────────────────────────────────────────────────
 backend/output.json
