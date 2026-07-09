@@ -146,7 +146,9 @@ class CreateOrganizationUseCase:
             name=org_name,
             owner_user_id=owner_user_id,
             status=OrgStatus.ACTIVE,
-            plan_tier=PlanTier.FREE,
+            # All new orgs provision on ENTERPRISE (billing not yet wired;
+            # every workspace gets the full feature set + unlimited limits).
+            plan_tier=PlanTier.ENTERPRISE,
             created_at=now,
             updated_at=now,
         )
@@ -166,7 +168,7 @@ class CreateOrganizationUseCase:
                 settings_overrides["timezone"] = tz
         if settings_overrides:
             settings = settings.model_copy(update=settings_overrides)
-        plan = plan_from_template(org_id, PlanTier.FREE)
+        plan = plan_from_template(org_id, PlanTier.ENTERPRISE)
         owner_user = User.create(
             user_id=owner_user_id,
             email=owner_email,

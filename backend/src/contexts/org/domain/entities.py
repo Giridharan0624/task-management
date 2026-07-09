@@ -113,7 +113,11 @@ class OrgSettings(BaseModel):
     features: dict[str, bool] = {
         "birthday_wishes": True,
         "activity_monitoring": True,
-        "screenshots": False,
+        # On by default: new orgs provision on ENTERPRISE (which allows
+        # screenshots), so the desktop captures out of the box. The plan
+        # feature-gate (require_feature) still hard-blocks screenshots for
+        # any non-ENTERPRISE tier regardless of this workspace toggle.
+        "screenshots": True,
         "ai_summaries": True,
         "day_offs": True,
         "comments": True,
