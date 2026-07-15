@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const REPO = 'Giridharan0624/taskflow-desktop'
+const REPO = 'Giridharan0624/taskflow-desktop-rust'
 const RELEASES_LATEST_API = `https://api.github.com/repos/${REPO}/releases/latest`
 const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`
 
@@ -30,7 +30,9 @@ type Platform = 'windows' | 'macos' | 'linux'
 // Ubuntu/Debian covers the majority of Linux users.
 const PLATFORM_MATCHERS: Record<Platform, RegExp[]> = {
   windows: [/setup.*\.exe$/i, /\.exe$/i, /\.msi$/i],
-  macos: [/\.dmg$/i, /\.pkg$/i, /darwin.*\.zip$/i],
+  // macOS ships a single universal dmg (Intel + Apple Silicon). Prefer it
+  // explicitly, but fall back to any dmg so older per-arch releases still work.
+  macos: [/universal.*\.dmg$/i, /\.dmg$/i, /\.pkg$/i, /darwin.*\.zip$/i],
   linux: [/\.deb$/i, /\.appimage$/i, /\.rpm$/i, /linux.*\.tar\.gz$/i],
 }
 

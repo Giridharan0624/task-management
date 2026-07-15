@@ -26,7 +26,7 @@ import { Reveal } from '@/components/landing/Reveal'
 import { cn } from '@/lib/utils'
 
 const RELEASES_URL =
-  'https://github.com/Giridharan0624/taskflow-desktop/releases/latest'
+  'https://github.com/Giridharan0624/taskflow-desktop-rust/releases/latest'
 
 export const metadata: Metadata = {
   title: 'Download TaskFlow Desktop — Native apps for Windows, macOS, and Linux',
@@ -196,7 +196,7 @@ const PLATFORMS: Platform[] = [
     version: '64-bit',
     format: '.exe installer',
     href: '/api/download/windows',
-    assetLabel: 'TaskFlowDesktop-Setup.exe',
+    assetLabel: 'TaskFlow_x64-setup.exe',
     tint: 'from-sky-500/15 to-blue-500/5',
     iconTint: 'bg-sky-500/15 text-sky-600 dark:text-sky-300',
     ring: 'ring-sky-500/20',
@@ -208,7 +208,7 @@ const PLATFORMS: Platform[] = [
     version: 'Universal · Apple Silicon + Intel',
     format: '.dmg disk image',
     href: '/api/download/macos',
-    assetLabel: 'TaskFlowDesktop-universal.dmg',
+    assetLabel: 'TaskFlow_universal.dmg',
     tint: 'from-slate-500/15 to-zinc-500/5',
     iconTint: 'bg-slate-500/15 text-slate-700 dark:text-slate-200',
     ring: 'ring-slate-500/20',
@@ -220,14 +220,14 @@ const PLATFORMS: Platform[] = [
     version: 'x86_64',
     format: '.deb package',
     href: '/api/download/linux?format=deb',
-    assetLabel: 'taskflow-desktop_amd64.deb',
+    assetLabel: 'TaskFlow_amd64.deb',
     tint: 'from-amber-500/15 to-orange-500/5',
     iconTint: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
     ring: 'ring-amber-500/20',
     alt: {
       label: 'Other distro? Download AppImage',
       href: '/api/download/linux?format=appimage',
-      assetLabel: 'TaskFlow-x86_64.AppImage',
+      assetLabel: 'TaskFlow_amd64.AppImage',
     },
   },
 ]

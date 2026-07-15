@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const REPO = 'Giridharan0624/taskflow-desktop'
+const REPO = 'Giridharan0624/taskflow-desktop-rust'
 const RELEASES_LATEST_API = `https://api.github.com/repos/${REPO}/releases/latest`
 
 // Cache GitHub's response for 10 minutes at the edge. This protects us from
