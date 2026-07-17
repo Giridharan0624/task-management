@@ -77,6 +77,10 @@ class OrgNestedStack(NestedStack):
         app_url: str,
         log_retention: logs.RetentionDays = logs.RetentionDays.THREE_MONTHS,
         hcaptcha_secret_value: str = "",
+        # Self-service signup — POST /signup creates a whole new org and is a
+        # public route, so the gate is enforced in the handler, not the UI.
+        # Defaults True: deployments that don't set it are unaffected.
+        signup_enabled: bool = True,
         uploads_bucket=None,
         # User-context resources that live under /users/* in the parent
         # tree but whose methods live here for CFN budget reasons.
@@ -188,6 +192,7 @@ class OrgNestedStack(NestedStack):
         # prod flips it on by setting the value in the app entry point.
         if hcaptcha_secret_value:
             signup_fn.add_environment("HCAPTCHA_SECRET", hcaptcha_secret_value)
+        signup_fn.add_environment("SIGNUP_ENABLED", "1" if signup_enabled else "0")
 
         # ── Public org lookup by slug (pre-login branding) ─────────────
         orgs = api.root.add_resource("orgs")

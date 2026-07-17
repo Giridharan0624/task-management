@@ -14,12 +14,23 @@ from stack import TaskManagementStack
 # §4a). If the staging frontend is moved to a separate Vercel project
 # (Option B), update these three fields before redeploying.
 V2_CONFIG = {
+    # taskflow.neurostack.in is the primary app domain now that the migrated
+    # NEUROSTACK tenant lives on V2 and the frontend deploys there. It MUST be
+    # listed: API Gateway echoes back only origins in this list, otherwise it
+    # returns the first entry and the browser blocks every request at preflight
+    # (login still works — Cognito SRP doesn't go through API Gateway — which
+    # makes the failure look like "logged in but nothing loads").
     "cors_origins": [
+        "https://taskflow.neurostack.in",
         "https://taskflow-ns.vercel.app",
         "http://localhost:3000",
     ],
-    "allowed_origin": "https://taskflow-ns.vercel.app",
-    "app_url": "https://taskflow-ns.vercel.app",
+    # `allowed_origin` is vestigial — nothing reads ALLOWED_ORIGIN (responses
+    # send `*`); kept in sync to avoid misleading the next reader.
+    "allowed_origin": "https://taskflow.neurostack.in",
+    # `app_url` IS live: it's the base for invite/welcome email links
+    # (org/handlers/send_invite.py, user/application/use_cases.py).
+    "app_url": "https://taskflow.neurostack.in",
     "api_stage": "prod",
     "gmail_secret_name": "taskflow-v2/gmail-credentials",
     "groq_secret_name": "taskflow-v2/groq-api-key",
@@ -34,6 +45,11 @@ V2_CONFIG = {
     # wires the new URL via NEXT_PUBLIC_INTEGRATIONS_API_URL — capture
     # the `IntegrationsApiUrl` CFN output after deploy.
     "integrations_enabled": True,
+    # Self-service signup is OFF. V2 hosts the migrated NEUROSTACK tenant and
+    # new workspaces must not be creatable from the public /signup route — the
+    # route stays deployed but the handler returns 403. Users are added by
+    # invite instead. Flip to True (or drop the key) to re-open signup.
+    "signup_enabled": False,
     # AWS WAF v2 requires rate-based statement limits to be >=10. The
     # default in stack.py (5) was accepted by AWS when the existing
     # prod stack first deployed; bumping to 10 here for V2. Still

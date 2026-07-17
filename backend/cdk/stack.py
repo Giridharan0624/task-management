@@ -459,6 +459,7 @@ class TaskManagementStack(Stack):
             app_url=config["app_url"],
             log_retention=log_retention,
             hcaptcha_secret_value=config.get("hcaptcha_secret", ""),
+            signup_enabled=config.get("signup_enabled", True),
             uploads_bucket=uploads_bucket,
             users_bulk_resource=users_bulk,
             users_me_email_resource=users_me_email,
