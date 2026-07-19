@@ -456,8 +456,10 @@ class DeleteUserUseCase:
                     "You can only delete users with non-privileged roles."
                 )
 
-        # Delete from Cognito
-        self._cognito.delete_user(target_user.email)
+        # Delete from Cognito by sub, not email — the email alias index is
+        # eventually consistent, so deleting a recently-created user by email
+        # can silently no-op and orphan the login (target_user_id is the sub).
+        self._cognito.delete_user(target_user_id)
 
         # Remove from all project memberships
         projects = self._project_repo.find_projects_for_user(target_user_id)

@@ -212,7 +212,7 @@ class CreateOrganizationUseCase:
             for pipeline in default_pipelines:
                 pipeline_repo.save_pipeline(org_id, pipeline.to_dict())
         except Exception:
-            self._rollback_all(org_id, slug, owner_email)
+            self._rollback_all(org_id, slug, owner_user_id)
             raise
 
         return {
@@ -268,14 +268,17 @@ class CreateOrganizationUseCase:
         except Exception:
             pass
 
-    def _rollback_all(self, org_id: str, slug: str, owner_email: str) -> None:
+    def _rollback_all(self, org_id: str, slug: str, owner_user_id: str) -> None:
         """Best-effort cleanup after a Cognito create has succeeded but
         DynamoDB writes have failed. Swallows all errors — this runs
         only when something has already failed."""
         # Delete Cognito user first so the email can be re-used on retry.
+        # By sub (owner_user_id), not email: the just-created user's email
+        # alias may not have propagated, and a delete-by-email would no-op
+        # and orphan the login.
         if self._cognito is not None:
             try:
-                self._cognito.rollback_user(owner_email)
+                self._cognito.rollback_user(owner_user_id)
             except Exception:
                 pass
         # Delete any DynamoDB records we wrote.

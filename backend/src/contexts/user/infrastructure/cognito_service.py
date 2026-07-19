@@ -110,29 +110,46 @@ class CognitoService(IIdentityService):
         return sub
 
     @staticmethod
-    def rollback_user(email: str) -> None:
-        """Best-effort: delete a Cognito user by email. Used when a
+    def rollback_user(user_id: str) -> None:
+        """Best-effort: delete a Cognito user by their `sub`. Used when a
         multi-step signup/invite-accept fails after Cognito create
         succeeded, to leave the system in a clean state.
+
+        MUST be the `sub`, not the email: this runs immediately after
+        `admin_create_user`, when the email alias index has often not
+        propagated yet — a delete-by-email would raise UserNotFound and
+        leave the login orphaned.
         """
         try:
             cognito_client.admin_delete_user(
                 UserPoolId=USER_POOL_ID,
-                Username=email,
+                Username=user_id,
             )
         except Exception:
             pass
 
     @staticmethod
-    def delete_user(email: str) -> None:
-        """Delete a Cognito user by email/username."""
+    def delete_user(user_id: str) -> None:
+        """Delete a Cognito user by their `sub` (the immutable Cognito
+        username), NOT their email.
+
+        Deleting by email is unsafe: the email→user alias index is
+        eventually consistent, so for a recently-created user
+        `admin_delete_user(Username=email)` can raise UserNotFound even
+        though the user exists. That exception is swallowed below for
+        idempotency, which would then orphan the Cognito login while the
+        caller goes on to delete the DynamoDB profile. The `sub` never has
+        this lag. (See the prod->v2 migration incident: 20 users created
+        in a burst, then two deleted-by-email orphaned their logins.)
+        """
         try:
             cognito_client.admin_delete_user(
                 UserPoolId=USER_POOL_ID,
-                Username=email,
+                Username=user_id,
             )
         except cognito_client.exceptions.UserNotFoundException:
-            # User doesn't exist in Cognito — proceed with DynamoDB cleanup
+            # Genuinely absent (sub is never subject to alias lag) —
+            # proceed with DynamoDB cleanup.
             pass
 
     @staticmethod

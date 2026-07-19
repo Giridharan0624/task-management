@@ -257,10 +257,13 @@ class AcceptInviteUseCase:
             user_repo = UserDynamoRepository(org_id=invite.org_id)
             user_repo.save(new_user)
         except Exception:
-            # Roll back the Cognito user so the invite email can be retried
+            # Roll back the Cognito user so the invite email can be retried.
+            # By sub (user_id), not email: the alias index may not have
+            # propagated for the just-created user, and a delete-by-email
+            # would no-op and orphan the login.
             if self._cognito is not None:
                 try:
-                    self._cognito.rollback_user(invite.email)
+                    self._cognito.rollback_user(user_id)
                 except Exception:
                     pass
             raise
